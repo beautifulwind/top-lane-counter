@@ -9,7 +9,11 @@ import NotFound from './pages/NotFound';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
-  useEffect(() => window.scrollTo(0, 0), [pathname]);
+  // 중괄호 필수: scrollTo()는 최신 브라우저에서 Promise를 돌려줄 수 있는데,
+  // 이를 그대로 return하면 React가 cleanup으로 호출해 "n is not a function" 오류가 난다.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
   return null;
 }
 
