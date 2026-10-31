@@ -40,7 +40,7 @@ export default function Champion() {
         <p className="hint">위에 있을수록 더 확실하게 이기는 카운터예요. 순서는 관리자가 정합니다.</p>
 
         {data.counters.length === 0 ? (
-          <p className="empty">아직 등록된 카운터가 없어요. 첫 카운터를 제안해 주세요!</p>
+          <p className="empty">아직 등록된 카운터가 없습니다</p>
         ) : (
           <ol className="counter-list">
             {data.counters.map((c, i) => {

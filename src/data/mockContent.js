@@ -1,14 +1,9 @@
 // 1단계 가짜 데이터. 2단계에서 Supabase 테이블(counters, matchup_docs, builds)로 교체된다.
 // 모양은 SPEC 7장의 테이블 구조를 따른다.
+// 예시는 "다리우스 상대 퀸" 매치업 하나만 둔다. Supabase 초기 데이터도 이것 하나만 넣는다.
 
 export const counters = [
   { id: 1, target_champion: 'Darius', counter_champion: 'Quinn', sort_order: 1 },
-  { id: 2, target_champion: 'Darius', counter_champion: 'Vayne', sort_order: 2 },
-  { id: 3, target_champion: 'Darius', counter_champion: 'Kennen', sort_order: 3 },
-  { id: 4, target_champion: 'Darius', counter_champion: 'Teemo', sort_order: 4 },
-  { id: 5, target_champion: 'Garen', counter_champion: 'Vayne', sort_order: 1 },
-  { id: 6, target_champion: 'Garen', counter_champion: 'Kayle', sort_order: 2 },
-  { id: 7, target_champion: 'Fiora', counter_champion: 'Malphite', sort_order: 1 },
 ];
 
 const sampleLevels = (who, target) => ({

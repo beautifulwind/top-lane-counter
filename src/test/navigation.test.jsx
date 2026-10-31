@@ -41,3 +41,16 @@ test('이동 직후 데이터가 오기 전에는 로딩 문구가 보인다', a
   expect(screen.getByText('불러오는 중…')).toBeDefined();
   await screen.findByText(/다리우스을\(를\) 이기는 챔피언/);
 });
+
+test('예시 데이터는 다리우스 상대 퀸 하나뿐이다', async () => {
+  start('/champion/Darius');
+  await screen.findByText(/다리우스을\(를\) 이기는 챔피언/);
+  const rows = document.querySelectorAll('.counter-row');
+  expect([...rows].map((r) => r.querySelector('strong').textContent)).toEqual(['퀸']);
+});
+
+test.each(['Garen', 'Vayne', 'Teemo'])('예시가 없는 챔피언(%s)은 "아직 등록된 카운터가 없습니다"가 보인다', async (id) => {
+  start(`/champion/${id}`);
+  expect(await screen.findByText('아직 등록된 카운터가 없습니다')).toBeDefined();
+  expect(document.querySelectorAll('.counter-row')).toHaveLength(0);
+});
