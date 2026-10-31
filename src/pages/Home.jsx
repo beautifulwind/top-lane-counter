@@ -6,7 +6,7 @@ import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
 
 export default function Home() {
-  const { data: champions, error, loading } = useAsync(getChampions, []);
+  const { data: champions, error, loading, retry } = useAsync(getChampions, []);
   const [query, setQuery] = useState('');
 
   const filtered = useMemo(
@@ -31,7 +31,7 @@ export default function Home() {
       </div>
 
       {loading && <Loading />}
-      {error && <ErrorBox error={error} />}
+      {error && <ErrorBox error={error} onRetry={retry} />}
       {champions && (
         <>
           {filtered.length === 0 ? (

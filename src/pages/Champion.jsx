@@ -7,7 +7,7 @@ import NotFound from './NotFound';
 
 export default function Champion() {
   const { id } = useParams();
-  const { data, error, loading } = useAsync(
+  const { data, error, loading, retry } = useAsync(
     async () => {
       const [champs, counters] = await Promise.all([getChampionMap(), getCountersFor(id)]);
       return { champs, counters };
@@ -16,7 +16,7 @@ export default function Champion() {
   );
 
   if (loading) return <Loading />;
-  if (error) return <ErrorBox error={error} />;
+  if (error) return <ErrorBox error={error} onRetry={retry} />;
   const target = data.champs[id];
   if (!target) return <NotFound />;
 

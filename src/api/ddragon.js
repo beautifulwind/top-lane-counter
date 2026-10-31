@@ -14,10 +14,22 @@ function once(key, loader) {
   return cache.get(key);
 }
 
+const TIMEOUT_MS = 15000;
+
 async function getJson(url) {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`Data Dragon 요청 실패 (${res.status})`);
-  return res.json();
+  const ctrl = new AbortController();
+  const timer = setTimeout(() => ctrl.abort(), TIMEOUT_MS);
+  try {
+    const res = await fetch(url, { signal: ctrl.signal });
+    if (!res.ok) throw new Error(`게임 데이터 요청 실패 (${res.status})`);
+    return await res.json();
+  } catch (err) {
+    if (err.name === 'AbortError') throw new Error('게임 데이터 서버 응답이 너무 늦어요.');
+    if (err instanceof TypeError) throw new Error('게임 데이터 서버에 연결할 수 없어요. 인터넷 연결을 확인해 주세요.');
+    throw err;
+  } finally {
+    clearTimeout(timer);
+  }
 }
 
 export function getLatestVersion() {

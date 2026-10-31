@@ -1,14 +1,22 @@
 export function Loading() {
-  return <p className="status">불러오는 중…</p>;
+  return (
+    <p className="status" role="status">
+      불러오는 중…
+    </p>
+  );
 }
 
-export function ErrorBox({ error }) {
+export function ErrorBox({ error, onRetry }) {
   return (
-    <p className="status status-error">
-      데이터를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.
-      <br />
-      <small>{String(error?.message ?? error)}</small>
-    </p>
+    <div className="status status-error" role="alert">
+      <p>데이터를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+      {error && <small>{String(error.message ?? error)}</small>}
+      <div className="actions center">
+        <button type="button" className="btn" onClick={onRetry ?? (() => window.location.reload())}>
+          다시 시도
+        </button>
+      </div>
+    </div>
   );
 }
 

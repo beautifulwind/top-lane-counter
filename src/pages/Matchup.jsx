@@ -9,7 +9,7 @@ export const REQUIRED_LEVELS = [1, 2, 3, 6, 9, 11];
 
 export default function Matchup() {
   const { targetId, counterId } = useParams();
-  const { data, error, loading } = useAsync(
+  const { data, error, loading, retry } = useAsync(
     async () => {
       const [champs, matchup] = await Promise.all([getChampionMap(), getMatchup(targetId, counterId)]);
       const builds = matchup ? await getBuilds(matchup.counter.id) : [];
@@ -25,7 +25,7 @@ export default function Matchup() {
   );
 
   if (loading) return <Loading />;
-  if (error) return <ErrorBox error={error} />;
+  if (error) return <ErrorBox error={error} onRetry={retry} />;
   const target = data.champs[targetId];
   const counter = data.champs[counterId];
   if (!target || !counter) return <NotFound />;

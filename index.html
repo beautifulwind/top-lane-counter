@@ -12,7 +12,16 @@
   </head>
   <body>
     <noscript>이 사이트를 보려면 JavaScript를 켜 주세요.</noscript>
-    <div id="root"></div>
+    <!-- 앱이 뜨기 전 문구. React가 시작되면 사라진다. 15초 넘게 남아 있으면 안내로 바꾼다. -->
+    <div id="root"><p style="padding:48px 16px;text-align:center;color:#6c757d">불러오는 중…</p></div>
+    <script>
+      setTimeout(function () {
+        var p = document.querySelector('#root > p');
+        if (p && p.textContent === '불러오는 중…') {
+          p.innerHTML = '사이트를 불러오지 못했어요.<br><a href="" style="color:#008275">새로고침</a>';
+        }
+      }, 15000);
+    </script>
     <script type="module" src="/src/index.jsx"></script>
   </body>
 </html>

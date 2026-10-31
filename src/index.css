@@ -87,6 +87,7 @@ a:hover { text-decoration: underline; }
 }
 .status { padding: 32px 0; text-align: center; color: var(--muted); }
 .status-error { color: var(--warn); }
+.status p { margin: 0 0 8px; }
 .prose { white-space: pre-line; }
 
 .actions { margin-top: 12px; display: flex; gap: 8px; flex-wrap: wrap; }
@@ -181,3 +182,4 @@ kbd {
   .level { flex-direction: row; gap: 16px; }
   .level dt { width: 64px; flex: none; }
 }
+.actions.center { justify-content: center; }
