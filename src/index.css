@@ -350,3 +350,35 @@ button.champ-cell:disabled { opacity: .4; cursor: default; }
 .legal-table th, .legal-table td { overflow-wrap: anywhere; }
 .legal-table ul { margin: 0; padding-left: 18px; }
 .fill-me { padding: 2px 6px; background: #fff3a3; color: #5c4a00; border: 2px dashed #e0b400; border-radius: 4px; font-weight: 700; }
+
+/* 빌드 등록 (5단계) */
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
+.build-form { display: flex; flex-direction: column; gap: 12px; }
+.pick-group { margin: 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); min-width: 0; }
+.pick-group legend { padding: 0 4px; font-weight: 700; }
+.pick-row { display: flex; align-items: center; gap: 4px; padding: 4px 0; flex-wrap: wrap; }
+.pick-sub { display: inline-flex; gap: 4px; padding-right: 8px; margin-right: 4px; border-right: 1px solid var(--line); }
+.pick-sub:last-child { border-right: 0; }
+.pick {
+  min-width: 40px; min-height: 40px; padding: 2px; font: inherit; font-weight: 700;
+  border: 2px solid transparent; border-radius: var(--radius); background: var(--bg); cursor: pointer; opacity: .55;
+}
+.pick.on { border-color: var(--brand); background: var(--soft); opacity: 1; }
+.pick:disabled { cursor: default; opacity: .25; }
+.pick.on:disabled { opacity: 1; }
+.picked { list-style: none; margin: 6px 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.picked .empty { padding: 8px; }
+.picked-item { display: flex; align-items: center; gap: 6px; }
+.picked-item span { flex: 1; min-width: 0; font-size: 14px; }
+.item-search { width: 100%; height: 44px; padding: 0 12px; font-size: 16px; border: 1px solid var(--line); border-radius: var(--radius); margin: 4px 0; }
+.ico.missing { display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; }
+.skill-group { display: inline-flex; align-items: center; gap: 4px; }
+.early { display: inline-flex; flex-direction: column; align-items: center; }
+.early small, .muted { font-size: 11px; color: var(--muted); }
+.vote.on { border-color: var(--brand); background: var(--soft); font-weight: 700; }
+.vote.on.down { border-color: var(--warn); background: #fdecea; }
+.vote:disabled { cursor: default; opacity: .6; }
+.vote-count { font-size: 14px; color: var(--muted); }
+.own-badge { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--bg); color: var(--muted); }
+.status-badge.hidden { color: var(--warn); }
+.build-summary { margin-top: 6px; }

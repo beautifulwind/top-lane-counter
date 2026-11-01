@@ -58,31 +58,47 @@ export async function getChampionMap() {
   return Object.fromEntries(list.map((c) => [c.id, c]));
 }
 
+/**
+ * 아이템 (id → { id, name, icon, gold, shop }).
+ * shop: 소환사의 협곡 상점에서 살 수 있는 아이템 (빌드 등록 화면의 고르기 목록). 예전 빌드 표시용으로 나머지도 다 담는다.
+ */
 export function getItems() {
   return once('items', async () => {
     const v = await getLatestVersion();
     const { data } = await getJson(`${BASE}/cdn/${v}/data/${LANG}/item.json`);
     const map = {};
-    for (const [id, it] of Object.entries(data)) {
-      map[id] = { id, name: it.name, icon: `${BASE}/cdn/${v}/img/item/${it.image.full}` };
+    const shopNames = new Set();
+    // 같은 이름이 여러 id로 있으면(모드별 사본) 작은 id 하나만 상점 목록에 넣는다
+    for (const [id, it] of Object.entries(data).sort((a, b) => Number(a[0]) - Number(b[0]))) {
+      const shop = isShopItem(id, it) && !shopNames.has(it.name);
+      if (shop) shopNames.add(it.name);
+      map[id] = { id, name: it.name, icon: `${BASE}/cdn/${v}/img/item/${it.image.full}`, gold: it.gold?.total ?? 0, shop };
     }
     return map;
   });
 }
 
+function isShopItem(id, it) {
+  return Number(id) < 10000 && it.maps?.['11'] === true && it.gold?.purchasable === true
+    && it.inStore !== false && !it.hideFromAll && !it.requiredChampion && !it.requiredAlly;
+}
+
+/** 소환사 주문 (id → { id, name, icon, classic }). classic: 소환사의 협곡에서 쓸 수 있는 주문 */
 export function getSummonerSpells() {
   return once('spells', async () => {
     const v = await getLatestVersion();
     const { data } = await getJson(`${BASE}/cdn/${v}/data/${LANG}/summoner.json`);
     const map = {};
     for (const s of Object.values(data)) {
-      map[s.id] = { id: s.id, name: s.name, icon: `${BASE}/cdn/${v}/img/spell/${s.image.full}` };
+      map[s.id] = {
+        id: s.id, name: s.name, icon: `${BASE}/cdn/${v}/img/spell/${s.image.full}`, classic: (s.modes ?? []).includes('CLASSIC'),
+      };
     }
     return map;
   });
 }
 
-// 능력치 파편은 runesReforged.json에 없어서 여기에 정의한다.
+// 능력치 파편은 runesReforged.json에 없어서 여기에 정의한다. 줄마다 고를 수 있는 값은 SHARD_ROWS (DB 검사와 같음).
 const SHARD_IMG = `${BASE}/cdn/img/perk-images/StatMods`;
 export const STAT_SHARDS = {
   5008: { id: 5008, name: '적응형 능력치', icon: `${SHARD_IMG}/StatModsAdaptiveForceIcon.png` },
@@ -93,8 +109,13 @@ export const STAT_SHARDS = {
   5001: { id: 5001, name: '성장 체력', icon: `${SHARD_IMG}/StatModsHealthScalingIcon.png` },
   5013: { id: 5013, name: '강인함 및 둔화 저항', icon: `${SHARD_IMG}/StatModsTenacityIcon.png` },
 };
+export const SHARD_ROWS = [[5008, 5005, 5007], [5008, 5010, 5001], [5011, 5013, 5001]];
 
-/** 룬 경로와 개별 룬을 id로 찾을 수 있게 정리 */
+/**
+ * 룬 경로와 개별 룬을 id로 찾을 수 있게 정리.
+ * paths[id] = { id, name, icon, keystones: [룬 id], rows: [[1줄], [2줄], [3줄]] }
+ * runes[id] = { id, name, icon, path: 경로 id, row: 0(핵심 룬)~3 }
+ */
 export function getRunes() {
   return once('runes', async () => {
     const v = await getLatestVersion();
@@ -102,12 +123,13 @@ export function getRunes() {
     const pathMap = {};
     const runeMap = {};
     for (const p of paths) {
-      pathMap[p.id] = { id: p.id, name: p.name, icon: `${BASE}/cdn/img/${p.icon}` };
-      for (const slot of p.slots) {
+      const slots = p.slots.map((slot) => slot.runes.map((r) => r.id));
+      pathMap[p.id] = { id: p.id, name: p.name, icon: `${BASE}/cdn/img/${p.icon}`, keystones: slots[0] ?? [], rows: slots.slice(1) };
+      p.slots.forEach((slot, row) => {
         for (const r of slot.runes) {
-          runeMap[r.id] = { id: r.id, name: r.name, icon: `${BASE}/cdn/img/${r.icon}` };
+          runeMap[r.id] = { id: r.id, name: r.name, icon: `${BASE}/cdn/img/${r.icon}`, path: p.id, row };
         }
-      }
+      });
     }
     return { paths: pathMap, runes: runeMap, shards: STAT_SHARDS };
   });

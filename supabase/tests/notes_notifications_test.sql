@@ -72,16 +72,17 @@ select request_revision(:garen, '9레벨을 고쳐 주세요');
 select t.ok('운영자는 남의 알림을 못 봄', (select count(*) = 0 from notifications));
 select t.fails('운영자도 알림 직접 만들기 불가',
   $$insert into notifications (user_id, kind) values ('00000000-0000-0000-0000-00000000000b', 'revision_request')$$, 'permission denied');
-set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
-select t.ok('다른 유저는 그 알림을 못 봄', (select count(*) = 0 from notifications));
-select t.ok('남의 알림 읽음 처리는 무시됨 (0개)',
-  (select mark_notifications_read(array(select id from notifications)) = 0));
 reset role;
-select t.ok('남이 읽음 처리해도 그대로 안 읽음 (postgres로 확인)', (select count(*) = 1 from notifications where read_at is null));
-insert into ids select 'n1', id from notifications;
+insert into ids select 'b_note', id from notifications where kind = 'revision_request';
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
-select t.ok('남의 알림 id를 직접 넣어도 0개', (select mark_notifications_read(array[(select v from ids where k = 'n1')]) = 0));
+select t.ok('다른 유저는 그 알림을 못 봄', (select count(*) = 0 from notifications where kind = 'revision_request'));
+select t.ok('남의 알림 읽음 처리는 무시됨 (0개)',
+  (select mark_notifications_read(array[(select v from ids where k = 'b_note')]) = 0));
+reset role;
+select t.ok('남이 읽음 처리해도 그대로 안 읽음 (postgres로 확인)',
+  (select read_at is null from notifications where id = (select v from ids where k = 'b_note')));
+set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.ok('제안자: 안 읽은 재검토 요청 알림 1개 (메모·제안 포함)',
   (select count(*) = 1 from notifications
@@ -89,7 +90,10 @@ select t.ok('제안자: 안 읽은 재검토 요청 알림 1개 (메모·제안 
      and proposal_id = (select v from ids where k = 'garen_p')));
 select t.fails('제안자도 알림 직접 수정 불가', $$update notifications set read_at = now()$$, 'permission denied');
 select t.fails('제안자도 알림 직접 삭제 불가', $$delete from notifications$$, 'permission denied');
-select t.ok('/me에서 확인 → 1개 읽음 처리', (select mark_notifications_read(array(select id from notifications)) = 1));
+select t.ok('008: 가렌 승인 알림도 받음 (메모 포함)',
+  (select count(*) = 1 from notifications where kind = 'proposal_approved' and message = '좋은 공략이에요'
+     and proposal_id = (select v from ids where k = 'garen_p')));
+select t.ok('/me에서 확인 → 2개 읽음 처리 (승인 + 재검토 요청)', (select mark_notifications_read(array(select id from notifications)) = 2));
 select t.ok('빨간 점 조건이 꺼짐', (select count(*) = 0 from notifications where read_at is null));
 select t.ok('다시 확인해도 0개', (select mark_notifications_read(array(select id from notifications)) = 0));
 select t.ok('확인해도 재검토 요청 상태와 메모는 남음 (다시 제출 가능)',
@@ -111,7 +115,8 @@ select request_revision(:garen, '한 번 더 고쳐 주세요');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.ok('두 번째 요청: 새 알림 1개', (select count(*) = 1 from notifications where read_at is null and message = '한 번 더 고쳐 주세요'));
 select resubmit_proposal((select v from ids where k = 'garen_p'), :'v1');
-select t.ok('다시 제출하면 확인 안 한 알림도 읽음 처리', (select count(*) = 0 from notifications where read_at is null));
+select t.ok('다시 제출하면 확인 안 한 재검토 요청 알림도 읽음 처리', (select count(*) = 0 from notifications where read_at is null and kind = 'revision_request'));
+select t.ok('008: 거절 알림은 직접 확인할 때까지 남음', (select count(*) = 1 from notifications where read_at is null and kind = 'proposal_rejected' and message = '아직 부족해요'));
 
 -- ===== 7. 재검토 요청 중 [다시 공개]로 취소하면 알림도 읽음 처리 =====
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
@@ -119,8 +124,8 @@ select reject_proposal((select v from ids where k = 'garen_p'), '그래도 부�
 select request_revision(:garen, '세 번째');
 select restore_counter(:garen, '그냥 공개할게요');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
-select t.ok('취소된 요청 알림은 빨간 점에 남지 않음', (select count(*) = 0 from notifications where read_at is null));
-select t.ok('알림 기록 자체는 남음 (3개)', (select count(*) = 3 from notifications));
+select t.ok('취소된 요청 알림은 빨간 점에 남지 않음', (select count(*) = 0 from notifications where read_at is null and kind = 'revision_request'));
+select t.ok('알림 기록 자체는 남음 (재검토 요청 3개)', (select count(*) = 3 from notifications where kind = 'revision_request'));
 
 -- ===== 8. 카운터를 완전 삭제하면 그 제안의 알림도 지워짐 =====
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
@@ -128,4 +133,4 @@ select hide_counter(:garen, '중복');
 select request_revision(:garen, '네 번째');
 select delete_counter(:garen, 'Garen', '중복 카운터');
 reset role;
-select t.ok('삭제: 알림도 함께 지워짐', (select count(*) = 0 from notifications));
+select t.ok('삭제: 그 제안의 알림도 함께 지워짐', (select count(*) = 0 from notifications where user_id = '00000000-0000-0000-0000-00000000000b'));

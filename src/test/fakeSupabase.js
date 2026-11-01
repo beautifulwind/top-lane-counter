@@ -1,14 +1,27 @@
 // 테스트용 가짜 Supabase. src/api/supabase.js의 db()를 대신한다 (setupTests.js에서 연결).
 // 행 모양은 supabase/schema.sql + content.js의 select(관계 포함)가 돌려주는 모양을 따른다.
 const runes = (keystone) => ({ primaryPath: 8000, keystone, primary: [9111, 9104, 8014], secondaryPath: 8100, secondary: [8143, 8106], shards: [5005, 5008, 5011] });
+const QUINN = { id: 1, target_champion: 'Darius', counter_champion: 'Quinn', status: 'approved' };
 const build = (id, author, extra = {}) => ({
-  id, counter_id: 1, author, status: 'approved', runes: runes(8005),
+  id, counter_id: 1, author, author_id: author ? `u-${id}` : null, is_example: !author, status: 'approved', runes: runes(8005),
   summoner_spells: ['SummonerFlash', 'SummonerTeleport'], starting_items: ['1055', '2003'],
-  core_items: ['6672', '3006'], skill_order: ['Q', 'E', 'W'], patch: '99.1.1',
-  up_count: 0, down_count: 0, created_at: `2026-11-0${id - 100}T00:00:00Z`, ...extra,
+  core_items: ['6672', '3006', '3031'], skill_order: ['Q', 'E', 'W'], early_skills: ['Q', 'E', 'W'], patch: '99.1.1',
+  up_count: 0, down_count: 0, created_at: `2026-11-0${id - 100}T00:00:00Z`, counter: QUINN, logs: [],
+  approve_note: null, reject_reason: null, hide_reason: null, hidden_at: null, reviewed_at: null, ...extra,
 });
+/** 테스트에서 쓰는 빌드 한 줄 (기본: 퀸 매치업에 공개된 빌드) */
+export const fakeBuild = (id, author, extra) => build(id, author, extra);
+
+const INITIAL_BUILDS = () => [
+    build(101, null, { patch: '14.1.1', up_count: 1 }),
+    build(102, { nickname: '탑신병자', level: 7, main_title: 'senior_researcher' }, { up_count: 5, down_count: 1 }),
+    build(103, { nickname: '칭호없음', level: 3, main_title: null }, { up_count: 2 }),
+    build(104, { nickname: '대기중', level: 1, main_title: null }, { status: 'pending', up_count: 99 }),
+    build(105, { nickname: '영자(운)', level: 0, main_title: null }), // 운영자가 쓴 빌드 (점수 0)
+];
 
 export const TABLES = {
+  builds: INITIAL_BUILDS(),
   counters: [
     {
       id: 1, target_champion: 'Darius', counter_champion: 'Quinn', sort_order: 1, status: 'approved',
@@ -19,13 +32,6 @@ export const TABLES = {
       },
     },
     { id: 2, target_champion: 'Darius', counter_champion: 'Vayne', sort_order: 0, status: 'pending', matchup_docs: null },
-  ],
-  builds: [
-    build(101, null, { patch: '14.1.1', up_count: 1 }),
-    build(102, { nickname: '탑신병자', level: 7, main_title: 'senior_researcher' }, { up_count: 5, down_count: 1 }),
-    build(103, { nickname: '칭호없음', level: 3, main_title: null }, { up_count: 2 }),
-    build(104, { nickname: '대기중', level: 1, main_title: null }, { status: 'pending', up_count: 99 }),
-    build(105, { nickname: '영자(운)', level: 0, main_title: null }), // 운영자가 쓴 빌드 (점수 0)
   ],
   profiles: [
     { id: 'u-old', nickname: '기존유저', role: 'user', xp: 0, level: 1, main_title: null },
@@ -72,6 +78,7 @@ export function resetFake() {
   TABLES.counter_deletions = [];
   TABLES.build_votes = [];
   TABLES.notifications = [];
+  TABLES.builds = INITIAL_BUILDS();
   fakeState.inserts = [];
   fakeState.insertError = null;
   fakeState.rpcCalls = [];
@@ -115,6 +122,14 @@ function query(table) {
       // DB 트리거·RLS가 낸 오류 흉내 (예: '이미 등록된 카운터예요.')
       if (fakeState.insertError) return { data: null, error: { message: fakeState.insertError } };
       fakeState.inserts.push({ table, values: inserted });
+      if (table === 'builds') {
+        const me = TABLES.profiles.find((p) => p.id === inserted.author_id);
+        TABLES.builds.push(build(900 + TABLES.builds.length, me && { nickname: me.nickname, level: me.level, main_title: me.main_title }, {
+          ...inserted, status: 'pending', is_example: false, created_at: new Date().toISOString(),
+          counter: TABLES.counters.find((c) => c.id === inserted.counter_id) ?? null,
+        }));
+        return { data: null, error: null };
+      }
       const proposer = TABLES.profiles.find((p) => p.id === inserted.proposer_id);
       TABLES[table].push({
         id: 900 + TABLES[table].length, status: 'pending', reject_reason: null, reviewed_at: null,
@@ -171,6 +186,19 @@ async function rpc(name, args) {
     const mine = TABLES.notifications.filter((n) => args.p_ids.includes(n.id) && n.user_id === me && !n.read_at);
     mine.forEach((n) => { n.read_at = new Date().toISOString(); });
     return { data: mine.length, error: null };
+  }
+  if (name === 'vote_build') {
+    // DB 함수처럼: 한 사람 한 표, null = 취소, 따봉 수 다시 세기
+    const me = fakeState.session?.user.id;
+    const b = TABLES.builds.find((x) => x.id === args.p_build_id);
+    const old = TABLES.build_votes.find((v) => v.build_id === b.id && v.user_id === me);
+    if (old) b[old.value === 1 ? 'up_count' : 'down_count'] -= 1;
+    TABLES.build_votes = TABLES.build_votes.filter((v) => v !== old);
+    if (args.p_value != null) {
+      TABLES.build_votes.push({ build_id: b.id, user_id: me, value: args.p_value });
+      b[args.p_value === 1 ? 'up_count' : 'down_count'] += 1;
+    }
+    return { data: { up: b.up_count, down: b.down_count, mine: args.p_value }, error: null };
   }
   return { data: null, error: null };
 }

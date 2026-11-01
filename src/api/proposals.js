@@ -74,7 +74,7 @@ export function getMyProposal(userId, id) {
 }
 
 // ---------------- 알림 (확인하면 꺼짐) ----------------
-// 알림은 DB 함수만 만든다 (지금은 재검토 요청). /me에서 보이면 읽음 처리 → 상단 빨간 점이 꺼진다.
+// 알림은 DB 함수만 만든다 (재검토 요청, 제안 승인·거절, 빌드 승인·거절·숨김·다시 공개). /me에서 보이면 읽음 처리 → 상단 빨간 점이 꺼진다.
 
 const NOTIFICATIONS_CHANGED = 'tlc:notifications-changed';
 /** 읽음 처리 등으로 알림 개수가 바뀌었을 때 상단 빨간 점이 다시 세도록 */
@@ -86,7 +86,7 @@ export function onNotificationsChanged(cb) {
 /** 안 읽은 내 알림 (최근 순). RLS가 내 것만 돌려준다. */
 export function getMyUnreadNotifications(userId) {
   return run(
-    db().from('notifications').select('id, kind, proposal_id, message, created_at')
+    db().from('notifications').select('id, kind, proposal_id, build_id, message, created_at')
       .eq('user_id', userId).is('read_at', null).order('created_at', { ascending: false }),
     '알림을 불러오지 못했어요.',
   );

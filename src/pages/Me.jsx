@@ -1,16 +1,18 @@
 import { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { PROVIDERS, getIdentities, linkProvider } from '../api/auth';
-import { getChampionMap } from '../api/ddragon';
+import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../api/ddragon';
 import { getMyProposals, getMyUnreadNotifications, markNotificationsRead } from '../api/proposals';
-import { STATUS_LABEL, TYPE_LABEL, fmtDateTime } from '../lib/format';
+import { getMyBuilds } from '../api/builds';
+import { BUILD_STATUS_LABEL, STATUS_LABEL, TYPE_LABEL, fmtDateTime } from '../lib/format';
 import { useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
 import UserName from '../components/UserName';
+import BuildCard from '../components/BuildCard';
 
 /**
- * 내 활동 (/me): 내 제안 목록과 상태, 로그인 연결.
+ * 내 활동 (/me): 내 제안·내 빌드 목록과 상태, 로그인 연결.
  * 레벨·경험치·칭호는 6단계에서 채운다 (SPEC 3장).
  */
 export default function Me() {
@@ -31,20 +33,20 @@ export default function Me() {
           {sent} 운영자가 승인하면 반영돼요.
         </p>
       )}
-      <MyProposals userId={auth.user.id} />
+      <MyActivity userId={auth.user.id} />
       <LinkedLogins userId={auth.user.id} />
     </article>
   );
 }
 
-function MyProposals({ userId }) {
+function MyActivity({ userId }) {
   const { data, error, loading, retry } = useAsync(async () => {
-    const [champs, proposals, unread] = await Promise.all([
-      getChampionMap(), getMyProposals(userId), getMyUnreadNotifications(userId),
+    const [champs, proposals, builds, unread, items, runes, spells, latest] = await Promise.all([
+      getChampionMap(), getMyProposals(userId), getMyBuilds(userId), getMyUnreadNotifications(userId),
+      getItems(), getRunes(), getSummonerSpells(), getLatestVersion(),
     ]);
-    return { champs, proposals, unread };
+    return { champs, proposals, builds, unread, game: { items, runes, spells, latest } };
   }, [userId]);
-  const name = (id) => data.champs[id]?.name ?? id;
 
   // 화면에 보인 알림 = 확인한 것 → 읽음 처리 (상단 빨간 점이 꺼진다).
   // "새 알림" 표시는 이번에 불러온 화면에서만 보인다. 재검토 요청 내용과 [고쳐서 다시 제출]은 제안 상태라 그대로 남는다.
@@ -52,13 +54,24 @@ function MyProposals({ userId }) {
   useEffect(() => {
     if (unread?.length) markNotificationsRead(unread.map((n) => n.id)).catch(() => {}); // 실패하면 다음에 다시 확인
   }, [unread]);
-  const isNew = (p) => unread?.some((n) => n.proposal_id === p.id);
+
+  if (loading) return <Loading />;
+  if (error) return <ErrorBox error={error} onRetry={retry} />;
+  return (
+    <>
+      <MyProposals data={data} />
+      <MyBuilds data={data} />
+    </>
+  );
+}
+
+function MyProposals({ data }) {
+  const name = (id) => data.champs[id]?.name ?? id;
+  const isNew = (p) => data.unread.some((n) => n.proposal_id === p.id);
 
   return (
     <section className="me-section" aria-labelledby="my-proposals">
       <h2 id="my-proposals">내 제안</h2>
-      {loading && <Loading />}
-      {error && <ErrorBox error={error} onRetry={retry} />}
       {data && data.proposals.length === 0 && <p className="empty">아직 보낸 제안이 없어요.</p>}
       {data && data.proposals.length > 0 && (
         <ul className="proposal-list">
@@ -93,6 +106,61 @@ function MyProposals({ userId }) {
                     </p>
                     <p>운영자 메모: {p.revision_note}</p>
                     <Link to={`/me/resubmit/${p.id}`} className="btn btn-small">고쳐서 다시 제출</Link>
+                  </div>
+                )}
+              </li>
+            );
+          })}
+        </ul>
+      )}
+    </section>
+  );
+}
+
+/** 내 빌드: 상태·메모·따봉 수, [이 빌드로 다시 쓰기] (승인된 빌드는 고치지 않고 새 빌드로 보낸다) */
+function MyBuilds({ data }) {
+  const name = (id) => data.champs[id]?.name ?? id;
+  const isNew = (b) => data.unread.some((n) => n.build_id === b.id);
+
+  return (
+    <section className="me-section" aria-labelledby="my-builds">
+      <h2 id="my-builds">내 빌드</h2>
+      {data.builds.length === 0 && <p className="empty">아직 보낸 빌드가 없어요. 매치업 문서의 [+ 빌드 등록]에서 보낼 수 있어요.</p>}
+      {data.builds.length > 0 && (
+        <ul className="proposal-list">
+          {data.builds.map((b) => {
+            const c = b.counter;
+            const title = c ? `${name(c.counter_champion)}(으)로 ${name(c.target_champion)} 잡는 법` : '(숨긴 카운터)';
+            const path = c && `/champion/${c.target_champion}/counter/${c.counter_champion}`;
+            const open = c?.status === 'approved';
+            return (
+              <li key={b.id} className={`proposal-row ${b.status}`} aria-label={`내 빌드: ${title}`}>
+                <div className="proposal-main">
+                  {isNew(b) && <span className="new-badge">새 알림</span>}
+                  <span className="proposal-type">빌드</span>{' '}
+                  {open && b.status === 'approved' ? <Link to={`${path}#builds`}>{title}</Link> : title}
+                </div>
+                <div className="proposal-meta">
+                  <span className={`status-badge ${b.status}`}>{BUILD_STATUS_LABEL[b.status]}</span>
+                  <span>보낸 날 {fmtDateTime(b.created_at)}</span>
+                  {b.reviewed_at && <span>처리 {fmtDateTime(b.reviewed_at)}</span>}
+                  {['approved', 'hidden'].includes(b.status) && <span>👍 {b.up} · 👎 {b.down}</span>}
+                </div>
+                {b.status === 'approved' && b.approve_note && <p className="approve-note">승인 메모: {b.approve_note}</p>}
+                {b.status === 'rejected' && <p className="reject-reason">거절 사유: {b.reject_reason}</p>}
+                {b.status === 'hidden' && (
+                  <p className="reject-reason">
+                    숨긴 사유: {b.hide_reason}
+                    {b.hidden_at && <> ({fmtDateTime(b.hidden_at)})</>}
+                  </p>
+                )}
+                <details className="build-summary">
+                  <summary>빌드 보기</summary>
+                  <BuildCard build={b} {...data.game} />
+                </details>
+                {open && (
+                  <div className="row-actions">
+                    <Link to={`${path}/build/new?from=${b.id}`} className="btn btn-small">이 빌드로 다시 쓰기</Link>
                   </div>
                 )}
               </li>

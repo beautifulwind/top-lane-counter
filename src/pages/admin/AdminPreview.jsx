@@ -1,11 +1,12 @@
 import { Link, useParams } from 'react-router-dom';
 import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../../api/ddragon';
-import { getBuilds } from '../../api/content';
+import { getBuilds } from '../../api/builds';
 import { getHiddenMatchup } from '../../api/proposals';
 import { useAsync } from '../../lib/useAsync';
 import { ErrorBox, Loading } from '../../components/Status';
 import RequireOperator from '../../components/RequireOperator';
-import { BuildCard, LevelList } from '../Matchup';
+import { LevelList } from '../Matchup';
+import BuildCard from '../../components/BuildCard';
 
 /** 숨긴 카운터 미리보기 (읽기 전용): /admin/preview/:targetId/:counterId — 숨긴 문서·빌드는 DB가 운영자에게만 보여 준다 */
 export default function AdminPreview() {

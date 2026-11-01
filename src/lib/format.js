@@ -9,4 +9,5 @@ export function fmtDateTime(ts) {
 }
 
 export const STATUS_LABEL = { pending: '대기 중', approved: '승인', rejected: '거절', revoked: '승인 취소', revision_requested: '재검토 요청' };
+export const BUILD_STATUS_LABEL = { pending: '대기 중', approved: '공개', rejected: '거절', hidden: '숨김' };
 export const TYPE_LABEL = { new_counter: '새 카운터', doc_edit: '문서 수정' };

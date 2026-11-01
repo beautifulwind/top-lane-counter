@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { getChampionMap } from '../../api/ddragon';
+import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../../api/ddragon';
+import { approveBuild, getHiddenBuilds, getPendingBuilds, rejectBuild, restoreBuild } from '../../api/builds';
+import { buildReviewFlags, quickBuildBlock } from '../../lib/buildContent';
+import BuildCard, { BuildAuthor } from '../../components/BuildCard';
 import {
   approveProposal, getDeletions, getHiddenCounters, getPendingProposals, rejectProposal, requestRevision, restoreCounter,
 } from '../../api/proposals';
@@ -11,7 +14,7 @@ import RequireOperator from '../../components/RequireOperator';
 import UserName from '../../components/UserName';
 import NoteForm from '../../components/NoteForm';
 
-/** 운영자 페이지: 승인 대기·숨긴 카운터를 목록에서 바로 처리 (메모 입력이 확인 단계), 삭제 기록 */
+/** 운영자 페이지: 승인 대기·숨긴 카운터·빌드 승인 대기·숨긴 빌드를 목록에서 바로 처리 (메모 입력이 확인 단계), 삭제 기록 */
 export default function AdminHome() {
   return (
     <RequireOperator>
@@ -24,10 +27,15 @@ function PendingList() {
   const location = useLocation();
   const [done, setDone] = useState(location.state?.done ?? null);
   const { data, error, loading, retry } = useAsync(async () => {
-    const [champs, pending, hidden, deletions] = await Promise.all([
-      getChampionMap(), getPendingProposals(), getHiddenCounters(), getDeletions(),
+    const [champs, pending, hidden, deletions, builds, hiddenBuilds, items, runes, spells, latest] = await Promise.all([
+      getChampionMap(), getPendingProposals(), getHiddenCounters(), getDeletions(), getPendingBuilds(), getHiddenBuilds(),
+      getItems(), getRunes(), getSummonerSpells(), getLatestVersion(),
     ]);
-    return { champs, pending, hidden, deletions };
+    const game = { items, runes, spells, latest };
+    const pendingBuilds = builds.pending.map((b) => ({
+      ...b, block: quickBuildBlock(buildReviewFlags(b, game, builds.approved), b, latest),
+    }));
+    return { champs, pending, hidden, deletions, pendingBuilds, hiddenBuilds, game };
   }, []);
   const name = (id) => data.champs[id]?.name ?? id;
   /** 줄에서 처리를 마치면: 안내를 띄우고 목록을 다시 불러온다 */
@@ -65,6 +73,36 @@ function PendingList() {
             <ul className="proposal-list">
               {data.hidden.map((c) => (
                 <HiddenRow key={c.id} counter={c} name={name} onDone={finished} />
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {data && (
+        <section className="section">
+          <h2 className="section-title">빌드 승인 대기 ({data.pendingBuilds.length})</h2>
+          {data.pendingBuilds.length === 0 ? (
+            <p className="empty">대기 중인 빌드가 없어요.</p>
+          ) : (
+            <ul className="proposal-list">
+              {data.pendingBuilds.map((b) => (
+                <PendingBuildRow key={b.id} build={b} game={data.game} name={name} onDone={finished} />
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
+
+      {data && (
+        <section className="section">
+          <h2 className="section-title">숨긴 빌드 ({data.hiddenBuilds.length})</h2>
+          {data.hiddenBuilds.length === 0 ? (
+            <p className="empty">숨긴 빌드가 없어요.</p>
+          ) : (
+            <ul className="proposal-list">
+              {data.hiddenBuilds.map((b) => (
+                <HiddenBuildRow key={b.id} build={b} game={data.game} name={name} onDone={finished} />
               ))}
             </ul>
           )}
@@ -260,6 +298,118 @@ function HiddenRow({ counter: c, name, onDone }) {
           ))}
         </ul>
       </details>
+    </li>
+  );
+}
+
+/** 빌드의 매치업 제목 (숨긴 카운터도 운영자는 읽는다) */
+function buildTitle(build, name) {
+  const c = build.counter;
+  return c ? `${name(c.counter_champion)}(으)로 ${name(c.target_champion)} 잡는 법` : '(알 수 없는 매치업)';
+}
+
+/** 빌드 승인 대기 한 줄: [승인] [거절]은 그 자리에 메모 입력창. 위험하면 [승인]을 잠그고 [자세히]로 */
+function PendingBuildRow({ build: b, game, name, onDone }) {
+  const [open, setOpen] = useState(null); // 'approve' | 'reject' | null
+  const title = buildTitle(b, name);
+  const toggle = (kind) => setOpen(open === kind ? null : kind);
+  const who = b.author?.nickname ?? '예시 빌드';
+
+  return (
+    <li className="proposal-row" aria-label={`[빌드] ${title}`}>
+      <div className="proposal-main">
+        <span className="proposal-type">빌드</span> {title}
+      </div>
+      <div className="proposal-meta">
+        <BuildAuthor build={b} />
+        <span>{fmtDateTime(b.created_at)}</span>
+      </div>
+      {b.block && <p className="block-reason">{b.block} 내용을 [자세히]에서 확인해 주세요.</p>}
+      <details className="build-summary">
+        <summary>빌드 보기</summary>
+        <BuildCard build={b} {...game} />
+      </details>
+      <div className="row-actions">
+        <button type="button" className="btn btn-small" onClick={() => toggle('approve')} disabled={!!b.block} aria-expanded={open === 'approve'}>
+          승인
+        </button>
+        <button type="button" className="btn btn-small" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>
+          거절
+        </button>
+        <Link to={`/admin/builds/${b.id}`} className="btn btn-small">자세히</Link>
+      </div>
+      {open === 'approve' && (
+        <NoteForm
+          id={`approve-build-${b.id}`}
+          label="승인 메모 (필수, 작성자에게 보여요)"
+          confirmLabel="승인 확정"
+          busyLabel="승인 중…"
+          onCancel={() => setOpen(null)}
+          onSubmit={async (note) => {
+            await approveBuild(b.id, note);
+            onDone(`빌드를 승인했어요: ${title} (${who})`);
+          }}
+        />
+      )}
+      {open === 'reject' && (
+        <NoteForm
+          id={`reject-build-${b.id}`}
+          label="거절 사유 (필수, 작성자에게 보여요)"
+          confirmLabel="거절 확정"
+          busyLabel="거절 중…"
+          onCancel={() => setOpen(null)}
+          onSubmit={async (reason) => {
+            await rejectBuild(b.id, reason);
+            onDone(`빌드를 거절했어요: ${title} (${who})`);
+          }}
+        />
+      )}
+    </li>
+  );
+}
+
+/** 숨긴 빌드 한 줄: [다시 공개]는 그 자리에 메모 입력창 */
+function HiddenBuildRow({ build: b, game, name, onDone }) {
+  const [open, setOpen] = useState(false);
+  const title = buildTitle(b, name);
+  const counterHidden = b.counter?.status !== 'approved';
+  const who = b.author?.nickname ?? '예시 빌드';
+
+  return (
+    <li className="proposal-row" aria-label={`[숨긴 빌드] ${title}`}>
+      <div className="proposal-main">
+        <span className="proposal-type">빌드</span> {title}
+      </div>
+      <div className="proposal-meta">
+        <BuildAuthor build={b} />
+        {b.hidden_at && <span>숨긴 날 {fmtDateTime(b.hidden_at)}</span>}
+        <span>👍 {b.up} · 👎 {b.down}</span>
+      </div>
+      <p className="reject-reason">사유: {b.hide_reason}</p>
+      {counterHidden && <p className="hint">카운터가 숨겨져 있어서, 다시 공개해도 카운터를 공개하기 전까지는 안 보여요.</p>}
+      <details className="build-summary">
+        <summary>빌드 보기</summary>
+        <BuildCard build={b} {...game} />
+      </details>
+      <div className="row-actions">
+        <button type="button" className="btn btn-small" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+          다시 공개
+        </button>
+        <Link to={`/admin/builds/${b.id}`} className="btn btn-small">자세히</Link>
+      </div>
+      {open && (
+        <NoteForm
+          id={`restore-build-${b.id}`}
+          label="다시 공개 메모 (필수, 작성자에게 보여요)"
+          confirmLabel="다시 공개 확정"
+          busyLabel="공개하는 중…"
+          onCancel={() => setOpen(false)}
+          onSubmit={async (note) => {
+            await restoreBuild(b.id, note);
+            onDone(`빌드를 다시 공개했어요: ${title} (${who})`);
+          }}
+        />
+      )}
     </li>
   );
 }

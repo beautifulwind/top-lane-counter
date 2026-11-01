@@ -1,11 +1,12 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../api/ddragon';
-import { getBuilds, getMatchup } from '../api/content';
+import { getMatchup } from '../api/content';
+import { getBuilds } from '../api/builds';
 import { useAsync } from '../lib/useAsync';
 import { useAuth } from '../lib/auth';
-import { ErrorBox, Loading, PendingButton } from '../components/Status';
-import UserName from '../components/UserName';
+import { ErrorBox, Loading } from '../components/Status';
+import BuildCard from '../components/BuildCard';
 import NoteForm from '../components/NoteForm';
 import { hideCounter } from '../api/proposals';
 import { REQUIRED_LEVELS } from '../lib/docContent';
@@ -14,13 +15,15 @@ import NotFound from './NotFound';
 
 export default function Matchup() {
   const { targetId, counterId } = useParams();
-  const { isOperator } = useAuth();
+  const { isOperator, user } = useAuth();
+  const userId = user?.id ?? null;
   const navigate = useNavigate();
   const [hiding, setHiding] = useState(false);
+  const [buildNotice, setBuildNotice] = useState(null);
   const { data, error, loading, retry } = useAsync(
     async () => {
       const [champs, matchup] = await Promise.all([getChampionMap(), getMatchup(targetId, counterId)]);
-      const builds = matchup ? await getBuilds(matchup.counter.id) : [];
+      const builds = matchup ? await getBuilds(matchup.counter.id, userId) : [];
       const [items, runes, spells, latest] = await Promise.all([
         getItems(),
         getRunes(),
@@ -29,7 +32,7 @@ export default function Matchup() {
       ]);
       return { champs, matchup, builds, items, runes, spells, latest };
     },
-    [targetId, counterId],
+    [targetId, counterId, userId],
   );
 
   if (loading) return <Loading />;
@@ -124,14 +127,26 @@ export default function Matchup() {
 
       <section className="section" id="builds">
         <h2 className="section-title"><span className="num">3.</span> 빌드</h2>
-        <p className="hint">따봉 점수(따봉 − 반대)가 높은 순서예요.</p>
+        <p className="hint">점수(따봉 − 비추)가 높은 순서예요. 점수가 같으면 투표가 많은 빌드, 그다음 최근 빌드가 먼저예요.</p>
+        {buildNotice && <p className="notice" role="status">{buildNotice}</p>}
         {data.builds.length === 0 ? (
           <p className="empty">아직 등록된 빌드가 없어요.</p>
         ) : (
-          data.builds.map((b) => <BuildCard key={b.id} build={b} {...data} />)
+          data.builds.map((b) => (
+            <BuildCard
+              key={b.id}
+              build={b}
+              {...data}
+              interactive
+              onHidden={(message) => {
+                setBuildNotice(message);
+                retry();
+              }}
+            />
+          ))
         )}
         <div className="actions">
-          <PendingButton>+ 빌드 등록</PendingButton>
+          <Link to={`/champion/${targetId}/counter/${counterId}/build/new`} className="btn">+ 빌드 등록</Link>
         </div>
       </section>
     </article>
@@ -155,100 +170,5 @@ export function LevelList({ doc }) {
         </div>
       ))}
     </dl>
-  );
-}
-
-function Icon({ entry, size = 32, round = false }) {
-  if (!entry) return null;
-  return (
-    <img
-      src={entry.icon}
-      alt={entry.name}
-      title={entry.name}
-      width={size}
-      height={size}
-      className={round ? 'ico round' : 'ico'}
-      loading="lazy"
-    />
-  );
-}
-
-/** 빌드 카드 (매치업 문서·운영자 미리보기 공용) */
-export function BuildCard({ build, items, runes, spells, latest }) {
-  const r = build.runes;
-  const outdated = build.patch !== latest;
-  const score = build.up - build.down;
-  return (
-    <div className="build">
-      <div className="build-head">
-        <span className="build-author">
-          {build.author ? <UserName profile={build.author} /> : '예시 빌드'}
-        </span>
-        <span className={outdated ? 'badge old' : 'badge'}>
-          {outdated ? `구버전 · ${build.patch}` : `패치 ${build.patch}`}
-        </span>
-      </div>
-
-      <div className="build-row">
-        <span className="label">특성</span>
-        <div className="icons">
-          <Icon entry={runes.runes[r.keystone]} size={40} round />
-          {r.primary.map((id) => <Icon key={id} entry={runes.runes[id]} size={28} round />)}
-          <span className="sep" />
-          <Icon entry={runes.paths[r.secondaryPath]} size={22} round />
-          {r.secondary.map((id) => <Icon key={id} entry={runes.runes[id]} size={28} round />)}
-          <span className="sep" />
-          {r.shards.map((id, i) => <Icon key={i} entry={runes.shards[id]} size={20} round />)}
-        </div>
-      </div>
-
-      <div className="build-row">
-        <span className="label">주문</span>
-        <div className="icons">
-          {build.summoner_spells.map((id) => <Icon key={id} entry={spells[id]} />)}
-        </div>
-      </div>
-
-      <div className="build-row">
-        <span className="label">시작</span>
-        <div className="icons">
-          {build.starting_items.map((id, i) => <Icon key={i} entry={items[id]} />)}
-        </div>
-      </div>
-
-      <div className="build-row">
-        <span className="label">템트리</span>
-        <div className="icons">
-          {build.core_items.map((id, i) => (
-            <span key={i} className="step">
-              {i > 0 && <span className="arrow">›</span>}
-              <Icon entry={items[id]} />
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <div className="build-row">
-        <span className="label">스킬</span>
-        <div className="skills">
-          {build.skill_order.map((k, i) => (
-            <span key={k} className="step">
-              {i > 0 && <span className="arrow">›</span>}
-              <kbd>{k}</kbd>
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <div className="votes">
-        <button type="button" className="vote" onClick={() => alert('투표는 로그인 기능 이후에 연결됩니다.')}>
-          👍 {build.up}
-        </button>
-        <button type="button" className="vote" onClick={() => alert('투표는 로그인 기능 이후에 연결됩니다.')}>
-          👎 {build.down}
-        </button>
-        <span className="score">점수 {score > 0 ? `+${score}` : score}</span>
-      </div>
-    </div>
   );
 }

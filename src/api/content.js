@@ -43,20 +43,4 @@ export async function getMatchup(targetId, counterId) {
   return { counter, doc: doc && { ...doc, updated_at: day(doc.updated_at) } };
 }
 
-/** 매치업의 공개된 빌드 목록 (따봉 점수 높은 순, 같으면 먼저 등록된 순) */
-export async function getBuilds(counterRowId) {
-  const rows = await run(
-    db()
-      .from('builds')
-      .select(
-        'id, counter_id, runes, summoner_spells, starting_items, core_items, skill_order, patch, up_count, down_count, created_at, ' +
-          'author:profiles!builds_author_id_fkey(nickname, level, main_title)',
-      )
-      .eq('counter_id', counterRowId)
-      .eq('status', 'approved')
-      .order('created_at', { ascending: true }),
-  );
-  return rows
-    .map(({ up_count, down_count, ...b }) => ({ ...b, up: up_count, down: down_count }))
-    .sort((a, b) => b.up - b.down - (a.up - a.down));
-}
+// 빌드는 src/api/builds.js

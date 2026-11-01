@@ -27,8 +27,9 @@ set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select approve_proposal((select v from ids where k = 'garen_p'), '좋아요') as garen \gset
 insert into ids values ('garen', :garen);
 reset role;
-insert into builds (counter_id, runes, summoner_spells, skill_order, patch, status)
-values (:garen, '{}', array['SummonerFlash','SummonerTeleport'], '["Q","E","W"]', '16.1.1', 'approved');
+insert into builds (counter_id, runes, summoner_spells, starting_items, core_items, skill_order, early_skills, patch, status)
+values (:garen, '{"primaryPath":8000,"keystone":8010,"primary":[9111,9104,8299],"secondaryPath":8400,"secondary":[8444,8242],"shards":[5005,5008,5011]}',
+        array['SummonerFlash','SummonerTeleport'], array['1055','2003'], array['6631','3047','3053'], '["Q","E","W"]', array['Q','E','W'], '16.1.1', 'approved');
 insert into build_votes (build_id, user_id, value)
 select id, '00000000-0000-0000-0000-00000000000d', 1 from builds where counter_id = :garen;
 set role authenticated;
