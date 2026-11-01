@@ -32,9 +32,10 @@ function Review() {
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
   if (!data.review) return <p className="empty">제안을 찾지 못했어요.</p>;
-  const { proposal: p, current, exists, hidden, stale } = data.review;
+  const { proposal: p, current, exists, hidden, stale, resubmitted } = data.review;
   const name = (cid) => data.champs[cid]?.name ?? cid;
   const title = `${name(p.counter_champion)}(으)로 ${name(p.target_champion)} 잡는 법`;
+  const label = resubmitted ? '재검토 후 다시 낸 제안' : TYPE_LABEL[p.type];
 
   const act = async (kind) => {
     setBusy(kind);
@@ -42,7 +43,8 @@ function Review() {
     try {
       if (kind === 'approve') await approveProposal(p.id);
       else await rejectProposal(p.id, reason);
-      navigate('/admin', { state: { done: `${kind === 'approve' ? '승인' : '거절'}했어요: [${TYPE_LABEL[p.type]}] ${title}` } });
+      const what = kind === 'approve' ? (resubmitted ? '승인하고 다시 공개' : '승인') : '거절';
+      navigate('/admin', { state: { done: `${what}했어요: [${label}] ${title}` } });
     } catch (e) {
       setActionError(e.message);
       setBusy(null);
@@ -52,7 +54,7 @@ function Review() {
   return (
     <article>
       <nav className="crumbs"><Link to="/admin">운영자 페이지</Link> › 제안 #{p.id}</nav>
-      <h1 className="doc-title">[{TYPE_LABEL[p.type]}] {title}</h1>
+      <h1 className="doc-title">[{label}] {title}</h1>
       <p className="proposal-meta">
         {p.proposer ? <UserName profile={p.proposer} /> : <span>(탈퇴한 유저)</span>}
         <span>{fmtDateTime(p.created_at)}</span>
@@ -66,6 +68,12 @@ function Review() {
             : '숨긴 카운터의 제안이에요. 승인할 수 없으니 거절해 주세요.'}
         </p>
       )}
+      {resubmitted && p.status === 'pending' && (
+        <div className="revision-note" role="note">
+          <p>숨긴 카운터의 제안자가 재검토 요청을 받고 고쳐서 다시 낸 제안이에요. <strong>승인하면 고친 내용으로 다시 공개</strong>되고(목록 맨 뒤), 거절하면 계속 숨김이에요.</p>
+          <p>보낸 재검토 메모: {p.revision_note}</p>
+        </div>
+      )}
       {p.type === 'new_counter' && exists && p.status === 'pending' && (
         <p className="warn" role="alert">이미 같은 카운터가 공개돼 있어요. 승인할 수 없으니 거절해 주세요.</p>
       )}
@@ -77,9 +85,9 @@ function Review() {
 
       <section className="section">
         <h2 className="section-title">
-          {p.type === 'new_counter' ? '제안한 문서 내용' : '바뀐 부분 (지금 문서 → 제안)'}
+          {resubmitted ? '바뀐 부분 (숨긴 문서 → 고친 내용)' : p.type === 'new_counter' ? '제안한 문서 내용' : '바뀐 부분 (지금 문서 → 제안)'}
         </h2>
-        <DiffView before={p.type === 'doc_edit' ? current : null} after={p.content} />
+        <DiffView before={p.type === 'doc_edit' || resubmitted ? current : null} after={p.content} />
       </section>
 
       {p.status === 'pending' ? (

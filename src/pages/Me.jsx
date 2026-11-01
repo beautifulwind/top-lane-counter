@@ -54,7 +54,7 @@ function MyProposals({ userId }) {
         <ul className="proposal-list">
           {data.proposals.map((p) => {
             const title = `${name(p.counter_champion)}(으)로 ${name(p.target_champion)} 잡는 법`;
-            const live = p.status === 'approved' || (p.type === 'doc_edit' && p.status !== 'revoked');
+            const live = p.status === 'approved' || (p.type === 'doc_edit' && !['revoked', 'revision_requested'].includes(p.status));
             return (
               <li key={p.id} className={`proposal-row ${p.status}`}>
                 <div className="proposal-main">
@@ -72,6 +72,16 @@ function MyProposals({ userId }) {
                     승인 취소 사유: {p.revoke_reason}
                     {p.revoked_at && <> ({fmtDateTime(p.revoked_at)})</>}
                   </p>
+                )}
+                {p.status === 'revision_requested' && (
+                  <div className="revision-note">
+                    <p>
+                      <strong>재검토 요청</strong>
+                      {p.revision_requested_at && <small> ({fmtDateTime(p.revision_requested_at)})</small>}
+                    </p>
+                    <p>운영자 메모: {p.revision_note}</p>
+                    <Link to={`/me/resubmit/${p.id}`} className="btn btn-small">고쳐서 다시 제출</Link>
+                  </div>
                 )}
               </li>
             );

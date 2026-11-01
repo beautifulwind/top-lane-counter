@@ -55,11 +55,6 @@ export default function Matchup() {
   }
 
   const doc = data.matchup.doc;
-  const levels = doc
-    ? Object.entries(doc.level_notes)
-        .map(([lv, text]) => [Number(lv), text])
-        .sort((a, b) => a[0] - b[0])
-    : [];
 
   return (
     <article>
@@ -87,18 +82,7 @@ export default function Matchup() {
 
       <section className="section" id="levels">
         <h2 className="section-title"><span className="num">1.</span> 레벨별 딜교법</h2>
-        {levels.length === 0 ? (
-          <p className="empty">아직 작성된 내용이 없어요.</p>
-        ) : (
-          <dl className="level-list">
-            {levels.map(([lv, text]) => (
-              <div key={lv} className={REQUIRED_LEVELS.includes(lv) ? 'level req' : 'level'}>
-                <dt>{lv}레벨</dt>
-                <dd>{text}</dd>
-              </div>
-            ))}
-          </dl>
-        )}
+        <LevelList doc={doc} />
       </section>
 
       <section className="section" id="cautions">
@@ -131,6 +115,26 @@ export default function Matchup() {
   );
 }
 
+/** 레벨별 딜교법 목록 (매치업 문서·운영자 미리보기 공용) */
+export function LevelList({ doc }) {
+  const levels = doc
+    ? Object.entries(doc.level_notes ?? {})
+        .map(([lv, text]) => [Number(lv), text])
+        .sort((a, b) => a[0] - b[0])
+    : [];
+  if (levels.length === 0) return <p className="empty">아직 작성된 내용이 없어요.</p>;
+  return (
+    <dl className="level-list">
+      {levels.map(([lv, text]) => (
+        <div key={lv} className={REQUIRED_LEVELS.includes(lv) ? 'level req' : 'level'}>
+          <dt>{lv}레벨</dt>
+          <dd>{text}</dd>
+        </div>
+      ))}
+    </dl>
+  );
+}
+
 function Icon({ entry, size = 32, round = false }) {
   if (!entry) return null;
   return (
@@ -146,7 +150,8 @@ function Icon({ entry, size = 32, round = false }) {
   );
 }
 
-function BuildCard({ build, items, runes, spells, latest }) {
+/** 빌드 카드 (매치업 문서·운영자 미리보기 공용) */
+export function BuildCard({ build, items, runes, spells, latest }) {
   const r = build.runes;
   const outdated = build.patch !== latest;
   const score = build.up - build.down;

@@ -308,3 +308,14 @@ button.champ-cell:disabled { opacity: .4; cursor: default; }
 .restore-form label { font-size: 13px; color: var(--muted); }
 .restore-form input { flex: 1; min-width: 160px; padding: 8px 10px; font: inherit; font-size: 16px; border: 1px solid var(--line); border-radius: var(--radius); }
 .log-list { margin: 6px 0 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
+
+/* 숨긴 카운터 도구 · 재검토 요청 */
+.alert-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #e74c3c; box-shadow: 0 0 0 2px #fff; flex: none; }
+.hidden-state { margin: 6px 0 0; font-size: 14px; font-weight: 600; }
+.hidden-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.restore-form textarea { flex-basis: 100%; padding: 8px 10px; font: inherit; font-size: 16px; border: 1px solid var(--line); border-radius: var(--radius); }
+.btn-danger { color: var(--warn); border-color: var(--warn); }
+.btn-danger:disabled { color: inherit; border-color: inherit; }
+.revision-note { margin: 8px 0; padding: 10px 12px; border-left: 3px solid var(--brand); background: var(--soft); border-radius: var(--radius); font-size: 14px; }
+.revision-note p { margin: 0 0 6px; white-space: pre-wrap; }
+.revision-note p:last-child { margin-bottom: 0; }

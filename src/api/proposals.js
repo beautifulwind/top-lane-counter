@@ -6,7 +6,7 @@ import { cleanDoc } from '../lib/docContent';
 const PERSON = 'nickname, level, main_title';
 const PROPOSAL_COLUMNS =
   'id, type, target_champion, counter_champion, counter_id, content, status, reject_reason, reviewed_at, created_at, base_revision_id, ' +
-  'revoke_reason, revoked_at, ' +
+  'revoke_reason, revoked_at, revision_note, revision_requested_at, resubmitted_at, ' +
   `proposer:profiles!edit_proposals_proposer_id_fkey(${PERSON})`;
 const DOC_COLUMNS = 'counter_id, summary, level_notes, lane_cautions, updated_at, revision_id';
 
@@ -65,6 +65,30 @@ export function getMyProposals(userId) {
   );
 }
 
+/** 내 제안 하나 (다시 제출 화면용). RLS가 내 것만 돌려준다. */
+export function getMyProposal(userId, id) {
+  return run(
+    db().from('edit_proposals').select(PROPOSAL_COLUMNS).eq('proposer_id', userId).eq('id', id).maybeSingle(),
+    '제안을 불러오지 못했어요.',
+  );
+}
+
+/** 운영자가 재검토를 요청한 내 제안 개수 (상단 빨간 점) */
+export async function getMyRevisionRequestCount(userId) {
+  const rows = await run(
+    db().from('edit_proposals').select('id').eq('proposer_id', userId).eq('status', 'revision_requested'),
+    '알림을 불러오지 못했어요.',
+  );
+  return rows.length;
+}
+
+/** 재검토 요청 받은 내 제안을 고쳐서 다시 제출 → 승인 대기. 본인만 (DB 함수가 확인) */
+export const resubmitProposal = (id, content) =>
+  rpc('resubmit_proposal', { p_id: id, p_content: cleanDoc(content) }, '다시 제출하지 못했어요.');
+
+/** 재검토 후 다시 낸 제안인가 (새 카운터 제안인데 이미 숨긴 카운터가 정해져 있음) */
+export const isResubmission = (p) => p.type === 'new_counter' && p.counter_id != null && p.resubmitted_at != null;
+
 // ---------------- 운영자 ----------------
 
 /** 승인 대기 목록 (오래된 순) */
@@ -78,7 +102,8 @@ export function getPendingProposals() {
 /**
  * 제안 하나 + 비교할 지금 문서.
  * { proposal, current: 지금 문서 | null, exists: (새 카운터) 이미 공개된 같은 카운터가 있나,
- *   hidden: 대상 카운터를 운영자가 숨겼나, stale: 제안 후 문서가 바뀌었나 }
+ *   hidden: 대상 카운터를 운영자가 숨겼나(승인 불가), stale: 제안 후 문서가 바뀌었나,
+ *   resubmitted: 재검토 후 다시 낸 제안인가(current = 숨긴 문서, 승인하면 다시 공개) }
  */
 export async function getProposalForReview(id) {
   const proposal = await run(
@@ -102,12 +127,14 @@ export async function getProposalForReview(id) {
       '지금 카운터 목록을 확인하지 못했어요.',
     );
   const current = one(counter?.matchup_docs);
-  const hidden = counter?.status === 'hidden';
+  // 재검토 후 다시 낸 제안: 숨긴 문서 → 고친 내용을 비교하고, 승인하면 다시 공개된다
+  const resubmitted = isResubmission(proposal) && counter?.status === 'hidden';
+  const hidden = counter?.status === 'hidden' && !resubmitted;
   // 이미 승인된 새 카운터 제안이면 그 카운터는 "자기 자신"이라 중복 경고 대상이 아니다
   const exists = proposal.type === 'doc_edit' || counter?.status === 'approved';
   const stale = proposal.type === 'doc_edit' && proposal.status === 'pending' && current != null
     && proposal.base_revision_id != null && current.revision_id !== proposal.base_revision_id;
-  return { proposal, current: proposal.type === 'doc_edit' ? current : null, exists, hidden, stale };
+  return { proposal, current: proposal.type === 'doc_edit' || resubmitted ? current : null, exists, hidden, stale, resubmitted };
 }
 
 const one = (v) => (Array.isArray(v) ? v[0] ?? null : v ?? null);
@@ -149,19 +176,89 @@ export const hideCounter = (counterRowId, reason) =>
 export const restoreCounter = (counterRowId, note) =>
   rpc('restore_counter', { p_counter_id: counterRowId, p_note: note || null }, '다시 공개하지 못했어요.');
 
-/** 숨긴 카운터 목록 + 각 카운터의 숨김·공개 기록(최근 순) — 운영자만 */
+/**
+ * 숨긴 카운터 목록 — 운영자만.
+ * 각 카운터: logs(숨김·공개·재검토 기록, 최근 순), origin(그 카운터를 만든 제안 | null: 초기 데이터처럼 제안 없이 생김)
+ */
 export async function getHiddenCounters() {
   const counters = await run(
     db().from('counters').select('id, target_champion, counter_champion, status').eq('status', 'hidden'),
     '숨긴 카운터를 불러오지 못했어요.',
   );
   if (counters.length === 0) return [];
-  const logs = await run(
+  const ids = counters.map((c) => c.id);
+  const [logs, origins] = await Promise.all([
+    run(
+      db()
+        .from('counter_status_log')
+        .select(`id, counter_id, action, reason, created_at, actor:profiles!counter_status_log_actor_fkey(${PERSON})`)
+        .in('counter_id', ids)
+        .order('created_at', { ascending: false })
+        .order('id', { ascending: false }),
+      '숨김 기록을 불러오지 못했어요.',
+    ),
+    run(
+      db().from('edit_proposals').select(PROPOSAL_COLUMNS).eq('type', 'new_counter').in('counter_id', ids)
+        .order('id', { ascending: false }),
+      '원래 제안을 불러오지 못했어요.',
+    ),
+  ]);
+  return counters.map((c) => ({
+    ...c,
+    logs: logs.filter((l) => l.counter_id === c.id),
+    origin: origins.find((p) => p.counter_id === c.id) ?? null,
+  }));
+}
+
+/** 숨긴 카운터의 매치업 문서 (운영자 미리보기). 숨긴 카운터가 아니면 null */
+export async function getHiddenMatchup(targetId, counterId) {
+  const row = await run(
     db()
-      .from('counter_status_log')
-      .select(`id, counter_id, action, reason, created_at, actor:profiles!counter_status_log_actor_fkey(${PERSON})`)
-      .order('created_at', { ascending: false }),
-    '숨김 기록을 불러오지 못했어요.',
+      .from('counters')
+      .select(`id, target_champion, counter_champion, status, matchup_docs(${DOC_COLUMNS})`)
+      .eq('target_champion', targetId)
+      .eq('counter_champion', counterId)
+      .eq('status', 'hidden')
+      .maybeSingle(),
+    '숨긴 카운터를 불러오지 못했어요.',
   );
-  return counters.map((c) => ({ ...c, logs: logs.filter((l) => l.counter_id === c.id) }));
+  if (!row) return null;
+  const { matchup_docs, ...counter } = row;
+  return { counter, doc: one(matchup_docs) };
+}
+
+/** 재검토 요청: 메모 필수. 그 카운터를 만든 제안이 "재검토 요청"이 되고 제안자 /me에 메모가 보인다 */
+export const requestRevision = (counterRowId, note) =>
+  rpc('request_revision', { p_counter_id: counterRowId, p_note: note }, '재검토를 요청하지 못했어요.');
+
+/** 완전 삭제할 때 함께 지워지는 것 개수 */
+export async function getDeletionCounts(counterRowId) {
+  const [proposals, revisions, builds] = await Promise.all([
+    run(db().from('edit_proposals').select('id').eq('counter_id', counterRowId), '개수를 세지 못했어요.'),
+    run(db().from('doc_revisions').select('id').eq('counter_id', counterRowId), '개수를 세지 못했어요.'),
+    run(db().from('builds').select('id').eq('counter_id', counterRowId), '개수를 세지 못했어요.'),
+  ]);
+  const votes = builds.length === 0 ? [] : await run(
+    db().from('build_votes').select('build_id').in('build_id', builds.map((b) => b.id)),
+    '개수를 세지 못했어요.',
+  );
+  return { proposals: proposals.length, revisions: revisions.length, builds: builds.length, votes: votes.length };
+}
+
+/** 완전 삭제: 숨긴 카운터만. confirmChampion = 이기는 챔피언 ID (DB가 실제 카운터와 같은지 확인) */
+export const deleteCounter = (counterRowId, confirmChampion, reason) =>
+  rpc('delete_counter', { p_counter_id: counterRowId, p_confirm: confirmChampion, p_reason: reason }, '삭제하지 못했어요.');
+
+/** 삭제 기록 (최근 순) — 운영자만 */
+export function getDeletions() {
+  return run(
+    db()
+      .from('counter_deletions')
+      .select(
+        'id, target_champion, counter_champion, reason, deleted_at, proposals_count, revisions_count, builds_count, votes_count, ' +
+          `deleter:profiles!counter_deletions_deleted_by_fkey(${PERSON}), proposer:profiles!counter_deletions_proposer_id_fkey(${PERSON})`,
+      )
+      .order('deleted_at', { ascending: false }),
+    '삭제 기록을 불러오지 못했어요.',
+  );
 }
