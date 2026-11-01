@@ -26,30 +26,82 @@ export const TABLES = {
     build(103, { nickname: '칭호없음', level: 3, main_title: null }, { up_count: 2 }),
     build(104, { nickname: '대기중', level: 1, main_title: null }, { status: 'pending', up_count: 99 }),
   ],
+  profiles: [
+    { id: 'u-old', nickname: '기존유저', role: 'user', xp: 0, level: 1, main_title: null },
+  ],
 };
 
-export const fakeState = { error: null };
+// 테스트가 바꾸는 상태. setupTests.js가 테스트마다 초기화한다.
+export const fakeState = { error: null, session: null, initError: null, oauthCalls: [], listeners: new Set() };
+const INITIAL_PROFILES = TABLES.profiles.map((p) => ({ ...p }));
+
+export function resetFake() {
+  fakeState.error = null;
+  fakeState.session = null;
+  fakeState.initError = null;
+  fakeState.oauthCalls = [];
+  fakeState.listeners.clear();
+  TABLES.profiles = INITIAL_PROFILES.map((p) => ({ ...p }));
+}
+
+/** 테스트에서 "구글 로그인을 마치고 돌아온" 상태 만들기. DB 트리거처럼 프로필도 만든다. */
+export function fakeLogin(id, profile = {}) {
+  if (!TABLES.profiles.some((p) => p.id === id)) {
+    TABLES.profiles.push({ id, nickname: null, role: 'user', xp: 0, level: 1, main_title: null, ...profile });
+  }
+  fakeState.session = { user: { id }, access_token: 'fake' };
+  fakeState.listeners.forEach((cb) => cb('SIGNED_IN', fakeState.session));
+}
 
 function query(table) {
   let rows = [...(TABLES[table] ?? [])];
   let single = false;
+  let patch = null;
   const q = {
     select: () => q,
+    update: (values) => { patch = values; return q; },
     eq: (col, v) => { rows = rows.filter((r) => r[col] === v); return q; },
     order: (col, { ascending = true } = {}) => {
       rows.sort((a, b) => (a[col] < b[col] ? -1 : a[col] > b[col] ? 1 : 0) * (ascending ? 1 : -1));
       return q;
     },
     maybeSingle: () => { single = true; return q; },
-    then: (ok, fail) => Promise.resolve(
-      fakeState.error
-        ? { data: null, error: { message: fakeState.error } }
-        : { data: single ? rows[0] ?? null : rows, error: null },
-    ).then(ok, fail),
+    then: (ok, fail) => Promise.resolve(run()).then(ok, fail),
   };
+  function run() {
+    if (fakeState.error) return { data: null, error: { message: fakeState.error } };
+    if (patch) {
+      // RLS 흉내: 내 행만 수정 / DB 제약 흉내: 닉네임 중복(대소문자 무시) 금지
+      const me = fakeState.session?.user.id;
+      rows = rows.filter((r) => r.id === me);
+      const nick = patch.nickname?.toLowerCase();
+      if (nick && TABLES[table].some((r) => r.id !== me && r.nickname?.toLowerCase() === nick)) {
+        return { data: null, error: { code: '23505', message: 'duplicate key value violates unique constraint' } };
+      }
+      rows.forEach((r) => Object.assign(r, patch));
+      rows = rows.map((r) => ({ ...r }));
+    }
+    return { data: single ? rows[0] ?? null : rows, error: null };
+  }
   return q;
 }
 
+const auth = {
+  // 진짜 supabase-js처럼: code 교환 실패는 던지지 않고 { error }로만 돌려준다
+  initialize: async () => ({ error: fakeState.initError }),
+  getSession: async () => ({ data: { session: fakeState.session }, error: null }),
+  onAuthStateChange: (cb) => {
+    fakeState.listeners.add(cb);
+    return { data: { subscription: { unsubscribe: () => fakeState.listeners.delete(cb) } } };
+  },
+  signInWithOAuth: async (args) => { fakeState.oauthCalls.push(args); return { data: {}, error: null }; },
+  signOut: async () => {
+    fakeState.session = null;
+    fakeState.listeners.forEach((cb) => cb('SIGNED_OUT', null));
+    return { error: null };
+  },
+};
+
 export function db() {
-  return { from: query };
+  return { from: query, auth };
 }

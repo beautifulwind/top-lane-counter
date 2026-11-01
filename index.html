@@ -7,7 +7,8 @@
     <meta name="theme-color" content="#00a495" />
     <meta name="description" content="상대 탑 라이너를 이기는 카운터 챔피언과 공략을 모은 참여형 위키" />
     <link rel="apple-touch-icon" href="/logo192.png" />
-    <link rel="manifest" href="/manifest.json" />
+    <!-- crossorigin: Codespace 비공개 포트에서 manifest 요청에도 로그인 쿠키를 실어 CORS 오류를 막는다 -->
+    <link rel="manifest" href="/manifest.json" crossorigin="use-credentials" />
     <title>탑 카운터 위키</title>
   </head>
   <body>

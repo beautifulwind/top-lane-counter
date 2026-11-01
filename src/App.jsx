@@ -6,6 +6,9 @@ import Home from './pages/Home';
 import Champion from './pages/Champion';
 import Matchup from './pages/Matchup';
 import NotFound from './pages/NotFound';
+import Login from './pages/Login';
+import Welcome from './pages/Welcome';
+import { AuthProvider } from './lib/auth';
 
 function ScrollToTop() {
   const { pathname } = useLocation();
@@ -19,17 +22,19 @@ function ScrollToTop() {
 
 export function AppRoutes() {
   return (
-    <>
+    <AuthProvider>
       <ScrollToTop />
       <Routes>
         <Route element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="champion/:id" element={<Champion />} />
           <Route path="champion/:targetId/counter/:counterId" element={<Matchup />} />
+          <Route path="login" element={<Login />} />
+          <Route path="welcome" element={<Welcome />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>
-    </>
+    </AuthProvider>
   );
 }
 
