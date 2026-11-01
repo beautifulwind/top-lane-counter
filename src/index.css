@@ -188,7 +188,6 @@ kbd {
 .auth-bar { display: flex; align-items: center; gap: 8px; min-width: 0; }
 .me { color: #fff; font-size: 13px; display: flex; align-items: center; gap: 6px; min-width: 0; }
 .me .user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.role-badge { font-size: 11px; padding: 1px 6px; border-radius: 999px; background: #fff; color: var(--brand-dark); font-weight: 700; flex: none; }
 .top-btn {
   flex: none; min-height: 36px; padding: 0 12px; display: inline-flex; align-items: center;
   border: 1px solid rgba(255,255,255,.8); border-radius: var(--radius);

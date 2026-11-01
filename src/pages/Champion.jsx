@@ -37,7 +37,7 @@ export default function Champion() {
         <h2 className="section-title">
           <span className="num">1.</span> {target.name}을(를) 이기는 챔피언
         </h2>
-        <p className="hint">위에 있을수록 더 확실하게 이기는 카운터예요. 순서는 관리자가 정합니다.</p>
+        <p className="hint">위에 있을수록 더 확실하게 이기는 카운터예요. 순서는 운영자가 정합니다.</p>
 
         {data.counters.length === 0 ? (
           <p className="empty">아직 등록된 카운터가 없습니다</p>

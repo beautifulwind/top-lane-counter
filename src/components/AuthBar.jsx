@@ -3,7 +3,7 @@ import { signOut } from '../api/auth';
 import { useAuth } from '../lib/auth';
 import UserName from './UserName';
 
-/** 상단 바 오른쪽: 로그인 전 [로그인], 로그인 후 "Lv.1 닉네임" + [로그아웃] */
+/** 상단 바 오른쪽: 로그인 전 [로그인], 로그인 후 "Lv.1 닉네임"(운영자는 "Lv.0 닉네임") + [로그아웃] */
 export default function AuthBar() {
   const auth = useAuth();
   const { pathname, search } = useLocation();
@@ -25,8 +25,8 @@ export default function AuthBar() {
     <div className="auth-bar">
       {auth.profile?.nickname && (
         <span className="me">
+          {/* 운영자도 역할 글자 없이 "Lv.0 닉네임"으로만 표시 (SPEC 3장) */}
           <UserName profile={auth.profile} />
-          {auth.isAdmin && <span className="role-badge">관리자</span>}
         </span>
       )}
       <button type="button" className="top-btn" onClick={logout}>

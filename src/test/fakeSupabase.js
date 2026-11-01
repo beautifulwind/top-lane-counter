@@ -25,6 +25,7 @@ export const TABLES = {
     build(102, { nickname: '탑신병자', level: 7, main_title: 'senior_researcher' }, { up_count: 5, down_count: 1 }),
     build(103, { nickname: '칭호없음', level: 3, main_title: null }, { up_count: 2 }),
     build(104, { nickname: '대기중', level: 1, main_title: null }, { status: 'pending', up_count: 99 }),
+    build(105, { nickname: '영자(운)', level: 0, main_title: null }), // 운영자가 쓴 빌드 (점수 0)
   ],
   profiles: [
     { id: 'u-old', nickname: '기존유저', role: 'user', xp: 0, level: 1, main_title: null },

@@ -61,14 +61,30 @@ test('빈 닉네임, 20자 초과 닉네임은 저장 전에 막는다', async (
   expect(screen.getByText('닉네임은 20자 이하로 정해 주세요.')).toBeDefined();
 });
 
-test('닉네임이 있는 유저: 상단에 "Lv. 닉네임"·관리자 표시, 로그아웃하면 [로그인]으로 바뀐다', async () => {
-  fakeLogin('u-admin', { nickname: '운영자', role: 'admin', level: 7, main_title: 'senior_researcher' });
+test('닉네임이 있는 유저: 상단에 "Lv.7 칭호 · 닉네임", 로그아웃하면 [로그인]으로 바뀐다', async () => {
+  fakeLogin('u-user', { nickname: '탑신병자', level: 7, main_title: 'senior_researcher' });
   start('/');
-  await screen.findByText('관리자');
-  expect(document.querySelector('.me .user-name').textContent).toBe('Lv.7 수석 연구원 · 운영자');
+  await screen.findByText('탑신병자');
+  expect(document.querySelector('.me').textContent).toBe('Lv.7 수석 연구원 · 탑신병자');
   fireEvent.click(screen.getByRole('button', { name: '로그아웃' }));
   expect(await screen.findByRole('link', { name: '로그인' })).toBeDefined();
-  expect(screen.queryByText('관리자')).toBeNull();
+});
+
+test('운영자: 상단에 "Lv.0 닉네임"만 보이고 "운영자"·"관리자" 글자는 붙지 않는다', async () => {
+  fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
+  start('/');
+  await screen.findByText('영자(운)');
+  const header = document.querySelector('.topbar');
+  expect(header.querySelector('.me').textContent).toBe('Lv.0 영자(운)');
+  expect(header.textContent).not.toMatch(/운영자|관리자/);
+});
+
+test('관리자 지정 화면은 없다 (/admin은 없는 페이지)', async () => {
+  fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
+  start('/admin');
+  await screen.findByRole('button', { name: '로그아웃' });
+  expect(document.querySelector('.content').textContent).toMatch(/찾을 수 없|없는 페이지|404/);
+  expect(screen.queryByText(/관리자 지정|권한 변경/)).toBeNull();
 });
 
 test('이미 로그인한 상태로 /login에 오면 원래 페이지로 보낸다', async () => {

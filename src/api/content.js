@@ -12,7 +12,7 @@ async function run(query) {
 const one = (v) => (Array.isArray(v) ? v[0] ?? null : v ?? null);
 const day = (ts) => (ts ? String(ts).slice(0, 10) : null);
 
-/** 이 챔피언을 이기는 카운터 목록 (관리자가 정한 순서) */
+/** 이 챔피언을 이기는 카운터 목록 (운영자가 정한 순서) */
 export async function getCountersFor(targetId) {
   const rows = await run(
     db()

@@ -7,7 +7,7 @@ import { finishLoginFromUrl, getProfile, getSession, onAuthChange } from '../api
  * profile: 로그인했을 때 내 프로필 (불러오는 중이면 undefined)
  */
 const AuthContext = createContext(null);
-const SIGNED_OUT = { status: 'signedOut', session: null, user: null, profile: null, isAdmin: false, setProfile: () => {}, loginError: null, clearLoginError: () => {} };
+const SIGNED_OUT = { status: 'signedOut', session: null, user: null, profile: null, isOperator: false, setProfile: () => {}, loginError: null, clearLoginError: () => {} };
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined); // undefined = 아직 확인 중
@@ -56,7 +56,8 @@ export function AuthProvider({ children }) {
       user: session.user,
       profile,
       profileError: loaded.userId === userId ? loaded.error : null,
-      isAdmin: profile?.role === 'admin',
+      // 운영자 = role 'admin'인 유일한 계정 (모든 권한). 실제 권한 검사는 DB(RLS)가 한다.
+      isOperator: profile?.role === 'admin',
       setProfile,
       loginError: null,
       clearLoginError,
