@@ -3,10 +3,19 @@ import { db } from './supabase';
 
 export const NICKNAME_MAX = 20;
 
-/** 구글 로그인 시작 → 구글 → Supabase → 지금 접속한 주소(origin)의 returnTo 경로로 돌아온다 */
-export async function signInWithGoogle(returnTo = '/') {
+/** 로그인할 수 있는 방식 (Supabase Auth의 provider 이름 → 화면에 보일 이름) */
+export const PROVIDERS = { google: '구글', kakao: '카카오' };
+
+/**
+ * 소셜 로그인 시작 → 구글/카카오 → Supabase → 지금 접속한 주소(origin)의 returnTo 경로로 돌아온다.
+ * 카카오: Supabase가 account_email·profile_nickname·profile_image를 항상 요청한다 (scopes로 뺄 수 없음).
+ *   이메일은 카카오 동의항목에서 "선택 동의"로 두고, Supabase에서 "Allow users without an email"을 켠다.
+ *   앱은 이메일을 쓰지 않는다.
+ */
+export async function signIn(provider, returnTo = '/') {
+  if (!PROVIDERS[provider]) throw new Error(`지원하지 않는 로그인 방식이에요. (${provider})`);
   const { error } = await db().auth.signInWithOAuth({
-    provider: 'google',
+    provider,
     options: { redirectTo: window.location.origin + returnTo },
   });
   if (error) throw new Error(`로그인을 시작하지 못했어요. (${error.message})`);
@@ -16,7 +25,7 @@ export async function signInWithGoogle(returnTo = '/') {
 const CALLBACK_PARAMS = ['code', 'sb_flow_id', 'error', 'error_code', 'error_description'];
 
 /**
- * 구글 → Supabase를 거쳐 ?code=...로 돌아왔을 때, 그 code가 세션으로 바뀌었는지 확인한다.
+ * 구글/카카오 → Supabase를 거쳐 ?code=...로 돌아왔을 때, 그 code가 세션으로 바뀌었는지 확인한다.
  * (supabase-js는 이 단계가 실패해도 콘솔에 아무것도 남기지 않으므로 여기서 직접 잡아 화면에 보여준다)
  * 로그인 콜백이 아니면 아무 일도 하지 않는다. 실패하면 안내 문구가 담긴 Error를 던진다.
  */
@@ -45,7 +54,7 @@ function loginError(error, providerError) {
   const raw = error?.message ?? providerError ?? '';
   let message;
   if (providerError && !error?.message?.match(/verifier|flow state|ByteString|fetch/i)) {
-    message = '구글 로그인이 취소됐거나 거절됐어요. 다시 시도해 주세요.';
+    message = '로그인이 취소됐거나 거절됐어요. 다시 시도해 주세요.';
   } else if (/ByteString|ISO-8859-1|Failed to fetch|NetworkError|Load failed/i.test(raw)) {
     message = 'Supabase 서버에 로그인 요청을 보내지 못했어요. 인터넷 연결과 Supabase 키 설정(.env / Cloudflare 환경변수)을 확인해 주세요.';
   } else if (/verifier/i.test(raw) || !error) {

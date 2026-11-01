@@ -11,7 +11,7 @@ const SIGNED_OUT = { status: 'signedOut', session: null, user: null, profile: nu
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined); // undefined = 아직 확인 중
-  const [loginError, setLoginError] = useState(null); // 구글에서 돌아왔는데 로그인이 안 됐을 때
+  const [loginError, setLoginError] = useState(null); // 구글/카카오에서 돌아왔는데 로그인이 안 됐을 때
   const [loaded, setLoaded] = useState({ userId: null, profile: undefined, error: null });
 
   useEffect(() => {

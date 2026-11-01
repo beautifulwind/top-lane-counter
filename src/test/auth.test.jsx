@@ -27,6 +27,30 @@ test('로그인 전: 상단에 [로그인] → 로그인 화면에서 구글 로
   ]);
 });
 
+test('로그인 화면에서 카카오 로그인을 시작하면 provider kakao로 요청하고, 이동 중에는 두 버튼 모두 잠긴다', async () => {
+  start('/login');
+  fireEvent.click(await screen.findByRole('button', { name: '카카오로 로그인' }));
+  expect((await screen.findByRole('button', { name: '카카오로 이동 중…' })).disabled).toBe(true);
+  expect(screen.getByRole('button', { name: '구글로 로그인' }).disabled).toBe(true);
+  expect(fakeState.oauthCalls).toEqual([
+    { provider: 'kakao', options: { redirectTo: `${window.location.origin}/` } },
+  ]);
+});
+
+test('카카오 첫 로그인(이메일 없음)도 구글과 똑같이 닉네임 설정으로 가고, 저장하면 원래 페이지로 돌아간다', async () => {
+  fakeLogin('u-kakao', {}, { email: '', app_metadata: { provider: 'kakao' } });
+  start('/champion/Darius');
+  expect(await screen.findByRole('heading', { name: '닉네임 정하기' })).toBeDefined();
+  expect(where()).toBe('/welcome');
+  expect(screen.getByLabelText('닉네임').value).toBe(''); // 카카오 닉네임을 미리 채우지 않는다
+
+  fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '카카오탑' } });
+  fireEvent.click(screen.getByRole('button', { name: '시작하기' }));
+  expect(await screen.findByText(/다리우스을\(를\) 이기는 챔피언/)).toBeDefined();
+  expect(where()).toBe('/champion/Darius');
+  expect(document.querySelector('.me').textContent).toBe('Lv.1 카카오탑');
+});
+
 test('첫 로그인(닉네임 없음): 어느 페이지든 닉네임 설정으로 보내고, 저장하면 원래 페이지로 돌아간다', async () => {
   fakeLogin('u-new');
   start('/champion/Darius');

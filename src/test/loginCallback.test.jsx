@@ -11,7 +11,7 @@ beforeEach(() => {
 });
 afterEach(() => { cleanup(); vi.restoreAllMocks(); window.history.replaceState(null, '', '/'); });
 
-/** 구글 → Supabase를 거쳐 브라우저 주소가 `query`로 돌아온 상황 */
+/** 구글/카카오 → Supabase를 거쳐 브라우저 주소가 `query`로 돌아온 상황 */
 function returnFromGoogle(query, path = '/login') {
   window.history.replaceState(null, '', path + query);
   return render(<MemoryRouter initialEntries={[path]}><AppRoutes /></MemoryRouter>);
@@ -37,7 +37,7 @@ test('만료되거나 이미 쓴 code면 다시 로그인하라고 안내한다'
   expect(await screen.findByText(/만료됐거나 이미 사용됐어요/)).toBeDefined();
 });
 
-test('구글 동의 화면에서 취소하면 취소 안내가 보인다', async () => {
+test('구글·카카오 동의 화면에서 취소하면 취소 안내가 보인다', async () => {
   returnFromGoogle('?error=access_denied&error_description=The+user+denied+access');
   expect(await screen.findByText(/취소됐거나 거절됐어요/)).toBeDefined();
   expect(screen.getByText(/상세: The user denied access/)).toBeDefined();

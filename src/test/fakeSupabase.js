@@ -45,12 +45,15 @@ export function resetFake() {
   TABLES.profiles = INITIAL_PROFILES.map((p) => ({ ...p }));
 }
 
-/** 테스트에서 "구글 로그인을 마치고 돌아온" 상태 만들기. DB 트리거처럼 프로필도 만든다. */
-export function fakeLogin(id, profile = {}) {
+/**
+ * 테스트에서 "구글/카카오 로그인을 마치고 돌아온" 상태 만들기. DB 트리거처럼 프로필도 만든다.
+ * user: 세션의 user에 덧붙일 값 (예: 이메일 없는 카카오 유저 { email: '', app_metadata: { provider: 'kakao' } })
+ */
+export function fakeLogin(id, profile = {}, user = {}) {
   if (!TABLES.profiles.some((p) => p.id === id)) {
     TABLES.profiles.push({ id, nickname: null, role: 'user', xp: 0, level: 1, main_title: null, ...profile });
   }
-  fakeState.session = { user: { id }, access_token: 'fake' };
+  fakeState.session = { user: { id, ...user }, access_token: 'fake' };
   fakeState.listeners.forEach((cb) => cb('SIGNED_IN', fakeState.session));
 }
 

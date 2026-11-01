@@ -197,7 +197,10 @@ kbd {
 
 /* 로그인 · 닉네임 설정 */
 .login-buttons { display: flex; flex-direction: column; gap: 8px; max-width: 360px; }
-.login-btn { width: 100%; }
+.login-btn { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
+/* 카카오 디자인 가이드: 배경 #FEE500, 글자·심볼 검정(85%) */
+.login-btn.kakao { background: #FEE500; color: rgba(0,0,0,.85); border-color: #FEE500; }
+.login-btn.kakao:hover:not(:disabled) { background: #F5DC00; border-color: #F5DC00; }
 .btn:disabled { opacity: .6; cursor: default; }
 .nick-form { display: flex; flex-direction: column; gap: 6px; max-width: 360px; }
 .nick-form label { font-weight: 600; font-size: 14px; }

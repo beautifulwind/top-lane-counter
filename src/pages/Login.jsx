@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Navigate, useLocation } from 'react-router-dom';
-import { signInWithGoogle } from '../api/auth';
+import { PROVIDERS, signIn } from '../api/auth';
 import { useAuth } from '../lib/auth';
 import { Loading } from '../components/Status';
 
@@ -8,21 +8,21 @@ export default function Login() {
   const auth = useAuth();
   const location = useLocation();
   const from = safePath(location.state?.from);
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(null); // 이동 중인 provider ('google' | 'kakao')
   const [error, setError] = useState(null);
 
   if (auth.status === 'loading') return <Loading />;
   // 이미 로그인했으면 원래 페이지로 (닉네임이 없으면 Layout이 /welcome으로 보낸다)
   if (auth.status === 'signedIn') return <Navigate to={from} replace />;
 
-  const google = async () => {
-    setBusy(true);
+  const start = async (provider) => {
+    setBusy(provider);
     setError(null);
     try {
-      await signInWithGoogle(from); // 성공하면 구글 화면으로 이동한다
+      await signIn(provider, from); // 성공하면 구글/카카오 화면으로 이동한다
     } catch (e) {
       setError(e.message);
-      setBusy(false);
+      setBusy(null);
     }
   };
 
@@ -31,13 +31,30 @@ export default function Login() {
       <h1 className="doc-title">로그인</h1>
       <p className="lead">로그인하면 카운터 제안, 문서 수정, 빌드 등록, 투표를 할 수 있어요. 보기는 로그인 없이도 돼요.</p>
       <div className="login-buttons">
-        <button type="button" className="btn login-btn google" onClick={google} disabled={busy}>
-          {busy ? '구글로 이동 중…' : '구글로 로그인'}
-        </button>
-        {/* 카카오 로그인은 3단계 후반에 추가 */}
+        {Object.entries(PROVIDERS).map(([provider, name]) => (
+          <button
+            key={provider}
+            type="button"
+            className={`btn login-btn ${provider}`}
+            onClick={() => start(provider)}
+            disabled={busy !== null}
+          >
+            {provider === 'kakao' && <KakaoSymbol />}
+            {busy === provider ? `${name}로 이동 중…` : `${name}로 로그인`}
+          </button>
+        ))}
       </div>
       {error && <p className="form-error" role="alert">{error}</p>}
     </article>
+  );
+}
+
+/** 카카오 디자인 가이드의 말풍선 심볼 (검정) */
+function KakaoSymbol() {
+  return (
+    <svg className="kakao-symbol" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+      <path fill="#000" d="M12 3C6.48 3 2 6.54 2 10.9c0 2.82 1.87 5.3 4.69 6.7l-.95 3.5c-.08.3.26.55.52.38l4.13-2.73c.53.06 1.07.1 1.61.1 5.52 0 10-3.54 10-7.95S17.52 3 12 3z" />
+    </svg>
   );
 }
 
