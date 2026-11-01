@@ -6,7 +6,7 @@ import { cleanDoc } from '../lib/docContent';
 const PERSON = 'nickname, level, main_title';
 const PROPOSAL_COLUMNS =
   'id, type, target_champion, counter_champion, counter_id, content, status, reject_reason, reviewed_at, created_at, base_revision_id, ' +
-  'revoke_reason, revoked_at, revision_note, revision_requested_at, resubmitted_at, ' +
+  'revoke_reason, revoked_at, approve_note, revision_note, revision_requested_at, resubmitted_at, ' +
   `proposer:profiles!edit_proposals_proposer_id_fkey(${PERSON})`;
 const DOC_COLUMNS = 'counter_id, summary, level_notes, lane_cautions, updated_at, revision_id';
 
@@ -73,13 +73,30 @@ export function getMyProposal(userId, id) {
   );
 }
 
-/** 운영자가 재검토를 요청한 내 제안 개수 (상단 빨간 점) */
-export async function getMyRevisionRequestCount(userId) {
-  const rows = await run(
-    db().from('edit_proposals').select('id').eq('proposer_id', userId).eq('status', 'revision_requested'),
+// ---------------- 알림 (확인하면 꺼짐) ----------------
+// 알림은 DB 함수만 만든다 (지금은 재검토 요청). /me에서 보이면 읽음 처리 → 상단 빨간 점이 꺼진다.
+
+const NOTIFICATIONS_CHANGED = 'tlc:notifications-changed';
+/** 읽음 처리 등으로 알림 개수가 바뀌었을 때 상단 빨간 점이 다시 세도록 */
+export function onNotificationsChanged(cb) {
+  window.addEventListener(NOTIFICATIONS_CHANGED, cb);
+  return () => window.removeEventListener(NOTIFICATIONS_CHANGED, cb);
+}
+
+/** 안 읽은 내 알림 (최근 순). RLS가 내 것만 돌려준다. */
+export function getMyUnreadNotifications(userId) {
+  return run(
+    db().from('notifications').select('id, kind, proposal_id, message, created_at')
+      .eq('user_id', userId).is('read_at', null).order('created_at', { ascending: false }),
     '알림을 불러오지 못했어요.',
   );
-  return rows.length;
+}
+
+/** 내 알림 읽음 처리 (본인 것만 처리된다 — DB 함수가 확인) */
+export async function markNotificationsRead(ids) {
+  if (ids.length === 0) return;
+  await rpc('mark_notifications_read', { p_ids: ids }, '알림을 확인 처리하지 못했어요.');
+  window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED));
 }
 
 /** 재검토 요청 받은 내 제안을 고쳐서 다시 제출 → 승인 대기. 본인만 (DB 함수가 확인) */
@@ -91,12 +108,54 @@ export const isResubmission = (p) => p.type === 'new_counter' && p.counter_id !=
 
 // ---------------- 운영자 ----------------
 
-/** 승인 대기 목록 (오래된 순) */
-export function getPendingProposals() {
-  return run(
-    db().from('edit_proposals').select(PROPOSAL_COLUMNS).eq('status', 'pending').order('created_at', { ascending: true }),
-    '승인 대기 목록을 불러오지 못했어요.',
-  );
+/**
+ * 제안과 대상 카운터를 보고 승인 전에 알아야 할 것.
+ * counter: 운영자가 읽은 대상 카운터(+ matchup_docs) | null
+ */
+function reviewFlags(proposal, counter) {
+  const current = one(counter?.matchup_docs);
+  // 재검토 후 다시 낸 제안: 숨긴 문서 → 고친 내용을 비교하고, 승인하면 다시 공개된다
+  const resubmitted = isResubmission(proposal) && counter?.status === 'hidden';
+  const hidden = counter?.status === 'hidden' && !resubmitted;
+  // 이미 승인된 새 카운터 제안이면 그 카운터는 "자기 자신"이라 중복 경고 대상이 아니다
+  const exists = proposal.type === 'doc_edit' || counter?.status === 'approved';
+  const stale = proposal.type === 'doc_edit' && proposal.status === 'pending' && current != null
+    && proposal.base_revision_id != null && current.revision_id !== proposal.base_revision_id;
+  return { current, resubmitted, hidden, exists, stale };
+}
+
+/**
+ * 목록에서 바로 승인하면 위험한 이유 (없으면 null) → 줄에서 [승인]을 잠그고 [자세히]로 보낸다.
+ * 거절은 줄에서 바로 할 수 있다.
+ */
+export function quickApproveBlock(proposal, flags) {
+  if (flags.hidden) return '숨긴 카운터에 대한 제안이에요.';
+  if (proposal.type === 'new_counter' && flags.exists) return '같은 카운터가 이미 공개돼 있어요.';
+  if (proposal.type === 'doc_edit' && !flags.current) return '수정할 문서를 찾지 못했어요.';
+  if (flags.stale) return '제안 뒤에 문서가 바뀌었어요.';
+  return null;
+}
+
+/** 승인 대기 목록 (오래된 순) + 줄에서 바로 승인해도 되는지 (block: 막는 이유 | null) */
+export async function getPendingProposals() {
+  const [pending, counters] = await Promise.all([
+    run(
+      db().from('edit_proposals').select(PROPOSAL_COLUMNS).eq('status', 'pending').order('created_at', { ascending: true }),
+      '승인 대기 목록을 불러오지 못했어요.',
+    ),
+    // 운영자는 숨긴 카운터도 읽는다 (RLS: is_admin)
+    run(
+      db().from('counters').select('id, target_champion, counter_champion, status, matchup_docs(revision_id)'),
+      '카운터 목록을 확인하지 못했어요.',
+    ),
+  ]);
+  return pending.map((p) => {
+    const counter = p.type === 'doc_edit' || isResubmission(p)
+      ? counters.find((c) => c.id === p.counter_id)
+      : counters.find((c) => c.target_champion === p.target_champion && c.counter_champion === p.counter_champion);
+    const flags = reviewFlags(p, counter ?? null);
+    return { ...p, resubmitted: flags.resubmitted, block: quickApproveBlock(p, flags) };
+  });
 }
 
 /**
@@ -126,14 +185,7 @@ export async function getProposalForReview(id) {
         .maybeSingle(),
       '지금 카운터 목록을 확인하지 못했어요.',
     );
-  const current = one(counter?.matchup_docs);
-  // 재검토 후 다시 낸 제안: 숨긴 문서 → 고친 내용을 비교하고, 승인하면 다시 공개된다
-  const resubmitted = isResubmission(proposal) && counter?.status === 'hidden';
-  const hidden = counter?.status === 'hidden' && !resubmitted;
-  // 이미 승인된 새 카운터 제안이면 그 카운터는 "자기 자신"이라 중복 경고 대상이 아니다
-  const exists = proposal.type === 'doc_edit' || counter?.status === 'approved';
-  const stale = proposal.type === 'doc_edit' && proposal.status === 'pending' && current != null
-    && proposal.base_revision_id != null && current.revision_id !== proposal.base_revision_id;
+  const { current, resubmitted, hidden, exists, stale } = reviewFlags(proposal, counter);
   return { proposal, current: proposal.type === 'doc_edit' || resubmitted ? current : null, exists, hidden, stale, resubmitted };
 }
 
@@ -145,11 +197,13 @@ async function rpc(name, args, fallback) {
   return data;
 }
 
-export const approveProposal = (id) => rpc('approve_proposal', { p_id: id }, '승인하지 못했어요.');
+/** 승인: 메모 필수 (제안자에게 보인다) */
+export const approveProposal = (id, note) => rpc('approve_proposal', { p_id: id, p_note: note }, '승인하지 못했어요.');
 export const rejectProposal = (id, reason) => rpc('reject_proposal', { p_id: id, p_reason: reason }, '거절하지 못했어요.');
 /** ids = 그 챔피언의 공개된 카운터 id 전부, 새 순서대로 */
 export const reorderCounters = (target, ids) => rpc('reorder_counters', { p_target: target, p_ids: ids }, '순서를 저장하지 못했어요.');
-export const revertDoc = (revisionId) => rpc('revert_doc', { p_revision_id: revisionId }, '되돌리지 못했어요.');
+/** 되돌리기: 메모 필수 (수정 기록에 남는다) */
+export const revertDoc = (revisionId, note) => rpc('revert_doc', { p_revision_id: revisionId, p_note: note }, '되돌리지 못했어요.');
 
 /** 문서 버전 목록 (최근 순) */
 export function getRevisions(counterRowId) {
@@ -157,7 +211,7 @@ export function getRevisions(counterRowId) {
     db()
       .from('doc_revisions')
       .select(
-        'id, kind, content, created_at, proposal_id, reverted_from, ' +
+        'id, kind, content, note, created_at, proposal_id, reverted_from, ' +
           `editor:profiles!doc_revisions_edited_by_fkey(${PERSON}), approver:profiles!doc_revisions_approved_by_fkey(${PERSON})`,
       )
       .eq('counter_id', counterRowId)
@@ -172,9 +226,9 @@ export function getRevisions(counterRowId) {
 /** 숨기기: 일반 사용자에게서 카운터·문서·빌드를 가린다. 그 카운터를 만든 제안은 "승인 취소"가 된다. 사유 필수 */
 export const hideCounter = (counterRowId, reason) =>
   rpc('hide_counter', { p_counter_id: counterRowId, p_reason: reason }, '숨기지 못했어요.');
-/** 다시 공개: 목록 맨 뒤로 돌아오고, 제안은 다시 "승인". 메모는 선택 */
+/** 다시 공개: 목록 맨 뒤로 돌아오고, 제안은 다시 "승인". 메모 필수 */
 export const restoreCounter = (counterRowId, note) =>
-  rpc('restore_counter', { p_counter_id: counterRowId, p_note: note || null }, '다시 공개하지 못했어요.');
+  rpc('restore_counter', { p_counter_id: counterRowId, p_note: note }, '다시 공개하지 못했어요.');
 
 /**
  * 숨긴 카운터 목록 — 운영자만.

@@ -32,14 +32,15 @@ test('일반 유저: /admin은 "운영자만 볼 수 있어요", 상단 [관리]
   expect(screen.queryByRole('link', { name: '순서 변경' })).toBeNull();
 });
 
-test('운영자: [관리] → 대기 목록 → 제안 열기 → 바뀐 칸만 비교해서 보여 주고 [승인]하면 approve_proposal을 부른다', async () => {
+test('운영자: [관리] → 대기 목록 → [자세히] → 바뀐 칸만 비교, [승인]은 메모를 써야 확정되고 approve_proposal(메모)', async () => {
   TABLES.edit_proposals.push(fakeProposal());
   asOperator();
+  vi.spyOn(window, 'confirm');
   start('/');
   fireEvent.click(await screen.findByRole('link', { name: '관리' }));
-  const row = (await screen.findByRole('link', { name: /문서 수정 퀸\(으\)로 다리우스 잡는 법/ })).closest('li');
+  const row = await screen.findByRole('listitem', { name: '[문서 수정] 퀸(으)로 다리우스 잡는 법' });
   expect(within(row).getByText('기존유저')).toBeDefined();
-  fireEvent.click(within(row).getByRole('link'));
+  fireEvent.click(within(row).getByRole('link', { name: '자세히' }));
   expect(where()).toBe('/admin/proposals/501');
 
   const summary = await screen.findByRole('region', { name: '한 줄 요약 변경' });
@@ -52,16 +53,24 @@ test('운영자: [관리] → 대기 목록 → 제안 열기 → 바뀐 칸만 
   expect(screen.queryByText(/문서가 다른 승인으로 바뀌었어요/)).toBeNull();
 
   fireEvent.click(screen.getByRole('button', { name: '승인' }));
+  const ok = screen.getByRole('button', { name: '승인 확정' });
+  expect(ok.disabled).toBe(true);
+  fireEvent.change(screen.getByLabelText(/승인 메모/), { target: { value: '   ' } });
+  expect(ok.disabled).toBe(true);
+  fireEvent.change(screen.getByLabelText(/승인 메모/), { target: { value: ' 좋은 수정이에요 ' } });
+  fireEvent.click(ok);
   expect(await screen.findByText(/승인했어요: \[문서 수정\] 퀸\(으\)로 다리우스 잡는 법/)).toBeDefined();
-  expect(fakeState.rpcCalls).toEqual([{ name: 'approve_proposal', args: { p_id: 501 } }]);
+  expect(fakeState.rpcCalls).toEqual([{ name: 'approve_proposal', args: { p_id: 501, p_note: '좋은 수정이에요' } }]);
   expect(where()).toBe('/admin');
+  expect(window.confirm).not.toHaveBeenCalled();
 });
 
-test('거절: 사유가 비어 있으면 [거절]이 안 눌리고, 사유를 쓰면 reject_proposal로 보낸다', async () => {
+test('거절: [거절] → 사유가 비어 있으면 [거절 확정]이 안 눌리고, 사유를 쓰면 reject_proposal로 보낸다', async () => {
   TABLES.edit_proposals.push(fakeProposal());
   asOperator();
   start('/admin/proposals/501');
-  const reject = await screen.findByRole('button', { name: '거절' });
+  fireEvent.click(await screen.findByRole('button', { name: '거절' }));
+  const reject = screen.getByRole('button', { name: '거절 확정' });
   expect(reject.disabled).toBe(true);
   fireEvent.change(screen.getByLabelText(/거절 사유/), { target: { value: '   ' } });
   expect(reject.disabled).toBe(true);
@@ -78,6 +87,8 @@ test('제안 후 문서가 바뀌었으면 경고, DB가 거부하면 그 이유
   start('/admin/proposals/501');
   expect(await screen.findByText(/이 제안을 쓴 뒤에 문서가 다른 승인으로 바뀌었어요/)).toBeDefined();
   fireEvent.click(screen.getByRole('button', { name: '승인' }));
+  fireEvent.change(screen.getByLabelText(/승인 메모/), { target: { value: '확인함' } });
+  fireEvent.click(screen.getByRole('button', { name: '승인 확정' }));
   expect(await screen.findByText('이미 처리된 제안이에요.')).toBeDefined();
   expect(where()).toBe('/admin/proposals/501');
 });
@@ -121,7 +132,7 @@ test('순서 변경: [순서 변경] → ▲로 옮기고 [순서 저장]하면 
   expect(save.disabled).toBe(true);
 });
 
-test('수정 기록: 버전 목록과 지금 버전 표시, 예전 버전 비교, 확인 후 revert_doc', async () => {
+test('수정 기록: 버전 목록과 지금 버전 표시, 예전 버전 비교, 메모를 써야 되돌리기 확정 → revert_doc(메모)', async () => {
   TABLES.doc_revisions.push(
     { id: 7, kind: 'edit', content: {}, created_at: '2026-11-01T09:00:00Z', reverted_from: null,
       editor: { nickname: '기존유저', level: 1, main_title: null }, approver: { nickname: '영자(운)', level: 0, main_title: null } },
@@ -142,10 +153,65 @@ test('수정 기록: 버전 목록과 지금 버전 표시, 예전 버전 비교
   const summary = within(v1).getByRole('region', { name: '한 줄 요약 변경' });
   expect(summary.querySelector('.diff-line.add').textContent).toBe('+ 처음 요약\n');
 
-  vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
   fireEvent.click(within(v1).getByRole('button', { name: '이 버전으로 되돌리기' }));
-  expect(fakeState.rpcCalls).toEqual([]);
+  const ok = within(v1).getByRole('button', { name: '되돌리기 확정' });
+  expect(ok.disabled).toBe(true);
+  fireEvent.click(within(v1).getByRole('button', { name: '취소' })); // 취소하면 닫힘
+  expect(within(v1).queryByRole('button', { name: '되돌리기 확정' })).toBeNull();
   fireEvent.click(within(v1).getByRole('button', { name: '이 버전으로 되돌리기' }));
+  fireEvent.change(within(v1).getByLabelText(/되돌리기 메모/), { target: { value: '처음 버전이 정확해요' } });
+  fireEvent.click(within(v1).getByRole('button', { name: '되돌리기 확정' }));
   expect(await screen.findByText('1번 버전으로 되돌렸어요.')).toBeDefined();
-  expect(fakeState.rpcCalls).toEqual([{ name: 'revert_doc', args: { p_revision_id: 5 } }]);
+  expect(fakeState.rpcCalls).toEqual([{ name: 'revert_doc', args: { p_revision_id: 5, p_note: '처음 버전이 정확해요' } }]);
+});
+
+test('대기 목록 줄에서 바로: [승인]·[거절]은 그 자리에 메모 입력, 메모를 써야 확정 (확인 창 없음)', async () => {
+  TABLES.edit_proposals.push(fakeProposal(), fakeProposal({ id: 502, counter_champion: 'Quinn', created_at: '2026-11-01T11:00:00Z' }));
+  asOperator();
+  vi.spyOn(window, 'confirm');
+  start('/admin');
+  const [row1] = await screen.findAllByRole('listitem', { name: '[문서 수정] 퀸(으)로 다리우스 잡는 법' });
+
+  fireEvent.click(within(row1).getByRole('button', { name: '승인' }));
+  const ok = within(row1).getByRole('button', { name: '승인 확정' });
+  expect(ok.disabled).toBe(true);
+  // 다른 버튼을 누르면 입력창이 바뀐다 (한 줄에 하나만)
+  fireEvent.click(within(row1).getByRole('button', { name: '거절' }));
+  expect(within(row1).queryByRole('button', { name: '승인 확정' })).toBeNull();
+  fireEvent.click(within(row1).getByRole('button', { name: '승인' }));
+  fireEvent.change(within(row1).getByLabelText(/승인 메모/), { target: { value: '좋아요' } });
+  fireEvent.click(within(row1).getByRole('button', { name: '승인 확정' }));
+  expect(await screen.findByText('승인했어요: [문서 수정] 퀸(으)로 다리우스 잡는 법')).toBeDefined();
+  expect(where()).toBe('/admin');
+  expect(fakeState.rpcCalls).toEqual([{ name: 'approve_proposal', args: { p_id: 501, p_note: '좋아요' } }]);
+
+  fakeState.rpcCalls.length = 0;
+  const again = (await screen.findAllByRole('listitem', { name: '[문서 수정] 퀸(으)로 다리우스 잡는 법' }))[1];
+  fireEvent.click(within(again).getByRole('button', { name: '거절' }));
+  fireEvent.change(within(again).getByLabelText(/거절 사유/), { target: { value: '근거 부족' } });
+  fireEvent.click(within(again).getByRole('button', { name: '거절 확정' }));
+  expect(await screen.findByText('거절했어요: [문서 수정] 퀸(으)로 다리우스 잡는 법')).toBeDefined();
+  expect(fakeState.rpcCalls).toEqual([{ name: 'reject_proposal', args: { p_id: 502, p_reason: '근거 부족' } }]);
+  expect(window.confirm).not.toHaveBeenCalled();
+});
+
+test('대기 목록: 바로 승인하면 위험한 제안은 줄에서 [승인]이 잠기고 이유를 보여 준다 (거절은 가능)', async () => {
+  TABLES.edit_proposals.push(
+    fakeProposal({ id: 701, base_revision_id: 6 }), // 제안 뒤에 문서가 바뀜 (지금 버전 7)
+    fakeProposal({ id: 702, type: 'new_counter', counter_id: null, created_at: '2026-11-01T11:00:00Z' }), // 퀸은 이미 공개
+    fakeProposal({ id: 703, type: 'new_counter', counter_champion: 'Garen', counter_id: null, created_at: '2026-11-01T12:00:00Z' }), // 정상
+  );
+  asOperator();
+  start('/admin');
+  const stale = await screen.findByRole('listitem', { name: '[문서 수정] 퀸(으)로 다리우스 잡는 법' });
+  expect(within(stale).getByText('제안 뒤에 문서가 바뀌었어요. 내용을 [자세히]에서 확인해 주세요.')).toBeDefined();
+  expect(within(stale).getByRole('button', { name: '승인' }).disabled).toBe(true);
+  expect(within(stale).getByRole('button', { name: '거절' }).disabled).toBe(false);
+  expect(within(stale).getByRole('link', { name: '자세히' }).getAttribute('href')).toBe('/admin/proposals/701');
+  const dup = screen.getByRole('listitem', { name: '[새 카운터] 퀸(으)로 다리우스 잡는 법' });
+  expect(within(dup).getByText(/같은 카운터가 이미 공개돼 있어요/)).toBeDefined();
+  expect(within(dup).getByRole('button', { name: '승인' }).disabled).toBe(true);
+  const fine = screen.getByRole('listitem', { name: '[새 카운터] 가렌(으)로 다리우스 잡는 법' });
+  expect(within(fine).getByRole('button', { name: '승인' }).disabled).toBe(false);
+  expect(within(fine).queryByText(/자세히\]에서 확인/)).toBeNull();
 });

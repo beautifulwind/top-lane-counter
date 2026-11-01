@@ -15,7 +15,6 @@ import AdminHome from './pages/admin/AdminHome';
 import AdminProposal from './pages/admin/AdminProposal';
 import AdminOrder from './pages/admin/AdminOrder';
 import AdminHistory from './pages/admin/AdminHistory';
-import AdminHide from './pages/admin/AdminHide';
 import AdminPreview from './pages/admin/AdminPreview';
 import AdminDelete from './pages/admin/AdminDelete';
 import Resubmit from './pages/Resubmit';
@@ -50,7 +49,6 @@ export function AppRoutes() {
           <Route path="admin/proposals/:id" element={<AdminProposal />} />
           <Route path="admin/order/:championId" element={<AdminOrder />} />
           <Route path="admin/history/:targetId/:counterId" element={<AdminHistory />} />
-          <Route path="admin/hide/:targetId/:counterId" element={<AdminHide />} />
           <Route path="admin/preview/:targetId/:counterId" element={<AdminPreview />} />
           <Route path="admin/delete/:targetId/:counterId" element={<AdminDelete />} />
           <Route path="*" element={<NotFound />} />

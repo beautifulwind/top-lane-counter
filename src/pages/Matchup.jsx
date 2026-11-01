@@ -1,10 +1,13 @@
-import { Link, useParams } from 'react-router-dom';
+import { useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../api/ddragon';
 import { getBuilds, getMatchup } from '../api/content';
 import { useAsync } from '../lib/useAsync';
 import { useAuth } from '../lib/auth';
 import { ErrorBox, Loading, PendingButton } from '../components/Status';
 import UserName from '../components/UserName';
+import NoteForm from '../components/NoteForm';
+import { hideCounter } from '../api/proposals';
 import { REQUIRED_LEVELS } from '../lib/docContent';
 import NotFound from './NotFound';
 
@@ -12,6 +15,8 @@ import NotFound from './NotFound';
 export default function Matchup() {
   const { targetId, counterId } = useParams();
   const { isOperator } = useAuth();
+  const navigate = useNavigate();
+  const [hiding, setHiding] = useState(false);
   const { data, error, loading, retry } = useAsync(
     async () => {
       const [champs, matchup] = await Promise.all([getChampionMap(), getMatchup(targetId, counterId)]);
@@ -95,8 +100,26 @@ export default function Matchup() {
         <div className="actions">
           <Link to={`/champion/${targetId}/counter/${counterId}/edit`} className="btn">문서 수정 제안</Link>
           {isOperator && <Link to={`/admin/history/${targetId}/${counterId}`} className="btn">수정 기록</Link>}
-          {isOperator && <Link to={`/admin/hide/${targetId}/${counterId}`} className="btn">카운터 숨기기</Link>}
+          {isOperator && (
+            <button type="button" className="btn" onClick={() => setHiding((v) => !v)} aria-expanded={hiding}>
+              카운터 숨기기
+            </button>
+          )}
         </div>
+        {hiding && (
+          <NoteForm
+            id="hide-reason"
+            label="숨기는 사유 (필수, 제안자에게 보여요)"
+            hint="숨기면 다른 사람에게 이 카운터·문서·빌드가 안 보여요. 이 카운터를 만든 제안은 승인 취소가 돼요. 운영자 페이지에서 다시 공개할 수 있어요."
+            confirmLabel="숨기기 확정"
+            busyLabel="숨기는 중…"
+            onCancel={() => setHiding(false)}
+            onSubmit={async (reason) => {
+              await hideCounter(data.matchup.counter.id, reason);
+              navigate(`/champion/${targetId}`, { state: { done: `숨겼어요: ${counter.name}(으)로 ${target.name} 잡는 법` } });
+            }}
+          />
+        )}
       </section>
 
       <section className="section" id="builds">

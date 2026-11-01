@@ -1,14 +1,17 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getChampionMap } from '../../api/ddragon';
-import { getDeletions, getHiddenCounters, getPendingProposals, isResubmission, requestRevision, restoreCounter } from '../../api/proposals';
+import {
+  approveProposal, getDeletions, getHiddenCounters, getPendingProposals, rejectProposal, requestRevision, restoreCounter,
+} from '../../api/proposals';
 import { useAsync } from '../../lib/useAsync';
 import { TYPE_LABEL, fmtDateTime } from '../../lib/format';
 import { ErrorBox, Loading } from '../../components/Status';
 import RequireOperator from '../../components/RequireOperator';
 import UserName from '../../components/UserName';
+import NoteForm from '../../components/NoteForm';
 
-/** 운영자 페이지: 승인 대기 목록 (오래된 순) */
+/** 운영자 페이지: 승인 대기·숨긴 카운터를 목록에서 바로 처리 (메모 입력이 확인 단계), 삭제 기록 */
 export default function AdminHome() {
   return (
     <RequireOperator>
@@ -18,7 +21,8 @@ export default function AdminHome() {
 }
 
 function PendingList() {
-  const done = useLocation().state?.done;
+  const location = useLocation();
+  const [done, setDone] = useState(location.state?.done ?? null);
   const { data, error, loading, retry } = useAsync(async () => {
     const [champs, pending, hidden, deletions] = await Promise.all([
       getChampionMap(), getPendingProposals(), getHiddenCounters(), getDeletions(),
@@ -26,6 +30,11 @@ function PendingList() {
     return { champs, pending, hidden, deletions };
   }, []);
   const name = (id) => data.champs[id]?.name ?? id;
+  /** 줄에서 처리를 마치면: 안내를 띄우고 목록을 다시 불러온다 */
+  const finished = (message) => {
+    setDone(message);
+    retry();
+  };
 
   return (
     <article>
@@ -41,16 +50,7 @@ function PendingList() {
         {data && data.pending.length > 0 && (
           <ul className="proposal-list">
             {data.pending.map((p) => (
-              <li key={p.id} className="proposal-row">
-                <Link to={`/admin/proposals/${p.id}`} className="proposal-main">
-                  <span className="proposal-type">{isResubmission(p) ? '재검토 후 다시 낸 제안' : TYPE_LABEL[p.type]}</span>{' '}
-                  {name(p.counter_champion)}(으)로 {name(p.target_champion)} 잡는 법
-                </Link>
-                <div className="proposal-meta">
-                  {p.proposer ? <UserName profile={p.proposer} /> : <span>(탈퇴한 유저)</span>}
-                  <span>{fmtDateTime(p.created_at)}</span>
-                </div>
-              </li>
+              <PendingRow key={p.id} proposal={p} name={name} onDone={finished} />
             ))}
           </ul>
         )}
@@ -64,7 +64,7 @@ function PendingList() {
           ) : (
             <ul className="proposal-list">
               {data.hidden.map((c) => (
-                <HiddenRow key={c.id} counter={c} name={name} onChanged={retry} />
+                <HiddenRow key={c.id} counter={c} name={name} onDone={finished} />
               ))}
             </ul>
           )}
@@ -113,35 +113,71 @@ function originState(origin) {
   return { text: null, canRequest: origin.status === 'revoked', waiting: false };
 }
 
-function HiddenRow({ counter: c, name, onChanged }) {
-  const [note, setNote] = useState('');
-  const [revisionNote, setRevisionNote] = useState('');
-  const [asking, setAsking] = useState(false);
-  const [busy, setBusy] = useState(null);
-  const [error, setError] = useState(null);
+/** 승인 대기 한 줄: [승인] [거절]은 그 자리에 메모 입력창, 내용은 [자세히] */
+function PendingRow({ proposal: p, name, onDone }) {
+  const [open, setOpen] = useState(null); // 'approve' | 'reject' | null
+  const title = `${name(p.counter_champion)}(으)로 ${name(p.target_champion)} 잡는 법`;
+  const label = p.resubmitted ? '재검토 후 다시 낸 제안' : TYPE_LABEL[p.type];
+  const toggle = (kind) => setOpen(open === kind ? null : kind);
+
+  return (
+    <li className="proposal-row" aria-label={`[${label}] ${title}`}>
+      <div className="proposal-main">
+        <span className="proposal-type">{label}</span> {title}
+      </div>
+      <div className="proposal-meta">
+        {p.proposer ? <UserName profile={p.proposer} /> : <span>(탈퇴한 유저)</span>}
+        <span>{fmtDateTime(p.created_at)}</span>
+      </div>
+      {p.block && <p className="block-reason">{p.block} 내용을 [자세히]에서 확인해 주세요.</p>}
+      <div className="row-actions">
+        <button type="button" className="btn btn-small" onClick={() => toggle('approve')} disabled={!!p.block} aria-expanded={open === 'approve'}>
+          승인
+        </button>
+        <button type="button" className="btn btn-small" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>
+          거절
+        </button>
+        <Link to={`/admin/proposals/${p.id}`} className="btn btn-small">자세히</Link>
+      </div>
+      {open === 'approve' && (
+        <NoteForm
+          id={`approve-note-${p.id}`}
+          label="승인 메모 (필수, 제안자에게 보여요)"
+          hint={p.resubmitted ? '승인하면 고친 내용으로 다시 공개돼요 (목록 맨 뒤).' : undefined}
+          confirmLabel="승인 확정"
+          busyLabel="승인 중…"
+          onCancel={() => setOpen(null)}
+          onSubmit={async (note) => {
+            await approveProposal(p.id, note);
+            onDone(`${p.resubmitted ? '승인하고 다시 공개' : '승인'}했어요: [${label}] ${title}`);
+          }}
+        />
+      )}
+      {open === 'reject' && (
+        <NoteForm
+          id={`reject-note-${p.id}`}
+          label="거절 사유 (필수, 제안자에게 보여요)"
+          confirmLabel="거절 확정"
+          busyLabel="거절 중…"
+          onCancel={() => setOpen(null)}
+          onSubmit={async (reason) => {
+            await rejectProposal(p.id, reason);
+            onDone(`거절했어요: [${label}] ${title}`);
+          }}
+        />
+      )}
+    </li>
+  );
+}
+
+/** 숨긴 카운터 한 줄: [재검토 요청] [다시 공개]는 그 자리에 메모 입력창 */
+function HiddenRow({ counter: c, name, onDone }) {
+  const [open, setOpen] = useState(null); // 'revision' | 'restore' | null
   const title = `${name(c.counter_champion)}(으)로 ${name(c.target_champion)} 잡는 법`;
   const lastHide = c.logs.find((l) => l.action === 'hide');
   const state = originState(c.origin);
   const path = `${c.target_champion}/${c.counter_champion}`;
-
-  const act = async (kind, question, call) => {
-    if (!window.confirm(question)) return;
-    setBusy(kind);
-    setError(null);
-    try {
-      await call();
-      onChanged();
-    } catch (e) {
-      setError(e.message);
-      setBusy(null);
-    }
-  };
-  const restore = () =>
-    act('restore', `'${title}'을(를) 다시 공개할까요? 카운터 목록 맨 뒤로 들어가요.`
-      + (c.origin?.status === 'revision_requested' ? ' 보낸 재검토 요청은 취소돼요.' : ''),
-    () => restoreCounter(c.id, note.trim()));
-  const ask = () =>
-    act('revision', `'${title}'의 제안자에게 재검토를 요청할까요?`, () => requestRevision(c.id, revisionNote.trim()));
+  const toggle = (kind) => setOpen(open === kind ? null : kind);
 
   return (
     <li className="proposal-row" aria-label={title}>
@@ -163,43 +199,56 @@ function HiddenRow({ counter: c, name, onChanged }) {
         </p>
       )}
 
-      <div className="hidden-actions">
-        <Link to={`/admin/preview/${path}`} className="btn btn-small">미리보기</Link>
+      <div className="row-actions">
         <button
           type="button"
           className="btn btn-small"
-          onClick={() => setAsking((v) => !v)}
-          disabled={!state.canRequest || busy !== null}
-          aria-expanded={asking}
+          onClick={() => toggle('revision')}
+          disabled={!state.canRequest}
+          aria-expanded={open === 'revision'}
         >
           재검토 요청
         </button>
+        <button type="button" className="btn btn-small" onClick={() => toggle('restore')} disabled={state.waiting} aria-expanded={open === 'restore'}>
+          다시 공개
+        </button>
+        <Link to={`/admin/preview/${path}`} className="btn btn-small">미리보기</Link>
         {state.waiting ? (
           <button type="button" className="btn btn-small" disabled title="다시 낸 제안부터 승인하거나 거절해 주세요">완전 삭제</button>
         ) : (
           <Link to={`/admin/delete/${path}`} className="btn btn-small btn-danger">완전 삭제</Link>
         )}
       </div>
+      {state.waiting && <p className="hint">다시 낸 제안이 승인 대기 중이라 다시 공개·삭제는 잠겨 있어요. 그 제안부터 처리해 주세요.</p>}
 
-      {asking && state.canRequest && (
-        <div className="restore-form">
-          <label htmlFor={`revision-note-${c.id}`}>재검토 요청 메모 (필수, 제안자에게 보여요)</label>
-          <textarea id={`revision-note-${c.id}`} rows={3} value={revisionNote} onChange={(e) => setRevisionNote(e.target.value)} maxLength={500} />
-          <button type="button" className="btn btn-small" onClick={ask} disabled={busy !== null || !revisionNote.trim()}>
-            {busy === 'revision' ? '보내는 중…' : '재검토 요청 보내기'}
-          </button>
-        </div>
+      {open === 'revision' && (
+        <NoteForm
+          id={`revision-note-${c.id}`}
+          label="재검토 요청 메모 (필수, 제안자에게 보여요)"
+          confirmLabel="재검토 요청 확정"
+          busyLabel="보내는 중…"
+          onCancel={() => setOpen(null)}
+          onSubmit={async (note) => {
+            await requestRevision(c.id, note);
+            onDone(`재검토를 요청했어요: ${title}`);
+          }}
+        />
+      )}
+      {open === 'restore' && (
+        <NoteForm
+          id={`restore-note-${c.id}`}
+          label="다시 공개 메모 (필수)"
+          hint={`카운터 목록 맨 뒤로 들어가요.${c.origin?.status === 'revision_requested' ? ' 보낸 재검토 요청은 취소돼요.' : ''}`}
+          confirmLabel="다시 공개 확정"
+          busyLabel="공개하는 중…"
+          onCancel={() => setOpen(null)}
+          onSubmit={async (note) => {
+            await restoreCounter(c.id, note);
+            onDone(`다시 공개했어요: ${title}`);
+          }}
+        />
       )}
 
-      <div className="restore-form">
-        <label htmlFor={`restore-note-${c.id}`}>다시 공개 메모 (선택)</label>
-        <input id={`restore-note-${c.id}`} value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} />
-        <button type="button" className="btn btn-small" onClick={restore} disabled={busy !== null || state.waiting}>
-          {busy === 'restore' ? '공개하는 중…' : '다시 공개'}
-        </button>
-      </div>
-      {state.waiting && <p className="hint">다시 낸 제안이 승인 대기 중이라 다시 공개·삭제는 잠겨 있어요. 그 제안부터 처리해 주세요.</p>}
-      {error && <p className="form-error" role="alert">{error}</p>}
       <details>
         <summary>숨김·공개 기록 {c.logs.length}개</summary>
         <ul className="log-list">

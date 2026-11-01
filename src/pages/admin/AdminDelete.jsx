@@ -50,7 +50,6 @@ function DeleteForm() {
   const nameOk = typed.trim() === counter.name;
 
   const remove = async () => {
-    if (!window.confirm(`'${title}'을(를) 완전히 삭제할까요? 되돌릴 수 없어요.`)) return;
     setBusy(true);
     setActionError(null);
     try {

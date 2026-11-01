@@ -1,8 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { PROVIDERS, getIdentities, linkProvider } from '../api/auth';
 import { getChampionMap } from '../api/ddragon';
-import { getMyProposals } from '../api/proposals';
+import { getMyProposals, getMyUnreadNotifications, markNotificationsRead } from '../api/proposals';
 import { STATUS_LABEL, TYPE_LABEL, fmtDateTime } from '../lib/format';
 import { useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
@@ -39,10 +39,20 @@ export default function Me() {
 
 function MyProposals({ userId }) {
   const { data, error, loading, retry } = useAsync(async () => {
-    const [champs, proposals] = await Promise.all([getChampionMap(), getMyProposals(userId)]);
-    return { champs, proposals };
+    const [champs, proposals, unread] = await Promise.all([
+      getChampionMap(), getMyProposals(userId), getMyUnreadNotifications(userId),
+    ]);
+    return { champs, proposals, unread };
   }, [userId]);
   const name = (id) => data.champs[id]?.name ?? id;
+
+  // 화면에 보인 알림 = 확인한 것 → 읽음 처리 (상단 빨간 점이 꺼진다).
+  // "새 알림" 표시는 이번에 불러온 화면에서만 보인다. 재검토 요청 내용과 [고쳐서 다시 제출]은 제안 상태라 그대로 남는다.
+  const unread = data?.unread;
+  useEffect(() => {
+    if (unread?.length) markNotificationsRead(unread.map((n) => n.id)).catch(() => {}); // 실패하면 다음에 다시 확인
+  }, [unread]);
+  const isNew = (p) => unread?.some((n) => n.proposal_id === p.id);
 
   return (
     <section className="me-section" aria-labelledby="my-proposals">
@@ -58,6 +68,7 @@ function MyProposals({ userId }) {
             return (
               <li key={p.id} className={`proposal-row ${p.status}`}>
                 <div className="proposal-main">
+                  {isNew(p) && <span className="new-badge">새 알림</span>}
                   <span className="proposal-type">{TYPE_LABEL[p.type]}</span>{' '}
                   {live ? <Link to={`/champion/${p.target_champion}/counter/${p.counter_champion}`}>{title}</Link> : title}
                 </div>
@@ -66,6 +77,7 @@ function MyProposals({ userId }) {
                   <span>보낸 날 {fmtDateTime(p.created_at)}</span>
                   {p.reviewed_at && <span>처리 {fmtDateTime(p.reviewed_at)}</span>}
                 </div>
+                {p.status === 'approved' && p.approve_note && <p className="approve-note">승인 메모: {p.approve_note}</p>}
                 {p.status === 'rejected' && <p className="reject-reason">거절 사유: {p.reject_reason}</p>}
                 {p.status === 'revoked' && (
                   <p className="reject-reason">

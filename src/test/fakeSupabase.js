@@ -36,6 +36,7 @@ export const TABLES = {
   counter_status_log: [],
   counter_deletions: [],
   build_votes: [],
+  notifications: [],
 };
 
 /** 테스트에서 쓰는 제안 한 줄 (기본: 기존유저가 보낸 대기 중 문서 수정) */
@@ -44,7 +45,7 @@ export function fakeProposal(extra = {}) {
     id: 501, type: 'doc_edit', target_champion: 'Darius', counter_champion: 'Quinn', counter_id: 1,
     content: { summary: '고친 요약', level_notes: { 1: '1렙 내용', 2: '2렙', 3: '3렙', 6: '6렙', 9: '9렙', 11: '11렙' }, lane_cautions: 'E 사거리 주의\n궁 조심' },
     status: 'pending', reject_reason: null, reviewed_at: null, created_at: '2026-11-01T10:00:00Z', base_revision_id: 7,
-    revoke_reason: null, revoked_at: null, revision_note: null, revision_requested_at: null, resubmitted_at: null,
+    revoke_reason: null, revoked_at: null, approve_note: null, revision_note: null, revision_requested_at: null, resubmitted_at: null,
     proposer_id: 'u-old', proposer: { nickname: '기존유저', level: 1, main_title: null }, ...extra,
   };
 }
@@ -70,6 +71,7 @@ export function resetFake() {
   TABLES.counter_status_log = [];
   TABLES.counter_deletions = [];
   TABLES.build_votes = [];
+  TABLES.notifications = [];
   fakeState.inserts = [];
   fakeState.insertError = null;
   fakeState.rpcCalls = [];
@@ -98,6 +100,7 @@ function query(table) {
     insert: (values) => { inserted = values; return q; },
     update: (values) => { patch = values; return q; },
     eq: (col, v) => { rows = rows.filter((r) => r[col] === v); return q; },
+    is: (col, v) => { rows = rows.filter((r) => (r[col] ?? null) === v); return q; },
     in: (col, vs) => { rows = rows.filter((r) => vs.includes(r[col])); return q; },
     order: (col, { ascending = true } = {}) => {
       rows.sort((a, b) => (a[col] < b[col] ? -1 : a[col] > b[col] ? 1 : 0) * (ascending ? 1 : -1));
@@ -162,6 +165,13 @@ const auth = {
 async function rpc(name, args) {
   fakeState.rpcCalls.push({ name, args });
   if (fakeState.rpcError) return { data: null, error: { message: fakeState.rpcError, code: '42501' } };
+  if (name === 'mark_notifications_read') {
+    // DB 함수처럼 내 것만 읽음 처리
+    const me = fakeState.session?.user.id;
+    const mine = TABLES.notifications.filter((n) => args.p_ids.includes(n.id) && n.user_id === me && !n.read_at);
+    mine.forEach((n) => { n.read_at = new Date().toISOString(); });
+    return { data: mine.length, error: null };
+  }
   return { data: null, error: null };
 }
 

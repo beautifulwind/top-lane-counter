@@ -9,6 +9,7 @@ import { ErrorBox, Loading } from '../../components/Status';
 import RequireOperator from '../../components/RequireOperator';
 import DiffView from '../../components/DiffView';
 import UserName from '../../components/UserName';
+import NoteForm from '../../components/NoteForm';
 import NotFound from '../NotFound';
 
 /** 매치업 문서 수정 기록 + 예전 버전으로 되돌리기 */
@@ -30,9 +31,8 @@ function History() {
     return { champs, matchup, revisions };
   }, [targetId, counterId]);
   const [open, setOpen] = useState(null); // 비교를 펼친 버전 id
-  const [busy, setBusy] = useState(false);
+  const [reverting, setReverting] = useState(null); // 되돌리기 메모 입력창을 연 버전 id
   const [message, setMessage] = useState(null);
-  const [actionError, setActionError] = useState(null);
 
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
@@ -46,20 +46,13 @@ function History() {
   const kindText = (r) =>
     r.kind === 'create' ? '처음 작성' : r.kind === 'revert' ? `되돌림 (${number[r.reverted_from] ?? '?'}번 버전으로)` : '수정 제안 승인';
 
-  const revert = async (r) => {
-    if (!window.confirm(`${number[r.id]}번 버전으로 되돌릴까요? 지금 문서는 기록에 남아요.`)) return;
-    setBusy(true);
-    setActionError(null);
-    try {
-      await revertDoc(r.id);
-      setMessage(`${number[r.id]}번 버전으로 되돌렸어요.`);
-      setOpen(null);
-      retry();
-    } catch (e) {
-      setActionError(e.message);
-    } finally {
-      setBusy(false);
-    }
+  // 메모 입력이 확인 단계: 실패하면 NoteForm이 이유를 보여 준다
+  const revert = async (r, note) => {
+    await revertDoc(r.id, note);
+    setMessage(`${number[r.id]}번 버전으로 되돌렸어요.`);
+    setOpen(null);
+    setReverting(null);
+    retry();
   };
 
   return (
@@ -70,7 +63,6 @@ function History() {
       </nav>
       <h1 className="doc-title">수정 기록</h1>
       {message && <p className="notice" role="status">{message}</p>}
-      {actionError && <p className="form-error" role="alert">{actionError}</p>}
       {total === 0 && <p className="empty">기록이 없어요.</p>}
 
       <ol className="revision-list">
@@ -87,15 +79,32 @@ function History() {
                 <span>작성 {who(r.editor)}</span>
                 <span>승인 {who(r.approver)}</span>
               </div>
+              {r.note && <p className="approve-note">되돌리기 메모: {r.note}</p>}
               {!isCurrent && (
                 <div className="actions">
                   <button type="button" className="btn btn-small" onClick={() => setOpen(open === r.id ? null : r.id)}>
                     {open === r.id ? '비교 닫기' : '지금 문서와 비교'}
                   </button>
-                  <button type="button" className="btn btn-small" onClick={() => revert(r)} disabled={busy}>
+                  <button
+                    type="button"
+                    className="btn btn-small"
+                    onClick={() => setReverting(reverting === r.id ? null : r.id)}
+                    aria-expanded={reverting === r.id}
+                  >
                     이 버전으로 되돌리기
                   </button>
                 </div>
+              )}
+              {!isCurrent && reverting === r.id && (
+                <NoteForm
+                  id={`revert-note-${r.id}`}
+                  label="되돌리기 메모 (필수, 수정 기록에 남아요)"
+                  hint="지금 문서는 기록에 남아요."
+                  confirmLabel="되돌리기 확정"
+                  busyLabel="되돌리는 중…"
+                  onCancel={() => setReverting(null)}
+                  onSubmit={(note) => revert(r, note)}
+                />
               )}
               {open === r.id && (
                 <>

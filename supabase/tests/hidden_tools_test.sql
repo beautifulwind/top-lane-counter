@@ -24,7 +24,7 @@ insert into edit_proposals (type, target_champion, counter_champion, proposer_id
 values ('new_counter', 'Darius', 'Garen', auth.uid(), :'doc');
 insert into ids select 'garen_p', id from edit_proposals where counter_champion = 'Garen';
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select approve_proposal((select v from ids where k = 'garen_p')) as garen \gset
+select approve_proposal((select v from ids where k = 'garen_p'), '좋아요') as garen \gset
 insert into ids values ('garen', :garen);
 reset role;
 insert into builds (counter_id, runes, summoner_spells, skill_order, patch, status)
@@ -130,7 +130,7 @@ set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select t.ok('기록(resubmit, 제안자)',
   (select count(*) = 1 from counter_status_log where counter_id = :garen and action = 'resubmit' and actor = '00000000-0000-0000-0000-00000000000b'));
 select t.ok('승인 대기 목록에 들어옴', (select count(*) = 1 from edit_proposals where status = 'pending' and id = (select v from ids where k = 'garen_p')));
-select t.fails('승인 대기 중 다시 공개', format('select restore_counter(%s)', :garen), '승인 대기 중');
+select t.fails('승인 대기 중 다시 공개', format($$select restore_counter(%s, '공개')$$, :garen), '승인 대기 중');
 select t.fails('승인 대기 중 삭제', format($$select delete_counter(%s, 'Garen', '중복')$$, :garen), '승인 대기 중');
 select t.fails('승인 대기 중 재검토 요청', format($$select request_revision(%s, '또')$$, :garen), '이미 다시 제출');
 
@@ -152,7 +152,7 @@ select t.ok('거절 뒤 다시 재검토 요청: 출발점은 다시 숨긴 문�
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select resubmit_proposal((select v from ids where k = 'garen_p'), :'v2');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select approve_proposal((select v from ids where k = 'garen_p')) = :garen as same_counter \gset
+select approve_proposal((select v from ids where k = 'garen_p'), ' 고친 내용 확인 ') = :garen as same_counter \gset
 select t.ok('승인: 같은 카운터를 살림 (새로 만들지 않음)', :'same_counter'::boolean);
 select t.ok('승인: 공개 + 목록 맨 뒤 (퀸 다음)',
   (select status = 'approved' and sort_order = (select sort_order + 1 from counters where id = (select v from ids where k = 'quinn'))
@@ -165,7 +165,7 @@ select t.ok('승인: 제안은 승인, 취소 사유 지움',
   (select status = 'approved' and revoke_reason is null and reviewed_at is not null
    from edit_proposals where id = (select v from ids where k = 'garen_p')));
 select t.ok('승인: 기록(restore)',
-  (select reason = '재검토 후 다시 낸 내용을 승인' from counter_status_log
+  (select reason = '고친 내용 확인' from counter_status_log
    where counter_id = :garen and action = 'restore' order by id desc limit 1));
 reset role;
 set role anon;
@@ -192,7 +192,7 @@ select t.fails('요청이 취소되면 다시 제출 불가', format($$select re
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select hide_counter((select v from ids where k = 'quinn'), '테스트');
 select t.fails('제안자 없는 카운터 재검토 요청', format($$select request_revision(%s, '고쳐 주세요')$$, (select v from ids where k = 'quinn')), '제안 없이 생긴');
-select restore_counter((select v from ids where k = 'quinn'));
+select restore_counter((select v from ids where k = 'quinn'), '테스트 끝');
 
 -- ===== 10. 완전 삭제 =====
 select t.fails('공개 중인 카운터 삭제', format($$select delete_counter(%s, 'Garen', '중복')$$, :garen), '숨긴 카운터만');

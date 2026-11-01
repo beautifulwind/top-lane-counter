@@ -319,3 +319,17 @@ button.champ-cell:disabled { opacity: .4; cursor: default; }
 .revision-note { margin: 8px 0; padding: 10px 12px; border-left: 3px solid var(--brand); background: var(--soft); border-radius: var(--radius); font-size: 14px; }
 .revision-note p { margin: 0 0 6px; white-space: pre-wrap; }
 .revision-note p:last-child { margin-bottom: 0; }
+
+/* 메모 입력 = 확인 단계 (확인 창 대신) */
+.note-form { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
+.note-form label { font-size: 13px; color: var(--muted); }
+.note-form textarea { padding: 8px 10px; font: inherit; font-size: 16px; border: 1px solid var(--line); border-radius: var(--radius); }
+.note-form-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.counter-item { display: flex; align-items: center; }
+.counter-item .counter-row { flex: 1; min-width: 0; }
+.counter-item .row-action { margin-right: 12px; flex: none; }
+.counter-list .note-form { margin: 0 12px 12px; }
+.row-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.block-reason { margin: 6px 0 0; font-size: 13px; color: var(--warn); }
+.approve-note { margin: 6px 0 0; font-size: 14px; color: var(--brand-dark); white-space: pre-wrap; }
+.new-badge { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 999px; background: #e74c3c; color: #fff; font-size: 12px; font-weight: 700; vertical-align: middle; }

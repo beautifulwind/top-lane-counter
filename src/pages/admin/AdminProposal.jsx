@@ -8,6 +8,7 @@ import { ErrorBox, Loading } from '../../components/Status';
 import RequireOperator from '../../components/RequireOperator';
 import DiffView from '../../components/DiffView';
 import UserName from '../../components/UserName';
+import NoteForm from '../../components/NoteForm';
 
 /** 제안 하나 검토: 기존 ↔ 제안 비교, 승인 / 거절(사유 필수) */
 export default function AdminProposal() {
@@ -25,9 +26,7 @@ function Review() {
     const [champs, review] = await Promise.all([getChampionMap(), getProposalForReview(Number(id))]);
     return { champs, review };
   }, [id]);
-  const [reason, setReason] = useState('');
-  const [busy, setBusy] = useState(null);
-  const [actionError, setActionError] = useState(null);
+  const [open, setOpen] = useState(null); // 'approve' | 'reject' | null — 메모 입력창
 
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
@@ -37,19 +36,14 @@ function Review() {
   const title = `${name(p.counter_champion)}(으)로 ${name(p.target_champion)} 잡는 법`;
   const label = resubmitted ? '재검토 후 다시 낸 제안' : TYPE_LABEL[p.type];
 
-  const act = async (kind) => {
-    setBusy(kind);
-    setActionError(null);
-    try {
-      if (kind === 'approve') await approveProposal(p.id);
-      else await rejectProposal(p.id, reason);
-      const what = kind === 'approve' ? (resubmitted ? '승인하고 다시 공개' : '승인') : '거절';
-      navigate('/admin', { state: { done: `${what}했어요: [${label}] ${title}` } });
-    } catch (e) {
-      setActionError(e.message);
-      setBusy(null);
-    }
+  // 메모 입력이 확인 단계: 실패하면 NoteForm이 이유를 보여 주고 그대로 둔다
+  const act = async (kind, note) => {
+    if (kind === 'approve') await approveProposal(p.id, note);
+    else await rejectProposal(p.id, note);
+    const what = kind === 'approve' ? (resubmitted ? '승인하고 다시 공개' : '승인') : '거절';
+    navigate('/admin', { state: { done: `${what}했어요: [${label}] ${title}` } });
   };
+  const toggle = (kind) => setOpen(open === kind ? null : kind);
 
   return (
     <article>
@@ -91,19 +85,46 @@ function Review() {
       </section>
 
       {p.status === 'pending' ? (
-        <section className="section review-actions">
-          <button type="button" className="btn" onClick={() => act('approve')} disabled={busy !== null || hidden || (p.type === 'new_counter' && exists)}>
-            {busy === 'approve' ? '승인 중…' : '승인'}
-          </button>
-          <label htmlFor="reject-reason">거절 사유 (필수, 제안자에게 보여요)</label>
-          <textarea id="reject-reason" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} />
-          <button type="button" className="btn" onClick={() => act('reject')} disabled={busy !== null || !reason.trim()}>
-            {busy === 'reject' ? '거절 중…' : '거절'}
-          </button>
-          {actionError && <p className="form-error" role="alert">{actionError}</p>}
+        <section className="section">
+          <div className="row-actions">
+            <button
+              type="button"
+              className="btn"
+              onClick={() => toggle('approve')}
+              disabled={hidden || (p.type === 'new_counter' && exists)}
+              aria-expanded={open === 'approve'}
+            >
+              승인
+            </button>
+            <button type="button" className="btn" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>
+              거절
+            </button>
+          </div>
+          {open === 'approve' && (
+            <NoteForm
+              id="approve-note"
+              label="승인 메모 (필수, 제안자에게 보여요)"
+              hint={resubmitted ? '승인하면 고친 내용으로 다시 공개돼요 (목록 맨 뒤).' : undefined}
+              confirmLabel="승인 확정"
+              busyLabel="승인 중…"
+              onCancel={() => setOpen(null)}
+              onSubmit={(note) => act('approve', note)}
+            />
+          )}
+          {open === 'reject' && (
+            <NoteForm
+              id="reject-note"
+              label="거절 사유 (필수, 제안자에게 보여요)"
+              confirmLabel="거절 확정"
+              busyLabel="거절 중…"
+              onCancel={() => setOpen(null)}
+              onSubmit={(note) => act('reject', note)}
+            />
+          )}
         </section>
       ) : (
         <>
+          {p.status === 'approved' && p.approve_note && <p className="approve-note">승인 메모: {p.approve_note}</p>}
           {p.reject_reason && <p className="reject-reason">거절 사유: {p.reject_reason}</p>}
           {p.status === 'revoked' && <p className="reject-reason">승인 취소 사유: {p.revoke_reason} ({fmtDateTime(p.revoked_at)})</p>}
         </>
