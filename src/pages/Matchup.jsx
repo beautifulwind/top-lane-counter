@@ -2,14 +2,16 @@ import { Link, useParams } from 'react-router-dom';
 import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../api/ddragon';
 import { getBuilds, getMatchup } from '../api/content';
 import { useAsync } from '../lib/useAsync';
+import { useAuth } from '../lib/auth';
 import { ErrorBox, Loading, PendingButton } from '../components/Status';
 import UserName from '../components/UserName';
+import { REQUIRED_LEVELS } from '../lib/docContent';
 import NotFound from './NotFound';
 
-export const REQUIRED_LEVELS = [1, 2, 3, 6, 9, 11];
 
 export default function Matchup() {
   const { targetId, counterId } = useParams();
+  const { isOperator } = useAuth();
   const { data, error, loading, retry } = useAsync(
     async () => {
       const [champs, matchup] = await Promise.all([getChampionMap(), getMatchup(targetId, counterId)]);
@@ -46,7 +48,7 @@ export default function Matchup() {
         </h1>
         <p className="empty">아직 등록되지 않은 카운터예요. 새 카운터로 제안할 수 있어요.</p>
         <div className="actions">
-          <PendingButton>+ 새 카운터 제안</PendingButton>
+          <Link to={`/champion/${targetId}/propose?counter=${counterId}`} className="btn">+ 새 카운터 제안</Link>
         </div>
       </article>
     );
@@ -107,7 +109,8 @@ export default function Matchup() {
           <p className="empty">아직 작성된 내용이 없어요.</p>
         )}
         <div className="actions">
-          <PendingButton>문서 수정 제안</PendingButton>
+          <Link to={`/champion/${targetId}/counter/${counterId}/edit`} className="btn">문서 수정 제안</Link>
+          {isOperator && <Link to={`/admin/history/${targetId}/${counterId}`} className="btn">수정 기록</Link>}
         </div>
       </section>
 

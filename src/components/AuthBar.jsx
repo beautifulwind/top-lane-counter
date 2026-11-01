@@ -29,6 +29,9 @@ export default function AuthBar() {
           <UserName profile={auth.profile} />
         </Link>
       )}
+      {auth.isOperator && (
+        <Link to="/admin" className="top-btn">관리</Link>
+      )}
       <button type="button" className="top-btn" onClick={logout}>
         로그아웃
       </button>

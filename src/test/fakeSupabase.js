@@ -15,7 +15,7 @@ export const TABLES = {
       matchup_docs: {
         counter_id: 1, summary: '사거리로 일방적인 견제',
         level_notes: { 1: '1렙 내용', 2: '2렙', 3: '3렙', 4: '4렙 추가', 6: '6렙', 9: '9렙', 11: '11렙' },
-        lane_cautions: 'E 사거리 주의', updated_at: '2026-11-01T09:00:00+00:00',
+        lane_cautions: 'E 사거리 주의', updated_at: '2026-11-01T09:00:00+00:00', revision_id: 7,
       },
     },
     { id: 2, target_champion: 'Darius', counter_champion: 'Vayne', sort_order: 0, status: 'pending', matchup_docs: null },
@@ -30,10 +30,26 @@ export const TABLES = {
   profiles: [
     { id: 'u-old', nickname: '기존유저', role: 'user', xp: 0, level: 1, main_title: null },
   ],
+  // 관계(proposer, editor, approver)는 select가 돌려주는 모양 그대로 넣어 둔다
+  edit_proposals: [],
+  doc_revisions: [],
 };
 
+/** 테스트에서 쓰는 제안 한 줄 (기본: 기존유저가 보낸 대기 중 문서 수정) */
+export function fakeProposal(extra = {}) {
+  return {
+    id: 501, type: 'doc_edit', target_champion: 'Darius', counter_champion: 'Quinn', counter_id: 1,
+    content: { summary: '고친 요약', level_notes: { 1: '1렙 내용', 2: '2렙', 3: '3렙', 6: '6렙', 9: '9렙', 11: '11렙' }, lane_cautions: 'E 사거리 주의\n궁 조심' },
+    status: 'pending', reject_reason: null, reviewed_at: null, created_at: '2026-11-01T10:00:00Z', base_revision_id: 7,
+    proposer_id: 'u-old', proposer: { nickname: '기존유저', level: 1, main_title: null }, ...extra,
+  };
+}
+
 // 테스트가 바꾸는 상태. setupTests.js가 테스트마다 초기화한다.
-export const fakeState = { error: null, session: null, initError: null, oauthCalls: [], linkCalls: [], linkError: null, listeners: new Set() };
+export const fakeState = {
+  error: null, session: null, initError: null, oauthCalls: [], linkCalls: [], linkError: null, listeners: new Set(),
+  inserts: [], insertError: null, rpcCalls: [], rpcError: null,
+};
 const INITIAL_PROFILES = TABLES.profiles.map((p) => ({ ...p }));
 
 export function resetFake() {
@@ -45,6 +61,12 @@ export function resetFake() {
   fakeState.linkError = null;
   fakeState.listeners.clear();
   TABLES.profiles = INITIAL_PROFILES.map((p) => ({ ...p }));
+  TABLES.edit_proposals = [];
+  TABLES.doc_revisions = [];
+  fakeState.inserts = [];
+  fakeState.insertError = null;
+  fakeState.rpcCalls = [];
+  fakeState.rpcError = null;
 }
 
 /**
@@ -63,8 +85,10 @@ function query(table) {
   let rows = [...(TABLES[table] ?? [])];
   let single = false;
   let patch = null;
+  let inserted = null;
   const q = {
     select: () => q,
+    insert: (values) => { inserted = values; return q; },
     update: (values) => { patch = values; return q; },
     eq: (col, v) => { rows = rows.filter((r) => r[col] === v); return q; },
     order: (col, { ascending = true } = {}) => {
@@ -76,6 +100,18 @@ function query(table) {
   };
   function run() {
     if (fakeState.error) return { data: null, error: { message: fakeState.error } };
+    if (inserted) {
+      // DB 트리거·RLS가 낸 오류 흉내 (예: '이미 등록된 카운터예요.')
+      if (fakeState.insertError) return { data: null, error: { message: fakeState.insertError } };
+      fakeState.inserts.push({ table, values: inserted });
+      const proposer = TABLES.profiles.find((p) => p.id === inserted.proposer_id);
+      TABLES[table].push({
+        id: 900 + TABLES[table].length, status: 'pending', reject_reason: null, reviewed_at: null,
+        created_at: new Date().toISOString(), base_revision_id: null, counter_id: null, ...inserted,
+        proposer: proposer && { nickname: proposer.nickname, level: proposer.level, main_title: proposer.main_title },
+      });
+      return { data: null, error: null };
+    }
     if (patch) {
       // RLS 흉내: 내 행만 수정 / DB 제약 흉내: 닉네임 중복(대소문자 무시) 금지
       const me = fakeState.session?.user.id;
@@ -114,6 +150,13 @@ const auth = {
   },
 };
 
+// 운영자 전용 DB 함수 호출 기록. 오류는 fakeState.rpcError로 흉내 낸다 (예: '운영자만 할 수 있어요.')
+async function rpc(name, args) {
+  fakeState.rpcCalls.push({ name, args });
+  if (fakeState.rpcError) return { data: null, error: { message: fakeState.rpcError, code: '42501' } };
+  return { data: null, error: null };
+}
+
 export function db() {
-  return { from: query, auth };
+  return { from: query, auth, rpc };
 }

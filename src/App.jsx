@@ -9,6 +9,12 @@ import NotFound from './pages/NotFound';
 import Login from './pages/Login';
 import Welcome from './pages/Welcome';
 import Me from './pages/Me';
+import ProposeCounter from './pages/ProposeCounter';
+import ProposeEdit from './pages/ProposeEdit';
+import AdminHome from './pages/admin/AdminHome';
+import AdminProposal from './pages/admin/AdminProposal';
+import AdminOrder from './pages/admin/AdminOrder';
+import AdminHistory from './pages/admin/AdminHistory';
 import { AuthProvider } from './lib/auth';
 
 function ScrollToTop() {
@@ -29,10 +35,16 @@ export function AppRoutes() {
         <Route element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="champion/:id" element={<Champion />} />
+          <Route path="champion/:id/propose" element={<ProposeCounter />} />
           <Route path="champion/:targetId/counter/:counterId" element={<Matchup />} />
+          <Route path="champion/:targetId/counter/:counterId/edit" element={<ProposeEdit />} />
           <Route path="login" element={<Login />} />
           <Route path="welcome" element={<Welcome />} />
           <Route path="me" element={<Me />} />
+          <Route path="admin" element={<AdminHome />} />
+          <Route path="admin/proposals/:id" element={<AdminProposal />} />
+          <Route path="admin/order/:championId" element={<AdminOrder />} />
+          <Route path="admin/history/:targetId/:counterId" element={<AdminHistory />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

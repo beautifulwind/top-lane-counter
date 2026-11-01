@@ -2,11 +2,13 @@ import { Link, useParams } from 'react-router-dom';
 import { getChampionMap } from '../api/ddragon';
 import { getCountersFor } from '../api/content';
 import { useAsync } from '../lib/useAsync';
-import { ErrorBox, Loading, PendingButton } from '../components/Status';
+import { ErrorBox, Loading } from '../components/Status';
+import { useAuth } from '../lib/auth';
 import NotFound from './NotFound';
 
 export default function Champion() {
   const { id } = useParams();
+  const { isOperator } = useAuth();
   const { data, error, loading, retry } = useAsync(
     async () => {
       const [champs, counters] = await Promise.all([getChampionMap(), getCountersFor(id)]);
@@ -64,7 +66,8 @@ export default function Champion() {
         )}
 
         <div className="actions">
-          <PendingButton>+ 새 카운터 제안</PendingButton>
+          <Link to={`/champion/${id}/propose`} className="btn">+ 새 카운터 제안</Link>
+          {isOperator && <Link to={`/admin/order/${id}`} className="btn">순서 변경</Link>}
         </div>
       </section>
     </article>

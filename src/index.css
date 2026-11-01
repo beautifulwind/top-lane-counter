@@ -242,3 +242,62 @@ kbd {
 .identity-row small { display: block; color: var(--muted); word-break: break-all; }
 .identity-linked { color: var(--brand-dark); font-weight: 600; font-size: 14px; flex: none; }
 .identity-row .btn { flex: none; min-height: 40px; }
+
+/* 4단계: 제안·운영자 화면 (기능 위주) */
+a.btn { display: inline-flex; align-items: center; text-decoration: none; }
+.btn-small { min-height: 36px; padding: 0 10px; font-size: 14px; }
+button.champ-cell { background: none; border: 0; padding: 0; font: inherit; font-size: 12px; color: var(--text); cursor: pointer; width: 100%; }
+button.champ-cell:disabled { opacity: .4; cursor: default; }
+.picked { display: flex; align-items: center; gap: 10px; }
+.picked img { border-radius: var(--radius); }
+
+.doc-form { display: flex; flex-direction: column; gap: 6px; max-width: 640px; }
+.doc-form label, .doc-form legend { font-weight: 600; font-size: 14px; }
+.doc-form input, .doc-form textarea, .doc-form select, .review-actions textarea {
+  width: 100%; padding: 10px 12px; font: inherit; font-size: 16px;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper);
+}
+.doc-form select { width: auto; }
+.doc-form fieldset { border: 0; padding: 0; margin: 12px 0 0; display: flex; flex-direction: column; gap: 12px; }
+.doc-level { display: flex; flex-direction: column; gap: 4px; }
+.doc-level .btn { align-self: flex-start; }
+.doc-add-level { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.doc-form .count { color: var(--muted); text-align: right; }
+.doc-form > .btn { margin-top: 12px; }
+
+.notice { padding: 10px 12px; border: 1px solid var(--brand); border-radius: var(--radius); background: var(--soft); }
+.warn { padding: 10px 12px; border: 1px solid var(--warn); border-radius: var(--radius); background: #fdecea; color: var(--warn); }
+
+.proposal-list, .revision-list, .order-list { list-style: none; padding: 0; margin: 12px 0 0; display: flex; flex-direction: column; gap: 8px; }
+.proposal-row, .revision { padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
+.revision.current { border-color: var(--brand); }
+.proposal-main { display: block; font-weight: 600; }
+.proposal-type { font-size: 12px; color: var(--muted); font-weight: 600; }
+.proposal-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; margin-top: 4px; font-size: 13px; color: var(--muted); }
+.status-badge { font-weight: 700; }
+.status-badge.pending { color: var(--muted); }
+.status-badge.approved { color: var(--brand-dark); }
+.status-badge.rejected { color: var(--warn); }
+.reject-reason { margin: 6px 0 0; color: var(--warn); font-size: 14px; white-space: pre-wrap; }
+.revision-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+.diff-field { margin-top: 12px; }
+.diff-field h3 { font-size: 15px; margin: 0 0 4px; }
+.diff-tag { font-size: 12px; color: var(--muted); font-weight: 600; }
+.diff-lines { margin: 0; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg);
+  white-space: pre-wrap; word-break: break-word; font: inherit; font-size: 14px; }
+.diff-line { display: block; }
+.diff-line.add { background: #e6f4ea; color: #1e6b34; }
+.diff-line.del { background: #fdecea; color: #a12a1e; text-decoration: line-through; }
+.diff-same { margin-top: 12px; }
+.diff-same summary { cursor: pointer; color: var(--muted); }
+
+.review-actions { display: flex; flex-direction: column; gap: 8px; max-width: 640px; }
+.review-actions .btn { align-self: flex-start; }
+.review-actions label { font-weight: 600; font-size: 14px; margin-top: 8px; }
+
+.order-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
+.order-row.dragging { position: relative; z-index: 1; box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+.order-row img { border-radius: var(--radius); }
+.order-name { flex: 1; font-weight: 600; }
+.drag-handle { min-width: 44px; min-height: 44px; border: 0; background: none; font-size: 20px; cursor: grab; touch-action: none; color: var(--muted); }

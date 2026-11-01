@@ -31,7 +31,7 @@ export async function getMatchup(targetId, counterId) {
   const row = await run(
     db()
       .from('counters')
-      .select('id, target_champion, counter_champion, sort_order, matchup_docs(counter_id, summary, level_notes, lane_cautions, updated_at)')
+      .select('id, target_champion, counter_champion, sort_order, matchup_docs(counter_id, summary, level_notes, lane_cautions, updated_at, revision_id)')
       .eq('target_champion', targetId)
       .eq('counter_champion', counterId)
       .eq('status', 'approved')

@@ -103,12 +103,12 @@ test('운영자: 상단에 "Lv.0 닉네임"만 보이고 "운영자"·"관리자
   expect(header.textContent).not.toMatch(/운영자|관리자/);
 });
 
-test('관리자 지정 화면은 없다 (/admin은 없는 페이지)', async () => {
+test('운영자 페이지(/admin)에도 관리자 지정 기능은 없다 (SPEC: 나중에 정함)', async () => {
   fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
   start('/admin');
-  await screen.findByRole('button', { name: '로그아웃' });
-  expect(document.querySelector('.content').textContent).toMatch(/찾을 수 없|없는 페이지|404/);
-  expect(screen.queryByText(/관리자 지정|권한 변경/)).toBeNull();
+  expect(await screen.findByRole('heading', { name: '운영자 페이지' })).toBeDefined();
+  await screen.findByText('대기 중인 제안이 없어요.');
+  expect(screen.queryByText(/관리자 지정|권한 변경|관리자로/)).toBeNull();
 });
 
 test('이미 로그인한 상태로 /login에 오면 원래 페이지로 보낸다', async () => {
