@@ -9,8 +9,8 @@ export const PROVIDERS = { google: '구글', kakao: '카카오' };
 /**
  * 소셜 로그인 시작 → 구글/카카오 → Supabase → 지금 접속한 주소(origin)의 returnTo 경로로 돌아온다.
  * 카카오: Supabase가 account_email·profile_nickname·profile_image를 항상 요청한다 (scopes로 뺄 수 없음).
- *   이메일은 카카오 동의항목에서 "선택 동의"로 두고, Supabase에서 "Allow users without an email"을 켠다.
- *   앱은 이메일을 쓰지 않는다.
+ *   이메일은 카카오 동의항목에서 "필수 동의"다 (카카오 비즈 앱 필요). 같은 이메일의 구글·카카오 계정을
+ *   Supabase가 한 계정으로 자동 연결하는 데 쓰이고, 화면에는 /me의 "로그인 연결"에만 보인다.
  */
 export async function signIn(provider, returnTo = '/') {
   if (!PROVIDERS[provider]) throw new Error(`지원하지 않는 로그인 방식이에요. (${provider})`);

@@ -294,3 +294,64 @@ RLS 원칙:
 - 기타 칭호 이름과 조건 (빌드 연구원, 비주류 픽 연구원, 연구소 수다쟁이)
 - 본인 빌드 투표 불가, 따봉 점수 정렬, "구버전" 표시 기준
 - 대표 칭호 1개 선택 방식
+
+## 11. Supabase 설정 (프로젝트를 새로 만들 때 이 순서대로)
+
+2026-11-01: 처음 만든 프로젝트가 호주(ap-southeast-2)라서 **서울(ap-northeast-2)** 새 프로젝트로 옮김 (테스트 데이터뿐이라 데이터 이전 없음).
+
+### 11-1. 프로젝트
+- 지역: **Northeast Asia (Seoul), ap-northeast-2** — 개인정보처리방침의 서버 지역(`src/lib/legal.js`)과 같아야 한다
+- Data API 켜짐, `public` 스키마 노출 (기본값). 새 표의 기본 권한은 아래 SQL이 스스로 걷어낸다
+
+### 11-2. SQL Editor에서 실행할 파일 (이 순서, 파일마다 따로 한 번씩)
+1. `supabase/schema.sql`
+2. `supabase/migrations/002_auth.sql`
+3. `supabase/migrations/003_operator.sql`
+4. `supabase/migrations/004_proposals.sql`
+5. `supabase/migrations/005_hide_counter.sql`
+6. `supabase/migrations/006_hidden_counter_tools.sql`
+7. `supabase/migrations/007_inline_actions_notifications.sql`
+- 합쳐서 한 번에 돌리지 않는다: 파일마다 `begin … commit`이라 중간에 실패하면 앞부분만 반영되고, 다시 돌리면 "already exists"가 난다.
+- 새 마이그레이션(008 …)을 만들면 이 목록에 추가한다. `supabase/tests/run.sh`가 빈 DB에 같은 순서로 실행해 검사한다 (`supabase/tests`는 실제 프로젝트에서 실행하지 않음).
+
+### 11-3. Authentication → Sign In / Providers
+- **Google**: 켜기. Client ID / Client Secret (Google Cloud Console의 OAuth 클라이언트)
+- **Kakao**: 켜기. Client ID = 카카오 **REST API 키**, Client Secret = 카카오 로그인 → 보안의 **Client Secret**
+  - Supabase가 `account_email`·`profile_nickname`·`profile_image`를 항상 요청한다 → 카카오 동의항목에 셋 다 있어야 함 (없으면 KOE205). 이메일은 **필수 동의** (비즈 앱 필요)
+  - "Allow users without an email": 예전 프로젝트와 같게 맞춘다
+- **Allow manual linking**: 켜기 (`/me`의 [구글/카카오 연결하기] = `linkIdentity`)
+- 같은 이메일 자동 연결은 Supabase 기본 동작 (끌 수 없음, "합치기"로 결정함)
+- **Email** 제공자: 끄기 (앱은 구글·카카오만 씀. 켜 두면 공개 키만으로 이메일 가입이 될 수 있음)
+
+### 11-4. Authentication → URL Configuration
+- **Site URL**: 배포 주소 (배포 전에는 아래 Codespace 주소)
+- **Redirect URLs**: 앱은 로그인 후 원래 보던 경로(`/me`, `/champion/...`)로 돌아오므로 끝에 `/**`가 필요하다. **딱 두 개만** 쓴다.
+  - `https://<Cloudflare Pages 프로젝트>.pages.dev/**` (배포 주소)
+  - `https://squalid-spooky-cackle-r57w7wvj5gqfw5gg-3000.app.github.dev/**` (지금 Codespace의 정확한 주소)
+- **`https://*-3000.app.github.dev/**` 같은 github.dev 와일드카드는 쓰지 않는다** (보안: 남의 Codespace 주소로도 로그인 결과가 돌아갈 수 있음).
+- Codespace를 새로 만들면 주소가 바뀌므로 그때 새 주소로 바꾼다 (터미널: `echo "https://${CODESPACE_NAME}-3000.${GITHUB_CODESPACES_PORT_FORWARDING_DOMAIN}"`).
+- 커스텀 도메인을 붙이면 `https://<도메인>/**`를 추가하고 Site URL도 바꾼다.
+- Cloudflare 미리보기 배포(`<해시>.<프로젝트>.pages.dev`)는 위 주소와 맞지 않아 로그인이 안 된다 (의도한 것). 필요하면 그 주소만 따로 추가한다.
+
+### 11-5. 바깥 서비스
+- **Google Cloud Console** → OAuth 클라이언트 → 승인된 리디렉션 URI: `https://<프로젝트ID>.supabase.co/auth/v1/callback`
+  - OAuth 동의 화면에 `/privacy`, `/terms` 주소가 등록돼 있다 (사이트 주소라 Supabase를 바꿔도 그대로)
+- **Kakao Developers** → 카카오 로그인 → Redirect URI: 같은 콜백 주소
+- 옛 프로젝트를 정리할 때 두 곳에서 옛 콜백 주소를 지운다
+
+### 11-6. 앱 환경변수
+- `VITE_SUPABASE_URL=https://<프로젝트ID>.supabase.co`, `VITE_SUPABASE_PUBLISHABLE_KEY=sb_publishable_…` (Settings → API Keys의 Publishable key)
+- Codespace: `.env` (git에 안 올라감). 바꾼 뒤 3000번 개발 서버를 재시작해야 반영된다 (Vite는 시작할 때만 읽음)
+- Cloudflare Pages: Settings → Environment variables에서 Production·Preview 둘 다. 빌드할 때 코드에 박히므로 바꾼 뒤 다시 배포
+- 코드에 프로젝트 주소를 하드코딩하지 않는다 (테스트의 주소 형식 예시만 예외)
+
+### 11-7. 운영자 지정 (11-2를 모두 실행한 뒤)
+1. 사이트에서 구글로 로그인하고 닉네임을 정한다
+2. SQL Editor:
+   ```sql
+   update public.profiles set role = 'admin'
+   where id = (select id from auth.users where email = 'ghkdrbtjd02@gmail.com');
+   ```
+   "UPDATE 1"이면 성공. 트리거가 Lv.0 · 경험치 0 · 칭호 없음으로 맞춘다 (운영자는 1명만 허용)
+3. 새로고침 → `Lv.0 닉네임`, 상단 [관리]
+- 카카오 이메일이 다르면 따로 계정이 생기므로, 운영자 계정의 `/me`에서 [카카오 연결하기]로 붙인다
