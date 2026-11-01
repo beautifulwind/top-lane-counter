@@ -25,7 +25,7 @@ test('홈 → 챔피언 문서 → 매치업 문서를 클릭으로 이동해도
 
   fireEvent.click(screen.getByText('퀸'));
   expect(await screen.findByText(/퀸\(으\)로 다리우스 잡는 법/)).toBeDefined();
-  expect(await screen.findByText('예시유저1')).toBeDefined();
+  expect(await screen.findByText('예시 빌드')).toBeDefined();
   expect(screen.getByText(RIOT_NOTICE)).toBeDefined();
 
   fireEvent.click(screen.getByRole('link', { name: '다리우스' }));

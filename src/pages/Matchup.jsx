@@ -3,6 +3,7 @@ import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells
 import { getBuilds, getMatchup } from '../api/content';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading, PendingButton } from '../components/Status';
+import UserName from '../components/UserName';
 import NotFound from './NotFound';
 
 export const REQUIRED_LEVELS = [1, 2, 3, 6, 9, 11];
@@ -148,7 +149,9 @@ function BuildCard({ build, items, runes, spells, latest }) {
   return (
     <div className="build">
       <div className="build-head">
-        <span className="build-author">{build.author}</span>
+        <span className="build-author">
+          {build.author ? <UserName profile={build.author} /> : '예시 빌드'}
+        </span>
         <span className={outdated ? 'badge old' : 'badge'}>
           {outdated ? `구버전 · ${build.patch}` : `패치 ${build.patch}`}
         </span>
