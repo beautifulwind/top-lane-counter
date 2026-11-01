@@ -24,10 +24,10 @@ export default function AuthBar() {
   return (
     <div className="auth-bar">
       {auth.profile?.nickname && (
-        <span className="me">
+        <Link to="/me" className="me" title="내 활동">
           {/* 운영자도 역할 글자 없이 "Lv.0 닉네임"으로만 표시 (SPEC 3장) */}
           <UserName profile={auth.profile} />
-        </span>
+        </Link>
       )}
       <button type="button" className="top-btn" onClick={logout}>
         로그아웃

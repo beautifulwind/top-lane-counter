@@ -8,6 +8,7 @@ import Matchup from './pages/Matchup';
 import NotFound from './pages/NotFound';
 import Login from './pages/Login';
 import Welcome from './pages/Welcome';
+import Me from './pages/Me';
 import { AuthProvider } from './lib/auth';
 
 function ScrollToTop() {
@@ -31,6 +32,7 @@ export function AppRoutes() {
           <Route path="champion/:targetId/counter/:counterId" element={<Matchup />} />
           <Route path="login" element={<Login />} />
           <Route path="welcome" element={<Welcome />} />
+          <Route path="me" element={<Me />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

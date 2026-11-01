@@ -33,7 +33,7 @@ export const TABLES = {
 };
 
 // 테스트가 바꾸는 상태. setupTests.js가 테스트마다 초기화한다.
-export const fakeState = { error: null, session: null, initError: null, oauthCalls: [], listeners: new Set() };
+export const fakeState = { error: null, session: null, initError: null, oauthCalls: [], linkCalls: [], linkError: null, listeners: new Set() };
 const INITIAL_PROFILES = TABLES.profiles.map((p) => ({ ...p }));
 
 export function resetFake() {
@@ -41,6 +41,8 @@ export function resetFake() {
   fakeState.session = null;
   fakeState.initError = null;
   fakeState.oauthCalls = [];
+  fakeState.linkCalls = [];
+  fakeState.linkError = null;
   fakeState.listeners.clear();
   TABLES.profiles = INITIAL_PROFILES.map((p) => ({ ...p }));
 }
@@ -99,6 +101,12 @@ const auth = {
     return { data: { subscription: { unsubscribe: () => fakeState.listeners.delete(cb) } } };
   },
   signInWithOAuth: async (args) => { fakeState.oauthCalls.push(args); return { data: {}, error: null }; },
+  linkIdentity: async (args) => {
+    fakeState.linkCalls.push(args);
+    return fakeState.linkError ? { data: null, error: { message: fakeState.linkError } } : { data: {}, error: null };
+  },
+  // 진짜처럼 user.identities를 돌려준다 (fakeLogin의 user 인자로 넣는다)
+  getUserIdentities: async () => ({ data: { identities: fakeState.session?.user.identities ?? [] }, error: null }),
   signOut: async () => {
     fakeState.session = null;
     fakeState.listeners.forEach((cb) => cb('SIGNED_OUT', null));

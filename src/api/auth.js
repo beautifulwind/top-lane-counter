@@ -14,11 +14,65 @@ export const PROVIDERS = { google: '구글', kakao: '카카오' };
  */
 export async function signIn(provider, returnTo = '/') {
   if (!PROVIDERS[provider]) throw new Error(`지원하지 않는 로그인 방식이에요. (${provider})`);
+  rememberPending('signIn', provider);
   const { error } = await db().auth.signInWithOAuth({
     provider,
     options: { redirectTo: window.location.origin + returnTo },
   });
-  if (error) throw new Error(`로그인을 시작하지 못했어요. (${error.message})`);
+  if (error) {
+    forgetPending();
+    throw new Error(`로그인을 시작하지 못했어요. (${error.message})`);
+  }
+}
+
+/**
+ * 로그인한 계정에 다른 로그인 방식을 붙인다 (Supabase 수동 연결 = linkIdentity).
+ * 구글/카카오에 다녀와서 /me로 돌아온다. Supabase에서 "Allow manual linking"이 켜져 있어야 한다.
+ */
+export async function linkProvider(provider) {
+  if (!PROVIDERS[provider]) throw new Error(`지원하지 않는 로그인 방식이에요. (${provider})`);
+  rememberPending('link', provider);
+  const { error } = await db().auth.linkIdentity({
+    provider,
+    options: { redirectTo: window.location.origin + '/me' },
+  });
+  if (error) {
+    forgetPending();
+    if (/manual linking/i.test(error.message)) {
+      throw new Error('계정 연결 기능이 아직 꺼져 있어요. (Supabase에서 Allow manual linking을 켜야 해요)');
+    }
+    throw new Error(`${PROVIDERS[provider]} 연결을 시작하지 못했어요. (${error.message})`);
+  }
+}
+
+/** 내 계정에 붙어 있는 로그인 방식들 [{ provider, email, createdAt }] */
+export async function getIdentities() {
+  const { data, error } = await db().auth.getUserIdentities();
+  if (error) throw new Error(`연결된 로그인 방식을 불러오지 못했어요. (${error.message})`);
+  return (data?.identities ?? []).map((i) => ({
+    provider: i.provider,
+    email: i.identity_data?.email ?? null,
+    createdAt: i.created_at ?? null,
+  }));
+}
+
+// 구글/카카오로 떠나기 직전에 "무엇을 하러 갔는지" 기억해 둔다 (돌아왔을 때 안내 문구에 쓴다).
+// 같은 탭에서만 필요하므로 sessionStorage. 못 쓰는 환경이면 안내만 빠진다.
+const PENDING_KEY = 'auth:pending';
+function rememberPending(kind, provider) {
+  try { sessionStorage.setItem(PENDING_KEY, JSON.stringify({ kind, provider })); } catch { /* 안내만 빠짐 */ }
+}
+function forgetPending() {
+  try { sessionStorage.removeItem(PENDING_KEY); } catch { /* 무시 */ }
+}
+function takePending() {
+  try {
+    const v = JSON.parse(sessionStorage.getItem(PENDING_KEY) ?? 'null');
+    sessionStorage.removeItem(PENDING_KEY);
+    return v && PROVIDERS[v.provider] ? v : null;
+  } catch {
+    return null;
+  }
 }
 
 // 로그인 후 돌아온 주소에 붙는 값들 (처리 후 주소창에서 지운다)
@@ -28,19 +82,49 @@ const CALLBACK_PARAMS = ['code', 'sb_flow_id', 'error', 'error_code', 'error_des
  * 구글/카카오 → Supabase를 거쳐 ?code=...로 돌아왔을 때, 그 code가 세션으로 바뀌었는지 확인한다.
  * (supabase-js는 이 단계가 실패해도 콘솔에 아무것도 남기지 않으므로 여기서 직접 잡아 화면에 보여준다)
  * 로그인 콜백이 아니면 아무 일도 하지 않는다. 실패하면 안내 문구가 담긴 Error를 던진다.
+ * 성공하면 화면에 띄울 안내(notice)를 돌려줄 수 있다:
+ *   { type: 'merged', provider, others } 같은 이메일의 기존 계정에 자동으로 합쳐짐 (Supabase 자동 연결)
+ *   { type: 'linked', provider }         /me에서 연결하기를 눌러 붙임
  */
 export async function finishLoginFromUrl() {
   const query = new URLSearchParams(window.location.search);
   const hash = new URLSearchParams(window.location.hash.slice(1));
   const providerError = query.get('error_description') ?? hash.get('error_description');
-  if (!query.has('code') && !providerError) return;
+  const providerCode = query.get('error_code') ?? hash.get('error_code');
+  if (!query.has('code') && !providerError) return null;
 
+  const pending = takePending();
   const auth = db().auth;
   const { error } = await auth.initialize(); // supabase-js가 code → 세션 교환을 마칠 때까지 기다림
   const { data } = await auth.getSession();
   clearCallbackParams();
-  if (data.session && !error) return;
-  throw loginError(error, providerError);
+  // 연결(linkIdentity)이 실패해도 원래 세션은 남아 있으므로, 구글/카카오가 보낸 오류가 있으면 실패로 본다
+  if (data.session && !error && !providerError) return loginNotice(pending, data.session.user);
+  throw loginError(error, providerError, providerCode, pending);
+}
+
+// 처음 만들어진 계정이면 계정과 로그인 방식이 같은 순간에 생긴다. 이보다 늦게 붙었으면 "기존 계정에 합쳐짐".
+const MERGE_GAP_MS = 60 * 1000;
+
+function loginNotice(pending, user) {
+  if (!pending) return null;
+  const { kind, provider } = pending;
+  if (kind === 'link') return { type: 'linked', provider };
+  const identities = user?.identities ?? [];
+  const mine = identities.find((i) => i.provider === provider);
+  const others = [...new Set(identities.map((i) => i.provider).filter((p) => p !== provider && PROVIDERS[p]))];
+  if (!mine?.created_at || !user?.created_at || others.length === 0) return null;
+  const joinedLater = Date.parse(mine.created_at) - Date.parse(user.created_at) > MERGE_GAP_MS;
+  const justNow = Date.now() - Date.parse(mine.created_at) < 10 * 60 * 1000;
+  return joinedLater && justNow ? { type: 'merged', provider, others } : null;
+}
+
+/** 안내(notice)를 사람이 읽을 문장으로 */
+export function noticeText(notice) {
+  const name = PROVIDERS[notice.provider];
+  if (notice.type === 'linked') return `${name} 로그인을 이 계정에 연결했어요. 이제 ${name}로 로그인해도 같은 계정이에요.`;
+  const others = notice.others.map((p) => PROVIDERS[p]).join('·');
+  return `같은 이메일로 이미 가입된 계정(${others})이 있어서, ${name} 로그인을 그 계정에 연결했어요. 앞으로 어느 쪽으로 로그인해도 같은 계정이에요.`;
 }
 
 function clearCallbackParams() {
@@ -50,11 +134,17 @@ function clearCallbackParams() {
   window.history.replaceState(window.history.state, '', url.toString());
 }
 
-function loginError(error, providerError) {
+function loginError(error, providerError, providerCode, pending) {
   const raw = error?.message ?? providerError ?? '';
+  const linking = pending?.kind === 'link';
+  const name = PROVIDERS[pending?.provider] ?? '';
   let message;
-  if (providerError && !error?.message?.match(/verifier|flow state|ByteString|fetch/i)) {
-    message = '로그인이 취소됐거나 거절됐어요. 다시 시도해 주세요.';
+  if (providerCode === 'identity_already_exists' || /already linked|identity_already_exists/i.test(raw)) {
+    message = `이 ${name || '로그인'} 계정은 이미 다른 회원 계정에 연결돼 있어요. 그 계정으로 로그인하거나, 다른 ${name || '로그인'} 계정으로 연결해 주세요.`;
+  } else if (/manual linking/i.test(raw)) {
+    message = '계정 연결 기능이 아직 꺼져 있어요. (Supabase에서 Allow manual linking을 켜야 해요)';
+  } else if (providerError && !error?.message?.match(/verifier|flow state|ByteString|fetch/i)) {
+    message = linking ? `${name} 연결이 취소됐거나 거절됐어요. 다시 시도해 주세요.` : '로그인이 취소됐거나 거절됐어요. 다시 시도해 주세요.';
   } else if (/ByteString|ISO-8859-1|Failed to fetch|NetworkError|Load failed/i.test(raw)) {
     message = 'Supabase 서버에 로그인 요청을 보내지 못했어요. 인터넷 연결과 Supabase 키 설정(.env / Cloudflare 환경변수)을 확인해 주세요.';
   } else if (/verifier/i.test(raw) || !error) {
@@ -65,7 +155,11 @@ function loginError(error, providerError) {
   } else {
     message = '로그인을 마치지 못했어요. 다시 시도해 주세요.';
   }
-  return Object.assign(new Error(message), { detail: raw || null });
+  return Object.assign(new Error(message), {
+    detail: raw || null,
+    title: linking ? '계정을 연결하지 못했어요.' : '로그인하지 못했어요.',
+    retryTo: linking ? '/me' : '/login',
+  });
 }
 
 export async function signOut() {

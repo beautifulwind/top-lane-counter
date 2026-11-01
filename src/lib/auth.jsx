@@ -7,11 +7,12 @@ import { finishLoginFromUrl, getProfile, getSession, onAuthChange } from '../api
  * profile: 로그인했을 때 내 프로필 (불러오는 중이면 undefined)
  */
 const AuthContext = createContext(null);
-const SIGNED_OUT = { status: 'signedOut', session: null, user: null, profile: null, isOperator: false, setProfile: () => {}, loginError: null, clearLoginError: () => {} };
+const SIGNED_OUT = { status: 'signedOut', session: null, user: null, profile: null, isOperator: false, setProfile: () => {}, loginError: null, clearLoginError: () => {}, notice: null, clearNotice: () => {} };
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined); // undefined = 아직 확인 중
-  const [loginError, setLoginError] = useState(null); // 구글/카카오에서 돌아왔는데 로그인이 안 됐을 때
+  const [loginError, setLoginError] = useState(null); // 구글/카카오에서 돌아왔는데 로그인·연결이 안 됐을 때
+  const [notice, setNotice] = useState(null); // 기존 계정에 합쳐짐 / 연결함 안내
   const [loaded, setLoaded] = useState({ userId: null, profile: undefined, error: null });
 
   useEffect(() => {
@@ -20,7 +21,7 @@ export function AuthProvider({ children }) {
     try {
       off = onAuthChange((s) => alive && setSession(s));
       finishLoginFromUrl()
-        .catch((e) => alive && setLoginError(e))
+        .then((n) => alive && n && setNotice(n), (e) => alive && setLoginError(e))
         .then(getSession)
         .then((s) => alive && setSession(s), () => alive && setSession(null));
     } catch (e) {
@@ -44,6 +45,7 @@ export function AuthProvider({ children }) {
 
   const setProfile = useCallback((profile) => setLoaded({ userId, profile, error: null }), [userId]);
   const clearLoginError = useCallback(() => setLoginError(null), []);
+  const clearNotice = useCallback(() => setNotice(null), []);
 
   let value;
   if (session === undefined) value = { ...SIGNED_OUT, status: 'loading' };
@@ -59,8 +61,10 @@ export function AuthProvider({ children }) {
       // 운영자 = role 'admin'인 유일한 계정 (모든 권한). 실제 권한 검사는 DB(RLS)가 한다.
       isOperator: profile?.role === 'admin',
       setProfile,
-      loginError: null,
+      loginError, // 로그인한 채로 계정 연결에 실패했을 때
       clearLoginError,
+      notice,
+      clearNotice,
     };
   }
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
