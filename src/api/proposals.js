@@ -6,6 +6,7 @@ import { cleanDoc } from '../lib/docContent';
 const PERSON = 'nickname, level, main_title';
 const PROPOSAL_COLUMNS =
   'id, type, target_champion, counter_champion, counter_id, content, status, reject_reason, reviewed_at, created_at, base_revision_id, ' +
+  'revoke_reason, revoked_at, ' +
   `proposer:profiles!edit_proposals_proposer_id_fkey(${PERSON})`;
 const DOC_COLUMNS = 'counter_id, summary, level_notes, lane_cautions, updated_at, revision_id';
 
@@ -76,7 +77,8 @@ export function getPendingProposals() {
 
 /**
  * 제안 하나 + 비교할 지금 문서.
- * { proposal, current: 지금 문서 | null, exists: (새 카운터) 이미 공개된 같은 카운터가 있나, stale: 제안 후 문서가 바뀌었나 }
+ * { proposal, current: 지금 문서 | null, exists: (새 카운터) 이미 공개된 같은 카운터가 있나,
+ *   hidden: 대상 카운터를 운영자가 숨겼나, stale: 제안 후 문서가 바뀌었나 }
  */
 export async function getProposalForReview(id) {
   const proposal = await run(
@@ -84,27 +86,28 @@ export async function getProposalForReview(id) {
     '제안을 불러오지 못했어요.',
   );
   if (!proposal) return null;
-  if (proposal.type === 'doc_edit') {
-    const counter = await run(
-      db().from('counters').select(`id, matchup_docs(${DOC_COLUMNS})`).eq('id', proposal.counter_id).maybeSingle(),
+  // 운영자는 숨긴 카운터도 읽을 수 있다 (RLS: is_admin)
+  const counter = proposal.type === 'doc_edit'
+    ? await run(
+      db().from('counters').select(`id, status, matchup_docs(${DOC_COLUMNS})`).eq('id', proposal.counter_id).maybeSingle(),
       '지금 문서를 불러오지 못했어요.',
+    )
+    : await run(
+      db()
+        .from('counters')
+        .select(`id, status, matchup_docs(${DOC_COLUMNS})`)
+        .eq('target_champion', proposal.target_champion)
+        .eq('counter_champion', proposal.counter_champion)
+        .maybeSingle(),
+      '지금 카운터 목록을 확인하지 못했어요.',
     );
-    const current = one(counter?.matchup_docs);
-    const stale = proposal.status === 'pending' && current != null && proposal.base_revision_id != null
-      && current.revision_id !== proposal.base_revision_id;
-    return { proposal, current, exists: true, stale };
-  }
-  const existing = await run(
-    db()
-      .from('counters')
-      .select(`id, matchup_docs(${DOC_COLUMNS})`)
-      .eq('target_champion', proposal.target_champion)
-      .eq('counter_champion', proposal.counter_champion)
-      .eq('status', 'approved')
-      .maybeSingle(),
-    '지금 카운터 목록을 확인하지 못했어요.',
-  );
-  return { proposal, current: one(existing?.matchup_docs), exists: !!existing, stale: false };
+  const current = one(counter?.matchup_docs);
+  const hidden = counter?.status === 'hidden';
+  // 이미 승인된 새 카운터 제안이면 그 카운터는 "자기 자신"이라 중복 경고 대상이 아니다
+  const exists = proposal.type === 'doc_edit' || counter?.status === 'approved';
+  const stale = proposal.type === 'doc_edit' && proposal.status === 'pending' && current != null
+    && proposal.base_revision_id != null && current.revision_id !== proposal.base_revision_id;
+  return { proposal, current: proposal.type === 'doc_edit' ? current : null, exists, hidden, stale };
 }
 
 const one = (v) => (Array.isArray(v) ? v[0] ?? null : v ?? null);
@@ -135,4 +138,30 @@ export function getRevisions(counterRowId) {
       .order('id', { ascending: false }),
     '수정 기록을 불러오지 못했어요.',
   );
+}
+
+// ---------------- 카운터 숨기기(승인 취소) / 다시 공개 ----------------
+
+/** 숨기기: 일반 사용자에게서 카운터·문서·빌드를 가린다. 그 카운터를 만든 제안은 "승인 취소"가 된다. 사유 필수 */
+export const hideCounter = (counterRowId, reason) =>
+  rpc('hide_counter', { p_counter_id: counterRowId, p_reason: reason }, '숨기지 못했어요.');
+/** 다시 공개: 목록 맨 뒤로 돌아오고, 제안은 다시 "승인". 메모는 선택 */
+export const restoreCounter = (counterRowId, note) =>
+  rpc('restore_counter', { p_counter_id: counterRowId, p_note: note || null }, '다시 공개하지 못했어요.');
+
+/** 숨긴 카운터 목록 + 각 카운터의 숨김·공개 기록(최근 순) — 운영자만 */
+export async function getHiddenCounters() {
+  const counters = await run(
+    db().from('counters').select('id, target_champion, counter_champion, status').eq('status', 'hidden'),
+    '숨긴 카운터를 불러오지 못했어요.',
+  );
+  if (counters.length === 0) return [];
+  const logs = await run(
+    db()
+      .from('counter_status_log')
+      .select(`id, counter_id, action, reason, created_at, actor:profiles!counter_status_log_actor_fkey(${PERSON})`)
+      .order('created_at', { ascending: false }),
+    '숨김 기록을 불러오지 못했어요.',
+  );
+  return counters.map((c) => ({ ...c, logs: logs.filter((l) => l.counter_id === c.id) }));
 }

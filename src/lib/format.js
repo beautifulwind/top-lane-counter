@@ -8,5 +8,5 @@ export function fmtDateTime(ts) {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
 }
 
-export const STATUS_LABEL = { pending: '대기 중', approved: '승인', rejected: '거절' };
+export const STATUS_LABEL = { pending: '대기 중', approved: '승인', rejected: '거절', revoked: '승인 취소' };
 export const TYPE_LABEL = { new_counter: '새 카운터', doc_edit: '문서 수정' };

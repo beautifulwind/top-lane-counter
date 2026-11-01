@@ -1,0 +1,129 @@
+import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { MemoryRouter, useLocation } from 'react-router-dom';
+import { AppRoutes } from '../App';
+import { fakeFetch } from './fakeDdragon';
+import { TABLES, fakeLogin, fakeProposal, fakeState } from './fakeSupabase';
+
+const COUNTERS = TABLES.counters.map((c) => ({ ...c }));
+beforeEach(() => {
+  vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch());
+  vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+});
+afterEach(() => { cleanup(); vi.restoreAllMocks(); TABLES.counters = COUNTERS.map((c) => ({ ...c })); });
+
+function Where() { const l = useLocation(); return <output data-testid="where">{l.pathname}</output>; }
+const start = (path) => render(<MemoryRouter initialEntries={[path]}><AppRoutes /><Where /></MemoryRouter>);
+const where = () => screen.getByTestId('where').textContent;
+const asOperator = () => fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
+const op = { nickname: '영자(운)', level: 0, main_title: null };
+
+/** 운영자가 숨긴 "가렌 → 다리우스" 카운터 (id 3) + 숨김 기록 */
+function hiddenGaren() {
+  TABLES.counters.push({
+    id: 3, target_champion: 'Darius', counter_champion: 'Garen', sort_order: 2, status: 'hidden',
+    matchup_docs: { counter_id: 3, summary: '가렌 요약', level_notes: { 1: 'a', 2: 'b', 3: 'c', 6: 'd', 9: 'e', 11: 'f' }, lane_cautions: '', updated_at: null, revision_id: 9 },
+  });
+  TABLES.counter_status_log.push(
+    { id: 2, counter_id: 3, action: 'hide', reason: '잘못 승인했어요', created_at: '2026-11-03T00:00:00Z', actor: op },
+    { id: 1, counter_id: 3, action: 'restore', reason: null, created_at: '2026-11-02T00:00:00Z', actor: op },
+  );
+}
+
+test('일반 유저: [카운터 숨기기]가 안 보이고, 주소로 들어가도 운영자만 볼 수 있어요', async () => {
+  fakeLogin('u-old');
+  start('/champion/Darius/counter/Quinn');
+  await screen.findByRole('link', { name: '문서 수정 제안' });
+  expect(screen.queryByRole('link', { name: '카운터 숨기기' })).toBeNull();
+  cleanup();
+  start('/admin/hide/Darius/Quinn');
+  expect(await screen.findByText('운영자만 볼 수 있어요.')).toBeDefined();
+});
+
+test('운영자: [카운터 숨기기] → 사유가 없으면 안 눌리고, 확인을 거쳐 hide_counter로 보낸 뒤 운영자 페이지로', async () => {
+  asOperator();
+  start('/champion/Darius/counter/Quinn');
+  fireEvent.click(await screen.findByRole('link', { name: '카운터 숨기기' }));
+  expect(await screen.findByRole('heading', { name: '카운터 숨기기 (승인 취소)' })).toBeDefined();
+  const hide = screen.getByRole('button', { name: '숨기기' });
+  expect(hide.disabled).toBe(true);
+  fireEvent.change(screen.getByLabelText(/숨기는 사유/), { target: { value: '  ' } });
+  expect(hide.disabled).toBe(true);
+  fireEvent.change(screen.getByLabelText(/숨기는 사유/), { target: { value: '잘못 승인했어요' } });
+
+  vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true);
+  fireEvent.click(hide);
+  expect(fakeState.rpcCalls).toEqual([]);
+  fireEvent.click(hide);
+  expect(await screen.findByText('숨겼어요: 퀸(으)로 다리우스 잡는 법')).toBeDefined();
+  expect(where()).toBe('/admin');
+  expect(fakeState.rpcCalls).toEqual([{ name: 'hide_counter', args: { p_counter_id: 1, p_reason: '잘못 승인했어요' } }]);
+});
+
+test('숨기기를 DB가 거부하면 이유를 보여 주고 화면에 머문다', async () => {
+  asOperator();
+  fakeState.rpcError = '이미 숨긴 카운터예요.';
+  vi.spyOn(window, 'confirm').mockReturnValue(true);
+  start('/admin/hide/Darius/Quinn');
+  fireEvent.change(await screen.findByLabelText(/숨기는 사유/), { target: { value: '실수' } });
+  fireEvent.click(screen.getByRole('button', { name: '숨기기' }));
+  expect(await screen.findByText('이미 숨긴 카운터예요.')).toBeDefined();
+  expect(where()).toBe('/admin/hide/Darius/Quinn');
+});
+
+test('운영자 페이지: 숨긴 카운터와 사유·기록이 보이고, [다시 공개]는 확인 후 restore_counter(메모 선택)', async () => {
+  hiddenGaren();
+  asOperator();
+  vi.spyOn(window, 'confirm').mockReturnValue(true);
+  start('/admin');
+  const row = await screen.findByRole('listitem', { name: '가렌(으)로 다리우스 잡는 법' });
+  expect(within(row).getByText('사유: 잘못 승인했어요')).toBeDefined();
+  expect(within(row).getByText('숨김·공개 기록 2개')).toBeDefined();
+  expect(row.querySelector('.log-list').textContent).toMatch(/숨김 · Lv\.0 영자\(운\) · 잘못 승인했어요/);
+
+  fireEvent.click(within(row).getByRole('button', { name: '다시 공개' }));
+  await vi.waitFor(() => expect(fakeState.rpcCalls).toEqual([{ name: 'restore_counter', args: { p_counter_id: 3, p_note: null } }]));
+  fakeState.rpcCalls.length = 0;
+  // 목록을 다시 불러온 뒤의 새 줄 (가짜 DB는 그대로라 다시 보임)
+  const row2 = (await screen.findByRole('button', { name: '다시 공개' })).closest('li');
+  fireEvent.change(within(row2).getByLabelText('다시 공개 메모 (선택)'), { target: { value: ' 확인해 보니 맞음 ' } });
+  fireEvent.click(within(row2).getByRole('button', { name: '다시 공개' }));
+  await vi.waitFor(() => expect(fakeState.rpcCalls).toEqual([{ name: 'restore_counter', args: { p_counter_id: 3, p_note: '확인해 보니 맞음' } }]));
+});
+
+test('/me: 승인 취소된 제안은 "승인 취소"와 사유를 보여 주고 링크는 없다', async () => {
+  TABLES.edit_proposals.push(fakeProposal({
+    id: 7, type: 'new_counter', counter_champion: 'Garen', counter_id: 3, status: 'revoked',
+    reviewed_at: '2026-11-02T00:00:00Z', revoke_reason: '잘못 승인했어요', revoked_at: '2026-11-03T00:00:00Z',
+  }));
+  fakeLogin('u-old');
+  start('/me');
+  const row = (await screen.findByText('승인 취소')).closest('li');
+  expect(within(row).getByText(/승인 취소 사유: 잘못 승인했어요/)).toBeDefined();
+  expect(within(row).queryByRole('link')).toBeNull();
+});
+
+test('제안 검토: 숨긴 카운터의 수정 제안·같은 매치업 새 카운터 제안은 경고 + 승인 잠금 (거절은 가능)', async () => {
+  hiddenGaren();
+  TABLES.edit_proposals.push(
+    fakeProposal({ id: 701, counter_champion: 'Garen', counter_id: 3, base_revision_id: 9 }),
+    fakeProposal({ id: 702, type: 'new_counter', counter_champion: 'Garen', counter_id: null }),
+    fakeProposal({ id: 703, type: 'new_counter', counter_champion: 'Garen', counter_id: 3, status: 'revoked', revoke_reason: '잘못 승인했어요', revoked_at: '2026-11-03T00:00:00Z' }),
+  );
+  asOperator();
+  start('/admin/proposals/701');
+  expect(await screen.findByText('숨긴 카운터의 제안이에요. 승인할 수 없으니 거절해 주세요.')).toBeDefined();
+  expect(screen.getByRole('button', { name: '승인' }).disabled).toBe(true);
+  fireEvent.change(screen.getByLabelText(/거절 사유/), { target: { value: '숨긴 카운터' } });
+  expect(screen.getByRole('button', { name: '거절' }).disabled).toBe(false);
+  cleanup();
+  start('/admin/proposals/702');
+  expect(await screen.findByText(/운영자가 숨긴 카운터예요. 살리려면/)).toBeDefined();
+  expect(screen.getByRole('button', { name: '승인' }).disabled).toBe(true);
+  expect(screen.queryByText(/이미 같은 카운터가 공개돼 있어요/)).toBeNull();
+  cleanup();
+  start('/admin/proposals/703');
+  expect(await screen.findByText(/승인 취소 사유: 잘못 승인했어요/)).toBeDefined();
+  expect(screen.queryByRole('button', { name: '승인' })).toBeNull();
+  expect(screen.queryByText(/운영자가 숨긴 카운터예요/)).toBeNull(); // 처리 끝난 제안엔 경고 없음
+});

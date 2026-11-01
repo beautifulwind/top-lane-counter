@@ -9,14 +9,18 @@ if ! docker ps --format '{{.Names}}' | grep -qx "$NAME"; then
   docker start "$NAME" >/dev/null 2>&1 || docker run -d --name "$NAME" -e POSTGRES_PASSWORD=pg postgres:16-alpine >/dev/null
   until docker exec "$NAME" pg_isready -U postgres >/dev/null 2>&1; do sleep 1; done
 fi
-docker exec "$NAME" psql -U postgres -q -c "drop database if exists tlc" -c "create database tlc" 2>/dev/null
-for f in tests/supabase_stub.sql schema.sql migrations/*.sql tests/*_test.sql; do
-  echo "== $f"
-  # 결과 행은 버리고, PASS/FAIL 알림과 오류만 보여 준다. 오류가 나면 거기서 멈춘다.
-  if ! out=$(docker exec -i "$NAME" psql -U postgres -d tlc -v ON_ERROR_STOP=1 -q < "$f" 2>&1 >/dev/null); then
+# 검사 파일마다 깨끗한 DB를 새로 만든다 (서로 영향 없게)
+run_file() {
+  if ! out=$(docker exec -i "$NAME" psql -U postgres -d tlc -v ON_ERROR_STOP=1 -q < "$1" 2>&1 >/dev/null); then
     printf '%s\n' "$out" | sed -e 's/^psql:<stdin>:[0-9]*: //' -e 's/^NOTICE:  //'
-    echo "실패: $f"; exit 1
+    echo "실패: $1"; exit 1
   fi
   printf '%s\n' "$out" | sed -e 's/^psql:<stdin>:[0-9]*: //' -e 's/^NOTICE:  //' | grep -v '^$' || true
+}
+for t in tests/*_test.sql; do
+  echo "===== $t"
+  docker exec "$NAME" psql -U postgres -q -c "drop database if exists tlc" -c "create database tlc" 2>/dev/null
+  for f in tests/supabase_stub.sql schema.sql migrations/*.sql; do run_file "$f"; done
+  run_file "$t"
 done
 echo "모두 통과"

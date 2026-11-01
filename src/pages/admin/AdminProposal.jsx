@@ -32,7 +32,7 @@ function Review() {
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
   if (!data.review) return <p className="empty">제안을 찾지 못했어요.</p>;
-  const { proposal: p, current, exists, stale } = data.review;
+  const { proposal: p, current, exists, hidden, stale } = data.review;
   const name = (cid) => data.champs[cid]?.name ?? cid;
   const title = `${name(p.counter_champion)}(으)로 ${name(p.target_champion)} 잡는 법`;
 
@@ -59,6 +59,13 @@ function Review() {
         <span className={`status-badge ${p.status}`}>{STATUS_LABEL[p.status]}</span>
       </p>
 
+      {hidden && p.status === 'pending' && (
+        <p className="warn" role="alert">
+          {p.type === 'new_counter'
+            ? '운영자가 숨긴 카운터예요. 살리려면 운영자 페이지의 [다시 공개]를 쓰고, 이 제안은 거절해 주세요.'
+            : '숨긴 카운터의 제안이에요. 승인할 수 없으니 거절해 주세요.'}
+        </p>
+      )}
       {p.type === 'new_counter' && exists && p.status === 'pending' && (
         <p className="warn" role="alert">이미 같은 카운터가 공개돼 있어요. 승인할 수 없으니 거절해 주세요.</p>
       )}
@@ -77,7 +84,7 @@ function Review() {
 
       {p.status === 'pending' ? (
         <section className="section review-actions">
-          <button type="button" className="btn" onClick={() => act('approve')} disabled={busy !== null || (p.type === 'new_counter' && exists)}>
+          <button type="button" className="btn" onClick={() => act('approve')} disabled={busy !== null || hidden || (p.type === 'new_counter' && exists)}>
             {busy === 'approve' ? '승인 중…' : '승인'}
           </button>
           <label htmlFor="reject-reason">거절 사유 (필수, 제안자에게 보여요)</label>
@@ -88,7 +95,10 @@ function Review() {
           {actionError && <p className="form-error" role="alert">{actionError}</p>}
         </section>
       ) : (
-        p.reject_reason && <p className="reject-reason">거절 사유: {p.reject_reason}</p>
+        <>
+          {p.reject_reason && <p className="reject-reason">거절 사유: {p.reject_reason}</p>}
+          {p.status === 'revoked' && <p className="reject-reason">승인 취소 사유: {p.revoke_reason} ({fmtDateTime(p.revoked_at)})</p>}
+        </>
       )}
     </article>
   );

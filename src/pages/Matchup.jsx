@@ -111,6 +111,7 @@ export default function Matchup() {
         <div className="actions">
           <Link to={`/champion/${targetId}/counter/${counterId}/edit`} className="btn">문서 수정 제안</Link>
           {isOperator && <Link to={`/admin/history/${targetId}/${counterId}`} className="btn">수정 기록</Link>}
+          {isOperator && <Link to={`/admin/hide/${targetId}/${counterId}`} className="btn">카운터 숨기기</Link>}
         </div>
       </section>
 

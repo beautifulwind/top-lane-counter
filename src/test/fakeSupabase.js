@@ -33,6 +33,7 @@ export const TABLES = {
   // 관계(proposer, editor, approver)는 select가 돌려주는 모양 그대로 넣어 둔다
   edit_proposals: [],
   doc_revisions: [],
+  counter_status_log: [],
 };
 
 /** 테스트에서 쓰는 제안 한 줄 (기본: 기존유저가 보낸 대기 중 문서 수정) */
@@ -41,6 +42,7 @@ export function fakeProposal(extra = {}) {
     id: 501, type: 'doc_edit', target_champion: 'Darius', counter_champion: 'Quinn', counter_id: 1,
     content: { summary: '고친 요약', level_notes: { 1: '1렙 내용', 2: '2렙', 3: '3렙', 6: '6렙', 9: '9렙', 11: '11렙' }, lane_cautions: 'E 사거리 주의\n궁 조심' },
     status: 'pending', reject_reason: null, reviewed_at: null, created_at: '2026-11-01T10:00:00Z', base_revision_id: 7,
+    revoke_reason: null, revoked_at: null,
     proposer_id: 'u-old', proposer: { nickname: '기존유저', level: 1, main_title: null }, ...extra,
   };
 }
@@ -63,6 +65,7 @@ export function resetFake() {
   TABLES.profiles = INITIAL_PROFILES.map((p) => ({ ...p }));
   TABLES.edit_proposals = [];
   TABLES.doc_revisions = [];
+  TABLES.counter_status_log = [];
   fakeState.inserts = [];
   fakeState.insertError = null;
   fakeState.rpcCalls = [];

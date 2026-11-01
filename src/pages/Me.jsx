@@ -54,7 +54,7 @@ function MyProposals({ userId }) {
         <ul className="proposal-list">
           {data.proposals.map((p) => {
             const title = `${name(p.counter_champion)}(으)로 ${name(p.target_champion)} 잡는 법`;
-            const live = p.status === 'approved' || p.type === 'doc_edit';
+            const live = p.status === 'approved' || (p.type === 'doc_edit' && p.status !== 'revoked');
             return (
               <li key={p.id} className={`proposal-row ${p.status}`}>
                 <div className="proposal-main">
@@ -67,6 +67,12 @@ function MyProposals({ userId }) {
                   {p.reviewed_at && <span>처리 {fmtDateTime(p.reviewed_at)}</span>}
                 </div>
                 {p.status === 'rejected' && <p className="reject-reason">거절 사유: {p.reject_reason}</p>}
+                {p.status === 'revoked' && (
+                  <p className="reject-reason">
+                    승인 취소 사유: {p.revoke_reason}
+                    {p.revoked_at && <> ({fmtDateTime(p.revoked_at)})</>}
+                  </p>
+                )}
               </li>
             );
           })}

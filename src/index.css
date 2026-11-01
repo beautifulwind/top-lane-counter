@@ -301,3 +301,10 @@ button.champ-cell:disabled { opacity: .4; cursor: default; }
 .order-row img { border-radius: var(--radius); }
 .order-name { flex: 1; font-weight: 600; }
 .drag-handle { min-width: 44px; min-height: 44px; border: 0; background: none; font-size: 20px; cursor: grab; touch-action: none; color: var(--muted); }
+
+/* 카운터 숨기기 / 다시 공개 */
+.hint-list { margin: 8px 0; padding-left: 20px; color: var(--muted); font-size: 14px; }
+.restore-form { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 8px; margin-top: 8px; }
+.restore-form label { font-size: 13px; color: var(--muted); }
+.restore-form input { flex: 1; min-width: 160px; padding: 8px 10px; font: inherit; font-size: 16px; border: 1px solid var(--line); border-radius: var(--radius); }
+.log-list { margin: 6px 0 0; padding-left: 18px; font-size: 13px; color: var(--muted); }

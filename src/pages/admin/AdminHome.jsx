@@ -1,6 +1,7 @@
+import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getChampionMap } from '../../api/ddragon';
-import { getPendingProposals } from '../../api/proposals';
+import { getHiddenCounters, getPendingProposals, restoreCounter } from '../../api/proposals';
 import { useAsync } from '../../lib/useAsync';
 import { TYPE_LABEL, fmtDateTime } from '../../lib/format';
 import { ErrorBox, Loading } from '../../components/Status';
@@ -19,8 +20,8 @@ export default function AdminHome() {
 function PendingList() {
   const done = useLocation().state?.done;
   const { data, error, loading, retry } = useAsync(async () => {
-    const [champs, pending] = await Promise.all([getChampionMap(), getPendingProposals()]);
-    return { champs, pending };
+    const [champs, pending, hidden] = await Promise.all([getChampionMap(), getPendingProposals(), getHiddenCounters()]);
+    return { champs, pending, hidden };
   }, []);
   const name = (id) => data.champs[id]?.name ?? id;
 
@@ -52,6 +53,75 @@ function PendingList() {
           </ul>
         )}
       </section>
+
+      {data && (
+        <section className="section">
+          <h2 className="section-title">숨긴 카운터 ({data.hidden.length})</h2>
+          {data.hidden.length === 0 ? (
+            <p className="empty">숨긴 카운터가 없어요.</p>
+          ) : (
+            <ul className="proposal-list">
+              {data.hidden.map((c) => (
+                <HiddenRow key={c.id} counter={c} name={name} onRestored={retry} />
+              ))}
+            </ul>
+          )}
+        </section>
+      )}
     </article>
+  );
+}
+
+const ACTION_LABEL = { hide: '숨김', restore: '다시 공개' };
+
+function HiddenRow({ counter: c, name, onRestored }) {
+  const [note, setNote] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+  const title = `${name(c.counter_champion)}(으)로 ${name(c.target_champion)} 잡는 법`;
+  const lastHide = c.logs.find((l) => l.action === 'hide');
+
+  const restore = async () => {
+    if (!window.confirm(`'${title}'을(를) 다시 공개할까요? 카운터 목록 맨 뒤로 들어가요.`)) return;
+    setBusy(true);
+    setError(null);
+    try {
+      await restoreCounter(c.id, note.trim());
+      onRestored();
+    } catch (e) {
+      setError(e.message);
+      setBusy(false);
+    }
+  };
+
+  return (
+    <li className="proposal-row" aria-label={title}>
+      <div className="proposal-main">{title}</div>
+      {lastHide && (
+        <div className="proposal-meta">
+          <span>숨긴 날 {fmtDateTime(lastHide.created_at)}</span>
+          <span>사유: {lastHide.reason}</span>
+        </div>
+      )}
+      <div className="restore-form">
+        <label htmlFor={`restore-note-${c.id}`}>다시 공개 메모 (선택)</label>
+        <input id={`restore-note-${c.id}`} value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} />
+        <button type="button" className="btn btn-small" onClick={restore} disabled={busy}>
+          {busy ? '공개하는 중…' : '다시 공개'}
+        </button>
+      </div>
+      {error && <p className="form-error" role="alert">{error}</p>}
+      <details>
+        <summary>숨김·공개 기록 {c.logs.length}개</summary>
+        <ul className="log-list">
+          {c.logs.map((l) => (
+            <li key={l.id}>
+              {fmtDateTime(l.created_at)} · {ACTION_LABEL[l.action]} · {l.actor ? <UserName profile={l.actor} /> : '—'}
+              {l.reason && <> · {l.reason}</>}
+            </li>
+          ))}
+        </ul>
+      </details>
+    </li>
   );
 }

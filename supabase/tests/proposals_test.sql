@@ -102,6 +102,7 @@ select t.fails('닉네임 없으면 제안 불가',
 -- 로그인 안 한 사람
 reset role;
 set role anon;
+set request.jwt.claim.sub = '';  -- 비로그인: 로그인 정보 없음
 select t.fails('비로그인 승인 함수 호출', 'select approve_proposal(1)', 'permission denied');
 select t.ok('비로그인도 공개 문서는 읽음', (select count(*) = 1 from matchup_docs));
 
