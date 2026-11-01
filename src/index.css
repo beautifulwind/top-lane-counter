@@ -333,3 +333,20 @@ button.champ-cell:disabled { opacity: .4; cursor: default; }
 .block-reason { margin: 6px 0 0; font-size: 13px; color: var(--warn); }
 .approve-note { margin: 6px 0 0; font-size: 14px; color: var(--brand-dark); white-space: pre-wrap; }
 .new-badge { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 999px; background: #e74c3c; color: #fff; font-size: 12px; font-weight: 700; vertical-align: middle; }
+
+/* 개인정보처리방침 · 이용약관 */
+.footer-links { max-width: 960px; margin: 0 auto 8px; font-size: 13px; }
+.footer-links a { color: var(--text); }
+.footer-privacy { font-weight: 700; }
+.login-consent { margin-top: 12px; font-size: 13px; color: var(--muted); }
+.legal { line-height: 1.7; }
+.legal section { margin-top: 24px; }
+.legal h2 { font-size: 18px; margin: 0 0 8px; }
+.legal ul, .legal ol { padding-left: 20px; }
+.legal-table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 8px 0; }
+.legal-table th, .legal-table td { border: 1px solid var(--line); padding: 8px; text-align: left; vertical-align: top; }
+.legal-table thead th { background: var(--soft); }
+.legal-table tbody th { width: 30%; font-weight: 600; }
+.legal-table th, .legal-table td { overflow-wrap: anywhere; }
+.legal-table ul { margin: 0; padding-left: 18px; }
+.fill-me { padding: 2px 6px; background: #fff3a3; color: #5c4a00; border: 2px dashed #e0b400; border-radius: 4px; font-weight: 700; }

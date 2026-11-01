@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Navigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { PROVIDERS, signIn } from '../api/auth';
 import { useAuth } from '../lib/auth';
 import { Loading } from '../components/Status';
@@ -44,6 +44,10 @@ export default function Login() {
           </button>
         ))}
       </div>
+      <p className="login-consent">
+        로그인하면 <Link to="/terms">이용약관</Link>과 <Link to="/privacy">개인정보처리방침</Link>에 동의하는 것으로 봐요.
+        만 14세 이상만 가입할 수 있어요.
+      </p>
       {error && <p className="form-error" role="alert">{error}</p>}
     </article>
   );

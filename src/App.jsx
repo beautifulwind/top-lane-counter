@@ -18,6 +18,8 @@ import AdminHistory from './pages/admin/AdminHistory';
 import AdminPreview from './pages/admin/AdminPreview';
 import AdminDelete from './pages/admin/AdminDelete';
 import Resubmit from './pages/Resubmit';
+import Privacy from './pages/Privacy';
+import Terms from './pages/Terms';
 import { AuthProvider } from './lib/auth';
 
 function ScrollToTop() {
@@ -43,6 +45,8 @@ export function AppRoutes() {
           <Route path="champion/:targetId/counter/:counterId/edit" element={<ProposeEdit />} />
           <Route path="login" element={<Login />} />
           <Route path="welcome" element={<Welcome />} />
+          <Route path="privacy" element={<Privacy />} />
+          <Route path="terms" element={<Terms />} />
           <Route path="me" element={<Me />} />
           <Route path="me/resubmit/:id" element={<Resubmit />} />
           <Route path="admin" element={<AdminHome />} />
