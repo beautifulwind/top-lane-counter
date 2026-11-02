@@ -90,8 +90,14 @@ export default function DocForm({
         )}
       </fieldset>
 
-      <label htmlFor="doc-cautions">라인전 주의사항</label>
-      <textarea id="doc-cautions" rows={5} value={cautions} onChange={(e) => setCautions(e.target.value)} />
+      <label htmlFor="doc-cautions">특이사항</label>
+      <textarea
+        id="doc-cautions"
+        rows={5}
+        value={cautions}
+        onChange={(e) => setCautions(e.target.value)}
+        placeholder="주의할 점, 이 매치업만의 특징이나 팁"
+      />
 
       {children}
 

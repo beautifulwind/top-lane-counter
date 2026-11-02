@@ -42,7 +42,7 @@ function hiddenGaren(origin = {}) {
 }
 const row = () => screen.findByRole('listitem', { name: '가렌(으)로 다리우스 잡는 법' });
 
-test('미리보기: 운영자만 숨긴 문서(딜교·주의사항·빌드)를 읽기 전용으로 본다', async () => {
+test('미리보기: 운영자만 숨긴 문서(딜교·특이사항·빌드)를 읽기 전용으로 본다', async () => {
   hiddenGaren();
   asOperator();
   start('/admin');
@@ -164,7 +164,7 @@ test('제안자: /me의 [고쳐서 다시 제출] → 숨긴 시점 문서로 �
   expect(screen.getByRole('alert').textContent).toBe('고친 내용이 없어요. 운영자 메모를 보고 글이나 빌드를 고쳐 주세요.');
   expect(fakeState.rpcCalls).toEqual([]);
 
-  fireEvent.change(screen.getByLabelText('9레벨 (필수)'), { target: { value: ' 9렙 고침 ' } });
+  fireEvent.change(screen.getByLabelText('9레벨'), { target: { value: ' 9렙 고침 ' } });
   fireEvent.click(screen.getByRole('button', { name: '다시 제출' }));
   expect(await screen.findByText(/고친 내용을 다시 제출했어요/)).toBeDefined();
   expect(where()).toBe('/me');

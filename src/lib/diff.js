@@ -29,7 +29,7 @@ export function lineDiff(before, after) {
 
 /**
  * 문서 전체 비교. before가 null이면 새 문서(전부 추가).
- * [{ key, label, before, after, changed }] — 요약, 레벨들(합친 목록), 라인전 주의사항 순서
+ * [{ key, label, before, after, changed }] — 요약, 레벨들(합친 목록), 특이사항 순서
  */
 export function docDiff(before, after) {
   const x = before ? cleanDoc(before) : null;
@@ -39,6 +39,6 @@ export function docDiff(before, after) {
   return [
     field('summary', '한 줄 요약', x?.summary, y.summary),
     ...levels.map((lv) => field(`lv${lv}`, `${lv}레벨`, x?.level_notes[lv], y.level_notes[lv])),
-    field('lane_cautions', '라인전 주의사항', x?.lane_cautions, y.lane_cautions),
+    field('lane_cautions', '특이사항', x?.lane_cautions, y.lane_cautions),
   ];
 }

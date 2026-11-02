@@ -46,7 +46,7 @@ test('운영자: [관리] → 대기 목록 → [자세히] → 바뀐 칸만 �
   const summary = await screen.findByRole('region', { name: '한 줄 요약 변경' });
   expect(summary.querySelector('.diff-line.del').textContent).toBe('− 사거리로 일방적인 견제\n');
   expect(summary.querySelector('.diff-line.add').textContent).toBe('+ 고친 요약\n');
-  const cautions = screen.getByRole('region', { name: '라인전 주의사항 변경' });
+  const cautions = screen.getByRole('region', { name: '특이사항 변경' });
   expect([...cautions.querySelectorAll('.diff-line')].map((l) => l.className)).toEqual(['diff-line same', 'diff-line add']);
   expect(within(screen.getByRole('region', { name: '4레벨 변경' })).getByText('삭제')).toBeDefined(); // 제안에서 4레벨이 빠짐
   expect(screen.getByText(/바뀌지 않은 칸 6개 보기/)).toBeDefined();

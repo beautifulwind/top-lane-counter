@@ -5,7 +5,7 @@
 
 ## 1. 한 줄 소개
 
-상대 탑 라이너를 클릭하면 **그 챔피언을 이기는 카운터 챔피언 목록**과 **카운터 공략(레벨별 딜교, 라인전 주의사항, 빌드)**을 보여주는 **참여형 위키** 사이트.
+상대 탑 라이너를 클릭하면 **그 챔피언을 이기는 카운터 챔피언 목록**과 **카운터 공략(레벨별 딜교, 특이사항, 빌드)**을 보여주는 **참여형 위키** 사이트.
 유저가 수정을 제안하고, **운영자가 승인해야 반영**된다.
 
 ### 핵심 사용 흐름
@@ -37,7 +37,7 @@
 |---|---|---|
 | 홈 | `/` | 전체 챔피언 아이콘 격자 + 검색창. **초성 검색** 지원 (`ㄷㄹㅇㅅ` → 다리우스) |
 | 챔피언 문서 | `/champion/:id` | 이 챔피언을 **이기는** 카운터 목록 (운영자가 정한 순서). 항목: 카운터 아이콘, 이름, 한 줄 요약. [새 카운터 제안] 버튼 |
-| 매치업 문서 | `/champion/:targetId/counter/:counterId` | 레벨별 딜교, 라인전 주의사항, 빌드 목록, [수정 제안] 버튼, [빌드 등록] 버튼 |
+| 매치업 문서 | `/champion/:targetId/counter/:counterId` | 레벨별 딜교, 특이사항, 빌드 목록, [수정 제안] 버튼, [빌드 등록] 버튼 |
 | 새 카운터 제안 | `/champion/:id/propose` | 이기는 챔피언 고르기(초성 검색, 이미 있는 카운터는 못 고름) + 첫 문서 내용 + **빌드 1개(필수, 빌드 등록과 같은 입력)** → 제출하면 승인 대기 |
 | 수정 제안 작성 | `/champion/:targetId/counter/:counterId/edit` | 현재 문서 내용을 불러와 편집 → 제출하면 승인 대기 (바뀐 게 없으면 제출 불가) |
 | 빌드 등록 | `/champion/:targetId/counter/:counterId/build/new` (`?from=내 빌드 id`: [이 빌드로 다시 쓰기]) | 특성·주문·아이템·스킬을 **아이콘 클릭으로 선택**(아이템은 초성 검색) + 미리보기 → 제출하면 승인 대기. 로그인 필요 |
@@ -54,12 +54,14 @@
 ## 4. 매치업 문서 구성
 
 ### 4-1. 레벨별 딜교법
-- **필수 칸**: 1 / 2 / 3 / 6 / 9 / 11 레벨 (비어 있으면 제출 불가)
-- **추가 칸**: 그 외 레벨을 자유롭게 추가 가능
+- **필수 칸**: 1 / 2 / 3 / 6 레벨 (비어 있으면 제출 불가)
+- **추가 칸**: 그 외 레벨(1~18)을 자유롭게 추가 가능. 9·11레벨도 필수가 아니라 기본 칸이 없고, 원하면 추가한다
+- 010 이전에 쓴 문서·제안·수정 기록의 9·11레벨 내용은 그대로 남아 추가 레벨로 보인다. 빼고 싶으면 문서 수정 제안에서 [9레벨 칸 빼기]로 뺀다 (뺀 내용은 수정 기록에 남음)
 - 각 칸은 자유 텍스트
 
-### 4-2. 라인전 주의사항
-- 자유 텍스트
+### 4-2. 특이사항
+- 자유 텍스트. 라인전에서 주의할 점뿐 아니라 이 매치업만의 특징이나 팁도 적는다
+- 2026-11-02에 "라인전 주의사항"에서 이름만 바꿈. DB 칸 이름은 그대로 `lane_cautions` (011은 DB 오류 문구만 바꿈)
 
 ### 4-3. 빌드 (여러 개 등록 가능)
 각 빌드는 로그인한 사람이 등록하고, 운영자 승인 후 공개된다. 빌드에는 **댓글 기능 없음.** 아이템·룬·주문 정보는 Data Dragon에서 가져온다 (DB에는 ID만).
@@ -115,7 +117,7 @@
   - 숨긴 동안 같은 매치업은 새 카운터로 제안·승인할 수 없고, 그 카운터의 대기 중 수정 제안은 승인할 수 없다 (거절만).
   - 숨기기·다시 공개는 운영자 전용 DB 함수(`hide_counter`, `restore_counter`)로만 하고, 매번 `counter_status_log`에 기록한다.
 - **숨긴 카운터 도구** (`/admin`의 "숨긴 카운터" 줄마다 [미리보기] [재검토 요청] [다시 공개] [완전 삭제], 모두 운영자 전용)
-  - **미리보기** (`/admin/preview/:target/:counter`): 숨긴 문서(딜교·주의사항)와 빌드를 읽기 전용으로 본다. 숨긴 카운터의 문서·빌드는 RLS가 운영자에게만 보여 준다.
+  - **미리보기** (`/admin/preview/:target/:counter`): 숨긴 문서(딜교·특이사항)와 빌드를 읽기 전용으로 본다. 숨긴 카운터의 문서·빌드는 RLS가 운영자에게만 보여 준다.
   - **재검토 요청** (`request_revision`, 메모 필수): 그 카운터를 만든 제안이 `revision_requested`가 되고, 제안자 `/me`에 "재검토 요청 + 메모"와 [고쳐서 다시 제출]이 보인다. 제안자에게 알림(빨간 점)이 가고, `/me`에서 확인하면 꺼진다.
     - 시작 내용은 원래 제안 내용이 아니라 **숨긴 시점의 문서**와 **그 제안의 지금 첫 빌드**다 (원래 제안 내용은 수정 기록에 남아 있음).
     - 글과 빌드를 같이 고쳐 다시 제출한다. 빌드는 필수이고(예전 제안이라 빌드가 없었으면 새로 채움), 글·빌드(패치 제외) 둘 다 그대로면 거부.
@@ -227,7 +229,7 @@
 
 - **profiles**: `id`(auth 유저), `nickname`(고유, 대소문자 무시 / 첫 로그인 직후에는 비어 있음), `role`(`user` / `admin` = 운영자), `xp`, `level`(운영자는 0), `main_title`(내가 가진 칭호 중에서만, 비워둘 수 있음), `created_at`
 - **counters**: `id`, `target_champion`(지는 쪽), `counter_champion`(이기는 쪽), `sort_order`, `status`, `proposed_by`, `created_at` — (`target_champion`, `counter_champion`) 고유
-- **matchup_docs**: `counter_id`, `level_notes`(jsonb: 필수 1/2/3/6/9/11 + 추가 레벨), `lane_cautions`, `summary`(목록에 보일 한 줄 요약), `updated_by`, `updated_at`
+- **matchup_docs**: `counter_id`, `level_notes`(jsonb: 필수 1/2/3/6 + 추가 레벨 — 010에서 9·11 필수 해제), `lane_cautions`(화면 이름: 특이사항), `summary`(목록에 보일 한 줄 요약), `updated_by`, `updated_at`
 - **doc_revisions**: 승인된 문서 수정 기록 (되돌리기용)
 - **edit_proposals**: `id`, `type`(`new_counter` / `doc_edit`), `target_champion`, `counter_champion`, `counter_id`, `proposer_id`, `content`(jsonb), `build`(jsonb, 새 카운터 제안만 필수 — `clean_build`로 검사), `status`, `reject_reason`, `reviewed_by`, `reviewed_at`, `created_at`
 - **builds**: `id`, `counter_id`, `author_id`(탈퇴하면 비움), `proposal_id`(새 카운터 제안과 함께 공개된 첫 빌드면 그 제안), `runes`(jsonb), `summoner_spells`, `starting_items`, `core_items`(순서 있음), `skill_order`(jsonb, 선마 순서), `early_skills`(1·2·3레벨 스킬), `patch`, `up_count`·`down_count`(트리거가 셈), `status`(pending/approved/rejected/hidden), `approve_note`, `reject_reason`, `hide_reason`, `hidden_at`, `reviewed_by`, `reviewed_at`, `created_at` — 넣기는 내용 칸만(검사 트리거 `check_new_build`), 상태 변경은 운영자 함수만
@@ -304,7 +306,7 @@ RLS 원칙:
 - 수정·참여는 로그인한 사람만, 로그인은 외부 로그인 서비스 사용
 - 빌드: 여러 개 등록, 승인 후 따봉/따봉 반대, 빌드 댓글 없음
 - 빌드 항목: 특성(아이콘 선택), 템트리(아이콘 선택), 소환사 주문, 시작 아이템, 스킬 선마 순서, 패치 버전 표시
-- 레벨별 딜교: 1/2/3/6/9/11 필수 + 자유 추가, 라인전 주의사항
+- 레벨별 딜교: 1/2/3/6 필수 + 자유 추가, 특이사항 (2026-11-02: 9·11 필수 해제, "라인전 주의사항" → "특이사항")
 - 새 카운터는 유저 제안 → 운영자 승인으로 추가
 - 난이도 점수·상성 단계 구분 없음
 - 레벨 시스템 있음
@@ -337,6 +339,8 @@ RLS 원칙:
 7. `supabase/migrations/007_inline_actions_notifications.sql`
 8. `supabase/migrations/008_builds.sql`
 9. `supabase/migrations/009_counter_needs_build.sql`
+10. `supabase/migrations/010_fewer_required_levels.sql`
+11. `supabase/migrations/011_special_notes_label.sql`
 - 합쳐서 한 번에 돌리지 않는다: 파일마다 `begin … commit`이라 중간에 실패하면 앞부분만 반영되고, 다시 돌리면 "already exists"가 난다.
 - 새 마이그레이션(010 …)을 만들면 이 목록에 추가한다. `supabase/tests/run.sh`가 빈 DB에 같은 순서로 실행한 뒤 검사용 데이터(`tests/fixtures.sql`)를 넣고 검사한다 (`supabase/tests`는 실제 프로젝트에서 실행하지 않음).
 

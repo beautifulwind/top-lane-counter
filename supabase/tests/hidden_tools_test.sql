@@ -110,8 +110,8 @@ select t.fails('공백만 다르면 바뀐 게 없는 것',
   format($$select resubmit_proposal(%s, '{"summary":" 가렌 요약 ","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f","5":" "},"lane_cautions":""}', t.build())$$, (select v from ids where k = 'garen_p')),
   '고친 내용이 없어요');
 select t.fails('내용 검사는 기존 규칙과 같음 (필수 레벨)',
-  format($$select resubmit_proposal(%s, '{"summary":"x","level_notes":{"1":"a","2":"b","3":"c","6":"d","11":"f"}}', t.build())$$, (select v from ids where k = 'garen_p')),
-  '9레벨 딜교법은 꼭');
+  format($$select resubmit_proposal(%s, '{"summary":"x","level_notes":{"1":"a","2":"b","3":"c","9":"e","11":"f"}}', t.build())$$, (select v from ids where k = 'garen_p')),
+  '6레벨 딜교법은 꼭');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 select t.fails('남의 제안은 다시 제출 불가', format($$select resubmit_proposal(%s, %L, t.build())$$, (select v from ids where k = 'garen_p'), :'v1'), '찾지 못했어요');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';

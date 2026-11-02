@@ -83,7 +83,7 @@ export default function Matchup() {
         <strong>목차</strong>
         <ol>
           <li><a href="#levels">레벨별 딜교법</a></li>
-          <li><a href="#cautions">라인전 주의사항</a></li>
+          <li><a href="#cautions">특이사항</a></li>
           <li><a href="#builds">빌드</a></li>
         </ol>
       </nav>
@@ -94,7 +94,7 @@ export default function Matchup() {
       </section>
 
       <section className="section" id="cautions">
-        <h2 className="section-title"><span className="num">2.</span> 라인전 주의사항</h2>
+        <h2 className="section-title"><span className="num">2.</span> 특이사항</h2>
         {doc?.lane_cautions ? (
           <div className="prose">{doc.lane_cautions}</div>
         ) : (

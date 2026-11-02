@@ -55,7 +55,7 @@ function Preview() {
         <LevelList doc={doc} />
       </section>
       <section className="section">
-        <h2 className="section-title"><span className="num">2.</span> 라인전 주의사항</h2>
+        <h2 className="section-title"><span className="num">2.</span> 특이사항</h2>
         {doc?.lane_cautions ? <div className="prose">{doc.lane_cautions}</div> : <p className="empty">아직 작성된 내용이 없어요.</p>}
       </section>
       <section className="section">

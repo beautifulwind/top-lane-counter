@@ -37,16 +37,20 @@ select t.fails('같은 매치업에 대기 중인 내 제안 중복',
   $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
     values ('new_counter','Darius','Garen',auth.uid(),'{"summary":"x","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"}}', t.build())$$,
   '이미 대기 중인 내 제안');
-select t.fails('필수 레벨(9) 빠짐',
+select t.fails('필수 레벨(6) 빠짐',
   $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
-    values ('new_counter','Darius','Teemo',auth.uid(),'{"summary":"x","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":" ","11":"f"}}', t.build())$$,
-  '9레벨 딜교법은 꼭');
+    values ('new_counter','Darius','Teemo',auth.uid(),'{"summary":"x","level_notes":{"1":"a","2":"b","3":"c","6":" ","9":"e","11":"f"}}', t.build())$$,
+  '6레벨 딜교법은 꼭');
 select t.fails('요약 없음',
   $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
     values ('new_counter','Darius','Teemo',auth.uid(),'{"summary":"","level_notes":{}}', t.build())$$, '한 줄 요약');
 select t.fails('레벨 19',
   $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
     values ('new_counter','Darius','Teemo',auth.uid(),'{"summary":"x","level_notes":{"19":"a"}}', t.build())$$, '1~18');
+select t.fails('특이사항 3001자 (011: 문구는 "특이사항")',
+  format($$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
+    values ('new_counter','Darius','Teemo',auth.uid(),jsonb_build_object('summary','x','level_notes','{"1":"a","2":"b","3":"c","6":"d"}'::jsonb,'lane_cautions',%L), t.build())$$, repeat('x', 3000) || E'\n'),
+  '특이사항은 3000자 이하로');
 select t.fails('이미 있는 카운터(퀸)',
   $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
     values ('new_counter','Darius','Quinn',auth.uid(),'{"summary":"x","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"}}', t.build())$$,

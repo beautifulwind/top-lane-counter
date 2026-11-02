@@ -40,10 +40,13 @@ test('새 카운터 제안: 이미 있는 카운터는 못 고르고, 필수 칸
   send();
   expect(screen.getByRole('alert').textContent).toBe('한 줄 요약을 적어 주세요.');
   type('한 줄 요약 (필수)', ' 사거리 싸움 ');
-  for (const lv of [1, 2, 3, 6, 11]) type(`${lv}레벨 (필수)`, `${lv}렙 공략`);
+  // 필수 칸은 1/2/3/6뿐, 9·11레벨 칸은 처음부터 없다 (010)
+  expect(screen.queryByLabelText(/^9레벨/)).toBeNull();
+  expect(screen.queryByLabelText(/^11레벨/)).toBeNull();
+  for (const lv of [1, 2, 3]) type(`${lv}레벨 (필수)`, `${lv}렙 공략`);
   send();
-  expect(screen.getByRole('alert').textContent).toBe('9레벨 딜교법은 꼭 적어야 해요.');
-  type('9레벨 (필수)', '9렙 공략');
+  expect(screen.getByRole('alert').textContent).toBe('6레벨 딜교법은 꼭 적어야 해요.');
+  type('6레벨 (필수)', '6렙 공략');
   fireEvent.change(screen.getByLabelText('레벨 추가'), { target: { value: '4' } });
   fireEvent.click(screen.getByRole('button', { name: '칸 추가' }));
   type('4레벨', '4렙 추가');
@@ -66,7 +69,7 @@ test('새 카운터 제안: 이미 있는 카운터는 못 고르고, 필수 칸
       type: 'new_counter', target_champion: 'Darius', counter_champion: 'Garen', proposer_id: 'u-old',
       content: {
         summary: '사거리 싸움',
-        level_notes: { 1: '1렙 공략', 2: '2렙 공략', 3: '3렙 공략', 4: '4렙 추가', 6: '6렙 공략', 9: '9렙 공략', 11: '11렙 공략' },
+        level_notes: { 1: '1렙 공략', 2: '2렙 공략', 3: '3렙 공략', 4: '4렙 추가', 6: '6렙 공략' },
         lane_cautions: '',
       },
       build: {
@@ -96,7 +99,7 @@ test('DB가 막으면(예: 그 사이 누가 등록) 그 이유를 보여 주고
   start('/champion/Darius/propose?counter=Garen');
   await screen.findByLabelText('한 줄 요약 (필수)');
   type('한 줄 요약 (필수)', '요약');
-  for (const lv of [1, 2, 3, 6, 9, 11]) type(`${lv}레벨 (필수)`, 'x');
+  for (const lv of [1, 2, 3, 6]) type(`${lv}레벨 (필수)`, 'x');
   fillBuild({ withSkillOrder: true });
   send();
   expect(await screen.findByText('이미 등록된 카운터예요. 문서 수정 제안을 이용해 주세요.')).toBeDefined();
@@ -113,7 +116,7 @@ test('문서 수정 제안: 지금 문서가 채워져 있고, 바뀐 게 없으
 
   send();
   expect(screen.getByRole('alert').textContent).toBe('지금 문서와 달라진 내용이 없어요.');
-  type('라인전 주의사항', 'E 사거리 주의\n궁 조심');
+  type('특이사항', 'E 사거리 주의\n궁 조심');
   fireEvent.click(screen.getByRole('button', { name: '4레벨 칸 빼기' }));
   send();
   expect(await screen.findByRole('heading', { name: /기존유저/ })).toBeDefined();
@@ -121,6 +124,26 @@ test('문서 수정 제안: 지금 문서가 채워져 있고, 바뀐 게 없으
     type: 'doc_edit', counter_id: 1, target_champion: 'Darius', counter_champion: 'Quinn', base_revision_id: 7,
     content: { lane_cautions: 'E 사거리 주의\n궁 조심', level_notes: { 1: '1렙 내용', 2: '2렙', 3: '3렙', 6: '6렙', 9: '9렙', 11: '11렙' } },
   });
+});
+
+test('010: 예전 문서의 9·11레벨은 추가 레벨로 보이고, 수정 제안에서 뺄 수 있다', async () => {
+  fakeLogin('u-old');
+  start('/champion/Darius/counter/Quinn');
+  // 문서 보기: 9·11레벨 내용은 그대로 보이지만 필수 표시(req)는 1/2/3/6에만
+  const lv9 = (await screen.findByText('9레벨')).closest('.level');
+  expect(lv9.className).toBe('level');
+  expect(screen.getByText('6레벨').closest('.level').className).toBe('level req');
+
+  fireEvent.click(screen.getByRole('link', { name: '문서 수정 제안' }));
+  expect(await screen.findByRole('heading', { name: /수정 제안/ })).toBeDefined();
+  expect(screen.getByLabelText('9레벨').value).toBe('9렙');
+  expect(screen.queryByLabelText('9레벨 (필수)')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: '9레벨 칸 빼기' }));
+  fireEvent.click(screen.getByRole('button', { name: '11레벨 칸 빼기' }));
+  expect(screen.queryByRole('button', { name: '6레벨 칸 빼기' })).toBeNull();
+  send();
+  expect(await screen.findByRole('heading', { name: /기존유저/ })).toBeDefined();
+  expect(fakeState.inserts[0].values.content.level_notes).toEqual({ 1: '1렙 내용', 2: '2렙', 3: '3렙', 4: '4렙 추가', 6: '6렙' });
 });
 
 test('/me: 거절된 제안은 거절 사유를, 승인된 제안은 문서 링크를 보여 준다', async () => {

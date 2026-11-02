@@ -1,6 +1,6 @@
-// 매치업 문서 내용 {summary, level_notes, lane_cautions} 규칙.
-// DB(004_proposals.sql의 clean_doc_content)와 같은 규칙 — 화면에서 먼저 알려 주고, DB가 한 번 더 막는다.
-export const REQUIRED_LEVELS = [1, 2, 3, 6, 9, 11];
+// 매치업 문서 내용 {summary, level_notes, lane_cautions} 규칙. lane_cautions의 화면 이름은 "특이사항" (011).
+// DB(011_special_notes_label.sql의 clean_doc_content)와 같은 규칙 — 화면에서 먼저 알려 주고, DB가 한 번 더 막는다.
+export const REQUIRED_LEVELS = [1, 2, 3, 6];  // 9·11은 010부터 필수 아님 (원하면 추가 레벨로)
 export const ALL_LEVELS = Array.from({ length: 18 }, (_, i) => i + 1);
 export const LIMITS = { summary: 100, level: 1000, lane_cautions: 3000 };
 
@@ -28,7 +28,7 @@ export function docProblem(c) {
     if (!ALL_LEVELS.includes(Number(lv))) return `레벨은 1~18 사이 숫자만 쓸 수 있어요. (${lv})`;
     if ([...t].length > LIMITS.level) return `${lv}레벨 내용은 ${LIMITS.level}자 이하로 적어 주세요.`;
   }
-  if ([...d.lane_cautions].length > LIMITS.lane_cautions) return `라인전 주의사항은 ${LIMITS.lane_cautions}자 이하로 적어 주세요.`;
+  if ([...d.lane_cautions].length > LIMITS.lane_cautions) return `특이사항은 ${LIMITS.lane_cautions}자 이하로 적어 주세요.`;
   return null;
 }
 

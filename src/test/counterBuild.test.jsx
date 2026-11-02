@@ -59,7 +59,7 @@ test('다시 제출: 예전 제안이라 빌드가 없으면 빌드를 채워야
   fakeLogin('u-old', { nickname: '기존유저' });
   start('/me/resubmit/7');
   expect(await screen.findByText(/이 제안에는 빌드가 없어요/)).toBeDefined();
-  fireEvent.change(screen.getByLabelText('9레벨 (필수)'), { target: { value: '9렙 고침' } });
+  fireEvent.change(screen.getByLabelText('9레벨'), { target: { value: '9렙 고침' } });
   send();
   expect(screen.getByRole('alert').textContent).toBe('빌드를 마저 채워 주세요: 주 경로를 골라 주세요.');
   expect(fakeState.rpcCalls.filter((c) => c.name === 'resubmit_proposal')).toEqual([]);
