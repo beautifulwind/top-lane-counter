@@ -20,9 +20,12 @@ export default function Layout() {
   return (
     <div className="app">
       <header className="topbar">
-        <Link to="/" className="brand">
-          탑 카운터 위키
-        </Link>
+        <nav className="top-nav" aria-label="사이트">
+          <Link to="/" className="brand">
+            탑 카운터 위키
+          </Link>
+          <Link to="/board" className="top-link">게시판</Link>
+        </nav>
         <AuthBar />
       </header>
       {auth.loginError && (

@@ -47,6 +47,11 @@ export const TABLES = {
   xp_events: [],
   user_titles: [],
   offmeta_champions: [],
+  // 015 자유게시판 (author = select가 돌려주는 관계 모양)
+  posts: [],
+  post_comments: [],
+  post_votes: [],
+  reports: [],
   xp_levels: [[1, 0], [2, 100], [3, 300], [4, 600], [5, 1000], [6, 1500], [7, 2100], [8, 2800], [9, 3600], [10, 4500]]
     .map(([level, min_xp]) => ({ level, min_xp })),
   xp_rules: [
@@ -78,7 +83,7 @@ export function fakeProposal(extra = {}) {
 // 테스트가 바꾸는 상태. setupTests.js가 테스트마다 초기화한다.
 export const fakeState = {
   error: null, session: null, initError: null, oauthCalls: [], linkCalls: [], linkError: null, listeners: new Set(),
-  inserts: [], insertError: null, rpcCalls: [], rpcError: null,
+  inserts: [], insertError: null, rpcCalls: [], rpcError: null, boardError: null,
 };
 const INITIAL_PROFILES = TABLES.profiles.map((p) => ({ ...p }));
 
@@ -100,11 +105,16 @@ export function resetFake() {
   TABLES.xp_events = [];
   TABLES.user_titles = [];
   TABLES.offmeta_champions = [];
+  TABLES.posts = [];
+  TABLES.post_comments = [];
+  TABLES.post_votes = [];
+  TABLES.reports = [];
   TABLES.builds = INITIAL_BUILDS();
   fakeState.inserts = [];
   fakeState.insertError = null;
   fakeState.rpcCalls = [];
   fakeState.rpcError = null;
+  fakeState.boardError = null;
 }
 
 /**
@@ -119,8 +129,28 @@ export function fakeLogin(id, profile = {}, user = {}) {
   fakeState.listeners.forEach((cb) => cb('SIGNED_IN', fakeState.session));
 }
 
+const isAdminNow = () => TABLES.profiles.find((p) => p.id === fakeState.session?.user.id)?.role === 'admin';
+/** RLS 흉내: 숨긴 글·댓글(숨긴 글의 댓글 포함)은 운영자에게만 */
+function visibleRows(table) {
+  const rows = TABLES[table] ?? [];
+  if (table === 'reports') {
+    // 관계 (post, comment) 는 select가 붙여 주는 모양 그대로
+    return rows.map((r) => ({
+      ...r,
+      post: r.post_id != null ? TABLES.posts.find((p) => p.id === r.post_id) ?? null : null,
+      comment: r.comment_id != null ? TABLES.post_comments.find((c) => c.id === r.comment_id) ?? null : null,
+    }));
+  }
+  if (isAdminNow()) return rows;
+  if (table === 'posts') return rows.filter((p) => p.status === 'visible');
+  if (table === 'post_comments') {
+    return rows.filter((c) => c.status === 'visible' && TABLES.posts.find((p) => p.id === c.post_id)?.status === 'visible');
+  }
+  return rows;
+}
+
 function query(table) {
-  let rows = [...(TABLES[table] ?? [])];
+  let rows = [...visibleRows(table)];
   let single = false;
   let patch = null;
   let inserted = null;
@@ -221,6 +251,8 @@ async function rpc(name, args) {
     TABLES.offmeta_champions = TABLES.offmeta_champions.filter((o) => o.champion_id !== args.p_champion);
     return { data: null, error: null };
   }
+  const board = boardRpc(name, args);
+  if (board) return board;
   if (name === 'vote_build') {
     // DB 함수처럼: 한 사람 한 표, null = 취소, 따봉 수 다시 세기
     const me = fakeState.session?.user.id;
@@ -235,6 +267,136 @@ async function rpc(name, args) {
     return { data: { up: b.up_count, down: b.down_count, mine: args.p_value }, error: null };
   }
   return { data: null, error: null };
+}
+
+const me = () => fakeState.session?.user.id;
+const person = (id) => {
+  const p = TABLES.profiles.find((x) => x.id === id);
+  return p ? { nickname: p.nickname, level: p.level, main_title: p.main_title } : null;
+};
+const fail = (message) => ({ data: null, error: { message } });
+const ok = (data = null) => ({ data, error: null });
+
+/** 테스트에서 쓰는 글 한 줄 (기본: 기존유저가 쓴 보이는 글) */
+export function fakePost(id, extra = {}) {
+  return {
+    id, author_id: 'u-old', author: { nickname: '기존유저', level: 1, main_title: null }, title: `글 ${id}`, body: `본문 ${id}`,
+    status: 'visible', hidden_note: null, hidden_at: null, edited_at: null, deleted_at: null, comment_count: 0, up_count: 0,
+    created_at: `2026-11-01T0${id % 10}:00:00Z`, ...extra,
+  };
+}
+export function fakeComment(id, postId, extra = {}) {
+  return {
+    id, post_id: postId, author_id: 'u-old', author: { nickname: '기존유저', level: 1, main_title: null }, body: `댓글 ${id}`,
+    status: 'visible', hidden_note: null, hidden_at: null, edited_at: null, created_at: `2026-11-01T1${id % 10}:00:00Z`, ...extra,
+  };
+}
+
+/** 게시판 DB 함수 흉내 (015). 권한·간격 같은 검사는 DB 검사(board_test.sql)에서 하고, 여기서는 화면 흐름만 */
+function boardRpc(name, args) {
+  const post = (id) => TABLES.posts.find((p) => p.id === id);
+  const comment = (id) => TABLES.post_comments.find((c) => c.id === id);
+  const recount = (pid) => {
+    const p = post(pid);
+    if (p) p.comment_count = TABLES.post_comments.filter((c) => c.post_id === pid && c.status === 'visible').length;
+  };
+  switch (name) {
+    case 'board_page': {
+      const q = (args.p_q ?? '').toLowerCase();
+      let rows = visibleRows('posts');
+      if (q) rows = rows.filter((p) => !p.deleted_at && (p.title.toLowerCase().includes(q) || p.body.toLowerCase().includes(q)));
+      rows = [...rows].sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : b.id - a.id));
+      const from = (args.p_page - 1) * args.p_size;
+      return ok({
+        total: rows.length, size: args.p_size,
+        rows: rows.slice(from, from + args.p_size).map((p) => ({
+          id: p.id, title: p.title, status: p.status, deleted: p.deleted_at != null, comment_count: p.comment_count,
+          up_count: p.up_count, created_at: p.created_at, edited_at: p.edited_at, author: p.author,
+        })),
+      });
+    }
+    case 'create_post': {
+      if (fakeState.boardError) return fail(fakeState.boardError);
+      const id = 700 + TABLES.posts.length;
+      TABLES.posts.push(fakePost(id, {
+        author_id: me(), author: person(me()), title: args.p_title.trim(), body: args.p_body.trim(), created_at: new Date().toISOString(),
+      }));
+      return ok(id);
+    }
+    case 'edit_post':
+      Object.assign(post(args.p_id), { title: args.p_title.trim(), body: args.p_body.trim(), edited_at: new Date().toISOString() });
+      return ok();
+    case 'delete_my_post': {
+      const p = post(args.p_id);
+      if (TABLES.post_comments.some((c) => c.post_id === p.id && c.author_id !== me())) {
+        Object.assign(p, { title: '', body: '', deleted_at: new Date().toISOString(), up_count: 0 });
+        return ok('soft');
+      }
+      TABLES.posts = TABLES.posts.filter((x) => x !== p);
+      return ok('hard');
+    }
+    case 'vote_post': {
+      const p = post(args.p_id);
+      const old = TABLES.post_votes.find((v) => v.post_id === p.id && v.user_id === me());
+      if (old) TABLES.post_votes = TABLES.post_votes.filter((v) => v !== old);
+      else TABLES.post_votes.push({ post_id: p.id, user_id: me() });
+      p.up_count = TABLES.post_votes.filter((v) => v.post_id === p.id).length;
+      return ok({ up: p.up_count, mine: !old });
+    }
+    case 'create_comment': {
+      if (fakeState.boardError) return fail(fakeState.boardError);
+      const id = 800 + TABLES.post_comments.length;
+      TABLES.post_comments.push(fakeComment(id, args.p_post, {
+        author_id: me(), author: person(me()), body: args.p_body.trim(), created_at: new Date().toISOString(),
+      }));
+      recount(args.p_post);
+      return ok(id);
+    }
+    case 'edit_comment':
+      Object.assign(comment(args.p_id), { body: args.p_body.trim(), edited_at: new Date().toISOString() });
+      return ok();
+    case 'delete_my_comment': {
+      const c = comment(args.p_id);
+      TABLES.post_comments = TABLES.post_comments.filter((x) => x !== c);
+      recount(c.post_id);
+      return ok();
+    }
+    case 'report_post':
+    case 'report_comment': {
+      const key = name === 'report_post' ? 'post_id' : 'comment_id';
+      if (TABLES.reports.some((r) => r.reporter_id === me() && r[key] === args.p_id)) {
+        return fail(name === 'report_post' ? '이미 신고한 글이에요.' : '이미 신고한 댓글이에요.');
+      }
+      TABLES.reports.push({
+        id: 600 + TABLES.reports.length, reporter_id: me(), post_id: null, comment_id: null, [key]: args.p_id,
+        reason: args.p_reason, detail: args.p_detail, status: 'open', created_at: new Date().toISOString(), reporter: person(me()),
+      });
+      return ok();
+    }
+    case 'hide_post':
+    case 'hide_comment':
+    case 'restore_post':
+    case 'restore_comment': {
+      const row = name.endsWith('post') ? post(args.p_id) : comment(args.p_id);
+      if (name.startsWith('hide')) {
+        Object.assign(row, { status: 'hidden', hidden_note: args.p_note, hidden_at: new Date().toISOString() });
+        const key = name.endsWith('post') ? 'post_id' : 'comment_id';
+        TABLES.reports.filter((r) => r[key] === row.id && r.status === 'open').forEach((r) => { r.status = 'resolved'; });
+      } else {
+        Object.assign(row, { status: 'visible', hidden_note: null, hidden_at: null });
+      }
+      if (!name.endsWith('post')) recount(row.post_id);
+      return ok();
+    }
+    case 'dismiss_reports': {
+      const open = TABLES.reports.filter((r) => r.status === 'open'
+        && ((args.p_post != null && r.post_id === args.p_post) || (args.p_comment != null && r.comment_id === args.p_comment)));
+      open.forEach((r) => { r.status = 'dismissed'; });
+      return ok(open.length);
+    }
+    default:
+      return null;
+  }
 }
 
 export function db() {

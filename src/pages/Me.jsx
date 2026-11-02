@@ -71,9 +71,34 @@ function MyActivity({ userId, operator }) {
       ) : (
         <MyRewards rewards={data.rewards} unread={data.unread} champs={data.champs} />
       )}
+      <BoardNotices unread={data.unread} />
       <MyProposals data={data} />
       <MyBuilds data={data} />
     </>
+  );
+}
+
+const BOARD_KINDS = ['post_comment', 'post_hidden', 'post_restored', 'comment_hidden', 'comment_restored'];
+
+/** 게시판 알림 (새 댓글·숨김·다시 공개): 이번에 처음 보는 것만, [글 보기]로 이동 */
+function BoardNotices({ unread }) {
+  const list = unread.filter((n) => BOARD_KINDS.includes(n.kind));
+  if (list.length === 0) return null;
+  return (
+    <section className="me-section" aria-labelledby="board-notices">
+      <h2 id="board-notices">게시판 알림</h2>
+      <ul className="proposal-list">
+        {list.map((n) => (
+          <li key={n.id} className="proposal-row">
+            <p className="board-notice-msg"><span className="new-badge">새 알림</span>{n.message}</p>
+            <div className="proposal-meta">
+              <span>{fmtDateTime(n.created_at)}</span>
+              {n.post_id && !['post_hidden'].includes(n.kind) && <Link to={`/board/${n.post_id}`}>글 보기</Link>}
+            </div>
+          </li>
+        ))}
+      </ul>
+    </section>
   );
 }
 

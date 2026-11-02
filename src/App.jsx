@@ -19,6 +19,10 @@ import AdminHistory from './pages/admin/AdminHistory';
 import AdminPreview from './pages/admin/AdminPreview';
 import AdminDelete from './pages/admin/AdminDelete';
 import AdminBuild from './pages/admin/AdminBuild';
+import AdminReports from './pages/admin/AdminReports';
+import Board from './pages/Board';
+import BoardPost from './pages/BoardPost';
+import BoardWrite from './pages/BoardWrite';
 import Resubmit from './pages/Resubmit';
 import ResubmitBuild from './pages/ResubmitBuild';
 import MyProposal from './pages/MyProposal';
@@ -74,6 +78,11 @@ export function AppRoutes() {
           <Route path="admin/preview/:targetId/:counterId" element={<AdminPreview />} />
           <Route path="admin/delete/:targetId/:counterId" element={<AdminDelete />} />
           <Route path="admin/builds/:id" element={<AdminBuild />} />
+          <Route path="admin/reports" element={<AdminReports />} />
+          <Route path="board" element={<Board />} />
+          <Route path="board/new" element={<BoardWrite />} />
+          <Route path="board/:id" element={<BoardPost />} />
+          <Route path="board/:id/edit" element={<BoardWrite />} />
           <Route path="*" element={<NotFound />} />
         </Route>
       </Routes>

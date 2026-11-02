@@ -419,3 +419,66 @@ a.op-link, .op-link { color: var(--op-dark); }
 /* 운영자: 비주류 픽 목록 */
 .offmeta-list { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .offmeta-list li { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
+
+/* 7단계: 자유게시판 (모바일 우선 — 한 줄 카드, 손가락 크기 버튼, 가로 스크롤 없음) */
+.top-nav { display: flex; align-items: center; gap: 12px; min-width: 0; flex: none; }
+.top-link { color: var(--on-brand); font-size: 14px; font-weight: 600; padding: 8px 2px; }
+.btn-primary { background: var(--brand); color: var(--on-brand); }
+.btn-primary:active { background: var(--brand-dark); }
+.link-btn { min-height: 32px; padding: 0 2px; border: 0; background: none; color: var(--brand-dark); font: inherit; font-size: 13px; cursor: pointer; }
+.link-btn.op-link { color: var(--op-dark); }
+.sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); border: 0; }
+.board-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px; border-bottom: 2px solid var(--brand); padding-bottom: 8px; }
+.board-head .doc-title { border-bottom: 0; padding-bottom: 0; margin: 0; }
+.board-head .btn { flex: none; }
+.board-search { display: flex; gap: 6px; }
+.board-search input { flex: 1; min-width: 0; }
+.board-search .btn { flex: none; min-height: 48px; }
+.post-list { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.post-row { border-bottom: 1px solid var(--line); }
+.post-link { display: flex; flex-direction: column; gap: 2px; padding: 10px 2px; min-height: 56px; color: var(--text); }
+.post-link:hover { text-decoration: none; background: var(--soft); }
+.post-title-line { display: flex; align-items: baseline; gap: 6px; min-width: 0; }
+.post-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.post-title.deleted, .post-heading.deleted { color: var(--muted); font-weight: 400; }
+.post-count { flex: none; color: var(--brand-dark); font-size: 13px; font-weight: 700; }
+.post-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 10px; font-size: 13px; color: var(--muted); }
+.post-meta .edited { font-size: 12px; }
+.hidden-row { background: var(--op-soft); }
+.op-badge { flex: none; padding: 0 6px; border-radius: 999px; background: var(--op); color: var(--on-brand); font-size: 12px; font-weight: 700; }
+.pager { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px; margin: 16px 0; }
+.pager .btn { min-width: 40px; min-height: 40px; justify-content: center; }
+.pager .btn.current { background: var(--brand); color: var(--on-brand); }
+.pager-gap { color: var(--muted); padding: 0 2px; }
+.post-heading { margin-top: 4px; }
+.post-body { margin: 16px 0; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
+.post-actions .row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.vote-btn.on { background: var(--soft); border-width: 2px; }
+.vote-count { color: var(--muted); font-size: 14px; padding: 0 4px; }
+.op-band { margin: 8px 0; padding: 10px 12px; border-left: 3px solid var(--op); background: var(--op-soft); border-radius: var(--radius); font-size: 14px; }
+.op-band p { margin: 0 0 6px; color: var(--op-dark); white-space: pre-wrap; }
+.comment-list { list-style: none; margin: 0 0 12px; padding: 0; }
+.comment { padding: 10px 0; border-top: 1px solid var(--line-soft); }
+.comment.hidden-row { padding: 10px 8px; }
+.comment-body { margin-top: 4px; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
+.comment-actions { display: flex; gap: 10px; margin-top: 2px; }
+.comment-form { display: flex; flex-direction: column; gap: 6px; margin-top: 8px; }
+.comment-form textarea, .report-form textarea {
+  width: 100%; padding: 10px 12px; font: inherit; font-size: 16px;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper);
+}
+.comment-form-foot { display: flex; align-items: center; justify-content: flex-end; gap: 8px; }
+.comment-form-foot .count { margin-right: auto; }
+.count { color: var(--muted); font-size: 12px; }
+.count.over { color: var(--warn); font-weight: 700; }
+.post-form .count { text-align: right; }
+.confirm-inline { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 8px 0; font-size: 14px; }
+.report-form { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); }
+.report-form fieldset { border: 0; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 4px 12px; }
+.report-form legend { font-size: 14px; font-weight: 600; padding: 0; margin-bottom: 4px; }
+.report-form > label { font-size: 13px; color: var(--muted); }
+.report-reason { display: inline-flex; align-items: center; gap: 4px; min-height: 36px; font-size: 14px; }
+.report-count { color: var(--warn); }
+.report-preview { margin: 4px 0; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
+.report-preview.body { font-size: 13px; color: var(--muted); }
+.board-notice-msg { margin: 0; }

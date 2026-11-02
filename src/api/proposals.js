@@ -92,7 +92,7 @@ export function onNotificationsChanged(cb) {
 /** 안 읽은 내 알림 (최근 순). RLS가 내 것만 돌려준다. */
 export function getMyUnreadNotifications(userId) {
   return run(
-    db().from('notifications').select('id, kind, proposal_id, build_id, message, created_at')
+    db().from('notifications').select('id, kind, proposal_id, build_id, post_id, message, created_at')
       .eq('user_id', userId).is('read_at', null).order('created_at', { ascending: false }),
     '알림을 불러오지 못했어요.',
   );
