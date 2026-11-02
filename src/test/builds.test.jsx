@@ -5,6 +5,7 @@ import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
 import { TABLES, fakeBuild, fakeLogin, fakeState } from './fakeSupabase';
 import { buildProblem, compareBuilds, emptyBuild, isOutdated } from '../lib/buildContent';
+import { fillBuild, pick } from './buildHelpers';
 
 beforeEach(() => {
   vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch());
@@ -103,7 +104,7 @@ test('정렬: 점수가 같으면 투표가 많은 빌드가 먼저', async () =
   start(MATCHUP);
   await screen.findByText(/퀸\(으\)로 다리우스 잡는 법/);
   const authors = [...document.querySelectorAll('.build-author')].map((e) => e.textContent);
-  expect(authors).toEqual(['Lv.7 수석 연구원 · 탑신병자', 'Lv.3 칭호없음', '예시 빌드', 'Lv.0 영자(운)']);
+  expect(authors).toEqual(['Lv.7 수석 연구원 · 탑신병자', 'Lv.3 칭호없음', '(탈퇴한 유저)', 'Lv.0 영자(운)']);
 });
 
 test('운영자: 매치업 문서에서 빌드를 바로 숨긴다 (사유 = 확인 단계)', async () => {
@@ -131,38 +132,11 @@ test('일반 유저에게는 [빌드 숨기기]가 없다', async () => {
 
 // ---------------- 빌드 등록 ----------------
 
-const pick = (group, name) => fireEvent.click(within(screen.getByRole('group', { name: group })).getByRole('button', { name }));
-
-async function fillBuild() {
-  await screen.findByRole('heading', { name: /빌드 등록/ });
-  pick('주 경로', '주 경로 정밀');
-  pick('핵심 룬', '정복자');
-  pick('주 경로 1줄', '승전보');
-  pick('주 경로 2줄', '전설: 민첩함');
-  pick('주 경로 3줄', '최후의 저항');
-  pick('보조 경로', '보조 경로 결의');
-  pick('보조 룬 (서로 다른 줄에서 2개)', '철거');
-  pick('보조 룬 (서로 다른 줄에서 2개)', '사전 준비');
-  pick('능력치 파편 공격', '공격 공격 속도');
-  pick('능력치 파편 유연', '유연 적응형 능력치');
-  pick('능력치 파편 방어', '방어 체력');
-  pick('소환사 주문', '점멸');
-  pick('소환사 주문', '순간이동');
-  pick('시작 아이템 고르기', '도란의 검');
-  pick('시작 아이템 고르기', '체력 물약');
-  pick('시작 아이템 고르기', '체력 물약');
-  pick('핵심 템트리 고르기', '스테락의 도전');
-  pick('핵심 템트리 고르기', '강철판 장화');
-  pick('핵심 템트리 고르기', '선혈포식자');
-  pick('1레벨 스킬', '1레벨 Q');
-  pick('2레벨 스킬', '2레벨 E');
-  pick('3레벨 스킬', '3레벨 W');
-}
-
 test('빌드 등록: 다 고르면 미리보기가 보이고, 보내면 승인 대기로 들어간 뒤 /me로', async () => {
   asUser();
   start(`${MATCHUP}/build/new`);
-  await fillBuild();
+  await screen.findByRole('heading', { name: /빌드 등록/ });
+  fillBuild();
   const send = screen.getByRole('button', { name: '빌드 보내기' });
   expect(send).toBeDisabled();
   expect(screen.getByText('아직 고를 것: 스킬 선마 순서를 골라 주세요.')).toBeDefined();
@@ -228,7 +202,8 @@ test('빌드 등록: 보조 룬은 같은 줄이면 바뀌고, 2개를 넘으면
 test('빌드 등록: DB가 거절하면 이유를 보여 주고 그대로 남는다', async () => {
   asUser();
   start(`${MATCHUP}/build/new`);
-  await fillBuild();
+  await screen.findByRole('heading', { name: /빌드 등록/ });
+  fillBuild();
   pick('선마 순서', '선마 Q › E › W');
   fakeState.insertError = '이 매치업에 이미 승인 대기 중인 내 빌드가 있어요. 처리된 뒤에 다시 등록해 주세요.';
   fireEvent.click(screen.getByRole('button', { name: '빌드 보내기' }));

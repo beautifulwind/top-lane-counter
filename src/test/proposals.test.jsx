@@ -4,6 +4,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
 import { TABLES, fakeLogin, fakeProposal, fakeState } from './fakeSupabase';
+import { fillBuild, pick } from './buildHelpers';
 
 beforeEach(() => {
   vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch());
@@ -47,6 +48,15 @@ test('새 카운터 제안: 이미 있는 카운터는 못 고르고, 필수 칸
   fireEvent.click(screen.getByRole('button', { name: '칸 추가' }));
   type('4레벨', '4렙 추가');
   send();
+  // 글을 다 써도 빌드가 없으면 못 보낸다
+  expect(screen.getByRole('alert').textContent).toBe('빌드를 마저 채워 주세요: 주 경로를 골라 주세요.');
+  expect(fakeState.inserts).toEqual([]);
+  fillBuild();
+  send();
+  expect(screen.getByRole('alert').textContent).toBe('빌드를 마저 채워 주세요: 스킬 선마 순서를 골라 주세요.');
+  pick('선마 순서', '선마 Q › E › W');
+  expect(screen.getByRole('article', { name: '빌드: 기존유저' })).toBeDefined(); // 미리보기
+  send();
 
   expect(await screen.findByRole('heading', { name: /기존유저/ })).toBeDefined();
   expect(where()).toBe('/me');
@@ -58,6 +68,11 @@ test('새 카운터 제안: 이미 있는 카운터는 못 고르고, 필수 칸
         summary: '사거리 싸움',
         level_notes: { 1: '1렙 공략', 2: '2렙 공략', 3: '3렙 공략', 4: '4렙 추가', 6: '6렙 공략', 9: '9렙 공략', 11: '11렙 공략' },
         lane_cautions: '',
+      },
+      build: {
+        runes: { primaryPath: 8000, keystone: 8010, primary: [9111, 9104, 8299], secondaryPath: 8400, secondary: [8446, 8444], shards: [5005, 5008, 5011] },
+        summoner_spells: ['SummonerFlash', 'SummonerTeleport'], starting_items: ['1055', '2003', '2003'], core_items: ['3053', '3047', '6631'],
+        skill_order: ['Q', 'E', 'W'], early_skills: ['Q', 'E', 'W'], patch: '99.1.1',
       },
     },
   }]);
@@ -82,6 +97,7 @@ test('DB가 막으면(예: 그 사이 누가 등록) 그 이유를 보여 주고
   await screen.findByLabelText('한 줄 요약 (필수)');
   type('한 줄 요약 (필수)', '요약');
   for (const lv of [1, 2, 3, 6, 9, 11]) type(`${lv}레벨 (필수)`, 'x');
+  fillBuild({ withSkillOrder: true });
   send();
   expect(await screen.findByText('이미 등록된 카운터예요. 문서 수정 제안을 이용해 주세요.')).toBeDefined();
   expect(where()).toBe('/champion/Darius/propose');

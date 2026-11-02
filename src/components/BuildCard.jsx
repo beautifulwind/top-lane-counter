@@ -27,22 +27,22 @@ export function Icon({ entry, size = 32, round = false, fallback = '?' }) {
   );
 }
 
-/** 작성자 표시: 닉네임 / 예시 빌드(초기 데이터) / 탈퇴한 유저 */
+/** 작성자 표시: 닉네임 / 작성자가 없으면 탈퇴한 유저 */
 export function BuildAuthor({ build }) {
   if (build.author) return <UserName profile={build.author} />;
-  return build.is_example || build.is_example === undefined ? '예시 빌드' : '(탈퇴한 유저)';
+  return '(탈퇴한 유저)';
 }
 
 /**
  * 빌드 카드 (매치업 문서·등록 미리보기·운영자 화면 공용).
  * interactive: 따봉/비추 누르기 + 운영자 [빌드 숨기기] (매치업 문서에서만). 아니면 숫자만 보인다.
- * onHidden(message): 운영자가 숨긴 뒤
+ * onHidden(message): 운영자가 숨긴 뒤 / lastOne: 이 매치업의 마지막 공개 빌드 (숨기기 잠금)
  */
-export default function BuildCard({ build, items, runes, spells, latest, interactive = false, onHidden }) {
+export default function BuildCard({ build, items, runes, spells, latest, interactive = false, onHidden, lastOne = false }) {
   const r = build.runes;
   const outdated = isOutdated(build.patch, latest);
   return (
-    <article className="build" aria-label={`빌드: ${build.author?.nickname ?? (build.is_example === false ? '탈퇴한 유저' : '예시 빌드')}`}>
+    <article className="build" aria-label={`빌드: ${build.author?.nickname ?? '탈퇴한 유저'}`}>
       <div className="build-head">
         <span className="build-author">
           <BuildAuthor build={build} />
@@ -118,7 +118,7 @@ export default function BuildCard({ build, items, runes, spells, latest, interac
       </div>
 
       {interactive ? (
-        <BuildActions build={build} onHidden={onHidden} />
+        <BuildActions build={build} onHidden={onHidden} lastOne={lastOne} />
       ) : (
         build.up !== undefined && (
           <div className="votes">
@@ -132,7 +132,7 @@ export default function BuildCard({ build, items, runes, spells, latest, interac
 }
 
 /** 따봉/비추 (로그인한 사람만, 한 사람 한 표, 같은 버튼 다시 누르면 취소, 내 빌드는 못 누름) + 운영자 숨기기 */
-function BuildActions({ build, onHidden }) {
+function BuildActions({ build, onHidden, lastOne }) {
   const auth = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
@@ -194,9 +194,10 @@ function BuildActions({ build, onHidden }) {
       {error && <p className="form-error" role="alert">{error}</p>}
       {auth.isOperator && (
         <div className="row-actions">
-          <button type="button" className="btn btn-small" onClick={() => setHiding((v) => !v)} aria-expanded={hiding}>
+          <button type="button" className="btn btn-small" onClick={() => setHiding((v) => !v)} aria-expanded={hiding} disabled={lastOne}>
             빌드 숨기기
           </button>
+          {lastOne && <small className="hint">마지막 공개 빌드라 숨길 수 없어요. 다른 빌드를 먼저 승인하거나, 카운터를 숨겨 주세요.</small>}
         </div>
       )}
       {hiding && (
@@ -209,7 +210,7 @@ function BuildActions({ build, onHidden }) {
           onCancel={() => setHiding(false)}
           onSubmit={async (reason) => {
             await hideBuild(build.id, reason);
-            onHidden?.(`빌드를 숨겼어요. (${build.author?.nickname ?? '예시 빌드'})`);
+            onHidden?.(`빌드를 숨겼어요. (${build.author?.nickname ?? '탈퇴한 유저'})`);
           }}
         />
       )}

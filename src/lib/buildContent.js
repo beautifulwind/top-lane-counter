@@ -155,3 +155,31 @@ export function quickBuildBlock(flags, build, latest) {
   if (flags.outdated) return `지금 패치(${patchMinor(latest)})와 다른 패치(${patchMinor(build.patch)})로 등록됐어요.`;
   return null;
 }
+
+/** 새 카운터 제안·다시 제출에 담는 빌드 (DB clean_build와 같은 모양, 패치 포함) */
+export const toProposalBuild = (b, patch) => ({ ...toRow(b), patch });
+
+/** 같은 빌드인가 (패치 제외). 한쪽이 없으면 다르다 */
+export const sameBuild = (a, b) => !!a && !!b && buildSignature(a) === buildSignature(b);
+
+/**
+ * 새 카운터 제안의 빌드에서 목록 바로 승인을 막을 이유 (없으면 null).
+ * game = { items, runes, spells, latest }
+ */
+export function proposalBuildBlock(build, game) {
+  if (!build) return '빌드가 없는 새 카운터 제안이에요. 거절해 주세요.';
+  const unknown = unknownParts(build, game);
+  if (unknown) return `빌드: ${unknown}`;
+  const layout = runeLayoutProblem(build.runes, game.runes);
+  if (layout) return `빌드: ${layout}`;
+  if (isOutdated(build.patch, game.latest)) {
+    return `빌드가 지금 패치(${patchMinor(game.latest)})와 다른 패치(${patchMinor(build.patch)})로 등록됐어요.`;
+  }
+  return null;
+}
+
+/** 새 카운터 제안·다시 제출: 빌드를 다 채우지 않았으면 보내기를 막는 문구 (다 채웠으면 null) */
+export function buildMissing(build, game) {
+  const problem = buildProblem(build, game);
+  return problem && `빌드를 마저 채워 주세요: ${problem}`;
+}

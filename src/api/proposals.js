@@ -2,11 +2,12 @@
 // 권한은 DB가 막는다: 제안 넣기는 RLS + 검사 트리거, 승인·거절·순서·되돌리기는 운영자 전용 함수(rpc).
 import { db } from './supabase';
 import { cleanDoc } from '../lib/docContent';
+import { proposalBuildBlock, toProposalBuild } from '../lib/buildContent';
 
 const PERSON = 'nickname, level, main_title';
 const PROPOSAL_COLUMNS =
   'id, type, target_champion, counter_champion, counter_id, content, status, reject_reason, reviewed_at, created_at, base_revision_id, ' +
-  'revoke_reason, revoked_at, approve_note, revision_note, revision_requested_at, resubmitted_at, ' +
+  'revoke_reason, revoked_at, approve_note, revision_note, revision_requested_at, resubmitted_at, build, ' +
   `proposer:profiles!edit_proposals_proposer_id_fkey(${PERSON})`;
 const DOC_COLUMNS = 'counter_id, summary, level_notes, lane_cautions, updated_at, revision_id';
 
@@ -27,8 +28,11 @@ async function run(query, fallback) {
 
 // ---------------- 제안 넣기 (로그인 + 닉네임 필요) ----------------
 
-/** 새 카운터 제안: target(지는 쪽)을 counter(이기는 쪽)가 이긴다 + 첫 문서 내용 */
-export async function proposeNewCounter(userId, target, counter, content) {
+/**
+ * 새 카운터 제안: target(지는 쪽)을 counter(이기는 쪽)가 이긴다 + 첫 문서 내용 + 빌드 1개(필수).
+ * 승인되면 그 빌드가 카운터의 첫 빌드로 공개된다. patch = 지금 Data Dragon 버전
+ */
+export async function proposeNewCounter(userId, target, counter, content, build, patch) {
   await run(
     db().from('edit_proposals').insert({
       type: 'new_counter',
@@ -36,6 +40,7 @@ export async function proposeNewCounter(userId, target, counter, content) {
       counter_champion: counter,
       proposer_id: userId,
       content: cleanDoc(content),
+      build: toProposalBuild(build, patch),
     }),
     '제안을 보내지 못했어요.',
   );
@@ -99,9 +104,9 @@ export async function markNotificationsRead(ids) {
   window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED));
 }
 
-/** 재검토 요청 받은 내 제안을 고쳐서 다시 제출 → 승인 대기. 본인만 (DB 함수가 확인) */
-export const resubmitProposal = (id, content) =>
-  rpc('resubmit_proposal', { p_id: id, p_content: cleanDoc(content) }, '다시 제출하지 못했어요.');
+/** 재검토 요청 받은 내 제안을 글 + 빌드 고쳐서 다시 제출 → 승인 대기. 본인만 (DB 함수가 확인) */
+export const resubmitProposal = (id, content, build, patch) =>
+  rpc('resubmit_proposal', { p_id: id, p_content: cleanDoc(content), p_build: toProposalBuild(build, patch) }, '다시 제출하지 못했어요.');
 
 /** 재검토 후 다시 낸 제안인가 (새 카운터 제안인데 이미 숨긴 카운터가 정해져 있음) */
 export const isResubmission = (p) => p.type === 'new_counter' && p.counter_id != null && p.resubmitted_at != null;
@@ -128,16 +133,23 @@ function reviewFlags(proposal, counter) {
  * 목록에서 바로 승인하면 위험한 이유 (없으면 null) → 줄에서 [승인]을 잠그고 [자세히]로 보낸다.
  * 거절은 줄에서 바로 할 수 있다.
  */
-export function quickApproveBlock(proposal, flags) {
+export function quickApproveBlock(proposal, flags, game) {
   if (flags.hidden) return '숨긴 카운터에 대한 제안이에요.';
+  if (proposal.type === 'new_counter' && game) {
+    const b = proposalBuildBlock(proposal.build, game);
+    if (b) return b;
+  }
   if (proposal.type === 'new_counter' && flags.exists) return '같은 카운터가 이미 공개돼 있어요.';
   if (proposal.type === 'doc_edit' && !flags.current) return '수정할 문서를 찾지 못했어요.';
   if (flags.stale) return '제안 뒤에 문서가 바뀌었어요.';
   return null;
 }
 
-/** 승인 대기 목록 (오래된 순) + 줄에서 바로 승인해도 되는지 (block: 막는 이유 | null) */
-export async function getPendingProposals() {
+/**
+ * 승인 대기 목록 (오래된 순) + 줄에서 바로 승인해도 되는지 (block: 막는 이유 | null).
+ * game(Data Dragon)을 주면 새 카운터 제안의 빌드도 확인한다.
+ */
+export async function getPendingProposals(game) {
   const [pending, counters] = await Promise.all([
     run(
       db().from('edit_proposals').select(PROPOSAL_COLUMNS).eq('status', 'pending').order('created_at', { ascending: true }),
@@ -154,7 +166,7 @@ export async function getPendingProposals() {
       ? counters.find((c) => c.id === p.counter_id)
       : counters.find((c) => c.target_champion === p.target_champion && c.counter_champion === p.counter_champion);
     const flags = reviewFlags(p, counter ?? null);
-    return { ...p, resubmitted: flags.resubmitted, block: quickApproveBlock(p, flags) };
+    return { ...p, resubmitted: flags.resubmitted, block: quickApproveBlock(p, flags, game) };
   });
 }
 
@@ -186,10 +198,22 @@ export async function getProposalForReview(id) {
       '지금 카운터 목록을 확인하지 못했어요.',
     );
   const { current, resubmitted, hidden, exists, stale } = reviewFlags(proposal, counter);
-  return { proposal, current: proposal.type === 'doc_edit' || resubmitted ? current : null, exists, hidden, stale, resubmitted };
+  // 재검토 후 다시 낸 제안: 비교할 원래 첫 빌드 (이 제안에서 공개됐던 빌드 중 최근 것)
+  const firstBuilds = resubmitted
+    ? await run(
+      db().from('builds').select(FIRST_BUILD_COLUMNS).eq('proposal_id', proposal.id).order('id', { ascending: false }),
+      '원래 첫 빌드를 불러오지 못했어요.',
+    )
+    : [];
+  return {
+    proposal, current: proposal.type === 'doc_edit' || resubmitted ? current : null, exists, hidden, stale, resubmitted,
+    firstBuild: firstBuilds.find((b) => b.status === 'approved') ?? firstBuilds[0] ?? null,
+  };
 }
 
 const one = (v) => (Array.isArray(v) ? v[0] ?? null : v ?? null);
+const FIRST_BUILD_COLUMNS =
+  'id, status, runes, summoner_spells, starting_items, core_items, skill_order, early_skills, patch, up_count, down_count';
 
 async function rpc(name, args, fallback) {
   const { data, error } = await db().rpc(name, args);

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { getChampionMap } from '../../api/ddragon';
+import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../../api/ddragon';
 import { approveProposal, getProposalForReview, rejectProposal } from '../../api/proposals';
 import { useAsync } from '../../lib/useAsync';
 import { STATUS_LABEL, TYPE_LABEL, fmtDateTime } from '../../lib/format';
@@ -9,6 +9,8 @@ import RequireOperator from '../../components/RequireOperator';
 import DiffView from '../../components/DiffView';
 import UserName from '../../components/UserName';
 import NoteForm from '../../components/NoteForm';
+import BuildCard from '../../components/BuildCard';
+import { proposalBuildBlock, sameBuild } from '../../lib/buildContent';
 
 /** 제안 하나 검토: 기존 ↔ 제안 비교, 승인 / 거절(사유 필수) */
 export default function AdminProposal() {
@@ -23,15 +25,22 @@ function Review() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { data, error, loading, retry } = useAsync(async () => {
-    const [champs, review] = await Promise.all([getChampionMap(), getProposalForReview(Number(id))]);
-    return { champs, review };
+    const [champs, review, items, runes, spells, latest] = await Promise.all([
+      getChampionMap(), getProposalForReview(Number(id)), getItems(), getRunes(), getSummonerSpells(), getLatestVersion(),
+    ]);
+    return { champs, review, game: { items, runes, spells, latest } };
   }, [id]);
   const [open, setOpen] = useState(null); // 'approve' | 'reject' | null — 메모 입력창
 
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
   if (!data.review) return <p className="empty">제안을 찾지 못했어요.</p>;
-  const { proposal: p, current, exists, hidden, stale, resubmitted } = data.review;
+  const { proposal: p, current, exists, hidden, stale, resubmitted, firstBuild } = data.review;
+  const isNew = p.type === 'new_counter';
+  const noBuild = isNew && !p.build;
+  const buildWarn = isNew && p.build ? proposalBuildBlock(p.build, data.game) : null;
+  const buildChanged = resubmitted && !sameBuild(firstBuild, p.build);
+  const card = (b, extra = {}) => <BuildCard build={{ ...b, author: p.proposer, ...extra }} {...data.game} />;
   const name = (cid) => data.champs[cid]?.name ?? cid;
   const title = `${name(p.counter_champion)}(으)로 ${name(p.target_champion)} 잡는 법`;
   const label = resubmitted ? '재검토 후 다시 낸 제안' : TYPE_LABEL[p.type];
@@ -71,6 +80,10 @@ function Review() {
       {p.type === 'new_counter' && exists && p.status === 'pending' && (
         <p className="warn" role="alert">이미 같은 카운터가 공개돼 있어요. 승인할 수 없으니 거절해 주세요.</p>
       )}
+      {noBuild && p.status === 'pending' && (
+        <p className="warn" role="alert">빌드가 없는 새 카운터 제안이에요. 새 카운터에는 빌드가 꼭 있어야 해서 승인할 수 없어요. 거절해 주세요.</p>
+      )}
+      {buildWarn && p.status === 'pending' && <p className="warn" role="alert">{buildWarn} 아래 빌드를 확인하고 승인해 주세요.</p>}
       {stale && (
         <p className="warn" role="alert">
           이 제안을 쓴 뒤에 문서가 다른 승인으로 바뀌었어요. 아래 비교는 <strong>지금 문서</strong> 기준이라, 승인하면 그 사이 바뀐 내용이 덮어써질 수 있어요.
@@ -84,6 +97,41 @@ function Review() {
         <DiffView before={p.type === 'doc_edit' || resubmitted ? current : null} after={p.content} />
       </section>
 
+      {isNew && p.build && (
+        <section className="section">
+          {!resubmitted && (
+            <>
+              <h2 className="section-title">함께 공개될 첫 빌드</h2>
+              <p className="hint">승인하면 카운터와 함께 이 빌드가 공개되고, 거절하면 같이 거절돼요.</p>
+              {card(p.build)}
+            </>
+          )}
+          {resubmitted && !buildChanged && (
+            <>
+              <h2 className="section-title">첫 빌드 (그대로)</h2>
+              <p className="hint">빌드는 고치지 않았어요. 승인하면 원래 첫 빌드가 그대로 공개돼요.</p>
+              {card(p.build)}
+            </>
+          )}
+          {resubmitted && buildChanged && (
+            <>
+              <h2 className="section-title">바뀐 빌드 (원래 첫 빌드 → 고친 빌드)</h2>
+              <p className="hint">승인하면 원래 첫 빌드는 숨기고("재검토로 교체"), 고친 빌드를 공개해요. 원래 빌드의 따봉 수는 숨긴 빌드에 남아요.</p>
+              <div className="build-compare">
+                <div>
+                  <h3>원래 첫 빌드</h3>
+                  {firstBuild ? card(firstBuild, { up: firstBuild.up_count, down: firstBuild.down_count }) : <p className="empty">원래 첫 빌드가 없어요.</p>}
+                </div>
+                <div>
+                  <h3>고친 빌드</h3>
+                  {card(p.build)}
+                </div>
+              </div>
+            </>
+          )}
+        </section>
+      )}
+
       {p.status === 'pending' ? (
         <section className="section">
           <div className="row-actions">
@@ -91,7 +139,7 @@ function Review() {
               type="button"
               className="btn"
               onClick={() => toggle('approve')}
-              disabled={hidden || (p.type === 'new_counter' && exists)}
+              disabled={hidden || (p.type === 'new_counter' && exists) || noBuild}
               aria-expanded={open === 'approve'}
             >
               승인

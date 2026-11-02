@@ -138,6 +138,7 @@ export default function Matchup() {
               build={b}
               {...data}
               interactive
+              lastOne={data.builds.length === 1}
               onHidden={(message) => {
                 setBuildNotice(message);
                 retry();

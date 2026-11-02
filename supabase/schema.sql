@@ -1,5 +1,5 @@
 -- =====================================================================
--- 롤 탑 카운터 위키 — 2단계: 테이블 + RLS + 초기 데이터 (SPEC 7장)
+-- 롤 탑 카운터 위키 — 2단계: 테이블 + RLS (SPEC 7장). 초기 데이터는 없음
 -- Supabase SQL Editor에 통째로 붙여넣어 "한 번" 실행한다.
 -- (다시 실행하면 "already exists" 오류가 난다. 처음부터 다시 하려면
 --  맨 아래 "초기화" 주석의 drop 문을 먼저 실행한다.)
@@ -107,7 +107,7 @@ create index doc_revisions_counter_idx on public.doc_revisions (counter_id, crea
 create table public.builds (
   id               bigint generated always as identity primary key,
   counter_id       bigint not null references public.counters (id) on delete cascade,
-  author_id        uuid references public.profiles (id) on delete set null,  -- null = 예시(초기) 빌드
+  author_id        uuid references public.profiles (id) on delete set null,  -- null = 탈퇴한 유저
   runes            jsonb not null,   -- {primaryPath, keystone, primary[], secondaryPath, secondary[], shards[]}
   summoner_spells  text[] not null check (cardinality(summoner_spells) = 2),
   starting_items   text[] not null default '{}',
@@ -403,43 +403,8 @@ create policy "offmeta_champions: 누구나 읽기" on public.offmeta_champions
 create policy "offmeta_champions: 관리자 쓰기" on public.offmeta_champions
   for all to authenticated using (public.is_admin()) with check (public.is_admin());
 
--- ---------------------------------------------------------------------
--- 5. 초기 데이터: 다리우스 상대 퀸 하나만 (카운터 1 + 문서 1 + 빌드 2)
---    아직 유저가 없으므로 작성자(author_id)는 비워 둔다 → 화면에는 "예시 빌드"로 표시.
--- ---------------------------------------------------------------------
-with c as (
-  insert into public.counters (target_champion, counter_champion, sort_order, status)
-  values ('Darius', 'Quinn', 1, 'approved')
-  returning id
-),
-d as (
-  insert into public.matchup_docs (counter_id, summary, level_notes, lane_cautions)
-  select c.id,
-    '사거리로 일방적인 견제, 다리우스 W·E만 피하면 라인전 압승',
-    jsonb_build_object(
-      '1',  '퀸 쪽이 사거리가 길다. 다리우스에게 붙지 말고 미니언 뒤에서 평타로만 견제한다.',
-      '2',  '상대가 2레벨을 먼저 찍으면 바로 뒤로 빠진다. 웨이브를 먼저 밀어 2레벨 선점을 노린다.',
-      '3',  '핵심 스킬 3개가 모두 생기는 구간. 상대 주요 스킬이 빠진 걸 보고 짧게 딜교한다.',
-      '4',  '첫 귀환 전 체력을 깎아 두면 다리우스가 CS를 포기하게 된다.',
-      '6',  '궁극기 유무가 가장 중요하다. 상대 궁 각이 보이면 체력을 반 이상 유지한다.',
-      '9',  '주력 스킬 마스터. 짧은 교환을 여러 번 하는 쪽이 유리하다.',
-      '11', '궁극기 2레벨. 사이드 운영으로 상대를 라인에 묶어둔다.'
-    ),
-    E'다리우스 E(포획) 사거리 안에서 오래 머무르지 않는다.\n출혈 5중첩 + 궁극기 각이 나오면 바로 빠진다.\n상대 정글이 탑에 오면 다리우스 혼자서도 킬각이 나오므로 와드 필수.'
-  from c
-  returning counter_id
-)
-insert into public.builds
-  (counter_id, author_id, runes, summoner_spells, starting_items, core_items, skill_order, patch, status)
-select c.id, null, b.runes, b.spells, b.starting, b.core, b.skills, b.patch, 'approved'
-from c, (values
-  ( '{"primaryPath":8000,"keystone":8005,"primary":[9111,9104,8014],"secondaryPath":8100,"secondary":[8143,8106],"shards":[5005,5008,5011]}'::jsonb,
-    array['SummonerFlash','SummonerTeleport'], array['1055','2003'], array['6672','3006','3031','3036'],
-    '["Q","E","W"]'::jsonb, '16.21.1' ),
-  ( '{"primaryPath":8000,"keystone":8021,"primary":[9111,9104,8299],"secondaryPath":8400,"secondary":[8444,8451],"shards":[5005,5008,5011]}'::jsonb,
-    array['SummonerFlash','SummonerDot'], array['1055','2003'], array['3153','3006','3124','3031'],
-    '["Q","W","E"]'::jsonb, '14.1.1' )
-) as b (runes, spells, starting, core, skills, patch);
+-- 초기 데이터는 넣지 않는다 (콘텐츠는 모두 유저 제안 → 운영자 승인으로 들어온다).
+-- 로컬 DB 검사용 데이터는 supabase/tests/fixtures.sql.
 
 commit;
 

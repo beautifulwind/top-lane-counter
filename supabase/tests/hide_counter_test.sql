@@ -17,21 +17,19 @@ insert into ids values ('quinn', (select id from counters where counter_champion
 -- 준비: 유저가 가렌 제안 → 운영자 승인 → (postgres로) 승인된 빌드 하나 → 유저2가 가렌 문서 수정 제안(대기)
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
-insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content)
-values ('new_counter', 'Darius', 'Garen', auth.uid(), :'doc');
+insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
+values ('new_counter', 'Darius', 'Garen', auth.uid(), :'doc', t.build());
 insert into ids select 'garen_p', id from edit_proposals where counter_champion = 'Garen';
 -- 승인 전에 유저2도 같은 매치업을 제안해 둠 (나중에 숨긴 뒤 이 제안을 승인하려는 경우 검사용)
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
-insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content)
-values ('new_counter', 'Darius', 'Garen', auth.uid(), :'doc');
+insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
+values ('new_counter', 'Darius', 'Garen', auth.uid(), :'doc', t.build());
 insert into ids select 'garen_p2', id from edit_proposals where counter_champion = 'Garen' and proposer_id = auth.uid();
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select approve_proposal((select v from ids where k = 'garen_p'), '좋아요') as garen \gset
 insert into ids values ('garen', :garen);
 reset role;
-insert into builds (counter_id, runes, summoner_spells, starting_items, core_items, skill_order, early_skills, patch, status)
-values (:garen, '{"primaryPath":8000,"keystone":8010,"primary":[9111,9104,8299],"secondaryPath":8400,"secondary":[8444,8242],"shards":[5005,5008,5011]}',
-        array['SummonerFlash','SummonerTeleport'], array['1055','2003'], array['6631','3047','3053'], '["Q","E","W"]', array['Q','E','W'], '16.1.1', 'approved');
+-- 009: 가렌 제안의 빌드가 승인과 함께 첫 빌드로 공개돼 있다
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 insert into edit_proposals (type, target_champion, counter_champion, counter_id, proposer_id, content)
@@ -86,16 +84,16 @@ select t.ok('비로그인: 숨긴 카운터·문서·빌드 안 보임',
 reset role;
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
-select t.ok('일반 유저: 숨긴 카운터·문서·빌드 안 보임',
+select t.ok('제안자: 숨긴 카운터·문서 안 보임 (내가 쓴 첫 빌드만 /me용으로 보임)',
   (select (select count(*) from counters where id = :garen) = 0
       and (select count(*) from matchup_docs where counter_id = :garen) = 0
-      and (select count(*) from builds where counter_id = :garen) = 0));
+      and (select count(*) from builds where counter_id = :garen and author_id is distinct from auth.uid()) = 0));
 select t.ok('제안자는 승인 취소와 사유를 봄',
   (select status = 'revoked' and revoke_reason = '잘못 승인했어요' from edit_proposals where id = (select v from ids where k = 'garen_p')));
 select t.ok('일반 유저는 숨김 기록을 못 봄', (select count(*) = 0 from counter_status_log));
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 select t.fails('숨긴 동안 같은 매치업 새 카운터 제안 불가',
-  format($$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content) values ('new_counter','Darius','Garen',auth.uid(),%L)$$, :'doc'),
+  format($$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build) values ('new_counter','Darius','Garen',auth.uid(),%L, t.build())$$, :'doc'),
   '숨긴 카운터라');
 select t.fails('숨긴 카운터 문서 수정 제안 불가',
   format($$insert into edit_proposals (type, target_champion, counter_champion, counter_id, proposer_id, content) values ('doc_edit','x','y',%s,auth.uid(),'{"summary":"또 고침","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"}}')$$, :garen),

@@ -27,11 +27,11 @@ function PendingList() {
   const location = useLocation();
   const [done, setDone] = useState(location.state?.done ?? null);
   const { data, error, loading, retry } = useAsync(async () => {
-    const [champs, pending, hidden, deletions, builds, hiddenBuilds, items, runes, spells, latest] = await Promise.all([
-      getChampionMap(), getPendingProposals(), getHiddenCounters(), getDeletions(), getPendingBuilds(), getHiddenBuilds(),
-      getItems(), getRunes(), getSummonerSpells(), getLatestVersion(),
-    ]);
+    const [items, runes, spells, latest] = await Promise.all([getItems(), getRunes(), getSummonerSpells(), getLatestVersion()]);
     const game = { items, runes, spells, latest };
+    const [champs, pending, hidden, deletions, builds, hiddenBuilds] = await Promise.all([
+      getChampionMap(), getPendingProposals(game), getHiddenCounters(), getDeletions(), getPendingBuilds(), getHiddenBuilds(),
+    ]);
     const pendingBuilds = builds.pending.map((b) => ({
       ...b, block: quickBuildBlock(buildReviewFlags(b, game, builds.approved), b, latest),
     }));
@@ -58,7 +58,7 @@ function PendingList() {
         {data && data.pending.length > 0 && (
           <ul className="proposal-list">
             {data.pending.map((p) => (
-              <PendingRow key={p.id} proposal={p} name={name} onDone={finished} />
+              <PendingRow key={p.id} proposal={p} name={name} game={data.game} onDone={finished} />
             ))}
           </ul>
         )}
@@ -152,7 +152,7 @@ function originState(origin) {
 }
 
 /** 승인 대기 한 줄: [승인] [거절]은 그 자리에 메모 입력창, 내용은 [자세히] */
-function PendingRow({ proposal: p, name, onDone }) {
+function PendingRow({ proposal: p, name, game, onDone }) {
   const [open, setOpen] = useState(null); // 'approve' | 'reject' | null
   const title = `${name(p.counter_champion)}(으)로 ${name(p.target_champion)} 잡는 법`;
   const label = p.resubmitted ? '재검토 후 다시 낸 제안' : TYPE_LABEL[p.type];
@@ -168,6 +168,12 @@ function PendingRow({ proposal: p, name, onDone }) {
         <span>{fmtDateTime(p.created_at)}</span>
       </div>
       {p.block && <p className="block-reason">{p.block} 내용을 [자세히]에서 확인해 주세요.</p>}
+      {p.type === 'new_counter' && p.build && (
+        <details className="build-summary">
+          <summary>{p.resubmitted ? '고친 빌드 보기' : '함께 공개될 첫 빌드 보기'}</summary>
+          <BuildCard build={{ ...p.build, author: p.proposer }} {...game} />
+        </details>
+      )}
       <div className="row-actions">
         <button type="button" className="btn btn-small" onClick={() => toggle('approve')} disabled={!!p.block} aria-expanded={open === 'approve'}>
           승인
@@ -313,7 +319,7 @@ function PendingBuildRow({ build: b, game, name, onDone }) {
   const [open, setOpen] = useState(null); // 'approve' | 'reject' | null
   const title = buildTitle(b, name);
   const toggle = (kind) => setOpen(open === kind ? null : kind);
-  const who = b.author?.nickname ?? '예시 빌드';
+  const who = b.author?.nickname ?? '탈퇴한 유저';
 
   return (
     <li className="proposal-row" aria-label={`[빌드] ${title}`}>
@@ -373,7 +379,7 @@ function HiddenBuildRow({ build: b, game, name, onDone }) {
   const [open, setOpen] = useState(false);
   const title = buildTitle(b, name);
   const counterHidden = b.counter?.status !== 'approved';
-  const who = b.author?.nickname ?? '예시 빌드';
+  const who = b.author?.nickname ?? '탈퇴한 유저';
 
   return (
     <li className="proposal-row" aria-label={`[숨긴 빌드] ${title}`}>

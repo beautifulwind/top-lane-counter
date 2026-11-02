@@ -29,7 +29,7 @@ test('매치업 빌드: 승인된 것만, 따봉 점수 높은 순, 작성자는
   start('/champion/Darius/counter/Quinn');
   await screen.findByText(/퀸\(으\)로 다리우스 잡는 법/);
   const authors = [...document.querySelectorAll('.build-author')].map((e) => e.textContent);
-  expect(authors).toEqual(['Lv.7 수석 연구원 · 탑신병자', 'Lv.3 칭호없음', '예시 빌드', 'Lv.0 영자(운)']);
+  expect(authors).toEqual(['Lv.7 수석 연구원 · 탑신병자', 'Lv.3 칭호없음', '(탈퇴한 유저)', 'Lv.0 영자(운)']);
   expect(screen.queryByText(/대기중/)).toBeNull();
   expect(screen.queryByText(/대표 칭호 없음/)).toBeNull();
   expect(screen.getByText('구버전 · 14.1')).toBeDefined(); // 앞 두 자리만 비교·표시

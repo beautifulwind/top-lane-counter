@@ -5,7 +5,7 @@ import { compareBuilds, toRow } from '../lib/buildContent';
 
 const PERSON = 'nickname, level, main_title';
 const BUILD_FIELDS =
-  'id, counter_id, author_id, is_example, runes, summoner_spells, starting_items, core_items, skill_order, early_skills, patch, ' +
+  'id, counter_id, author_id, proposal_id, runes, summoner_spells, starting_items, core_items, skill_order, early_skills, patch, ' +
   'up_count, down_count, status, created_at';
 const AUTHOR = `author:profiles!builds_author_id_fkey(${PERSON})`;
 const COUNTER = 'counter:counters!builds_counter_id_fkey(id, target_champion, counter_champion, status)';

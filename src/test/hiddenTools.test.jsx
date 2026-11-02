@@ -3,7 +3,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
-import { TABLES, fakeLogin, fakeProposal, fakeState } from './fakeSupabase';
+import { FAKE_PROPOSAL_BUILD, TABLES, fakeLogin, fakeProposal, fakeState } from './fakeSupabase';
 
 const COUNTERS = TABLES.counters.map((c) => ({ ...c }));
 const BUILDS = TABLES.builds.map((b) => ({ ...b }));
@@ -161,7 +161,7 @@ test('제안자: /me의 [고쳐서 다시 제출] → 숨긴 시점 문서로 �
   expect(screen.getByLabelText('한 줄 요약 (필수)').value).toBe('가렌 요약');
   fakeState.rpcCalls.length = 0;
   fireEvent.click(screen.getByRole('button', { name: '다시 제출' }));
-  expect(screen.getByRole('alert').textContent).toBe('지금 문서와 달라진 내용이 없어요.');
+  expect(screen.getByRole('alert').textContent).toBe('고친 내용이 없어요. 운영자 메모를 보고 글이나 빌드를 고쳐 주세요.');
   expect(fakeState.rpcCalls).toEqual([]);
 
   fireEvent.change(screen.getByLabelText('9레벨 (필수)'), { target: { value: ' 9렙 고침 ' } });
@@ -170,7 +170,7 @@ test('제안자: /me의 [고쳐서 다시 제출] → 숨긴 시점 문서로 �
   expect(where()).toBe('/me');
   expect(fakeState.rpcCalls[0]).toEqual({
     name: 'resubmit_proposal',
-    args: { p_id: 7, p_content: { ...GAREN_DOC, level_notes: { ...GAREN_DOC.level_notes, 9: '9렙 고침' } } },
+    args: { p_id: 7, p_content: { ...GAREN_DOC, level_notes: { ...GAREN_DOC.level_notes, 9: '9렙 고침' } }, p_build: FAKE_PROPOSAL_BUILD },
   });
 });
 

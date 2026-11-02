@@ -3,10 +3,15 @@ import { ALL_LEVELS, LIMITS, REQUIRED_LEVELS, docProblem, sameDoc, sortedLevels 
 
 /**
  * 매치업 문서 입력 폼 (새 카운터 제안·문서 수정 제안 공용)
- * initial: 시작 내용 / requireChange: true면 initial과 같을 때 제출 불가
+ * initial: 시작 내용 / requireChange: true면 initial과 같을 때 제출 불가 (changedElsewhere: 빌드 등 다른 곳을 고쳤으면 통과)
+ * children: 문서 칸 아래, 보내기 버튼 위에 들어갈 것 (새 카운터 제안·다시 제출의 빌드 입력)
+ * blocked: 보내기를 막는 이유 (예: 빌드를 아직 다 안 고름) → 글 검사 다음에 이 문구로 막는다
  * onSubmit(content): 실패하면 Error를 던진다 → 폼 아래에 문구로 보여 준다
  */
-export default function DocForm({ initial, onSubmit, submitLabel = '제안 보내기', requireChange = false }) {
+export default function DocForm({
+  initial, onSubmit, submitLabel = '제안 보내기', requireChange = false, changedElsewhere = false,
+  unchangedMessage = '지금 문서와 달라진 내용이 없어요.', children, blocked = null,
+}) {
   const [summary, setSummary] = useState(initial?.summary ?? '');
   const [notes, setNotes] = useState(() => {
     const n = { ...(initial?.level_notes ?? {}) };
@@ -31,7 +36,8 @@ export default function DocForm({ initial, onSubmit, submitLabel = '제안 보�
 
   const submit = async (e) => {
     e.preventDefault();
-    const problem = docProblem(content) ?? (requireChange && sameDoc(initial, content) ? '지금 문서와 달라진 내용이 없어요.' : null);
+    const problem = docProblem(content) ?? blocked
+      ?? (requireChange && !changedElsewhere && sameDoc(initial, content) ? unchangedMessage : null);
     if (problem) return setError(problem);
     setBusy(true);
     setError(null);
@@ -86,6 +92,8 @@ export default function DocForm({ initial, onSubmit, submitLabel = '제안 보�
 
       <label htmlFor="doc-cautions">라인전 주의사항</label>
       <textarea id="doc-cautions" rows={5} value={cautions} onChange={(e) => setCautions(e.target.value)} />
+
+      {children}
 
       {error && <p className="form-error" role="alert">{error}</p>}
       <button type="submit" className="btn" disabled={busy}>{busy ? '보내는 중…' : submitLabel}</button>

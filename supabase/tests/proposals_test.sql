@@ -26,42 +26,42 @@ insert into ids values ('quinn', (select id from counters where counter_champion
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 
-insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content)
-values ('new_counter', 'Darius', 'Garen', auth.uid(), :'full');
+insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
+values ('new_counter', 'Darius', 'Garen', auth.uid(), :'full', t.build());
 insert into ids select 'garen_p', id from edit_proposals where counter_champion = 'Garen';
 select t.ok('새 카운터 제안: 빈 추가 레벨은 빠지고 "07"은 "7"로, 공백 정리',
   (select content = '{"summary":"가렌 요약","level_notes":{"1":"a","2":"b","3":"c","6":"d","7":"칠","9":"e","11":"f"},"lane_cautions":"주의"}'::jsonb
    from edit_proposals where id = (select v from ids where k = 'garen_p')));
 
 select t.fails('같은 매치업에 대기 중인 내 제안 중복',
-  $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content)
-    values ('new_counter','Darius','Garen',auth.uid(),'{"summary":"x","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"}}')$$,
+  $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
+    values ('new_counter','Darius','Garen',auth.uid(),'{"summary":"x","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"}}', t.build())$$,
   '이미 대기 중인 내 제안');
 select t.fails('필수 레벨(9) 빠짐',
-  $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content)
-    values ('new_counter','Darius','Teemo',auth.uid(),'{"summary":"x","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":" ","11":"f"}}')$$,
+  $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
+    values ('new_counter','Darius','Teemo',auth.uid(),'{"summary":"x","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":" ","11":"f"}}', t.build())$$,
   '9레벨 딜교법은 꼭');
 select t.fails('요약 없음',
-  $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content)
-    values ('new_counter','Darius','Teemo',auth.uid(),'{"summary":"","level_notes":{}}')$$, '한 줄 요약');
+  $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
+    values ('new_counter','Darius','Teemo',auth.uid(),'{"summary":"","level_notes":{}}', t.build())$$, '한 줄 요약');
 select t.fails('레벨 19',
-  $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content)
-    values ('new_counter','Darius','Teemo',auth.uid(),'{"summary":"x","level_notes":{"19":"a"}}')$$, '1~18');
+  $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
+    values ('new_counter','Darius','Teemo',auth.uid(),'{"summary":"x","level_notes":{"19":"a"}}', t.build())$$, '1~18');
 select t.fails('이미 있는 카운터(퀸)',
-  $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content)
-    values ('new_counter','Darius','Quinn',auth.uid(),'{"summary":"x","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"}}')$$,
+  $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
+    values ('new_counter','Darius','Quinn',auth.uid(),'{"summary":"x","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"}}', t.build())$$,
   '이미 등록된 카운터');
 select t.fails('자기 자신 카운터',
-  $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content)
-    values ('new_counter','Darius','Darius',auth.uid(),'{"summary":"x","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"}}')$$,
+  $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
+    values ('new_counter','Darius','Darius',auth.uid(),'{"summary":"x","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"}}', t.build())$$,
   '같은 챔피언끼리');
 select t.fails('남의 이름으로 제안',
-  $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content)
-    values ('new_counter','Darius','Teemo','00000000-0000-0000-0000-00000000000d','{"summary":"x","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"}}')$$,
+  $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
+    values ('new_counter','Darius','Teemo','00000000-0000-0000-0000-00000000000d','{"summary":"x","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"}}', t.build())$$,
   'row-level security');
 select t.fails('처음부터 승인 상태로 넣기',
-  $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, status)
-    values ('new_counter','Darius','Teemo',auth.uid(),'{"summary":"x","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"}}','approved')$$,
+  $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, status, build)
+    values ('new_counter','Darius','Teemo',auth.uid(),'{"summary":"x","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"}}','approved', t.build())$$,
   'permission denied');
 select t.fails('문서 수정: 바뀐 게 없음',
   format($$insert into edit_proposals (type, target_champion, counter_champion, counter_id, proposer_id, content)
@@ -95,8 +95,8 @@ select t.ok('남의 제안은 안 보임', (select count(*) = 0 from edit_propos
 -- 닉네임 없는 유저
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000c';
 select t.fails('닉네임 없으면 제안 불가',
-  $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content)
-    values ('new_counter','Darius','Teemo',auth.uid(),'{"summary":"x","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"}}')$$,
+  $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
+    values ('new_counter','Darius','Teemo',auth.uid(),'{"summary":"x","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"}}', t.build())$$,
   'row-level security');
 
 -- 로그인 안 한 사람
@@ -131,8 +131,8 @@ select t.fails('처리된 제안 거절', format($$select reject_proposal(%s, '�
 reset role;
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
-insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content)
-values ('new_counter', 'Darius', 'Teemo', auth.uid(), '{"summary":"티모","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"}}');
+insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
+values ('new_counter', 'Darius', 'Teemo', auth.uid(), '{"summary":"티모","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"}}', t.build());
 insert into ids select 'teemo_p', id from edit_proposals where counter_champion = 'Teemo';
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select t.fails('거절 사유 없음', format($$select reject_proposal(%s, '   ')$$, (select v from ids where k='teemo_p')), '거절 사유를');

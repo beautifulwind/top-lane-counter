@@ -3,7 +3,7 @@
 const runes = (keystone) => ({ primaryPath: 8000, keystone, primary: [9111, 9104, 8014], secondaryPath: 8100, secondary: [8143, 8106], shards: [5005, 5008, 5011] });
 const QUINN = { id: 1, target_champion: 'Darius', counter_champion: 'Quinn', status: 'approved' };
 const build = (id, author, extra = {}) => ({
-  id, counter_id: 1, author, author_id: author ? `u-${id}` : null, is_example: !author, status: 'approved', runes: runes(8005),
+  id, counter_id: 1, author, author_id: author ? `u-${id}` : null, proposal_id: null, status: 'approved', runes: runes(8005),
   summoner_spells: ['SummonerFlash', 'SummonerTeleport'], starting_items: ['1055', '2003'],
   core_items: ['6672', '3006', '3031'], skill_order: ['Q', 'E', 'W'], early_skills: ['Q', 'E', 'W'], patch: '99.1.1',
   up_count: 0, down_count: 0, created_at: `2026-11-0${id - 100}T00:00:00Z`, counter: QUINN, logs: [],
@@ -46,8 +46,16 @@ export const TABLES = {
 };
 
 /** 테스트에서 쓰는 제안 한 줄 (기본: 기존유저가 보낸 대기 중 문서 수정) */
+/** 새 카운터 제안에 담기는 빌드 (DB clean_build 모양) */
+export const FAKE_PROPOSAL_BUILD = {
+  runes: { primaryPath: 8000, keystone: 8010, primary: [9111, 9104, 8299], secondaryPath: 8400, secondary: [8446, 8444], shards: [5005, 5008, 5011] },
+  summoner_spells: ['SummonerFlash', 'SummonerTeleport'], starting_items: ['1055', '2003'], core_items: ['3053', '3047', '6631'],
+  skill_order: ['Q', 'E', 'W'], early_skills: ['Q', 'E', 'W'], patch: '99.1.1',
+};
+
 export function fakeProposal(extra = {}) {
   return {
+    build: extra.type === 'new_counter' ? FAKE_PROPOSAL_BUILD : null,
     id: 501, type: 'doc_edit', target_champion: 'Darius', counter_champion: 'Quinn', counter_id: 1,
     content: { summary: '고친 요약', level_notes: { 1: '1렙 내용', 2: '2렙', 3: '3렙', 6: '6렙', 9: '9렙', 11: '11렙' }, lane_cautions: 'E 사거리 주의\n궁 조심' },
     status: 'pending', reject_reason: null, reviewed_at: null, created_at: '2026-11-01T10:00:00Z', base_revision_id: 7,
@@ -125,7 +133,7 @@ function query(table) {
       if (table === 'builds') {
         const me = TABLES.profiles.find((p) => p.id === inserted.author_id);
         TABLES.builds.push(build(900 + TABLES.builds.length, me && { nickname: me.nickname, level: me.level, main_title: me.main_title }, {
-          ...inserted, status: 'pending', is_example: false, created_at: new Date().toISOString(),
+          ...inserted, status: 'pending', created_at: new Date().toISOString(),
           counter: TABLES.counters.find((c) => c.id === inserted.counter_id) ?? null,
         }));
         return { data: null, error: null };

@@ -33,9 +33,10 @@ create function pg_temp.add(
 $$;
 grant execute on function pg_temp.add to authenticated, anon;
 
--- ===== 1. 기존 예시 빌드 =====
-select t.ok('예시 빌드 2개: is_example, 1·2·3레벨 스킬은 선마 순서로 채워짐',
-  (select count(*) = 2 and bool_and(is_example) and bool_and(early_skills = array(select jsonb_array_elements_text(skill_order)))
+-- ===== 1. 검사용 데이터(fixtures.sql): 작성자 없는 공개 빌드 2개 =====
+select t.ok('009: 예시 빌드 칸은 없음', not exists (select 1 from information_schema.columns where table_name = 'builds' and column_name = 'is_example'));
+select t.ok('작성자 없는 빌드 2개 (= 탈퇴한 유저)',
+  (select count(*) = 2 and bool_and(author_id is null)
    from builds where counter_id = :quinn));
 
 -- ===== 2. 등록 권한 =====
@@ -77,15 +78,11 @@ select t.fails('상태·승인 칸은 직접 못 넣음',
   format($$insert into builds (counter_id, author_id, runes, summoner_spells, starting_items, core_items, skill_order, early_skills, patch, status)
            values (%s, auth.uid(), %L, array['SummonerFlash','SummonerTeleport'], array['1055'], array['1','2','3'], '["Q","E","W"]', array['Q','E','W'], '16.21', 'approved')$$,
          :quinn, :'runes'), 'permission denied');
-select t.fails('예시 빌드 표시는 직접 못 넣음',
-  format($$insert into builds (counter_id, author_id, runes, summoner_spells, starting_items, core_items, skill_order, early_skills, patch, is_example)
-           values (%s, auth.uid(), %L, array['SummonerFlash','SummonerTeleport'], array['1055'], array['1','2','3'], '["Q","E","W"]', array['Q','E','W'], '16.21', true)$$,
-         :quinn, :'runes'), 'permission denied');
 
 -- 시작 아이템은 같은 것 여러 개 가능(포션 2개 등), 패치는 앞 두 자리만 써도 됨
 select pg_temp.add(starting => array['1055','2003','2003'], patch => '16.21');
-select t.ok('등록: 대기 상태, 룬은 숫자로 정리, 예시 아님',
-  (select count(*) = 1 from builds where author_id = auth.uid() and status = 'pending' and not is_example
+select t.ok('등록: 대기 상태, 룬은 숫자로 정리',
+  (select count(*) = 1 from builds where author_id = auth.uid() and status = 'pending'
      and runes -> 'primary' = '[9111,9104,8299]'::jsonb and starting_items = array['1055','2003','2003']));
 insert into ids select 'b1', id from builds where author_id = auth.uid();
 select t.fails('같은 매치업에 대기 빌드 2개 불가', $$select pg_temp.add(core => array['3071','3047','3053'])$$, '이미 승인 대기 중인');
@@ -99,7 +96,7 @@ select t.fails('일반 유저는 거절 불가', format($$select reject_build(%s
 set role anon;
 set request.jwt.claim.sub = '';
 select t.fails('비로그인은 승인 함수 못 부름', format($$select approve_build(%s, 'x')$$, (select v from ids where k = 'b1')), 'permission denied');
-select t.ok('비로그인: 공개 빌드(예시 2개)만 보임', (select count(*) = 2 from builds));
+select t.ok('비로그인: 공개 빌드(작성자 없는 2개)만 보임', (select count(*) = 2 from builds));
 
 -- ===== 4. 승인 (메모 필수, 기록, 알림) =====
 set role authenticated;
@@ -150,8 +147,8 @@ select vote_build((select v from ids where k = 'b1'), 1::smallint);
 select t.ok('일반 유저는 투표 기록을 못 봄 (운영자만)', (select count(*) = 0 from build_vote_log));
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select t.ok('운영자도 투표 가능 (남의 빌드)', (select vote_build((select v from ids where k = 'b1'), 1::smallint) = '{"up":2,"down":0,"mine":1}'::jsonb));
-select t.ok('예시 빌드(작성자 없음)에도 투표 가능',
-  (select (vote_build((select min(id) from builds where is_example), (-1)::smallint) ->> 'down')::int = 1));
+select t.ok('작성자 없는 빌드(탈퇴한 유저)에도 투표 가능',
+  (select (vote_build((select min(id) from builds where author_id is null), (-1)::smallint) ->> 'down')::int = 1));
 select t.ok('투표 기록: 바뀐 것만 (유저2: 없음→1→-1→없음→1 = 4줄, 운영자 2줄)',
   (select count(*) = 6 from build_vote_log));
 select t.ok('투표 기록 내용 (받은 사람·카운터·이전값·새값)',
@@ -170,7 +167,7 @@ select t.fails('두 번 숨기기 불가', format($$select hide_build(%s, '또')
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 select t.ok('다른 유저에게 숨긴 빌드는 안 보임', (select count(*) = 0 from builds where id = (select v from ids where k = 'b1')));
 select t.fails('숨긴 빌드에는 투표 불가', format('select vote_build(%s, (-1)::smallint)', (select v from ids where k = 'b1')), '공개된 빌드에만');
-select t.fails('일반 유저는 숨기기 불가', format($$select hide_build(%s, 'x')$$, (select min(id) from builds where is_example)), '운영자만');
+select t.fails('일반 유저는 숨기기 불가', format($$select hide_build(%s, 'x')$$, (select min(id) from builds where author_id is null)), '운영자만');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.ok('작성자에겐 숨긴 빌드와 사유가 보임 + 숨김 알림',
   (select status = 'hidden' and hide_reason = '아이템이 바뀌었어요' from builds where id = (select v from ids where k = 'b1'))
@@ -214,8 +211,8 @@ select restore_counter(:quinn, '다시 공개');
 -- ===== 9. 제안 승인·거절 알림 (카운터 제안) =====
 \set doc '{"summary":"가렌 요약","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"},"lane_cautions":""}'
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
-insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content)
-values ('new_counter', 'Darius', 'Garen', auth.uid(), :'doc'), ('new_counter', 'Darius', 'Teemo', auth.uid(), :'doc');
+insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
+values ('new_counter', 'Darius', 'Garen', auth.uid(), :'doc', t.build()), ('new_counter', 'Darius', 'Teemo', auth.uid(), :'doc', t.build());
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select approve_proposal((select id from edit_proposals where counter_champion = 'Garen'), '반영했어요');
 select reject_proposal((select id from edit_proposals where counter_champion = 'Teemo'), '근거가 부족해요');
@@ -239,10 +236,10 @@ select t.ok('투표한 사람 탈퇴: 표는 지워지고 수 반영, 투표 기
   and (select count(*) = 4 from build_vote_log where build_id = (select v from ids where k = 'b1') and voter_id is null));
 delete from auth.users where id = '00000000-0000-0000-0000-00000000000b';
 select t.ok('작성자 탈퇴: 거절·대기 빌드는 지워짐', (select count(*) = 0 from builds where id in (select v from ids where k in ('b2', 'b3'))));
-select t.ok('작성자 탈퇴: 공개 빌드는 작성자만 비우고 남음 (예시 빌드로 바뀌지 않음)',
-  (select author_id is null and not is_example and status = 'approved' from builds where id = (select v from ids where k = 'b1')));
+select t.ok('작성자 탈퇴: 공개 빌드는 작성자만 비우고 남음',
+  (select author_id is null and status = 'approved' from builds where id = (select v from ids where k = 'b1')));
 select t.ok('작성자 탈퇴: 투표 기록의 받은 사람도 비움 (기록은 남음)', (select count(*) = 5 and bool_and(author_id is null) from build_vote_log where build_id = (select v from ids where k = 'b1')));
-select t.ok('처리 기록: 남은 빌드 것만 남음 (지워진 거절 빌드 기록은 함께 지워짐)', (select count(*) = 3 from build_status_log where build_id = (select v from ids where k = 'b1')) and (select count(*) = 3 from build_status_log));
+select t.ok('처리 기록: 남은 빌드 것만 남음 (지워진 거절 빌드 기록은 함께 지워짐)', (select count(*) = 3 from build_status_log where build_id = (select v from ids where k = 'b1')) and (select count(*) = 3 from build_status_log l join builds b on b.id = l.build_id where b.counter_id = :quinn));
 
 -- ===== 11. 카운터 완전 삭제: 빌드는 함께 지워지고 투표 기록은 남음 =====
 set role authenticated;
@@ -250,5 +247,5 @@ set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select hide_counter(:quinn, '정리');
 select delete_counter(:quinn, 'Quinn', '테스트');
 reset role;
-select t.ok('삭제: 빌드·처리 기록은 함께 지워짐', (select count(*) = 0 from builds where counter_id = :quinn) and (select count(*) = 0 from build_status_log));
+select t.ok('삭제: 빌드·처리 기록은 함께 지워짐', (select count(*) = 0 from builds where counter_id = :quinn) and (select count(*) = 0 from build_status_log where build_id = (select v from ids where k = 'b1')));
 select t.ok('삭제: 투표 기록은 남음 (6단계 계산용)', (select count(*) = 6 from build_vote_log where counter_id = :quinn));

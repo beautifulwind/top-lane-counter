@@ -108,6 +108,12 @@ function MyProposals({ data }) {
                     <Link to={`/me/resubmit/${p.id}`} className="btn btn-small">고쳐서 다시 제출</Link>
                   </div>
                 )}
+                {p.type === 'new_counter' && p.build && (
+                  <details className="build-summary">
+                    <summary>제안한 빌드 보기</summary>
+                    <BuildCard build={{ ...p.build, author: p.proposer }} {...data.game} />
+                  </details>
+                )}
               </li>
             );
           })}

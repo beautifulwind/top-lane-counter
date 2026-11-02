@@ -18,8 +18,8 @@ insert into ids values ('quinn', (select id from counters where counter_champion
 
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
-insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content)
-values ('new_counter', 'Darius', 'Garen', auth.uid(), :'doc');
+insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
+values ('new_counter', 'Darius', 'Garen', auth.uid(), :'doc', t.build());
 insert into ids select 'garen_p', id from edit_proposals where counter_champion = 'Garen';
 
 -- ===== 1. 메모 없는 예전 함수는 없다 =====
@@ -108,13 +108,13 @@ set role authenticated;
 
 -- ===== 6. 확인 안 한 알림도 다시 제출하면 자동 읽음 처리 =====
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
-select resubmit_proposal((select v from ids where k = 'garen_p'), :'v1');
+select resubmit_proposal((select v from ids where k = 'garen_p'), :'v1', t.build());
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select reject_proposal((select v from ids where k = 'garen_p'), '아직 부족해요');
 select request_revision(:garen, '한 번 더 고쳐 주세요');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.ok('두 번째 요청: 새 알림 1개', (select count(*) = 1 from notifications where read_at is null and message = '한 번 더 고쳐 주세요'));
-select resubmit_proposal((select v from ids where k = 'garen_p'), :'v1');
+select resubmit_proposal((select v from ids where k = 'garen_p'), :'v1', t.build());
 select t.ok('다시 제출하면 확인 안 한 재검토 요청 알림도 읽음 처리', (select count(*) = 0 from notifications where read_at is null and kind = 'revision_request'));
 select t.ok('008: 거절 알림은 직접 확인할 때까지 남음', (select count(*) = 1 from notifications where read_at is null and kind = 'proposal_rejected' and message = '아직 부족해요'));
 

@@ -1,17 +1,19 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { getChampions } from '../api/ddragon';
+import { getChampions, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../api/ddragon';
 import { getCountersFor } from '../api/content';
 import { proposeNewCounter } from '../api/proposals';
 import { useAuth } from '../lib/auth';
 import { matchesQuery } from '../lib/chosung';
+import { buildMissing, emptyBuild } from '../lib/buildContent';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
 import DocForm from '../components/DocForm';
+import BuildFields from '../components/BuildFields';
 import { RequireLogin } from '../components/RequireOperator';
 import NotFound from './NotFound';
 
-/** 새 카운터 제안: /champion/:id/propose (?counter=Quinn 으로 미리 고를 수 있음) */
+/** 새 카운터 제안: /champion/:id/propose (?counter=Quinn 으로 미리 고를 수 있음). 글 + 빌드 1개(필수) */
 export default function ProposeCounter() {
   return (
     <RequireLogin>
@@ -26,11 +28,14 @@ function ProposeCounterForm() {
   const auth = useAuth();
   const navigate = useNavigate();
   const { data, error, loading, retry } = useAsync(async () => {
-    const [list, counters] = await Promise.all([getChampions(), getCountersFor(id)]);
-    return { list, existing: new Set(counters.map((c) => c.counter_champion)) };
+    const [list, counters, items, runes, spells, latest] = await Promise.all([
+      getChampions(), getCountersFor(id), getItems(), getRunes(), getSummonerSpells(), getLatestVersion(),
+    ]);
+    return { list, existing: new Set(counters.map((c) => c.counter_champion)), game: { items, runes, spells, latest } };
   }, [id]);
   const [picked, setPicked] = useState(params.get('counter'));
   const [query, setQuery] = useState('');
+  const [build, setBuild] = useState(emptyBuild);
 
   const choices = useMemo(
     () => (data?.list ?? []).filter((c) => c.id !== id && matchesQuery(query, c.name, c.id)),
@@ -45,7 +50,7 @@ function ProposeCounterForm() {
   const counter = picked && picked !== id && !data.existing.has(picked) ? byId[picked] : null;
 
   const submit = async (content) => {
-    await proposeNewCounter(auth.user.id, id, counter.id, content);
+    await proposeNewCounter(auth.user.id, id, counter.id, content, build, data.game.latest);
     navigate('/me', { state: { sent: `${counter.name}(으)로 ${target.name} 잡는 법 — 새 카운터 제안을 보냈어요.` } });
   };
 
@@ -101,9 +106,20 @@ function ProposeCounterForm() {
       {counter && (
         <section className="section">
           <h2 className="section-title"><span className="num">2.</span> {counter.name}(으)로 {target.name} 잡는 법</h2>
-          <DocForm onSubmit={submit} />
+          <DocForm onSubmit={submit} blocked={buildMissing(build, data.game)}>
+            <fieldset className="pick-group build-in-doc">
+              <legend>빌드 (필수)</legend>
+              <p className="hint">
+                새 카운터에는 빌드가 꼭 하나 있어야 해요. 승인되면 이 빌드가 카운터의 첫 빌드로 함께 공개돼요.
+              </p>
+              <div className="build-form">
+                <BuildFields game={data.game} value={build} onChange={setBuild} author={auth.profile} />
+              </div>
+            </fieldset>
+          </DocForm>
         </section>
       )}
     </article>
   );
 }
+

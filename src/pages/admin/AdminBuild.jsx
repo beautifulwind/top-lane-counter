@@ -42,7 +42,7 @@ function Review() {
   const c = b.counter;
   const title = c ? `${name(c.counter_champion)}(으)로 ${name(c.target_champion)} 잡는 법` : '(알 수 없는 매치업)';
   const flags = buildReviewFlags(b, data.game, approved);
-  const who = b.author?.nickname ?? '예시 빌드';
+  const who = b.author?.nickname ?? '탈퇴한 유저';
   const done = (message) => navigate('/admin', { state: { done: message } });
   const toggle = (kind) => setOpen(open === kind ? null : kind);
 
@@ -54,6 +54,7 @@ function Review() {
     flags.outdated && { bad: false, text: `지금 패치(${patchMinor(data.game.latest)})와 다른 패치(${patchMinor(b.patch)})로 등록됐어요.` },
   ].filter(Boolean);
   const cannotApprove = flags.hiddenCounter || flags.duplicate;
+  const lastOne = b.status === 'approved' && !approved.some((x) => x.id !== b.id);
 
   return (
     <article>
@@ -92,7 +93,10 @@ function Review() {
         )}
         {b.status === 'approved' && (
           <div className="row-actions">
-            <button type="button" className="btn btn-small" onClick={() => toggle('hide')} aria-expanded={open === 'hide'}>빌드 숨기기</button>
+            <button type="button" className="btn btn-small" onClick={() => toggle('hide')} aria-expanded={open === 'hide'} disabled={lastOne}>
+              빌드 숨기기
+            </button>
+            {lastOne && <small className="hint">마지막 공개 빌드라 숨길 수 없어요. 다른 빌드를 먼저 승인하거나, 카운터를 숨겨 주세요.</small>}
           </div>
         )}
         {b.status === 'hidden' && (
