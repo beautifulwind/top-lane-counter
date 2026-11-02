@@ -31,11 +31,11 @@ select t.fails('메모 없는 되돌리기 함수 없음', 'select revert_doc(1:
 select t.fails('메모 검사 도우미는 직접 못 부름', $$select require_note('a', 'b')$$, 'permission denied');
 
 -- ===== 2. 승인 메모 필수, 제안자에게 보임 =====
-select t.fails('승인: 메모 공백', format($$select approve_proposal(%s, '   ', null, null)$$, (select v from ids where k = 'garen_p')), '승인 메모를 적어');
-select t.fails('승인: 메모 null', format('select approve_proposal(%s, null, null, null)', (select v from ids where k = 'garen_p')), '승인 메모를 적어');
-select t.fails('승인: 메모 501자', format('select approve_proposal(%s, %L, null, null)', (select v from ids where k = 'garen_p'), repeat('a', 501)), '500자');
+select t.fails('승인: 메모 공백', format($$select approve_proposal(%s, '   ', null, null, t.pv(%1$s))$$, (select v from ids where k = 'garen_p')), '승인 메모를 적어');
+select t.fails('승인: 메모 null', format('select approve_proposal(%s, null, null, null, t.pv(%1$s))', (select v from ids where k = 'garen_p')), '승인 메모를 적어');
+select t.fails('승인: 메모 501자', format('select approve_proposal(%s, %L, null, null, t.pv(%1$s))', (select v from ids where k = 'garen_p'), repeat('a', 501)), '500자');
 select t.ok('메모가 없으면 제안은 그대로 대기', (select status = 'pending' from edit_proposals where id = (select v from ids where k = 'garen_p')));
-select approve_proposal((select v from ids where k = 'garen_p'), '  좋은 공략이에요 ', null, null) as garen \gset
+select approve_proposal((select v from ids where k = 'garen_p'), '  좋은 공략이에요 ', null, null, t.pv((select v from ids where k = 'garen_p'))) as garen \gset
 insert into ids values ('garen', :garen);
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.ok('제안자는 승인 메모(공백 정리)를 봄',
@@ -61,7 +61,7 @@ set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 insert into edit_proposals (type, target_champion, counter_champion, counter_id, proposer_id, content)
 values ('doc_edit', 'x', 'y', (select v from ids where k = 'quinn'), auth.uid(), :'v1');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select approve_proposal((select id from edit_proposals where type = 'doc_edit'), '반영', null, null);
+select approve_proposal((select id from edit_proposals where type = 'doc_edit'), '반영', null, null, t.pv((select id from edit_proposals where type = 'doc_edit')));
 select revert_doc((select id from doc_revisions where counter_id = (select v from ids where k = 'quinn') and kind = 'create'), ' 원래가 맞아요 ');
 select t.ok('되돌리기: 기록(revert)에 메모(공백 정리)',
   (select r.kind = 'revert' and r.note = '원래가 맞아요'
@@ -111,7 +111,7 @@ set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select resubmit_proposal((select v from ids where k = 'garen_p'), :'v1', t.build());
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select reject_proposal((select v from ids where k = 'garen_p'), '아직 부족해요');
+select reject_proposal((select v from ids where k = 'garen_p'), '아직 부족해요', t.pv((select v from ids where k = 'garen_p')));
 select request_revision(:garen, '한 번 더 고쳐 주세요');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.ok('두 번째 요청: 새 알림 1개', (select count(*) = 1 from notifications where read_at is null and message = '한 번 더 고쳐 주세요'));
@@ -121,7 +121,7 @@ select t.ok('008: 거절 알림은 직접 확인할 때까지 남음', (select c
 
 -- ===== 7. 재검토 요청 중 [다시 공개]로 취소하면 알림도 읽음 처리 =====
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select reject_proposal((select v from ids where k = 'garen_p'), '그래도 부족');
+select reject_proposal((select v from ids where k = 'garen_p'), '그래도 부족', t.pv((select v from ids where k = 'garen_p')));
 select request_revision(:garen, '세 번째');
 select restore_counter(:garen, '그냥 공개할게요');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';

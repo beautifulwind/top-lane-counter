@@ -2,10 +2,10 @@ import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getChampions, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../api/ddragon';
 import { getCountersFor } from '../api/content';
-import { proposeNewCounter } from '../api/proposals';
+import { getMyProposal, proposeNewCounter } from '../api/proposals';
 import { useAuth } from '../lib/auth';
 import { matchesQuery } from '../lib/chosung';
-import { buildMissing, emptyBuild } from '../lib/buildContent';
+import { buildMissing, buildToForm, emptyBuild } from '../lib/buildContent';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
 import DocForm from '../components/DocForm';
@@ -13,7 +13,10 @@ import BuildFields from '../components/BuildFields';
 import { RequireLogin } from '../components/RequireOperator';
 import NotFound from './NotFound';
 
-/** 새 카운터 제안: /champion/:id/propose (?counter=Quinn 으로 미리 고를 수 있음). 글 + 빌드 1개(필수) */
+/**
+ * 새 카운터 제안: /champion/:id/propose (?counter=Quinn 으로 미리 고를 수 있음). 글 + 빌드 1개(필수)
+ * ?from=내 제안 id: 거절된 내 제안 [다시 쓰기] — 그 글·빌드를 채워서 새 제안으로 보낸다 (원래 제안은 그대로)
+ */
 export default function ProposeCounter() {
   return (
     <RequireLogin>
@@ -27,15 +30,22 @@ function ProposeCounterForm() {
   const [params] = useSearchParams();
   const auth = useAuth();
   const navigate = useNavigate();
+  const fromId = Number(params.get('from')) || null;
   const { data, error, loading, retry } = useAsync(async () => {
-    const [list, counters, items, runes, spells, latest] = await Promise.all([
+    const [list, counters, items, runes, spells, latest, mine] = await Promise.all([
       getChampions(), getCountersFor(id), getItems(), getRunes(), getSummonerSpells(), getLatestVersion(),
+      fromId ? getMyProposal(auth.user.id, fromId) : null,
     ]);
-    return { list, existing: new Set(counters.map((c) => c.counter_champion)), game: { items, runes, spells, latest } };
-  }, [id]);
+    const from = mine?.type === 'new_counter' && mine.target_champion === id ? mine : null;
+    return { list, existing: new Set(counters.map((c) => c.counter_champion)), game: { items, runes, spells, latest }, from };
+  }, [id, fromId, auth.user.id]);
   const [picked, setPicked] = useState(params.get('counter'));
   const [query, setQuery] = useState('');
-  const [build, setBuild] = useState(emptyBuild);
+  // 고르기 전에는 null: [다시 쓰기]면 보낸 빌드, 아니면 빈 빌드에서 시작
+  const [picks, setBuild] = useState(null);
+  const from = data?.from ?? null;
+  const startBuild = useMemo(() => (from?.build ? buildToForm(from.build) : emptyBuild()), [from]);
+  const build = picks ?? startBuild;
 
   const choices = useMemo(
     () => (data?.list ?? []).filter((c) => c.id !== id && matchesQuery(query, c.name, c.id)),
@@ -106,7 +116,15 @@ function ProposeCounterForm() {
       {counter && (
         <section className="section">
           <h2 className="section-title"><span className="num">2.</span> {counter.name}(으)로 {target.name} 잡는 법</h2>
-          <DocForm onSubmit={submit} blocked={buildMissing(build, data.game)}>
+          {from && counter.id === from.counter_champion && (
+            <p className="notice" role="status">거절된 내 제안의 글과 빌드를 채워 뒀어요. 거절 사유를 보고 고쳐서 보내 주세요.</p>
+          )}
+          <DocForm
+            key={from && counter.id === from.counter_champion ? `from-${from.id}` : 'new'}
+            initial={from && counter.id === from.counter_champion ? from.content : undefined}
+            onSubmit={submit}
+            blocked={buildMissing(build, data.game)}
+          >
             <fieldset className="pick-group build-in-doc">
               <legend>빌드 (필수)</legend>
               <p className="hint">

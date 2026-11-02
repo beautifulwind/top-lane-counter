@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { BrowserRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
 import Home from './pages/Home';
@@ -21,6 +21,8 @@ import AdminDelete from './pages/admin/AdminDelete';
 import AdminBuild from './pages/admin/AdminBuild';
 import Resubmit from './pages/Resubmit';
 import ResubmitBuild from './pages/ResubmitBuild';
+import MyProposal from './pages/MyProposal';
+import MyBuild from './pages/MyBuild';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import { AuthProvider } from './lib/auth';
@@ -33,6 +35,12 @@ function ScrollToTop() {
     window.scrollTo(0, 0);
   }, [pathname]);
   return null;
+}
+
+/** 옛 주소를 새 주소로 바꿔 보낸다 (뒤로 가기에 옛 주소가 남지 않게 replace) */
+function OldPath({ to }) {
+  const { id } = useParams();
+  return <Navigate to={to(id)} replace />;
 }
 
 export function AppRoutes() {
@@ -52,8 +60,13 @@ export function AppRoutes() {
           <Route path="privacy" element={<Privacy />} />
           <Route path="terms" element={<Terms />} />
           <Route path="me" element={<Me />} />
-          <Route path="me/resubmit/:id" element={<Resubmit />} />
-          <Route path="me/builds/:id/resubmit" element={<ResubmitBuild />} />
+          <Route path="me/proposals/:id" element={<MyProposal />} />
+          <Route path="me/proposals/:id/edit" element={<Resubmit />} />
+          <Route path="me/builds/:id" element={<MyBuild />} />
+          <Route path="me/builds/:id/edit" element={<ResubmitBuild />} />
+          {/* 옛 주소 (알림·북마크) → 새 주소 */}
+          <Route path="me/resubmit/:id" element={<OldPath to={(id) => `/me/proposals/${id}/edit`} />} />
+          <Route path="me/builds/:id/resubmit" element={<OldPath to={(id) => `/me/builds/${id}/edit`} />} />
           <Route path="admin" element={<AdminHome />} />
           <Route path="admin/proposals/:id" element={<AdminProposal />} />
           <Route path="admin/order/:championId" element={<AdminOrder />} />

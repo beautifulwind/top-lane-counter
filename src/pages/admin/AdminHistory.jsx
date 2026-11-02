@@ -89,12 +89,12 @@ function History() {
               {r.note && <p className="approve-note">{r.kind === 'admin_edit' ? '승인 메모' : '되돌리기 메모'}: {r.note}</p>}
               {!isCurrent && (
                 <div className="actions">
-                  <button type="button" className="btn btn-small" onClick={() => setOpen(open === r.id ? null : r.id)}>
+                  <button type="button" className="btn btn-small btn-op" onClick={() => setOpen(open === r.id ? null : r.id)}>
                     {open === r.id ? '비교 닫기' : '지금 문서와 비교'}
                   </button>
                   <button
                     type="button"
-                    className="btn btn-small"
+                    className="btn btn-small btn-op"
                     onClick={() => setReverting(reverting === r.id ? null : r.id)}
                     aria-expanded={reverting === r.id}
                   >

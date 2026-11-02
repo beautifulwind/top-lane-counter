@@ -26,7 +26,7 @@ insert into edit_proposals (type, target_champion, counter_champion, proposer_id
 values ('new_counter', 'Darius', 'Garen', auth.uid(), :'doc', t.build());
 insert into ids select 'garen_p2', id from edit_proposals where counter_champion = 'Garen' and proposer_id = auth.uid();
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select approve_proposal((select v from ids where k = 'garen_p'), '좋아요', null, null) as garen \gset
+select approve_proposal((select v from ids where k = 'garen_p'), '좋아요', null, null, t.pv((select v from ids where k = 'garen_p'))) as garen \gset
 insert into ids values ('garen', :garen);
 reset role;
 -- 009: 가렌 제안의 빌드가 승인과 함께 첫 빌드로 공개돼 있다
@@ -100,15 +100,15 @@ select t.fails('숨긴 카운터 문서 수정 제안 불가',
   '찾지 못했어요');
 
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select t.fails('숨긴 카운터의 대기 중 수정 제안은 승인 불가', format($$select approve_proposal(%s, '좋아요', null, null)$$, (select v from ids where k = 'edit_p')), '숨긴 카운터의 제안');
-select reject_proposal((select v from ids where k = 'edit_p'), '카운터를 숨겼어요');
+select t.fails('숨긴 카운터의 대기 중 수정 제안은 승인 불가', format($$select approve_proposal(%s, '좋아요', null, null, t.pv(%1$s))$$, (select v from ids where k = 'edit_p')), '숨긴 카운터의 제안');
+select reject_proposal((select v from ids where k = 'edit_p'), '카운터를 숨겼어요', t.pv((select v from ids where k = 'edit_p')));
 select t.ok('그 제안은 거절은 됨', (select status = 'rejected' from edit_proposals where id = (select v from ids where k = 'edit_p')));
 select t.fails('순서 변경에 숨긴 카운터를 넣으면 거부', format($$select reorder_counters('Darius', array[%s,%s]::bigint[])$$, (select v from ids where k = 'quinn'), :garen), '목록이 바뀌었어요');
 select reorder_counters('Darius', array[(select v from ids where k = 'quinn')]::bigint[]);
 select t.ok('순서 변경은 숨긴 카운터를 빼고 동작', (select sort_order = 0 from counters where id = (select v from ids where k = 'quinn')));
 
 -- 숨기기 전에 들어와 있던 같은 매치업의 새 카운터 제안 → 승인 불가 (거절해야 함)
-select t.fails('숨긴 매치업의 새 카운터 제안 승인 불가', format($$select approve_proposal(%s, '좋아요', null, null)$$, (select v from ids where k = 'garen_p2')), '숨긴 카운터예요');
+select t.fails('숨긴 매치업의 새 카운터 제안 승인 불가', format($$select approve_proposal(%s, '좋아요', null, null, t.pv(%1$s))$$, (select v from ids where k = 'garen_p2')), '숨긴 카운터예요');
 
 -- ===== 다시 공개 =====
 select t.fails('메모 501자', format($$select restore_counter(%s, %L)$$, :garen, repeat('a', 501)), '500자');

@@ -7,7 +7,7 @@ const build = (id, author, extra = {}) => ({
   summoner_spells: ['SummonerFlash', 'SummonerTeleport'], starting_items: ['1055', '2003'],
   core_items: ['6672', '3006', '3031'], skill_order: ['Q', 'E', 'W'], early_skills: ['Q', 'E', 'W'], patch: '99.1.1',
   up_count: 0, down_count: 0, created_at: `2026-11-0${id - 100}T00:00:00Z`, counter: QUINN, logs: [],
-  approve_note: null, reject_reason: null, hide_reason: null, hidden_at: null, reviewed_at: null, ...extra,
+  approve_note: null, reject_reason: null, hide_reason: null, hidden_at: null, reviewed_at: null, version: 1, edited_at: null, ...extra,
 });
 /** 테스트에서 쓰는 빌드 한 줄 (기본: 퀸 매치업에 공개된 빌드) */
 export const fakeBuild = (id, author, extra) => build(id, author, extra);
@@ -60,7 +60,7 @@ export function fakeProposal(extra = {}) {
     content: { summary: '고친 요약', level_notes: { 1: '1렙 내용', 2: '2렙', 3: '3렙', 6: '6렙', 9: '9렙', 11: '11렙' }, lane_cautions: 'E 사거리 주의\n궁 조심' },
     status: 'pending', reject_reason: null, reviewed_at: null, created_at: '2026-11-01T10:00:00Z', base_revision_id: 7,
     revoke_reason: null, revoked_at: null, approve_note: null, revision_note: null, revision_requested_at: null, resubmitted_at: null,
-    proposer_id: 'u-old', proposer: { nickname: '기존유저', level: 1, main_title: null }, ...extra,
+    version: 1, edited_at: null, proposer_id: 'u-old', proposer: { nickname: '기존유저', level: 1, main_title: null }, ...extra,
   };
 }
 

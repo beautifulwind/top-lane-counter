@@ -1,7 +1,7 @@
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getChampionMap } from '../api/ddragon';
 import { getMatchup } from '../api/content';
-import { proposeDocEdit } from '../api/proposals';
+import { getMyProposal, proposeDocEdit } from '../api/proposals';
 import { useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
@@ -9,7 +9,10 @@ import DocForm from '../components/DocForm';
 import { RequireLogin } from '../components/RequireOperator';
 import NotFound from './NotFound';
 
-/** 매치업 문서 수정 제안: /champion/:targetId/counter/:counterId/edit */
+/**
+ * 매치업 문서 수정 제안: /champion/:targetId/counter/:counterId/edit
+ * ?from=내 제안 id: 거절된 내 제안 [다시 쓰기] — 그 글을 채워서 새 제안으로 보낸다 (원래 제안은 그대로)
+ */
 export default function ProposeEdit() {
   return (
     <RequireLogin>
@@ -22,10 +25,15 @@ function ProposeEditForm() {
   const { targetId, counterId } = useParams();
   const auth = useAuth();
   const navigate = useNavigate();
+  const [params] = useSearchParams();
+  const fromId = Number(params.get('from')) || null;
   const { data, error, loading, retry } = useAsync(async () => {
-    const [champs, matchup] = await Promise.all([getChampionMap(), getMatchup(targetId, counterId)]);
-    return { champs, matchup };
-  }, [targetId, counterId]);
+    const [champs, matchup, mine] = await Promise.all([
+      getChampionMap(), getMatchup(targetId, counterId), fromId ? getMyProposal(auth.user.id, fromId) : null,
+    ]);
+    const from = mine?.type === 'doc_edit' && mine.counter_id === matchup?.counter.id ? mine : null;
+    return { champs, matchup, from };
+  }, [targetId, counterId, fromId, auth.user.id]);
 
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
@@ -47,8 +55,14 @@ function ProposeEditForm() {
         <Link to={`/champion/${targetId}/counter/${counterId}`}>{counter.name}</Link> › 수정 제안
       </nav>
       <h1 className="doc-title">{title} — 수정 제안</h1>
-      <p className="lead">지금 문서 내용이 채워져 있어요. 고칠 부분만 바꿔서 보내 주세요.</p>
-      <DocForm initial={doc} onSubmit={submit} requireChange />
+      {data.from ? (
+        <p className="notice" role="status">
+          거절된 내 제안의 글을 채워 뒀어요. 거절 사유를 보고 고쳐서 보내 주세요. (그 사이 문서가 바뀌었을 수 있어요)
+        </p>
+      ) : (
+        <p className="lead">지금 문서 내용이 채워져 있어요. 고칠 부분만 바꿔서 보내 주세요.</p>
+      )}
+      <DocForm initial={data.from?.content ?? doc} onSubmit={submit} requireChange={!data.from} />
     </article>
   );
 }

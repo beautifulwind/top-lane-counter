@@ -1,17 +1,5 @@
 /* 모바일 우선: 기본 스타일은 폰 화면 기준, 넓은 화면은 아래 media query에서 확장 */
-:root {
-  --brand: #00a495;
-  --brand-dark: #008275;
-  --bg: #f5f5f5;
-  --paper: #ffffff;
-  --text: #212529;
-  --muted: #6c757d;
-  --line: #dddddd;
-  --soft: #eef7f6;
-  --warn: #c0392b;
-  --radius: 6px;
-  color-scheme: light;
-}
+/* 색은 src/styles/tokens.css에서만 정한다 */
 
 * { box-sizing: border-box; }
 
@@ -42,7 +30,7 @@ a:hover { text-decoration: underline; }
   height: calc(52px + env(safe-area-inset-top));
   display: flex; align-items: center; justify-content: space-between; gap: 8px;
 }
-.brand { color: #fff; font-weight: 700; font-size: 18px; }
+.brand { color: var(--on-brand); font-weight: 700; font-size: 18px; }
 .brand:hover { text-decoration: none; }
 
 .content {
@@ -115,7 +103,7 @@ a:hover { text-decoration: underline; }
   color: var(--text); font-size: 12px; text-align: center; line-height: 1.25;
 }
 .champ-cell:hover { text-decoration: none; }
-.champ-cell img { width: 56px; height: 56px; border-radius: var(--radius); border: 1px solid var(--line); background: #ccc; }
+.champ-cell img { width: 56px; height: 56px; border-radius: var(--radius); border: 1px solid var(--line); background: var(--placeholder); }
 .champ-cell:active img { border-color: var(--brand); }
 
 /* 챔피언 문서: 카운터 목록 */
@@ -152,11 +140,11 @@ a:hover { text-decoration: underline; }
 .build-head { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin-bottom: 8px; }
 .build-author { font-weight: 600; }
 .badge { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--soft); color: var(--brand-dark); white-space: nowrap; }
-.badge.old { background: #fdecea; color: var(--warn); }
-.build-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid #f0f0f0; }
+.badge.old { background: var(--warn-soft); color: var(--warn); }
+.build-row { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line-soft); }
 .label { width: 44px; flex: none; font-size: 12px; color: var(--muted); }
 .icons, .skills { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; }
-.ico { border-radius: 4px; background: #222; }
+.ico { border-radius: 4px; background: var(--icon-bg); }
 .ico.round { border-radius: 50%; }
 .sep { width: 1px; height: 20px; background: var(--line); margin: 0 4px; }
 .step { display: inline-flex; align-items: center; gap: 4px; }
@@ -186,21 +174,20 @@ kbd {
 
 /* 상단 로그인 영역 */
 .auth-bar { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.me { color: #fff; font-size: 13px; display: flex; align-items: center; gap: 6px; min-width: 0; }
+.me { color: var(--on-brand); font-size: 13px; display: flex; align-items: center; gap: 6px; min-width: 0; }
 .me .user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .top-btn {
   flex: none; min-height: 36px; padding: 0 12px; display: inline-flex; align-items: center;
-  border: 1px solid rgba(255,255,255,.8); border-radius: var(--radius);
-  background: transparent; color: #fff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
+  border: 1px solid var(--on-brand-line); border-radius: var(--radius);
+  background: transparent; color: var(--on-brand); font: inherit; font-size: 14px; font-weight: 600; cursor: pointer;
 }
-.top-btn:hover { text-decoration: none; background: rgba(255,255,255,.12); }
+.top-btn:hover { text-decoration: none; background: var(--on-brand-hover); }
 
 /* 로그인 · 닉네임 설정 */
 .login-buttons { display: flex; flex-direction: column; gap: 8px; max-width: 360px; }
 .login-btn { width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
-/* 카카오 디자인 가이드: 배경 #FEE500, 글자·심볼 검정(85%) */
-.login-btn.kakao, .login-btn-sm.kakao { background: #FEE500; color: rgba(0,0,0,.85); border-color: #FEE500; }
-.login-btn.kakao:hover:not(:disabled), .login-btn-sm.kakao:hover:not(:disabled) { background: #F5DC00; border-color: #F5DC00; }
+.login-btn.kakao, .login-btn-sm.kakao { background: var(--kakao); color: var(--on-kakao); border-color: var(--kakao); }
+.login-btn.kakao:hover:not(:disabled), .login-btn-sm.kakao:hover:not(:disabled) { background: var(--kakao-hover); border-color: var(--kakao-hover); }
 .btn:disabled { opacity: .6; cursor: default; }
 .nick-form { display: flex; flex-direction: column; gap: 6px; max-width: 360px; }
 .nick-form label { font-weight: 600; font-size: 14px; }
@@ -217,7 +204,7 @@ kbd {
 .login-error {
   margin: 12px 16px 0; padding: 12px 14px;
   border: 1px solid var(--warn); border-radius: var(--radius);
-  background: #fdecea; color: var(--warn); font-size: 14px;
+  background: var(--warn-soft); color: var(--warn); font-size: 14px;
 }
 .login-error p { margin: 0 0 4px; }
 .login-notice {
@@ -266,7 +253,7 @@ button.champ-cell:disabled { opacity: .4; cursor: default; }
 .doc-form > .btn { margin-top: 12px; }
 
 .notice { padding: 10px 12px; border: 1px solid var(--brand); border-radius: var(--radius); background: var(--soft); }
-.warn { padding: 10px 12px; border: 1px solid var(--warn); border-radius: var(--radius); background: #fdecea; color: var(--warn); }
+.warn { padding: 10px 12px; border: 1px solid var(--warn); border-radius: var(--radius); background: var(--warn-soft); color: var(--warn); }
 
 .proposal-list, .revision-list, .order-list { list-style: none; padding: 0; margin: 12px 0 0; display: flex; flex-direction: column; gap: 8px; }
 .proposal-row, .revision { padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
@@ -287,8 +274,8 @@ button.champ-cell:disabled { opacity: .4; cursor: default; }
 .diff-lines { margin: 0; padding: 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg);
   white-space: pre-wrap; word-break: break-word; font: inherit; font-size: 14px; }
 .diff-line { display: block; }
-.diff-line.add { background: #e6f4ea; color: #1e6b34; }
-.diff-line.del { background: #fdecea; color: #a12a1e; text-decoration: line-through; }
+.diff-line.add { background: var(--diff-add-bg); color: var(--diff-add-text); }
+.diff-line.del { background: var(--diff-del-bg); color: var(--diff-del-text); text-decoration: line-through; }
 .diff-same { margin-top: 12px; }
 .diff-same summary { cursor: pointer; color: var(--muted); }
 
@@ -297,7 +284,7 @@ button.champ-cell:disabled { opacity: .4; cursor: default; }
 .review-actions label { font-weight: 600; font-size: 14px; margin-top: 8px; }
 
 .order-row { display: flex; align-items: center; gap: 8px; padding: 6px 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
-.order-row.dragging { position: relative; z-index: 1; box-shadow: 0 4px 12px rgba(0,0,0,.15); }
+.order-row.dragging { position: relative; z-index: 1; box-shadow: 0 4px 12px var(--shadow); }
 .order-row img { border-radius: var(--radius); }
 .order-name { flex: 1; font-weight: 600; }
 .drag-handle { min-width: 44px; min-height: 44px; border: 0; background: none; font-size: 20px; cursor: grab; touch-action: none; color: var(--muted); }
@@ -310,12 +297,19 @@ button.champ-cell:disabled { opacity: .4; cursor: default; }
 .log-list { margin: 6px 0 0; padding-left: 18px; font-size: 13px; color: var(--muted); }
 
 /* 숨긴 카운터 도구 · 재검토 요청 */
-.alert-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: #e74c3c; box-shadow: 0 0 0 2px #fff; flex: none; }
+.alert-dot { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--alert); box-shadow: 0 0 0 2px var(--paper); flex: none; }
 .hidden-state { margin: 6px 0 0; font-size: 14px; font-weight: 600; }
 .hidden-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .restore-form textarea { flex-basis: 100%; padding: 8px 10px; font: inherit; font-size: 16px; border: 1px solid var(--line); border-radius: var(--radius); }
 .btn-danger { color: var(--warn); border-color: var(--warn); }
 .btn-danger:disabled { color: inherit; border-color: inherit; }
+/* 운영자 전용 버튼·링크: 일반 사용자에게는 안 보이는 것만 이 색 (색은 tokens.css의 --op) */
+.btn.btn-op { border-color: var(--op); color: var(--op-dark); }
+.btn.btn-op:active { background: var(--op-soft); }
+.btn.btn-op.btn-danger { color: var(--warn); border-color: var(--warn); }
+a.op-link, .op-link { color: var(--op-dark); }
+.top-btn.op { background: var(--op); border-color: var(--on-brand-line); }
+.top-btn.op:hover { background: var(--op-dark); }
 .revision-note { margin: 8px 0; padding: 10px 12px; border-left: 3px solid var(--brand); background: var(--soft); border-radius: var(--radius); font-size: 14px; }
 .revision-note p { margin: 0 0 6px; white-space: pre-wrap; }
 .revision-note p:last-child { margin-bottom: 0; }
@@ -332,7 +326,7 @@ button.champ-cell:disabled { opacity: .4; cursor: default; }
 .row-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .block-reason { margin: 6px 0 0; font-size: 13px; color: var(--warn); }
 .approve-note { margin: 6px 0 0; font-size: 14px; color: var(--brand-dark); white-space: pre-wrap; }
-.new-badge { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 999px; background: #e74c3c; color: #fff; font-size: 12px; font-weight: 700; vertical-align: middle; }
+.new-badge { display: inline-block; margin-right: 6px; padding: 0 6px; border-radius: 999px; background: var(--alert); color: var(--on-alert); font-size: 12px; font-weight: 700; vertical-align: middle; }
 
 /* 개인정보처리방침 · 이용약관 */
 .footer-links { max-width: 960px; margin: 0 auto 8px; font-size: 13px; }
@@ -349,7 +343,7 @@ button.champ-cell:disabled { opacity: .4; cursor: default; }
 .legal-table tbody th { width: 30%; font-weight: 600; }
 .legal-table th, .legal-table td { overflow-wrap: anywhere; }
 .legal-table ul { margin: 0; padding-left: 18px; }
-.fill-me { padding: 2px 6px; background: #fff3a3; color: #5c4a00; border: 2px dashed #e0b400; border-radius: 4px; font-weight: 700; }
+.fill-me { padding: 2px 6px; background: var(--fill-bg); color: var(--fill-text); border: 2px dashed var(--fill-line); border-radius: 4px; font-weight: 700; }
 
 /* 빌드 등록 (5단계) */
 .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0; }
@@ -371,12 +365,12 @@ button.champ-cell:disabled { opacity: .4; cursor: default; }
 .picked-item { display: flex; align-items: center; gap: 6px; }
 .picked-item span { flex: 1; min-width: 0; font-size: 14px; }
 .item-search { width: 100%; height: 44px; padding: 0 12px; font-size: 16px; border: 1px solid var(--line); border-radius: var(--radius); margin: 4px 0; }
-.ico.missing { display: inline-flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; }
+.ico.missing { display: inline-flex; align-items: center; justify-content: center; color: var(--on-brand); font-size: 12px; }
 .skill-group { display: inline-flex; align-items: center; gap: 4px; }
 .early { display: inline-flex; flex-direction: column; align-items: center; }
 .early small, .muted { font-size: 11px; color: var(--muted); }
 .vote.on { border-color: var(--brand); background: var(--soft); font-weight: 700; }
-.vote.on.down { border-color: var(--warn); background: #fdecea; }
+.vote.on.down { border-color: var(--warn); background: var(--warn-soft); }
 .vote:disabled { cursor: default; opacity: .6; }
 .vote-count { font-size: 14px; color: var(--muted); }
 .own-badge { font-size: 12px; padding: 2px 8px; border-radius: 999px; background: var(--bg); color: var(--muted); }
@@ -397,3 +391,12 @@ button.champ-cell:disabled { opacity: .4; cursor: default; }
 .edit-link { display: inline-block; margin: 4px 0 8px; font-size: 13px; }
 .edited-by-operator { margin: 8px 0; }
 .edited-by-operator > summary { cursor: pointer; font-size: 13px; }
+
+/* 내 제안·빌드 자세히, 제안자가 고침 */
+.status-box { margin: 12px 0; }
+.status-box p { margin: 0 0 6px; }
+.view-switch { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 8px; }
+.view-switch .btn[aria-pressed="true"] { background: var(--soft); border-width: 2px; }
+.edited-badge { padding: 0 6px; border-radius: 999px; background: var(--op-soft); color: var(--op-dark); font-size: 12px; font-weight: 700; }
+.author-changed { margin: 8px 0; }
+.author-changed p { margin: 0 0 6px; }

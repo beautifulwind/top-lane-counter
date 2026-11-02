@@ -112,11 +112,12 @@ function MyProposals({ data }) {
                 <div className="proposal-main">
                   {isNew(p) && <span className="new-badge">새 알림</span>}
                   <span className="proposal-type">{TYPE_LABEL[p.type]}</span>{' '}
-                  {live ? <Link to={`/champion/${p.target_champion}/counter/${p.counter_champion}`}>{title}</Link> : title}
+                  <Link to={`/me/proposals/${p.id}`}>{title}</Link>
                 </div>
                 <div className="proposal-meta">
                   <span className={`status-badge ${p.status}`}>{STATUS_LABEL[p.status]}</span>
                   <span>보낸 날 {fmtDateTime(p.created_at)}</span>
+                  {p.edited_at && p.status === 'pending' && <span>고친 때 {fmtDateTime(p.edited_at)}</span>}
                   {p.reviewed_at && <span>처리 {fmtDateTime(p.reviewed_at)}</span>}
                 </div>
                 {p.status === 'approved' && p.approve_note && <p className="approve-note">승인 메모: {p.approve_note}</p>}
@@ -141,7 +142,7 @@ function MyProposals({ data }) {
                       {p.revision_requested_at && <small> ({fmtDateTime(p.revision_requested_at)})</small>}
                     </p>
                     <p>운영자 메모: {p.revision_note}</p>
-                    <Link to={`/me/resubmit/${p.id}`} className="btn btn-small">고쳐서 다시 제출</Link>
+                    <Link to={`/me/proposals/${p.id}/edit`} className="btn btn-small">고쳐서 다시 제출</Link>
                   </div>
                 )}
                 {p.type === 'new_counter' && p.build && (
@@ -150,6 +151,11 @@ function MyProposals({ data }) {
                     <BuildCard build={{ ...p.build, author: p.proposer }} {...data.game} />
                   </details>
                 )}
+                <div className="row-actions">
+                  <Link to={`/me/proposals/${p.id}`} className="btn btn-small">자세히</Link>
+                  {p.status === 'pending' && <Link to={`/me/proposals/${p.id}/edit`} className="btn btn-small">고치기</Link>}
+                  {live && <Link to={`/champion/${p.target_champion}/counter/${p.counter_champion}`} className="btn btn-small">문서 보기</Link>}
+                </div>
               </li>
             );
           })}
@@ -180,11 +186,12 @@ function MyBuilds({ data }) {
                 <div className="proposal-main">
                   {isNew(b) && <span className="new-badge">새 알림</span>}
                   <span className="proposal-type">빌드</span>{' '}
-                  {open && b.status === 'approved' ? <Link to={`${path}#builds`}>{title}</Link> : title}
+                  <Link to={`/me/builds/${b.id}`}>{title}</Link>
                 </div>
                 <div className="proposal-meta">
                   <span className={`status-badge ${b.status}`}>{BUILD_STATUS_LABEL[b.status]}</span>
                   <span>보낸 날 {fmtDateTime(b.created_at)}</span>
+                  {b.edited_at && b.status === 'pending' && <span>고친 때 {fmtDateTime(b.edited_at)}</span>}
                   {b.reviewed_at && <span>처리 {fmtDateTime(b.reviewed_at)}</span>}
                   {['approved', 'hidden'].includes(b.status) && <span>👍 {b.up} · 👎 {b.down}</span>}
                 </div>
@@ -200,7 +207,7 @@ function MyBuilds({ data }) {
                       {b.revision_requested_at && <small> ({fmtDateTime(b.revision_requested_at)})</small>}
                     </p>
                     <p>운영자 메모: {b.revision_note}</p>
-                    <Link to={`/me/builds/${b.id}/resubmit`} className="btn btn-small">고쳐서 다시 제출</Link>
+                    <Link to={`/me/builds/${b.id}/edit`} className="btn btn-small">고쳐서 다시 제출</Link>
                   </div>
                 )}
                 {b.status === 'rejected' && <p className="reject-reason">거절 사유: {b.reject_reason}</p>}
@@ -214,11 +221,12 @@ function MyBuilds({ data }) {
                   <summary>빌드 보기</summary>
                   <BuildCard build={b} {...data.game} />
                 </details>
-                {open && (
-                  <div className="row-actions">
-                    <Link to={`${path}/build/new?from=${b.id}`} className="btn btn-small">이 빌드로 다시 쓰기</Link>
-                  </div>
-                )}
+                <div className="row-actions">
+                  <Link to={`/me/builds/${b.id}`} className="btn btn-small">자세히</Link>
+                  {open && b.status === 'pending' && <Link to={`/me/builds/${b.id}/edit`} className="btn btn-small">고치기</Link>}
+                  {open && b.status === 'approved' && <Link to={`${path}#builds`} className="btn btn-small">문서 보기</Link>}
+                  {open && <Link to={`${path}/build/new?from=${b.id}`} className="btn btn-small">이 빌드로 다시 쓰기</Link>}
+                </div>
               </li>
             );
           })}

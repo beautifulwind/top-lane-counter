@@ -13,6 +13,7 @@ import UserName from '../../components/UserName';
 import NoteForm from '../../components/NoteForm';
 import BuildCard, { BuildAuthor } from '../../components/BuildCard';
 import ApproveEditor from '../../components/ApproveEditor';
+import { EditedBadge, useAuthorChanged } from '../../components/AuthorChanged';
 import NotFound from '../NotFound';
 
 /**
@@ -43,6 +44,7 @@ function Review() {
     ]);
     return { champs, review, game: { items, runes, spells, latest } };
   }, [id]);
+  const { guard, notice } = useAuthorChanged(retry, '작성자');
 
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
@@ -75,6 +77,7 @@ function Review() {
         <span className={`status-badge ${b.status}`}>{BUILD_STATUS_LABEL[b.status]}</span>
         <span>작성자: <BuildAuthor build={b} /></span>
         <span>보낸 날 {fmtDateTime(b.created_at)}</span>
+        <EditedBadge row={b} who="작성자" />
         {c?.status === 'approved' && <Link to={`/champion/${c.target_champion}/counter/${c.counter_champion}#builds`}>매치업 문서</Link>}
       </div>
 
@@ -92,15 +95,16 @@ function Review() {
 
       <section className="section">
         <h2 className="section-title">처리</h2>
+        {notice}
         {b.status === 'pending' && (
           <div className="row-actions">
-            <button type="button" className="btn btn-small" onClick={() => toggle('approve')} disabled={cannotApprove} aria-expanded={open === 'approve'}>
+            <button type="button" className="btn btn-small btn-op" onClick={() => toggle('approve')} disabled={cannotApprove} aria-expanded={open === 'approve'}>
               승인
             </button>
-            <button type="button" className="btn btn-small" onClick={() => toggle('revision')} aria-expanded={open === 'revision'} disabled={flags.hiddenCounter}>
+            <button type="button" className="btn btn-small btn-op" onClick={() => toggle('revision')} aria-expanded={open === 'revision'} disabled={flags.hiddenCounter}>
               재검토 요청
             </button>
-            <button type="button" className="btn btn-small" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>
+            <button type="button" className="btn btn-small btn-op" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>
               거절
             </button>
           </div>
@@ -112,14 +116,14 @@ function Review() {
               <p>보낸 메모: {b.revision_note}</p>
             </div>
             <div className="row-actions">
-              <button type="button" className="btn btn-small" onClick={() => toggle('cancel')} aria-expanded={open === 'cancel'}>요청 취소</button>
-              <button type="button" className="btn btn-small" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>거절</button>
+              <button type="button" className="btn btn-small btn-op" onClick={() => toggle('cancel')} aria-expanded={open === 'cancel'}>요청 취소</button>
+              <button type="button" className="btn btn-small btn-op" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>거절</button>
             </div>
           </>
         )}
         {b.status === 'approved' && (
           <div className="row-actions">
-            <button type="button" className="btn btn-small" onClick={() => toggle('hide')} aria-expanded={open === 'hide'} disabled={lastOne}>
+            <button type="button" className="btn btn-small btn-op" onClick={() => toggle('hide')} aria-expanded={open === 'hide'} disabled={lastOne}>
               빌드 숨기기
             </button>
             {lastOne && <small className="hint">마지막 공개 빌드라 숨길 수 없어요. 다른 빌드를 먼저 승인하거나, 카운터를 숨겨 주세요.</small>}
@@ -129,7 +133,7 @@ function Review() {
           <>
             <p className="reject-reason">숨긴 사유: {b.hide_reason}</p>
             <div className="row-actions">
-              <button type="button" className="btn btn-small" onClick={() => toggle('restore')} aria-expanded={open === 'restore'}>다시 공개</button>
+              <button type="button" className="btn btn-small btn-op" onClick={() => toggle('restore')} aria-expanded={open === 'restore'}>다시 공개</button>
             </div>
           </>
         )}
@@ -159,10 +163,10 @@ function Review() {
             noteLabel="승인 메모 (필수, 작성자에게 보여요)"
             hint={checks.length > 0 ? '위의 확인할 점을 보고 승인해 주세요.' : undefined}
             onCancel={() => setOpen(null)}
-            onSubmit={async ({ note, build }) => {
-              await approveBuild(b.id, note, build, data.game.latest);
+            onSubmit={guard(async ({ note, build }) => {
+              await approveBuild(b, note, build, data.game.latest);
               done(`빌드를 ${build ? '고쳐서 ' : ''}승인했어요: ${title} (${who})`);
-            }}
+            })}
           />
         )}
         {open === 'revision' && (
@@ -173,10 +177,10 @@ function Review() {
             confirmLabel="재검토 요청 확정"
             busyLabel="보내는 중…"
             onCancel={() => setOpen(null)}
-            onSubmit={async (note) => {
-              await requestBuildRevision(b.id, note);
+            onSubmit={guard(async (note) => {
+              await requestBuildRevision(b, note);
               done(`빌드 재검토를 요청했어요: ${title} (${who})`);
-            }}
+            })}
           />
         )}
         {open === 'cancel' && (
@@ -200,10 +204,10 @@ function Review() {
             confirmLabel="거절 확정"
             busyLabel="거절 중…"
             onCancel={() => setOpen(null)}
-            onSubmit={async (reason) => {
-              await rejectBuild(b.id, reason);
+            onSubmit={guard(async (reason) => {
+              await rejectBuild(b, reason);
               done(`빌드를 거절했어요: ${title} (${who})`);
-            }}
+            })}
           />
         )}
         {open === 'hide' && (

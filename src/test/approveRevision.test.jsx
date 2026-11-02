@@ -52,7 +52,7 @@ test('/admin 승인 대기 줄: [재검토 요청]은 메모를 써야 확정 �
   note(/재검토 요청 메모/, '  근거를 더 적어 주세요 ', row);
   fireEvent.click(confirm);
   expect(await screen.findByText(`재검토를 요청했어요: ${QUINN_ROW}`)).toBeDefined();
-  expect(rpcCalls('request_proposal_revision')).toEqual([{ p_id: 501, p_note: '근거를 더 적어 주세요' }]);
+  expect(rpcCalls('request_proposal_revision')).toEqual([{ p_id: 501, p_note: '근거를 더 적어 주세요', p_version: 1 }]);
 });
 
 test('/admin 빌드 승인 대기 줄: [재검토 요청] → request_build_revision', async () => {
@@ -63,7 +63,7 @@ test('/admin 빌드 승인 대기 줄: [재검토 요청] → request_build_revi
   note(/재검토 요청 메모/, '핵심 템을 하나 더', row);
   click('재검토 요청 확정', row);
   expect(await screen.findByText(/빌드 재검토를 요청했어요: 퀸\(으\)로 다리우스 잡는 법 \(대기중\)/)).toBeDefined();
-  expect(rpcCalls('request_build_revision')).toEqual([{ p_id: 104, p_note: '핵심 템을 하나 더' }]);
+  expect(rpcCalls('request_build_revision')).toEqual([{ p_id: 104, p_note: '핵심 템을 하나 더', p_version: 1 }]);
 });
 
 test('/admin 재검토 기다리는 중: 제안·빌드 모두 보이고 [요청 취소] [거절] (숨긴 카운터 재검토는 여기 없음)', async () => {
@@ -93,7 +93,7 @@ test('/admin 재검토 기다리는 중: 제안·빌드 모두 보이고 [요청
   note(/거절 사유/, '오래 기다렸어요', b);
   click('거절 확정', b);
   expect(await screen.findByText(/거절했어요: \[빌드\]/)).toBeDefined();
-  expect(rpcCalls('reject_build')).toEqual([{ p_id: 104, p_reason: '오래 기다렸어요' }]);
+  expect(rpcCalls('reject_build')).toEqual([{ p_id: 104, p_reason: '오래 기다렸어요', p_version: 1 }]);
 });
 
 // ---------------- 운영자: [자세히]의 [승인] = 고쳐서 승인 ----------------
@@ -115,7 +115,7 @@ test('제안 [자세히] [승인]: 글을 고치면 "제안 → 운영자 수정
   expect(where()).toBe('/admin');
   const p = fakeProposal();
   expect(rpcCalls('approve_proposal')).toEqual([{
-    p_id: 501, p_note: '요약을 다듬었어요', p_build: null,
+    p_id: 501, p_note: '요약을 다듬었어요', p_build: null, p_version: 1,
     p_content: { ...p.content, summary: '운영자가 다듬은 요약' },
   }]);
 });
@@ -145,7 +145,7 @@ test('새 카운터 제안 [승인]: 빌드를 고치면 지금 패치로 p_buil
   click('고친 내용으로 승인 확정');
   expect(await screen.findByText(/고쳐서 승인했어요: \[새 카운터\] 가렌/)).toBeDefined();
   expect(rpcCalls('approve_proposal')).toEqual([{
-    p_id: 501, p_note: '선마를 바꿨어요', p_content: null,
+    p_id: 501, p_note: '선마를 바꿨어요', p_content: null, p_version: 1,
     p_build: { ...FAKE_PROPOSAL_BUILD, skill_order: ['Q', 'W', 'E'], patch: '99.1.1' },
   }]);
 });
@@ -161,7 +161,7 @@ test('빌드 [자세히] [승인]: 고쳐서 승인 → approve_build(고친 빌
   expect(await screen.findByText(/빌드를 고쳐서 승인했어요/)).toBeDefined();
   const b = fakeBuild(104, null);
   expect(rpcCalls('approve_build')).toEqual([{
-    p_id: 104, p_note: '선마 정리',
+    p_id: 104, p_note: '선마 정리', p_version: 1,
     p_build: {
       runes: b.runes, summoner_spells: b.summoner_spells, starting_items: b.starting_items, core_items: b.core_items,
       skill_order: ['Q', 'W', 'E'], early_skills: b.early_skills, patch: '99.1.1',

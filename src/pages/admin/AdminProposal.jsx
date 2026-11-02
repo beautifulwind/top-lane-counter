@@ -14,6 +14,7 @@ import UserName from '../../components/UserName';
 import NoteForm from '../../components/NoteForm';
 import BuildCard from '../../components/BuildCard';
 import ApproveEditor from '../../components/ApproveEditor';
+import { EditedBadge, useAuthorChanged } from '../../components/AuthorChanged';
 import { proposalBuildBlock, sameBuild } from '../../lib/buildContent';
 
 /** 제안 하나 검토: 기존 ↔ 제안 비교, [승인](고쳐서 승인 가능) / [재검토 요청] / [거절] — 모두 메모 필수. ?approve=1이면 [승인]을 연 채로 */
@@ -37,6 +38,7 @@ function Review() {
   }, [id]);
   // 'approve'(고쳐서 승인 편집기) | 'revision' | 'reject' | 'cancel' | null — 목록 줄의 [내용 고치기]로 오면 [승인]이 열려 있다
   const [open, setOpen] = useState(search.get('approve') ? 'approve' : null);
+  const { guard, notice } = useAuthorChanged(retry);
 
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
@@ -55,11 +57,11 @@ function Review() {
   const cannotApprove = hidden || (p.type === 'new_counter' && exists) || noBuild;
   const done = (what) => navigate('/admin', { state: { done: `${what}: [${label}] ${title}` } });
   // 메모 입력이 확인 단계: 실패하면 NoteForm이 이유를 보여 주고 그대로 둔다
-  const approve = async ({ note, content, build }) => {
-    await approveProposal(p.id, note, { content, build, patch: data.game.latest });
+  const approve = guard(async ({ note, content, build }) => {
+    await approveProposal(p, note, { content, build, patch: data.game.latest });
     const how = content || build ? '고쳐서 ' : '';
     done(resubmitted ? `${how}승인하고 다시 공개했어요` : `${how}승인했어요`);
-  };
+  });
   const toggle = (kind) => setOpen(open === kind ? null : kind);
 
   return (
@@ -70,6 +72,7 @@ function Review() {
         {p.proposer ? <UserName profile={p.proposer} /> : <span>(탈퇴한 유저)</span>}
         <span>{fmtDateTime(p.created_at)}</span>
         <span className={`status-badge ${p.status}`}>{STATUS_LABEL[p.status]}</span>
+        <EditedBadge row={p} />
       </p>
 
       {hidden && p.status === 'pending' && (
@@ -144,14 +147,15 @@ function Review() {
 
       {p.status === 'pending' && (
         <section className="section">
+          {notice}
           <div className="row-actions">
-            <button type="button" className="btn" onClick={() => toggle('approve')} disabled={cannotApprove} aria-expanded={open === 'approve'}>
+            <button type="button" className="btn btn-op" onClick={() => toggle('approve')} disabled={cannotApprove} aria-expanded={open === 'approve'}>
               승인
             </button>
-            <button type="button" className="btn" onClick={() => toggle('revision')} aria-expanded={open === 'revision'}>
+            <button type="button" className="btn btn-op" onClick={() => toggle('revision')} aria-expanded={open === 'revision'}>
               재검토 요청
             </button>
-            <button type="button" className="btn" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>
+            <button type="button" className="btn btn-op" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>
               거절
             </button>
           </div>
@@ -175,10 +179,10 @@ function Review() {
               confirmLabel="재검토 요청 확정"
               busyLabel="보내는 중…"
               onCancel={() => setOpen(null)}
-              onSubmit={async (note) => {
-                await requestProposalRevision(p.id, note);
+              onSubmit={guard(async (note) => {
+                await requestProposalRevision(p, note);
                 done('재검토를 요청했어요');
-              }}
+              })}
             />
           )}
           {open === 'reject' && (
@@ -188,10 +192,10 @@ function Review() {
               confirmLabel="거절 확정"
               busyLabel="거절 중…"
               onCancel={() => setOpen(null)}
-              onSubmit={async (note) => {
-                await rejectProposal(p.id, note);
+              onSubmit={guard(async (note) => {
+                await rejectProposal(p, note);
                 done('거절했어요');
-              }}
+              })}
             />
           )}
         </section>
@@ -208,8 +212,8 @@ function Review() {
           ) : (
             <>
               <div className="row-actions">
-                <button type="button" className="btn" onClick={() => toggle('cancel')} aria-expanded={open === 'cancel'}>요청 취소</button>
-                <button type="button" className="btn" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>거절</button>
+                <button type="button" className="btn btn-op" onClick={() => toggle('cancel')} aria-expanded={open === 'cancel'}>요청 취소</button>
+                <button type="button" className="btn btn-op" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>거절</button>
               </div>
               {open === 'cancel' && (
                 <NoteForm
@@ -233,7 +237,7 @@ function Review() {
                   busyLabel="거절 중…"
                   onCancel={() => setOpen(null)}
                   onSubmit={async (note) => {
-                    await rejectProposal(p.id, note);
+                    await rejectProposal(p, note);
                     done('거절했어요');
                   }}
                 />

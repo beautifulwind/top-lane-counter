@@ -8,6 +8,7 @@ const PERSON = 'nickname, level, main_title';
 const PROPOSAL_COLUMNS =
   'id, type, target_champion, counter_champion, counter_id, content, status, reject_reason, reviewed_at, created_at, base_revision_id, ' +
   'revoke_reason, revoked_at, approve_note, revision_note, revision_requested_at, resubmitted_at, build, approved_content, approved_build, ' +
+  'version, edited_at, ' +
   `proposer:profiles!edit_proposals_proposer_id_fkey(${PERSON})`;
 const DOC_COLUMNS = 'counter_id, summary, level_notes, lane_cautions, updated_at, revision_id';
 
@@ -110,6 +111,16 @@ export async function markNotificationsRead(ids) {
  */
 export const resubmitProposal = (id, content, build, patch) =>
   rpc('resubmit_proposal', { p_id: id, p_content: cleanDoc(content), p_build: build ? toProposalBuild(build, patch) : null }, '다시 제출하지 못했어요.');
+
+/**
+ * 승인 대기 중인 내 제안 고치기 (순서는 그대로, 운영자에게 "제안자가 고침" 표시). 본인만 (DB 함수가 확인)
+ * 새 카운터 제안은 글 + 빌드(필수, 지금 패치로), 문서 수정 제안은 글만 (build = null)
+ */
+export const editMyProposal = (id, content, build, patch) =>
+  rpc('edit_my_proposal', { p_id: id, p_content: cleanDoc(content), p_build: build ? toProposalBuild(build, patch) : null }, '고치지 못했어요.');
+
+/** 운영자가 처리하려는 사이 제안자·작성자가 고쳐서 막혔나 → 새 내용을 다시 불러오게 한다 */
+export const isChangedByAuthor = (err) => /방금 고쳤어요/.test(err?.message ?? '');
 
 /** 숨긴 카운터 재검토 흐름의 제안인가 (그 카운터를 만든 새 카운터 제안) — 요청 취소는 [다시 공개]로 */
 export const isHiddenCounterFlow = (p) => p.type === 'new_counter' && p.counter_id != null;
@@ -228,20 +239,25 @@ async function rpc(name, args, fallback) {
   return data;
 }
 
+// 승인·재검토 요청·거절은 p = 화면이 본 제안 줄 { id, version }을 받는다.
+// 그 사이 제안자가 고쳤으면 DB가 "제안자가 방금 고쳤어요. 다시 확인해 주세요."로 거부한다 (isChangedByAuthor).
+
 /**
  * 승인: 메모 필수 (제안자에게 보인다).
  * edits = { content, build, patch } — 운영자가 고친 것만 넣는다 (안 고친 칸은 빼면 제안 그대로 공개).
  * build는 등록 화면 값 모양, patch는 지금 Data Dragon 버전 (고친 빌드는 지금 패치로 기록)
  */
-export const approveProposal = (id, note, { content = null, build = null, patch = null } = {}) =>
+export const approveProposal = (p, note, { content = null, build = null, patch = null } = {}) =>
   rpc('approve_proposal', {
-    p_id: id, p_note: note, p_content: content ? cleanDoc(content) : null, p_build: build ? toProposalBuild(build, patch) : null,
+    p_id: p.id, p_note: note, p_content: content ? cleanDoc(content) : null, p_build: build ? toProposalBuild(build, patch) : null,
+    p_version: p.version,
   }, '승인하지 못했어요.');
 /** 거절: 승인 대기·재검토 기다리는 중인 제안 */
-export const rejectProposal = (id, reason) => rpc('reject_proposal', { p_id: id, p_reason: reason }, '거절하지 못했어요.');
+export const rejectProposal = (p, reason) =>
+  rpc('reject_proposal', { p_id: p.id, p_reason: reason, p_version: p.version }, '거절하지 못했어요.');
 /** 승인 대기 제안에 재검토 요청 (메모 필수, 제안자에게 알림) */
-export const requestProposalRevision = (id, note) =>
-  rpc('request_proposal_revision', { p_id: id, p_note: note }, '재검토를 요청하지 못했어요.');
+export const requestProposalRevision = (p, note) =>
+  rpc('request_proposal_revision', { p_id: p.id, p_note: note, p_version: p.version }, '재검토를 요청하지 못했어요.');
 /** 재검토 요청 취소 → 원래 제안 그대로 승인 대기 (메모 필수, 제안자에게 알림) */
 export const cancelProposalRevision = (id, note) =>
   rpc('cancel_proposal_revision', { p_id: id, p_note: note }, '요청을 취소하지 못했어요.');

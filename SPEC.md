@@ -28,6 +28,8 @@
 - **데이터 접근 계층 분리**: 화면 컴포넌트가 Supabase를 직접 호출하지 않고, `src/api/` 같은 별도 모듈을 거친다. (1단계의 가짜 데이터 → Supabase 교체가 쉬워야 함)
 - **보안**: 승인, 경험치 지급, 칭호 부여, 권한 변경은 **절대 클라이언트에서 결정하지 않는다.** Supabase RLS 정책과 DB 함수(또는 서버리스 함수)에서 처리한다.
 - **언어**: UI는 한국어.
+- **색은 한 곳에서**: 모든 색은 `src/styles/tokens.css`의 변수로만 정한다 (`index.css`·컴포넌트에는 색 값 없이 `var(--이름)`만, 검사가 확인). 디자인을 바꿀 때는 이 파일만 고친다.
+  - **운영자 전용 버튼·링크는 보라색** (`--op` `#6f42c1`, 클래스 `btn-op` / 상단 [관리] `top-btn op` / 링크 `op-link`): 운영자에게만 보이는 것(매치업의 [수정 기록]·[카운터 숨기기]·[빌드 숨기기], 챔피언의 [숨기기]·[순서 변경], 상단 [관리], `/admin`의 처리·자세히·미리보기 버튼, 메모 [… 확정])만. 메모 [취소]·[되돌리기]는 보통 색, [완전 삭제]는 빨강. 일반 사용자 화면에는 이 색이 나오지 않는다 (검사가 확인).
 - **라이엇 고지**: 모든 페이지 하단에 라이엇 팬사이트 고지 문구를 넣는다.
   > 이 사이트는 Riot Games가 보증하거나 후원하지 않으며, Riot Games 또는 League of Legends 제작·관리에 공식적으로 관여한 사람의 견해를 반영하지 않습니다. League of Legends 및 Riot Games는 Riot Games, Inc.의 상표 또는 등록 상표입니다.
 
@@ -38,10 +40,12 @@
 | 홈 | `/` | 전체 챔피언 아이콘 격자 + 검색창. **초성 검색** 지원 (`ㄷㄹㅇㅅ` → 다리우스) |
 | 챔피언 문서 | `/champion/:id` | 이 챔피언을 **이기는** 카운터 목록 (운영자가 정한 순서). 항목: 카운터 아이콘, 이름, 한 줄 요약. [새 카운터 제안] 버튼 |
 | 매치업 문서 | `/champion/:targetId/counter/:counterId` | 레벨별 딜교, 특이사항, 빌드 목록, [수정 제안] 버튼, [빌드 등록] 버튼 |
-| 새 카운터 제안 | `/champion/:id/propose` | 이기는 챔피언 고르기(초성 검색, 이미 있는 카운터는 못 고름) + 첫 문서 내용 + **빌드 1개(필수, 빌드 등록과 같은 입력)** → 제출하면 승인 대기 |
-| 수정 제안 작성 | `/champion/:targetId/counter/:counterId/edit` | 현재 문서 내용을 불러와 편집 → 제출하면 승인 대기 (바뀐 게 없으면 제출 불가) |
+| 새 카운터 제안 | `/champion/:id/propose` (`?from=내 제안 id`: 거절된 제안 [다시 쓰기]) | 이기는 챔피언 고르기(초성 검색, 이미 있는 카운터는 못 고름) + 첫 문서 내용 + **빌드 1개(필수, 빌드 등록과 같은 입력)** → 제출하면 승인 대기 |
+| 수정 제안 작성 | `/champion/:targetId/counter/:counterId/edit` (`?from=내 제안 id`: 거절된 제안 [다시 쓰기] — 그 글로 시작) | 현재 문서 내용을 불러와 편집 → 제출하면 승인 대기 (바뀐 게 없으면 제출 불가) |
 | 빌드 등록 | `/champion/:targetId/counter/:counterId/build/new` (`?from=내 빌드 id`: [이 빌드로 다시 쓰기]) | 특성·주문·아이템·스킬을 **아이콘 클릭으로 선택**(아이템은 초성 검색) + 미리보기 → 제출하면 승인 대기. 로그인 필요 |
-| 내 활동 | `/me` | 레벨, 경험치, 칭호, 내 제안 목록과 상태 (대기 중 / 승인 / 거절 + 사유), **내 빌드** 목록과 상태(대기 중 / 공개 / 거절 / 숨김 + 메모·사유, 따봉 수, [이 빌드로 다시 쓰기]). **로그인 연결**: 구글·카카오를 한 계정에 연결 (3단계에서 이 부분만 먼저 만듦) |
+| 내 활동 | `/me` | 레벨, 경험치, 칭호, 내 제안 목록과 상태 (대기 중 / 승인 / 거절 + 사유), **내 빌드** 목록과 상태(대기 중 / 공개 / 거절 / 숨김 + 메모·사유, 따봉 수, [이 빌드로 다시 쓰기]). **로그인 연결**: 구글·카카오를 한 계정에 연결 (3단계에서 이 부분만 먼저 만듦). 줄의 제목·[자세히] → 상세, 승인 대기면 [고치기], 공개된 것은 [문서 보기] |
+| 내 제안·빌드 자세히 | `/me/proposals/:id`, `/me/builds/:id` | 보낸 글·빌드 전체를 매치업 문서 모양(한 줄 요약 → 레벨별 딜교법 → 특이사항 → 빌드)으로. 상태·메모와 상태별 버튼: 승인 대기 [고치기] / 재검토 요청 [고쳐서 다시 제출] / 승인 [문서 보기] + "고칠 수 없어요, [문서 수정 제안]으로" / 거절 [다시 쓰기](보낸 내용이 채워진 새 제안) / 승인 취소·숨김 버튼 없음. 운영자가 고쳐서 승인했으면 [보낸 내용] ↔ [공개된 내용] 바꿔 보기 |
+| 내 제안·빌드 고치기 | `/me/proposals/:id/edit`, `/me/builds/:id/edit` (옛 주소 `/me/resubmit/:id`, `/me/builds/:id/resubmit`는 여기로) | 승인 대기면 그대로 고치기, 재검토 요청이면 고쳐서 다시 제출 |
 | 운영자 페이지 | `/admin`, `/admin/proposals/:id`, `/admin/order/:championId`, `/admin/history/:targetId/:counterId`, `/admin/preview/…`, `/admin/delete/…`, `/admin/builds/:id` | 운영자만 접근. 승인 대기 목록(줄에서 바로 승인/거절, 내용은 [자세히]), 빌드 승인 대기·숨긴 빌드 목록, 기존 내용과 바뀐 부분 비교, 승인/거절(메모·사유 필수), 카운터 순서 변경(드래그 또는 ▲▼), 문서 수정 기록과 예전 버전으로 되돌리기. 승인·거절·순서·되돌리기는 DB의 운영자 전용 함수로만 가능 (운영자도 표를 직접 못 고침). (관리자 지정 기능은 나중에 정함 — 만들지 않음) |
 | 자유게시판 | `/board`, `/board/:id`, `/board/new` | 글 목록, 글 보기, 글쓰기, 댓글 |
 | 개인정보처리방침 · 이용약관 | `/privacy`, `/terms` | 로그인·닉네임 설정 없이도 열림. 모든 화면 푸터에 링크(개인정보처리방침은 굵게) + Riot 고지 문구. 운영자 이메일·Supabase 서버 지역·시행일은 `src/lib/legal.js` 한곳에서 채우고, 비어 있으면 노란 칸으로 표시. 로그인 화면 버튼 아래에 "로그인하면 약관·방침에 동의, 만 14세 이상" 문구 |
@@ -108,10 +112,15 @@
     - 제안자 알림은 지금처럼 승인 메모. 고쳤으면 `/me`에 "운영자가 고쳐서 승인했어요 — 원래 제안 → 고친 내용 보기"(글은 줄 비교, 빌드는 나란히). 운영자 [자세히]에도 같은 비교.
     - 목록 줄의 [승인]은 메모만 쓰고 그대로 승인 + 메모 칸 아래 [내용 고치기] 링크 → [자세히]의 [승인]이 열린 채로(`?approve=1`). 위험한 경우 줄 [승인] 잠금은 그대로 (아래).
   - **[재검토 요청] (메모 필수)**: 승인 대기 제안(`request_proposal_revision`)·빌드(`request_build_revision`)에도. 상태 `revision_requested` + 제안자 알림(`revision_request`, 빌드는 `build_id`로 연결) → `/me`에 메모와 [고쳐서 다시 제출].
-    - 제안: `/me/resubmit/:id`에서 보낸 내용으로 시작해 고친다 (새 카운터 = 글 + 빌드, 문서 수정 = 글만). 빌드: `/me/builds/:id/resubmit` (지금 패치로 다시 기록). 바뀐 게 없으면 거부, 다시 내면 승인 대기로 돌아오고 확인 안 한 재검토 알림은 자동 읽음.
+    - 제안: `/me/proposals/:id/edit`에서 보낸 내용으로 시작해 고친다 (새 카운터 = 글 + 빌드, 문서 수정 = 글만). 빌드: `/me/builds/:id/edit` (지금 패치로 다시 기록). 바뀐 게 없으면 거부, 다시 내면 승인 대기로 돌아오고 확인 안 한 재검토 알림은 자동 읽음.
     - 재검토 중에는 같은 매치업에 새 제안·빌드를 낼 수 없다 ("대기 중인 내 것 1개" 규칙에 포함). 탈퇴하면 재검토 중인 빌드도 지운다(대기·거절과 같음).
     - 운영자는 `/admin`의 **"재검토 기다리는 중"** 목록에서 [요청 취소](메모 필수, 원래 내용 그대로 승인 대기로, 제안자에게 `revision_cancelled` 알림 — `/me`에 메모가 한 번 보임) 또는 [거절]을 한다.
     - 숨긴 카운터를 만든 제안(다시 낸 것)에 [재검토 요청]을 하면 숨긴 카운터 재검토와 같은 흐름이 된다: "숨긴 카운터" 줄에 보이고, 취소는 [다시 공개]로. 거절도 된다 (계속 숨김, 다시 요청 가능).
+- **제안자가 승인 대기 중인 제안·빌드를 직접 고치기** (2026-11-02, 013)
+  - 승인 대기(`pending`)면 제안자(빌드 작성자)가 운영자가 처리하기 전까지 언제든 `/me/…/edit`에서 고친다 (`edit_my_proposal`, `edit_my_build`, 본인만). 검사는 처음 낼 때와 같고, 바뀐 게 없으면 거부, 고친 빌드는 지금 패치로.
+  - 재검토 요청 중이면 지금처럼 [고쳐서 다시 제출]만 (그대로 고치기는 DB가 거부). 승인된 것은 못 고친다 ([문서 수정 제안] 또는 [이 빌드로 다시 쓰기]). 거절된 것은 [다시 쓰기] = 보낸 내용이 채워진 새 제안(원래 제안은 그대로).
+  - 고쳐도 **승인 대기 순서는 그대로**(처음 보낸 때 `created_at`). 운영자 목록·[자세히]에 "제안자가 고침 · 시각"(`edited_at`) 표시.
+  - **버전 확인**: 제안·빌드에 `version`(고치기·다시 제출마다 +1). 운영자의 [승인]·[재검토 요청]·[거절]은 화면이 본 버전을 같이 보내고(`p_version`), 그 사이 제안자가 고쳤으면 DB가 "제안자가 방금 고쳤어요. 다시 확인해 주세요."(빌드는 "작성자가…")로 거부한다. 화면은 [새 내용 불러오기]를 보여 주고, 누르면 승인 편집기에서 고치던 내용·메모는 사라진다. [요청 취소]는 재검토 중(제안자가 못 고침)에만 하므로 확인하지 않는다.
 - **`/admin` 목록에서 바로 처리**: 승인 대기 줄 [승인] [재검토 요청] [거절] [자세히], 재검토 기다리는 중 줄 [요청 취소] [거절] [자세히], 숨긴 카운터 줄 [재검토 요청] [다시 공개] [미리보기] [완전 삭제], 빌드 승인 대기 줄 [승인] [재검토 요청] [거절] [자세히] (빌드 보기 펼침), 숨긴 빌드 줄 [다시 공개] [자세히].
   - 목록에서 바로 승인하면 위험한 제안(제안 뒤 문서가 바뀜 / 같은 카운터가 이미 공개 / 숨긴 카운터에 대한 제안)은 줄의 [승인]을 잠그고 이유와 함께 [자세히]로 보낸다. 거절은 줄에서 가능.
   - 빌드도 같다: 숨긴 카운터의 빌드 / 똑같은 빌드가 이미 공개 / Data Dragon에 없는 아이템·룬·주문 / 룬이 경로·줄에 안 맞음 / 지금 패치와 앞 두 자리가 다름 → 줄의 [승인] 잠금. `/admin/builds/:id`에서 확인할 점을 보고 승인한다 (숨긴 카운터·똑같은 빌드는 DB가 승인을 거부하므로 거절만).
@@ -247,8 +256,8 @@
 - **counters**: `id`, `target_champion`(지는 쪽), `counter_champion`(이기는 쪽), `sort_order`, `status`, `proposed_by`, `created_at` — (`target_champion`, `counter_champion`) 고유
 - **matchup_docs**: `counter_id`, `level_notes`(jsonb: 필수 1/2/3/6 + 추가 레벨 — 010에서 9·11 필수 해제), `lane_cautions`(화면 이름: 특이사항), `summary`(목록에 보일 한 줄 요약), `updated_by`, `updated_at`
 - **doc_revisions**: 승인된 문서 수정 기록 (되돌리기용). `kind`: `create` / `edit` / `revert` / `admin_edit`(운영자가 고쳐서 승인 — 바로 앞 같은 제안의 줄이 제안 원본, 공개 안 됨), `note`(되돌리기·고쳐서 승인 메모)
-- **edit_proposals**: `id`, `type`(`new_counter` / `doc_edit`), `target_champion`, `counter_champion`, `counter_id`, `proposer_id`, `content`(jsonb), `build`(jsonb, 새 카운터 제안만 필수 — `clean_build`로 검사), `approved_content`·`approved_build`(운영자가 고쳐서 승인한 내용, 안 고쳤으면 비움), `status`, `reject_reason`, `revision_note`·`revision_requested_at`·`resubmitted_at`(재검토), `reviewed_by`, `reviewed_at`, `created_at`
-- **builds**: `id`, `counter_id`, `author_id`(탈퇴하면 비움), `proposal_id`(새 카운터 제안과 함께 공개된 첫 빌드면 그 제안), `runes`(jsonb), `summoner_spells`, `starting_items`, `core_items`(순서 있음), `skill_order`(jsonb, 선마 순서), `early_skills`(1·2·3레벨 스킬), `patch`, `up_count`·`down_count`(트리거가 셈), `status`(pending/approved/rejected/hidden/revision_requested), `approve_note`, `reject_reason`, `hide_reason`, `hidden_at`, `original_build`(운영자가 고쳐서 승인했으면 작성자 원본), `revision_note`·`revision_requested_at`·`resubmitted_at`(재검토), `reviewed_by`, `reviewed_at`, `created_at` — 넣기는 내용 칸만(검사 트리거 `check_new_build`), 상태 변경은 운영자 함수만
+- **edit_proposals**: `id`, `type`(`new_counter` / `doc_edit`), `target_champion`, `counter_champion`, `counter_id`, `proposer_id`, `content`(jsonb), `build`(jsonb, 새 카운터 제안만 필수 — `clean_build`로 검사), `approved_content`·`approved_build`(운영자가 고쳐서 승인한 내용, 안 고쳤으면 비움), `status`, `reject_reason`, `revision_note`·`revision_requested_at`·`resubmitted_at`(재검토), `version`(제안자가 고칠 때·다시 제출할 때 +1, 운영자 처리 때 비교)·`edited_at`(승인 대기 중 마지막으로 고친 때), `reviewed_by`, `reviewed_at`, `created_at`
+- **builds**: `id`, `counter_id`, `author_id`(탈퇴하면 비움), `proposal_id`(새 카운터 제안과 함께 공개된 첫 빌드면 그 제안), `runes`(jsonb), `summoner_spells`, `starting_items`, `core_items`(순서 있음), `skill_order`(jsonb, 선마 순서), `early_skills`(1·2·3레벨 스킬), `patch`, `up_count`·`down_count`(트리거가 셈), `status`(pending/approved/rejected/hidden/revision_requested), `approve_note`, `reject_reason`, `hide_reason`, `hidden_at`, `original_build`(운영자가 고쳐서 승인했으면 작성자 원본), `revision_note`·`revision_requested_at`·`resubmitted_at`(재검토), `version`·`edited_at`(작성자가 고치기, 제안과 같음), `reviewed_by`, `reviewed_at`, `created_at` — 넣기는 내용 칸만(검사 트리거 `check_new_build`), 상태 변경은 운영자 함수만
 - **build_votes**: `build_id`, `user_id`, `value`(+1 / −1) — (build_id, user_id) 고유. 본인 것만 읽기, 쓰기는 `vote_build()`만
 - **build_status_log**: 빌드 승인·거절·숨김·다시 공개·재검토 요청·요청 취소·다시 제출 기록 + 메모·사유 + 처리자 (운영자만 읽기)
 - **build_vote_log**: 표가 바뀔 때마다 한 줄 (`build_id`, `counter_id`, `author_id`, `voter_id`, `old_value`, `new_value`, `created_at`) — 빌드·카운터와 연결하지 않음, 운영자만 읽기, 6단계 경험치 계산용
@@ -358,6 +367,7 @@ RLS 원칙:
 10. `supabase/migrations/010_fewer_required_levels.sql`
 11. `supabase/migrations/011_special_notes_label.sql`
 12. `supabase/migrations/012_approve_edit_revision.sql`
+13. `supabase/migrations/013_proposer_edit.sql`
 - 합쳐서 한 번에 돌리지 않는다: 파일마다 `begin … commit`이라 중간에 실패하면 앞부분만 반영되고, 다시 돌리면 "already exists"가 난다.
 - 새 마이그레이션(010 …)을 만들면 이 목록에 추가한다. `supabase/tests/run.sh`가 빈 DB에 같은 순서로 실행한 뒤 검사용 데이터(`tests/fixtures.sql`)를 넣고 검사한다 (`supabase/tests`는 실제 프로젝트에서 실행하지 않음).
 

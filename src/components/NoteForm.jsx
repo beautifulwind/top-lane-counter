@@ -1,7 +1,7 @@
 import { useState } from 'react';
 
 /**
- * 확인 창 대신 쓰는 "메모 입력 = 확인 단계" 폼.
+ * 확인 창 대신 쓰는 "메모 입력 = 확인 단계" 폼. 운영자 처리(승인·거절·숨기기 등) 전용이라 확정 버튼은 운영자 색, [취소]는 보통 색.
  * 버튼을 누르면 그 자리에 열리고, 메모(앞뒤 공백 제외)를 써야 확정 버튼이 눌린다.
  * onSubmit(note): 실패하면 Error를 던진다 → 폼 아래에 이유를 보여 주고 그대로 둔다.
  * onCancel: [취소] 또는 Esc
@@ -40,7 +40,7 @@ export default function NoteForm({
       {hint && <small className="hint">{hint}</small>}
       {children}
       <div className="note-form-actions">
-        <button type="submit" className="btn btn-small" disabled={!ready || busy}>
+        <button type="submit" className="btn btn-small btn-op" disabled={!ready || busy}>
           {busy ? busyLabel : confirmLabel}
         </button>
         <button type="button" className="btn btn-small" onClick={onCancel} disabled={busy}>

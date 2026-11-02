@@ -120,7 +120,9 @@ test('/me: 승인 취소된 제안은 "승인 취소"와 사유를 보여 주고
   start('/me');
   const row = (await screen.findByText('승인 취소')).closest('li');
   expect(within(row).getByText(/승인 취소 사유: 잘못 승인했어요/)).toBeDefined();
-  expect(within(row).queryByRole('link')).toBeNull();
+  expect(within(row).queryByRole('link', { name: '문서 보기' })).toBeNull();
+  expect(within(row).queryByRole('link', { name: '고치기' })).toBeNull();
+  expect(within(row).getByRole('link', { name: '자세히' }).getAttribute('href')).toBe('/me/proposals/7');
 });
 
 test('제안 검토: 숨긴 카운터의 수정 제안·같은 매치업 새 카운터 제안은 경고 + 승인 잠금 (거절은 가능)', async () => {

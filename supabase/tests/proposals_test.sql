@@ -82,8 +82,8 @@ select t.ok('문서 수정 제안: 대상 챔피언은 카운터에서 가져옴
   (select target_champion = 'Darius' and counter_champion = 'Quinn' and status = 'pending'
    from edit_proposals where id = (select v from ids where k = 'edit_p')));
 
-select t.fails('일반 유저 승인', format($$select approve_proposal(%s, '좋아요', null, null)$$, (select v from ids where k='garen_p')), '운영자만');
-select t.fails('일반 유저 거절', format($$select reject_proposal(%s, '싫음')$$, (select v from ids where k='garen_p')), '운영자만');
+select t.fails('일반 유저 승인', format($$select approve_proposal(%s, '좋아요', null, null, t.pv(%1$s))$$, (select v from ids where k='garen_p')), '운영자만');
+select t.fails('일반 유저 거절', format($$select reject_proposal(%s, '싫음', t.pv(%1$s))$$, (select v from ids where k='garen_p')), '운영자만');
 select t.fails('일반 유저 순서 변경', format($$select reorder_counters('Darius', array[%s]::bigint[])$$, (select v from ids where k='quinn')), '운영자만');
 select t.fails('일반 유저 되돌리기', $$select revert_doc(1, '되돌림')$$, '운영자만');
 select t.fails('일반 유저 제안 상태 직접 변경', 'update edit_proposals set status = ''approved''', 'permission denied');
@@ -107,7 +107,7 @@ select t.fails('닉네임 없으면 제안 불가',
 reset role;
 set role anon;
 set request.jwt.claim.sub = '';  -- 비로그인: 로그인 정보 없음
-select t.fails('비로그인 승인 함수 호출', $$select approve_proposal(1, '좋아요', null, null)$$, 'permission denied');
+select t.fails('비로그인 승인 함수 호출', $$select approve_proposal(1, '좋아요', null, null, t.pv(1))$$, 'permission denied');
 select t.ok('비로그인도 공개 문서는 읽음', (select count(*) = 1 from matchup_docs));
 
 -- ===== 운영자 =====
@@ -119,7 +119,7 @@ select t.fails('운영자도 문서 직접 변경 불가', 'update matchup_docs 
 select t.fails('운영자도 제안 상태 직접 변경 불가', 'update edit_proposals set status = ''approved''', 'permission denied');
 select t.ok('운영자는 모든 제안을 봄', (select count(*) = 2 from edit_proposals));
 
-select approve_proposal((select v from ids where k = 'garen_p'), '좋아요', null, null) as garen \gset
+select approve_proposal((select v from ids where k = 'garen_p'), '좋아요', null, null, t.pv((select v from ids where k = 'garen_p'))) as garen \gset
 insert into ids values ('garen', :garen);
 select t.ok('새 카운터 승인: 카운터 공개 + 맨 뒤 순서',
   (select status = 'approved' and sort_order = 2 and proposed_by = '00000000-0000-0000-0000-00000000000b' from counters where id = :garen));
@@ -128,8 +128,8 @@ select t.ok('새 카운터 승인: 문서 + 첫 기록(create) + 제안에 카�
           and r.approved_by = auth.uid() and p.status = 'approved' and p.counter_id = :garen and p.reviewed_at is not null
    from matchup_docs d join doc_revisions r on r.id = d.revision_id join edit_proposals p on p.id = r.proposal_id
    where d.counter_id = :garen));
-select t.fails('같은 제안 두 번 승인', format($$select approve_proposal(%s, '좋아요', null, null)$$, (select v from ids where k='garen_p')), '이미 처리된');
-select t.fails('처리된 제안 거절', format($$select reject_proposal(%s, '사유')$$, (select v from ids where k='garen_p')), '이미 처리된');
+select t.fails('같은 제안 두 번 승인', format($$select approve_proposal(%s, '좋아요', null, null, t.pv(%1$s))$$, (select v from ids where k='garen_p')), '이미 처리된');
+select t.fails('처리된 제안 거절', format($$select reject_proposal(%s, '사유', t.pv(%1$s))$$, (select v from ids where k='garen_p')), '이미 처리된');
 
 -- 거절
 reset role;
@@ -139,9 +139,9 @@ insert into edit_proposals (type, target_champion, counter_champion, proposer_id
 values ('new_counter', 'Darius', 'Teemo', auth.uid(), '{"summary":"티모","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"}}', t.build());
 insert into ids select 'teemo_p', id from edit_proposals where counter_champion = 'Teemo';
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select t.fails('거절 사유 없음', format($$select reject_proposal(%s, '   ')$$, (select v from ids where k='teemo_p')), '거절 사유를');
-select t.fails('거절 사유 null', format($$select reject_proposal(%s, null)$$, (select v from ids where k='teemo_p')), '거절 사유를');
-select reject_proposal((select v from ids where k = 'teemo_p'), '  근거가 부족해요 ');
+select t.fails('거절 사유 없음', format($$select reject_proposal(%s, '   ', t.pv(%1$s))$$, (select v from ids where k='teemo_p')), '거절 사유를');
+select t.fails('거절 사유 null', format($$select reject_proposal(%s, null, t.pv(%1$s))$$, (select v from ids where k='teemo_p')), '거절 사유를');
+select reject_proposal((select v from ids where k = 'teemo_p'), '  근거가 부족해요 ', t.pv((select v from ids where k = 'teemo_p')));
 select t.ok('거절: 상태·사유(공백 정리)·처리자', (select status = 'rejected' and reject_reason = '근거가 부족해요' and reviewed_by = auth.uid()
   from edit_proposals where id = (select v from ids where k = 'teemo_p')));
 select t.ok('거절된 카운터는 생기지 않음', (select count(*) = 0 from counters where counter_champion = 'Teemo'));
@@ -150,7 +150,7 @@ select t.ok('제안자는 거절 사유를 봄', (select reject_reason = '근거
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 
 -- 문서 수정 승인
-select approve_proposal((select v from ids where k = 'edit_p'), '좋아요', null, null);
+select approve_proposal((select v from ids where k = 'edit_p'), '좋아요', null, null, t.pv((select v from ids where k = 'edit_p')));
 select t.ok('문서 수정 승인: 문서 교체 + edit 기록 + 버전 갱신',
   (select d.summary = '고친 요약' and r.kind = 'edit' and r.proposal_id = (select v from ids where k = 'edit_p')
    from matchup_docs d join doc_revisions r on r.id = d.revision_id where d.counter_id = (select v from ids where k = 'quinn')));

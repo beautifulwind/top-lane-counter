@@ -262,7 +262,9 @@ test('/me 내 빌드: 상태별 메모, 새 알림 표시 후 읽음 처리', as
   expect(within(approved).getByText('공개')).toBeDefined();
   expect(within(approved).getByText('승인 메모: 깔끔해요')).toBeDefined();
   expect(within(approved).getByText('새 알림')).toBeDefined();
-  expect(within(approved).getByRole('link', { name: '퀸(으)로 다리우스 잡는 법' }).getAttribute('href')).toBe(`${MATCHUP}#builds`);
+  expect(within(approved).getByRole('link', { name: '퀸(으)로 다리우스 잡는 법' }).getAttribute('href')).toBe('/me/builds/111');
+  expect(within(approved).getByRole('link', { name: '문서 보기' }).getAttribute('href')).toBe(`${MATCHUP}#builds`);
+  expect(within(rejected).queryByRole('link', { name: '문서 보기' })).toBeNull();
   await vi.waitFor(() => expect(TABLES.notifications[0].read_at).not.toBeNull());
 });
 
@@ -297,7 +299,7 @@ test('/admin 빌드 승인 대기: 똑같은 빌드가 공개돼 있으면 줄�
   TABLES.builds.find((b) => b.id === 104).status = 'rejected';
   click('거절 확정', row);
   expect(await screen.findByText('빌드를 거절했어요: 퀸(으)로 다리우스 잡는 법 (대기중)')).toBeDefined();
-  expect(rpcCalls('reject_build')).toEqual([{ p_id: 104, p_reason: '이미 있는 빌드' }]);
+  expect(rpcCalls('reject_build')).toEqual([{ p_id: 104, p_reason: '이미 있는 빌드', p_version: 1 }]);
   expect(await screen.findByRole('heading', { name: '빌드 승인 대기 (0)' })).toBeDefined();
 });
 
@@ -315,7 +317,7 @@ test('/admin 빌드 승인 대기: 걸리는 점이 없으면 줄에서 메모 �
   TABLES.builds.find((b) => b.id === 104).status = 'approved';
   fireEvent.click(confirm);
   expect(await screen.findByText('빌드를 승인했어요: 퀸(으)로 다리우스 잡는 법 (대기중)')).toBeDefined();
-  expect(rpcCalls('approve_build')).toEqual([{ p_id: 104, p_note: '좋아요', p_build: null }]);
+  expect(rpcCalls('approve_build')).toEqual([{ p_id: 104, p_note: '좋아요', p_build: null, p_version: 1 }]);
 });
 
 test('/admin 빌드 승인 대기: 구버전 패치·게임 데이터에 없는 값·숨긴 카운터는 [자세히]에서만 승인', async () => {
@@ -353,7 +355,7 @@ test('/admin/builds/:id: 구버전이면 경고를 보고 승인할 수 있다',
   click('승인 확정');
   await vi.waitFor(() => expect(where()).toBe('/admin'));
   expect(await screen.findByText('빌드를 승인했어요: 퀸(으)로 다리우스 잡는 법 (대기중)')).toBeDefined();
-  expect(rpcCalls('approve_build')).toEqual([{ p_id: 104, p_note: '패치 확인함', p_build: null }]);
+  expect(rpcCalls('approve_build')).toEqual([{ p_id: 104, p_note: '패치 확인함', p_build: null, p_version: 1 }]);
 });
 
 test('/admin/builds/:id: 똑같은 빌드가 공개돼 있으면 그대로는 승인 불가(고쳐서 승인은 가능), 처리 기록이 보인다', async () => {

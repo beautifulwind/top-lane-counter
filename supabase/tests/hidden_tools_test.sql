@@ -24,7 +24,7 @@ insert into edit_proposals (type, target_champion, counter_champion, proposer_id
 values ('new_counter', 'Darius', 'Garen', auth.uid(), :'doc', t.build());
 insert into ids select 'garen_p', id from edit_proposals where counter_champion = 'Garen';
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select approve_proposal((select v from ids where k = 'garen_p'), '좋아요', null, null) as garen \gset
+select approve_proposal((select v from ids where k = 'garen_p'), '좋아요', null, null, t.pv((select v from ids where k = 'garen_p'))) as garen \gset
 insert into ids values ('garen', :garen);
 reset role;
 -- 009: 가렌 제안의 빌드가 승인과 함께 첫 빌드로 공개돼 있다
@@ -135,7 +135,7 @@ select t.fails('승인 대기 중 삭제', format($$select delete_counter(%s, 'G
 select t.fails('승인 대기 중 재검토 요청', format($$select request_revision(%s, '또')$$, :garen), '이미 다시 제출');
 
 -- ===== 6. 거절 → 계속 숨김, 다시 요청 가능 =====
-select reject_proposal((select v from ids where k = 'garen_p'), '아직 부족해요');
+select reject_proposal((select v from ids where k = 'garen_p'), '아직 부족해요', t.pv((select v from ids where k = 'garen_p')));
 select t.ok('거절: 카운터는 계속 숨김, 문서는 그대로',
   (select c.status = 'hidden' and d.summary = '가렌 요약' from counters c join matchup_docs d on d.counter_id = c.id where c.id = :garen));
 select t.ok('거절: 기록(reject, 사유)',
@@ -152,7 +152,7 @@ select t.ok('거절 뒤 다시 재검토 요청: 출발점은 다시 숨긴 문�
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select resubmit_proposal((select v from ids where k = 'garen_p'), :'v2', t.build());
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select approve_proposal((select v from ids where k = 'garen_p'), ' 고친 내용 확인 ', null, null) = :garen as same_counter \gset
+select approve_proposal((select v from ids where k = 'garen_p'), ' 고친 내용 확인 ', null, null, t.pv((select v from ids where k = 'garen_p'))) = :garen as same_counter \gset
 select t.ok('승인: 같은 카운터를 살림 (새로 만들지 않음)', :'same_counter'::boolean);
 select t.ok('승인: 공개 + 목록 맨 뒤 (퀸 다음)',
   (select status = 'approved' and sort_order = (select sort_order + 1 from counters where id = (select v from ids where k = 'quinn'))

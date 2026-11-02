@@ -71,7 +71,7 @@ export default function Champion() {
                     {isOperator && (
                       <button
                         type="button"
-                        className="btn btn-small row-action"
+                        className="btn btn-small btn-op row-action"
                         onClick={() => setHiding(hiding === c.id ? null : c.id)}
                         aria-expanded={hiding === c.id}
                         aria-label={`${champ.name} 숨기기`}
@@ -104,7 +104,7 @@ export default function Champion() {
 
         <div className="actions">
           <Link to={`/champion/${id}/propose`} className="btn">+ 새 카운터 제안</Link>
-          {isOperator && <Link to={`/admin/order/${id}`} className="btn">순서 변경</Link>}
+          {isOperator && <Link to={`/admin/order/${id}`} className="btn btn-op">순서 변경</Link>}
         </div>
       </section>
     </article>

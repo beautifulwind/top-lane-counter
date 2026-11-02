@@ -60,3 +60,12 @@ returns jsonb language sql immutable as $$
     'core_items', to_jsonb(core), 'skill_order', '["Q","E","W"]'::jsonb, 'early_skills', '["Q","E","W"]'::jsonb, 'patch', patch);
 $$;
 grant execute on function t.build(text[], text) to anon, authenticated;
+
+-- 013: 운영자 처리 함수가 받는 "화면이 본 버전" = 지금 버전 (검사에서는 늘 최신을 본 셈)
+create function t.pv(p_id bigint) returns integer language sql stable security definer as $$
+  select version from public.edit_proposals where id = p_id;
+$$;
+create function t.bv(p_id bigint) returns integer language sql stable security definer as $$
+  select version from public.builds where id = p_id;
+$$;
+grant execute on function t.pv(bigint), t.bv(bigint) to anon, authenticated;

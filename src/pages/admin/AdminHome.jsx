@@ -16,6 +16,7 @@ import { ErrorBox, Loading } from '../../components/Status';
 import RequireOperator from '../../components/RequireOperator';
 import UserName from '../../components/UserName';
 import NoteForm from '../../components/NoteForm';
+import { EditedBadge, useAuthorChanged } from '../../components/AuthorChanged';
 
 /**
  * 운영자 페이지: 승인 대기·재검토 기다리는 중·숨긴 카운터·빌드 승인 대기·숨긴 빌드를 목록에서 바로 처리
@@ -69,7 +70,7 @@ function PendingList() {
         {data && data.pending.length > 0 && (
           <ul className="proposal-list">
             {data.pending.map((p) => (
-              <PendingRow key={p.id} proposal={p} name={name} game={data.game} onDone={finished} />
+              <PendingRow key={p.id} proposal={p} name={name} game={data.game} onDone={finished} onReload={retry} />
             ))}
           </ul>
         )}
@@ -116,7 +117,7 @@ function PendingList() {
           ) : (
             <ul className="proposal-list">
               {data.pendingBuilds.map((b) => (
-                <PendingBuildRow key={b.id} build={b} game={data.game} name={name} onDone={finished} />
+                <PendingBuildRow key={b.id} build={b} game={data.game} name={name} onDone={finished} onReload={retry} />
               ))}
             </ul>
           )}
@@ -184,8 +185,9 @@ function originState(origin) {
  * 승인 대기 한 줄: [승인] [재검토 요청] [거절]은 그 자리에 메모 입력창, 내용은 [자세히].
  * 줄의 [승인]은 그대로 승인 — 고쳐서 승인하려면 [내용 고치기]로 [자세히]의 편집기를 연다.
  */
-function PendingRow({ proposal: p, name, game, onDone }) {
+function PendingRow({ proposal: p, name, game, onDone, onReload }) {
   const [open, setOpen] = useState(null); // 'approve' | 'revision' | 'reject' | null
+  const { guard, notice } = useAuthorChanged(onReload);
   const title = `${name(p.counter_champion)}(으)로 ${name(p.target_champion)} 잡는 법`;
   const label = p.resubmitted ? '재검토 후 다시 낸 제안' : TYPE_LABEL[p.type];
   const toggle = (kind) => setOpen(open === kind ? null : kind);
@@ -198,7 +200,9 @@ function PendingRow({ proposal: p, name, game, onDone }) {
       <div className="proposal-meta">
         {p.proposer ? <UserName profile={p.proposer} /> : <span>(탈퇴한 유저)</span>}
         <span>{fmtDateTime(p.created_at)}</span>
+        <EditedBadge row={p} />
       </div>
+      {notice}
       {p.block && <p className="block-reason">{p.block} 내용을 [자세히]에서 확인해 주세요.</p>}
       {p.type === 'new_counter' && p.build && (
         <details className="build-summary">
@@ -207,16 +211,16 @@ function PendingRow({ proposal: p, name, game, onDone }) {
         </details>
       )}
       <div className="row-actions">
-        <button type="button" className="btn btn-small" onClick={() => toggle('approve')} disabled={!!p.block} aria-expanded={open === 'approve'}>
+        <button type="button" className="btn btn-small btn-op" onClick={() => toggle('approve')} disabled={!!p.block} aria-expanded={open === 'approve'}>
           승인
         </button>
-        <button type="button" className="btn btn-small" onClick={() => toggle('revision')} aria-expanded={open === 'revision'}>
+        <button type="button" className="btn btn-small btn-op" onClick={() => toggle('revision')} aria-expanded={open === 'revision'}>
           재검토 요청
         </button>
-        <button type="button" className="btn btn-small" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>
+        <button type="button" className="btn btn-small btn-op" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>
           거절
         </button>
-        <Link to={`/admin/proposals/${p.id}`} className="btn btn-small">자세히</Link>
+        <Link to={`/admin/proposals/${p.id}`} className="btn btn-small btn-op">자세히</Link>
       </div>
       {open === 'approve' && (
         <NoteForm
@@ -226,12 +230,12 @@ function PendingRow({ proposal: p, name, game, onDone }) {
           confirmLabel="승인 확정"
           busyLabel="승인 중…"
           onCancel={() => setOpen(null)}
-          onSubmit={async (note) => {
-            await approveProposal(p.id, note);
+          onSubmit={guard(async (note) => {
+            await approveProposal(p, note);
             onDone(`${p.resubmitted ? '승인하고 다시 공개' : '승인'}했어요: [${label}] ${title}`);
-          }}
+          })}
         >
-          <Link to={`/admin/proposals/${p.id}?approve=1`} className="edit-link">내용 고치기 (고쳐서 승인)</Link>
+          <Link to={`/admin/proposals/${p.id}?approve=1`} className="edit-link op-link">내용 고치기 (고쳐서 승인)</Link>
         </NoteForm>
       )}
       {open === 'revision' && (
@@ -242,10 +246,10 @@ function PendingRow({ proposal: p, name, game, onDone }) {
           confirmLabel="재검토 요청 확정"
           busyLabel="보내는 중…"
           onCancel={() => setOpen(null)}
-          onSubmit={async (note) => {
-            await requestProposalRevision(p.id, note);
+          onSubmit={guard(async (note) => {
+            await requestProposalRevision(p, note);
             onDone(`재검토를 요청했어요: [${label}] ${title}`);
-          }}
+          })}
         />
       )}
       {open === 'reject' && (
@@ -255,10 +259,10 @@ function PendingRow({ proposal: p, name, game, onDone }) {
           confirmLabel="거절 확정"
           busyLabel="거절 중…"
           onCancel={() => setOpen(null)}
-          onSubmit={async (reason) => {
-            await rejectProposal(p.id, reason);
+          onSubmit={guard(async (reason) => {
+            await rejectProposal(p, reason);
             onDone(`거절했어요: [${label}] ${title}`);
-          }}
+          })}
         />
       )}
     </li>
@@ -297,17 +301,17 @@ function HiddenRow({ counter: c, name, onDone }) {
       <div className="row-actions">
         <button
           type="button"
-          className="btn btn-small"
+          className="btn btn-small btn-op"
           onClick={() => toggle('revision')}
           disabled={!state.canRequest}
           aria-expanded={open === 'revision'}
         >
           재검토 요청
         </button>
-        <button type="button" className="btn btn-small" onClick={() => toggle('restore')} disabled={state.waiting} aria-expanded={open === 'restore'}>
+        <button type="button" className="btn btn-small btn-op" onClick={() => toggle('restore')} disabled={state.waiting} aria-expanded={open === 'restore'}>
           다시 공개
         </button>
-        <Link to={`/admin/preview/${path}`} className="btn btn-small">미리보기</Link>
+        <Link to={`/admin/preview/${path}`} className="btn btn-small btn-op">미리보기</Link>
         {state.waiting ? (
           <button type="button" className="btn btn-small" disabled title="다시 낸 제안부터 승인하거나 거절해 주세요">완전 삭제</button>
         ) : (
@@ -366,8 +370,9 @@ function buildTitle(build, name) {
 }
 
 /** 빌드 승인 대기 한 줄: [승인] [재검토 요청] [거절]은 그 자리에 메모 입력창. 위험하면 [승인]을 잠그고 [자세히]로 */
-function PendingBuildRow({ build: b, game, name, onDone }) {
+function PendingBuildRow({ build: b, game, name, onDone, onReload }) {
   const [open, setOpen] = useState(null); // 'approve' | 'revision' | 'reject' | null
+  const { guard, notice } = useAuthorChanged(onReload, '작성자');
   const title = buildTitle(b, name);
   const toggle = (kind) => setOpen(open === kind ? null : kind);
   const who = b.author?.nickname ?? '탈퇴한 유저';
@@ -380,23 +385,25 @@ function PendingBuildRow({ build: b, game, name, onDone }) {
       <div className="proposal-meta">
         <BuildAuthor build={b} />
         <span>{fmtDateTime(b.created_at)}</span>
+        <EditedBadge row={b} who="작성자" />
       </div>
+      {notice}
       {b.block && <p className="block-reason">{b.block} 내용을 [자세히]에서 확인해 주세요.</p>}
       <details className="build-summary">
         <summary>빌드 보기</summary>
         <BuildCard build={b} {...game} />
       </details>
       <div className="row-actions">
-        <button type="button" className="btn btn-small" onClick={() => toggle('approve')} disabled={!!b.block} aria-expanded={open === 'approve'}>
+        <button type="button" className="btn btn-small btn-op" onClick={() => toggle('approve')} disabled={!!b.block} aria-expanded={open === 'approve'}>
           승인
         </button>
-        <button type="button" className="btn btn-small" onClick={() => toggle('revision')} aria-expanded={open === 'revision'} disabled={b.counter?.status !== 'approved'}>
+        <button type="button" className="btn btn-small btn-op" onClick={() => toggle('revision')} aria-expanded={open === 'revision'} disabled={b.counter?.status !== 'approved'}>
           재검토 요청
         </button>
-        <button type="button" className="btn btn-small" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>
+        <button type="button" className="btn btn-small btn-op" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>
           거절
         </button>
-        <Link to={`/admin/builds/${b.id}`} className="btn btn-small">자세히</Link>
+        <Link to={`/admin/builds/${b.id}`} className="btn btn-small btn-op">자세히</Link>
       </div>
       {open === 'approve' && (
         <NoteForm
@@ -406,12 +413,12 @@ function PendingBuildRow({ build: b, game, name, onDone }) {
           confirmLabel="승인 확정"
           busyLabel="승인 중…"
           onCancel={() => setOpen(null)}
-          onSubmit={async (note) => {
-            await approveBuild(b.id, note);
+          onSubmit={guard(async (note) => {
+            await approveBuild(b, note);
             onDone(`빌드를 승인했어요: ${title} (${who})`);
-          }}
+          })}
         >
-          <Link to={`/admin/builds/${b.id}?approve=1`} className="edit-link">내용 고치기 (고쳐서 승인)</Link>
+          <Link to={`/admin/builds/${b.id}?approve=1`} className="edit-link op-link">내용 고치기 (고쳐서 승인)</Link>
         </NoteForm>
       )}
       {open === 'revision' && (
@@ -422,10 +429,10 @@ function PendingBuildRow({ build: b, game, name, onDone }) {
           confirmLabel="재검토 요청 확정"
           busyLabel="보내는 중…"
           onCancel={() => setOpen(null)}
-          onSubmit={async (note) => {
-            await requestBuildRevision(b.id, note);
+          onSubmit={guard(async (note) => {
+            await requestBuildRevision(b, note);
             onDone(`빌드 재검토를 요청했어요: ${title} (${who})`);
-          }}
+          })}
         />
       )}
       {open === 'reject' && (
@@ -435,10 +442,10 @@ function PendingBuildRow({ build: b, game, name, onDone }) {
           confirmLabel="거절 확정"
           busyLabel="거절 중…"
           onCancel={() => setOpen(null)}
-          onSubmit={async (reason) => {
-            await rejectBuild(b.id, reason);
+          onSubmit={guard(async (reason) => {
+            await rejectBuild(b, reason);
             onDone(`빌드를 거절했어요: ${title} (${who})`);
-          }}
+          })}
         />
       )}
     </li>
@@ -469,10 +476,10 @@ function HiddenBuildRow({ build: b, game, name, onDone }) {
         <BuildCard build={b} {...game} />
       </details>
       <div className="row-actions">
-        <button type="button" className="btn btn-small" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
+        <button type="button" className="btn btn-small btn-op" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
           다시 공개
         </button>
-        <Link to={`/admin/builds/${b.id}`} className="btn btn-small">자세히</Link>
+        <Link to={`/admin/builds/${b.id}`} className="btn btn-small btn-op">자세히</Link>
       </div>
       {open && (
         <NoteForm
@@ -520,9 +527,9 @@ function WaitingRow({ kind, item, name, game, onDone }) {
         </details>
       )}
       <div className="row-actions">
-        <button type="button" className="btn btn-small" onClick={() => toggle('cancel')} aria-expanded={open === 'cancel'}>요청 취소</button>
-        <button type="button" className="btn btn-small" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>거절</button>
-        <Link to={detail} className="btn btn-small">자세히</Link>
+        <button type="button" className="btn btn-small btn-op" onClick={() => toggle('cancel')} aria-expanded={open === 'cancel'}>요청 취소</button>
+        <button type="button" className="btn btn-small btn-op" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>거절</button>
+        <Link to={detail} className="btn btn-small btn-op">자세히</Link>
       </div>
       {open === 'cancel' && (
         <NoteForm
@@ -546,7 +553,7 @@ function WaitingRow({ kind, item, name, game, onDone }) {
           busyLabel="거절 중…"
           onCancel={() => setOpen(null)}
           onSubmit={async (reason) => {
-            await (isBuild ? rejectBuild(item.id, reason) : rejectProposal(item.id, reason));
+            await (isBuild ? rejectBuild(item, reason) : rejectProposal(item, reason));
             onDone(`거절했어요: ${what}`);
           }}
         />

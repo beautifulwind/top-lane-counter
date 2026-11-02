@@ -5,8 +5,7 @@ import { getHiddenMatchup } from '../../api/proposals';
 import { useAsync } from '../../lib/useAsync';
 import { ErrorBox, Loading } from '../../components/Status';
 import RequireOperator from '../../components/RequireOperator';
-import { LevelList } from '../Matchup';
-import BuildCard from '../../components/BuildCard';
+import DocView from '../../components/DocView';
 
 /** 숨긴 카운터 미리보기 (읽기 전용): /admin/preview/:targetId/:counterId — 숨긴 문서·빌드는 DB가 운영자에게만 보여 준다 */
 export default function AdminPreview() {
@@ -41,33 +40,16 @@ function Preview() {
       </article>
     );
   }
-  const doc = data.matchup.doc;
+  const { doc } = data.matchup;
 
   return (
     <article>
       {crumbs}
       <p className="warn" role="note">숨긴 카운터 미리보기 — 다른 사람에게는 보이지 않아요.</p>
       <h1 className="doc-title">{title}</h1>
-      {doc?.summary && <p className="doc-sub">{doc.summary}</p>}
-
-      <section className="section">
-        <h2 className="section-title"><span className="num">1.</span> 레벨별 딜교법</h2>
-        <LevelList doc={doc} />
-      </section>
-      <section className="section">
-        <h2 className="section-title"><span className="num">2.</span> 특이사항</h2>
-        {doc?.lane_cautions ? <div className="prose">{doc.lane_cautions}</div> : <p className="empty">아직 작성된 내용이 없어요.</p>}
-      </section>
-      <section className="section">
-        <h2 className="section-title"><span className="num">3.</span> 빌드</h2>
-        {data.builds.length === 0 ? (
-          <p className="empty">등록된 빌드가 없어요.</p>
-        ) : (
-          data.builds.map((b) => <BuildCard key={b.id} build={b} {...data} />)
-        )}
-      </section>
+      <DocView doc={doc ?? {}} builds={data.builds} game={data} />
       <div className="actions">
-        <Link to="/admin" className="btn">운영자 페이지로</Link>
+        <Link to="/admin" className="btn btn-op">운영자 페이지로</Link>
       </div>
     </article>
   );

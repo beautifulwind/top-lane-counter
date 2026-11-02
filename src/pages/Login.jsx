@@ -57,7 +57,7 @@ export default function Login() {
 function KakaoSymbol() {
   return (
     <svg className="kakao-symbol" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
-      <path fill="#000" d="M12 3C6.48 3 2 6.54 2 10.9c0 2.82 1.87 5.3 4.69 6.7l-.95 3.5c-.08.3.26.55.52.38l4.13-2.73c.53.06 1.07.1 1.61.1 5.52 0 10-3.54 10-7.95S17.52 3 12 3z" />
+      <path fill="currentColor" d="M12 3C6.48 3 2 6.54 2 10.9c0 2.82 1.87 5.3 4.69 6.7l-.95 3.5c-.08.3.26.55.52.38l4.13-2.73c.53.06 1.07.1 1.61.1 5.52 0 10-3.54 10-7.95S17.52 3 12 3z" />
     </svg>
   );
 }

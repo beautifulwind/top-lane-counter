@@ -60,7 +60,7 @@ test('운영자: [관리] → 대기 목록 → [자세히] → 바뀐 칸만 �
   fireEvent.change(screen.getByLabelText(/승인 메모/), { target: { value: ' 좋은 수정이에요 ' } });
   fireEvent.click(ok);
   expect(await screen.findByText(/승인했어요: \[문서 수정\] 퀸\(으\)로 다리우스 잡는 법/)).toBeDefined();
-  expect(fakeState.rpcCalls).toEqual([{ name: 'approve_proposal', args: { p_id: 501, p_note: '좋은 수정이에요', p_content: null, p_build: null } }]);
+  expect(fakeState.rpcCalls).toEqual([{ name: 'approve_proposal', args: { p_id: 501, p_note: '좋은 수정이에요', p_content: null, p_build: null, p_version: 1 } }]);
   expect(where()).toBe('/admin');
   expect(window.confirm).not.toHaveBeenCalled();
 });
@@ -77,7 +77,7 @@ test('거절: [거절] → 사유가 비어 있으면 [거절 확정]이 안 눌
   fireEvent.change(screen.getByLabelText(/거절 사유/), { target: { value: '근거가 부족해요' } });
   fireEvent.click(reject);
   expect(await screen.findByText(/거절했어요/)).toBeDefined();
-  expect(fakeState.rpcCalls).toEqual([{ name: 'reject_proposal', args: { p_id: 501, p_reason: '근거가 부족해요' } }]);
+  expect(fakeState.rpcCalls).toEqual([{ name: 'reject_proposal', args: { p_id: 501, p_reason: '근거가 부족해요', p_version: 1 } }]);
 });
 
 test('제안 후 문서가 바뀌었으면 경고, DB가 거부하면 그 이유를 보여 준다', async () => {
@@ -183,7 +183,7 @@ test('대기 목록 줄에서 바로: [승인]·[거절]은 그 자리에 메모
   fireEvent.click(within(row1).getByRole('button', { name: '승인 확정' }));
   expect(await screen.findByText('승인했어요: [문서 수정] 퀸(으)로 다리우스 잡는 법')).toBeDefined();
   expect(where()).toBe('/admin');
-  expect(fakeState.rpcCalls).toEqual([{ name: 'approve_proposal', args: { p_id: 501, p_note: '좋아요', p_content: null, p_build: null } }]);
+  expect(fakeState.rpcCalls).toEqual([{ name: 'approve_proposal', args: { p_id: 501, p_note: '좋아요', p_content: null, p_build: null, p_version: 1 } }]);
 
   fakeState.rpcCalls.length = 0;
   const again = (await screen.findAllByRole('listitem', { name: '[문서 수정] 퀸(으)로 다리우스 잡는 법' }))[1];
@@ -191,7 +191,7 @@ test('대기 목록 줄에서 바로: [승인]·[거절]은 그 자리에 메모
   fireEvent.change(within(again).getByLabelText(/거절 사유/), { target: { value: '근거 부족' } });
   fireEvent.click(within(again).getByRole('button', { name: '거절 확정' }));
   expect(await screen.findByText('거절했어요: [문서 수정] 퀸(으)로 다리우스 잡는 법')).toBeDefined();
-  expect(fakeState.rpcCalls).toEqual([{ name: 'reject_proposal', args: { p_id: 502, p_reason: '근거 부족' } }]);
+  expect(fakeState.rpcCalls).toEqual([{ name: 'reject_proposal', args: { p_id: 502, p_reason: '근거 부족', p_version: 1 } }]);
   expect(window.confirm).not.toHaveBeenCalled();
 });
 

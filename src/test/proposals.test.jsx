@@ -155,8 +155,10 @@ test('/me: 거절된 제안은 거절 사유를, 승인된 제안은 문서 링�
   start('/me');
   const rejected = (await screen.findByText('거절')).closest('li');
   expect(within(rejected).getByText('거절 사유: 근거가 부족해요')).toBeDefined();
-  expect(within(rejected).getByRole('link', { name: '퀸(으)로 다리우스 잡는 법' })).toBeDefined();
+  expect(within(rejected).getByRole('link', { name: '퀸(으)로 다리우스 잡는 법' }).getAttribute('href')).toBe('/me/proposals/1');
+  expect(within(rejected).getByRole('link', { name: '문서 보기' }).getAttribute('href')).toBe('/champion/Darius/counter/Quinn');
   const pending = screen.getByText('가렌(으)로 다리우스 잡는 법').closest('li');
-  expect(within(pending).queryByRole('link')).toBeNull(); // 아직 없는 문서라 링크 없음
+  expect(within(pending).queryByRole('link', { name: '문서 보기' })).toBeNull(); // 아직 없는 문서라 문서 링크 없음
+  expect(within(pending).getByRole('link', { name: '고치기' }).getAttribute('href')).toBe('/me/proposals/2/edit');
   expect(within(pending).getByText('대기 중')).toBeDefined();
 });

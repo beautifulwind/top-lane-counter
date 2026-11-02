@@ -1,7 +1,7 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useState } from 'react';
 import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../api/ddragon';
-import { getMyProposal, isHiddenCounterFlow, resubmitProposal } from '../api/proposals';
+import { editMyProposal, getMyProposal, isHiddenCounterFlow, resubmitProposal } from '../api/proposals';
 import { useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
 import { fmtDateTime } from '../lib/format';
@@ -12,7 +12,9 @@ import { buildMissing, buildToForm, emptyBuild, sameBuild } from '../lib/buildCo
 import { RequireLogin } from '../components/RequireOperator';
 
 /**
- * 재검토 요청 받은 내 제안을 고쳐서 다시 제출: /me/resubmit/:id
+ * 내 제안 고치기: /me/proposals/:id/edit (옛 주소 /me/resubmit/:id는 여기로 보낸다)
+ * - 승인 대기: 그대로 고친다 (edit_my_proposal, 대기 순서 그대로)
+ * - 재검토 요청: 고쳐서 다시 제출 (resubmit_proposal → 다시 승인 대기)
  * 새 카운터 제안은 글 + 빌드, 문서 수정 제안은 글만. 숨긴 카운터 재검토는 숨긴 시점 문서·첫 빌드에서 시작한다.
  */
 export default function Resubmit() {
@@ -36,13 +38,21 @@ function ResubmitForm() {
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
   const p = data.proposal;
-  const crumbs = <nav className="crumbs"><Link to="/me">내 활동</Link> › 다시 제출</nav>;
-  if (!p || p.status !== 'revision_requested') {
+  const crumbs = (
+    <nav className="crumbs">
+      <Link to="/me">내 활동</Link> › {p ? <Link to={`/me/proposals/${p.id}`}>제안 #{p.id}</Link> : '제안'} › 고치기
+    </nav>
+  );
+  if (!p || !['pending', 'revision_requested'].includes(p.status)) {
     return (
       <article>
         {crumbs}
-        <h1 className="doc-title">다시 제출</h1>
-        <p className="empty">재검토 요청을 받은 제안이 아니에요. 이미 다시 제출했거나, 운영자가 요청을 취소했을 수 있어요.</p>
+        <h1 className="doc-title">제안 고치기</h1>
+        <p className="empty">
+          지금은 고칠 수 없는 제안이에요. 승인 대기 중이거나 재검토 요청을 받은 제안만 고칠 수 있어요.
+          {p?.status === 'approved' && ' 승인된 내용을 바꾸려면 문서에서 [문서 수정 제안]을 보내 주세요.'}
+        </p>
+        {p && <div className="actions"><Link to={`/me/proposals/${p.id}`} className="btn">제안 자세히</Link></div>}
       </article>
     );
   }
@@ -53,26 +63,39 @@ function ResubmitEditor({ p, data, crumbs }) {
   const auth = useAuth();
   const navigate = useNavigate();
   const isNew = p.type === 'new_counter';
+  const resubmit = p.status === 'revision_requested';
   const hiddenFlow = isHiddenCounterFlow(p);
   const [build, setBuild] = useState(() => (p.build ? buildToForm(p.build) : emptyBuild()));
   const name = (cid) => data.champs[cid]?.name ?? cid;
   const title = `${name(p.counter_champion)}(으)로 ${name(p.target_champion)} 잡는 법`;
 
   const submit = async (content) => {
-    await resubmitProposal(p.id, content, isNew ? build : null, data.game.latest);
-    navigate('/me', { state: { sent: `${title} — 고친 내용을 다시 제출했어요.` } });
+    if (resubmit) {
+      await resubmitProposal(p.id, content, isNew ? build : null, data.game.latest);
+      navigate('/me', { state: { sent: `${title} — 고친 내용을 다시 제출했어요.` } });
+    } else {
+      await editMyProposal(p.id, content, isNew ? build : null, data.game.latest);
+      navigate(`/me/proposals/${p.id}`, { state: { sent: '고친 내용을 저장했어요. 승인 대기 순서는 그대로예요.' } });
+    }
   };
 
   return (
     <article>
       {crumbs}
-      <h1 className="doc-title">{title} — 고쳐서 다시 제출</h1>
-      <div className="revision-note" role="note">
-        <strong>운영자 메모</strong>
-        {p.revision_requested_at && <small> ({fmtDateTime(p.revision_requested_at)})</small>}
-        <p>{p.revision_note}</p>
-      </div>
-      {hiddenFlow ? (
+      <h1 className="doc-title">{title} — {resubmit ? '고쳐서 다시 제출' : '고치기'}</h1>
+      {resubmit && (
+        <div className="revision-note" role="note">
+          <strong>운영자 메모</strong>
+          {p.revision_requested_at && <small> ({fmtDateTime(p.revision_requested_at)})</small>}
+          <p>{p.revision_note}</p>
+        </div>
+      )}
+      {!resubmit ? (
+        <p className="lead">
+          승인 대기 중인 제안이에요. 보낸 {isNew ? '글과 빌드가' : '글이'} 채워져 있어요. 고쳐서 저장하면 운영자는 고친 내용을 보게 되고,
+          대기 순서는 그대로예요.{isNew && ' 빌드를 고치면 지금 패치로 기록돼요.'}
+        </p>
+      ) : hiddenFlow ? (
         <p className="lead">
           숨기기 전의 문서와 첫 빌드가 채워져 있어요. 메모를 보고 글이나 빌드를 고친 뒤 다시 제출해 주세요.
           빌드를 바꾸면 승인될 때 원래 첫 빌드 대신 고친 빌드가 공개돼요.
@@ -86,10 +109,10 @@ function ResubmitEditor({ p, data, crumbs }) {
       <DocForm
         initial={p.content}
         onSubmit={submit}
-        submitLabel="다시 제출"
+        submitLabel={resubmit ? '다시 제출' : '고친 내용 저장'}
         requireChange
         changedElsewhere={isNew && !sameBuild(p.build, build)}
-        unchangedMessage={`고친 내용이 없어요. 운영자 메모를 보고 ${isNew ? '글이나 빌드를' : '글을'} 고쳐 주세요.`}
+        unchangedMessage={resubmit ? `고친 내용이 없어요. 운영자 메모를 보고 ${isNew ? '글이나 빌드를' : '글을'} 고쳐 주세요.` : '고친 내용이 없어요.'}
         blocked={isNew ? buildMissing(build, data.game) : null}
       >
         {isNew && (

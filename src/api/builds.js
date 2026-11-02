@@ -6,7 +6,7 @@ import { compareBuilds, toProposalBuild, toRow } from '../lib/buildContent';
 const PERSON = 'nickname, level, main_title';
 const BUILD_FIELDS =
   'id, counter_id, author_id, proposal_id, runes, summoner_spells, starting_items, core_items, skill_order, early_skills, patch, ' +
-  'up_count, down_count, status, created_at';
+  'up_count, down_count, status, created_at, version, edited_at';
 const AUTHOR = `author:profiles!builds_author_id_fkey(${PERSON})`;
 const COUNTER = 'counter:counters!builds_counter_id_fkey(id, target_champion, counter_champion, status)';
 const REVIEW_FIELDS =
@@ -144,12 +144,19 @@ export async function getRevisionBuilds() {
 /**
  * 승인: 메모 필수. edited = 운영자가 고친 빌드(등록 화면 값 모양) | null(그대로), patch = 지금 Data Dragon 버전
  */
-export const approveBuild = (id, note, edited = null, patch = null) =>
-  rpc('approve_build', { p_id: id, p_note: note, p_build: edited ? toProposalBuild(edited, patch) : null }, '승인하지 못했어요.');
+export const approveBuild = (b, note, edited = null, patch = null) =>
+  rpc('approve_build', {
+    p_id: b.id, p_note: note, p_build: edited ? toProposalBuild(edited, patch) : null, p_version: b.version,
+  }, '승인하지 못했어요.');
 /** 거절: 승인 대기·재검토 기다리는 중인 빌드 */
-export const rejectBuild = (id, reason) => rpc('reject_build', { p_id: id, p_reason: reason }, '거절하지 못했어요.');
-export const requestBuildRevision = (id, note) => rpc('request_build_revision', { p_id: id, p_note: note }, '재검토를 요청하지 못했어요.');
+export const rejectBuild = (b, reason) =>
+  rpc('reject_build', { p_id: b.id, p_reason: reason, p_version: b.version }, '거절하지 못했어요.');
+export const requestBuildRevision = (b, note) =>
+  rpc('request_build_revision', { p_id: b.id, p_note: note, p_version: b.version }, '재검토를 요청하지 못했어요.');
 export const cancelBuildRevision = (id, note) => rpc('cancel_build_revision', { p_id: id, p_note: note }, '요청을 취소하지 못했어요.');
+/** 승인 대기 중인 내 빌드 고치기 (지금 패치로, 순서는 그대로). 본인만 */
+export const editMyBuild = (id, build, patch) =>
+  rpc('edit_my_build', { p_id: id, p_build: toProposalBuild(build, patch) }, '고치지 못했어요.');
 /** 재검토 요청 받은 내 빌드를 고쳐서 다시 제출 (지금 패치로) → 승인 대기. 본인만 */
 export const resubmitBuild = (id, build, patch) =>
   rpc('resubmit_build', { p_id: id, p_build: toProposalBuild(build, patch) }, '다시 제출하지 못했어요.');

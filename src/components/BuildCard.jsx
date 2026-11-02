@@ -194,7 +194,7 @@ function BuildActions({ build, onHidden, lastOne }) {
       {error && <p className="form-error" role="alert">{error}</p>}
       {auth.isOperator && (
         <div className="row-actions">
-          <button type="button" className="btn btn-small" onClick={() => setHiding((v) => !v)} aria-expanded={hiding} disabled={lastOne}>
+          <button type="button" className="btn btn-small btn-op" onClick={() => setHiding((v) => !v)} aria-expanded={hiding} disabled={lastOne}>
             빌드 숨기기
           </button>
           {lastOne && <small className="hint">마지막 공개 빌드라 숨길 수 없어요. 다른 빌드를 먼저 승인하거나, 카운터를 숨겨 주세요.</small>}

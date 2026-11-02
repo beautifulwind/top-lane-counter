@@ -9,7 +9,7 @@ import { ErrorBox, Loading } from '../components/Status';
 import BuildCard from '../components/BuildCard';
 import NoteForm from '../components/NoteForm';
 import { hideCounter } from '../api/proposals';
-import { REQUIRED_LEVELS } from '../lib/docContent';
+import { LevelList } from '../components/DocView';
 import NotFound from './NotFound';
 
 
@@ -102,9 +102,9 @@ export default function Matchup() {
         )}
         <div className="actions">
           <Link to={`/champion/${targetId}/counter/${counterId}/edit`} className="btn">문서 수정 제안</Link>
-          {isOperator && <Link to={`/admin/history/${targetId}/${counterId}`} className="btn">수정 기록</Link>}
+          {isOperator && <Link to={`/admin/history/${targetId}/${counterId}`} className="btn btn-op">수정 기록</Link>}
           {isOperator && (
-            <button type="button" className="btn" onClick={() => setHiding((v) => !v)} aria-expanded={hiding}>
+            <button type="button" className="btn btn-op" onClick={() => setHiding((v) => !v)} aria-expanded={hiding}>
               카운터 숨기기
             </button>
           )}
@@ -151,25 +151,5 @@ export default function Matchup() {
         </div>
       </section>
     </article>
-  );
-}
-
-/** 레벨별 딜교법 목록 (매치업 문서·운영자 미리보기 공용) */
-export function LevelList({ doc }) {
-  const levels = doc
-    ? Object.entries(doc.level_notes ?? {})
-        .map(([lv, text]) => [Number(lv), text])
-        .sort((a, b) => a[0] - b[0])
-    : [];
-  if (levels.length === 0) return <p className="empty">아직 작성된 내용이 없어요.</p>;
-  return (
-    <dl className="level-list">
-      {levels.map(([lv, text]) => (
-        <div key={lv} className={REQUIRED_LEVELS.includes(lv) ? 'level req' : 'level'}>
-          <dt>{lv}레벨</dt>
-          <dd>{text}</dd>
-        </div>
-      ))}
-    </dl>
   );
 }

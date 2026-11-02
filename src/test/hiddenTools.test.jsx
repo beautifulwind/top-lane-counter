@@ -155,7 +155,7 @@ test('제안자: /me의 [고쳐서 다시 제출] → 숨긴 시점 문서로 �
   revisionRequested();
   start('/me');
   const r = (await screen.findByText('운영자 메모: 9레벨을 고쳐 주세요')).closest('li');
-  expect(within(r).queryByRole('link', { name: /잡는 법/ })).toBeNull(); // 숨긴 카운터라 링크 없음
+  expect(within(r).queryByRole('link', { name: '문서 보기' })).toBeNull(); // 숨긴 카운터라 문서 링크 없음
   fireEvent.click(within(r).getByRole('link', { name: '고쳐서 다시 제출' }));
   expect(await screen.findByRole('heading', { name: '가렌(으)로 다리우스 잡는 법 — 고쳐서 다시 제출' })).toBeDefined();
   expect(screen.getByLabelText('한 줄 요약 (필수)').value).toBe('가렌 요약');
@@ -181,11 +181,12 @@ test('/me: 승인된 제안에는 승인 메모가 보인다', async () => {
   expect(await screen.findByText('승인 메모: 좋은 수정이에요')).toBeDefined();
 });
 
-test('재검토 요청 상태가 아니면 다시 제출 화면은 안내만 보여 준다', async () => {
+test('고칠 수 없는 상태(승인 취소)면 고치기 화면은 안내만 보여 준다 (옛 다시 제출 주소도 새 주소로)', async () => {
   hiddenGaren({ proposer_id: 'u-old' });
   fakeLogin('u-old', { nickname: '기존유저' });
   start('/me/resubmit/7');
-  expect(await screen.findByText(/재검토 요청을 받은 제안이 아니에요/)).toBeDefined();
+  expect(await screen.findByText(/지금은 고칠 수 없는 제안이에요/)).toBeDefined();
+  expect(where()).toBe('/me/proposals/7/edit');
   expect(screen.queryByRole('button', { name: '다시 제출' })).toBeNull();
 });
 
@@ -205,7 +206,7 @@ test('제안 검토: 다시 낸 제안은 메모와 "숨긴 문서 → 고친 �
   fireEvent.change(screen.getByLabelText(/승인 메모/), { target: { value: '고친 내용 확인' } });
   fireEvent.click(screen.getByRole('button', { name: '승인 확정' }));
   expect(await screen.findByText('승인하고 다시 공개했어요: [재검토 후 다시 낸 제안] 가렌(으)로 다리우스 잡는 법')).toBeDefined();
-  expect(fakeState.rpcCalls).toEqual([{ name: 'approve_proposal', args: { p_id: 7, p_note: '고친 내용 확인', p_content: null, p_build: null } }]);
+  expect(fakeState.rpcCalls).toEqual([{ name: 'approve_proposal', args: { p_id: 7, p_note: '고친 내용 확인', p_content: null, p_build: null, p_version: 1 } }]);
 });
 
 test('완전 삭제: 지워지는 개수를 보여 주고, 사유 + 챔피언 이름을 정확히 입력해야 눌리며 delete_counter (확인 창 없음)', async () => {
