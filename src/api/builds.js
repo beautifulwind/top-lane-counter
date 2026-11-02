@@ -159,6 +159,6 @@ export const editMyBuild = (id, build, patch) =>
   rpc('edit_my_build', { p_id: id, p_build: toProposalBuild(build, patch) }, '고치지 못했어요.');
 /** 재검토 요청 받은 내 빌드를 고쳐서 다시 제출 (지금 패치로) → 승인 대기. 본인만 */
 export const resubmitBuild = (id, build, patch) =>
-  rpc('resubmit_build', { p_id: id, p_build: toProposalBuild(build, patch) }, '다시 제출하지 못했어요.');
+  rpc('resubmit_build', { p_id: id, p_build: toProposalBuild(build, patch) }, '다시 보내지 못했어요.');
 export const hideBuild = (id, reason) => rpc('hide_build', { p_id: id, p_reason: reason }, '숨기지 못했어요.');
 export const restoreBuild = (id, note) => rpc('restore_build', { p_id: id, p_note: note }, '다시 공개하지 못했어요.');

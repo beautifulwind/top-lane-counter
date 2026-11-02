@@ -37,23 +37,26 @@ test('로그인 화면에서 카카오 로그인을 시작하면 provider kakao�
   ]);
 });
 
-test('카카오 첫 로그인(이메일 없음)도 구글과 똑같이 닉네임 설정으로 가고, 저장하면 원래 페이지로 돌아간다', async () => {
+test('카카오 첫 로그인(이메일 없음)도 쓰기 화면에 가면 닉네임 설정으로 가고, 저장하면 원래 페이지로 돌아간다', async () => {
   fakeLogin('u-kakao', {}, { email: '', app_metadata: { provider: 'kakao' } });
-  start('/champion/Darius');
+  start('/champion/Darius/propose');
   expect(await screen.findByRole('heading', { name: '닉네임 정하기' })).toBeDefined();
   expect(where()).toBe('/welcome');
   expect(screen.getByLabelText('닉네임').value).toBe(''); // 카카오 닉네임을 미리 채우지 않는다
 
   fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '카카오탑' } });
   fireEvent.click(screen.getByRole('button', { name: '시작하기' }));
-  expect(await screen.findByText(/다리우스를 이기는 챔피언/)).toBeDefined();
-  expect(where()).toBe('/champion/Darius');
+  expect(await screen.findByRole('heading', { name: '다리우스를 이기는 챔피언 제안' })).toBeDefined();
+  expect(where()).toBe('/champion/Darius/propose');
   expect(document.querySelector('.me').textContent).toBe('Lv.1 카카오탑');
 });
 
-test('첫 로그인(닉네임 없음): 어느 페이지든 닉네임 설정으로 보내고, 저장하면 원래 페이지로 돌아간다', async () => {
+test('닉네임 없음: 읽기는 그대로 + 위에 [닉네임 정하기] 띠, 정하면 원래 페이지로 돌아간다', async () => {
   fakeLogin('u-new');
   start('/champion/Darius');
+  expect(await screen.findByText(/다리우스를 이기는 챔피언/)).toBeDefined();
+  expect(where()).toBe('/champion/Darius');
+  fireEvent.click(screen.getByRole('link', { name: '닉네임 정하기' }));
   expect(await screen.findByRole('heading', { name: '닉네임 정하기' })).toBeDefined();
   expect(where()).toBe('/welcome');
 
@@ -66,7 +69,7 @@ test('첫 로그인(닉네임 없음): 어느 페이지든 닉네임 설정으�
 
 test('닉네임 중복(대소문자 무시)이면 안내 문구가 보이고 화면에 머문다', async () => {
   fakeLogin('u-new');
-  start('/');
+  start('/welcome');
   fireEvent.change(await screen.findByLabelText('닉네임'), { target: { value: '기존유저' } });
   fireEvent.click(screen.getByRole('button', { name: '시작하기' }));
   expect(await screen.findByText(/이미 사용 중인 닉네임/)).toBeDefined();
@@ -75,7 +78,7 @@ test('닉네임 중복(대소문자 무시)이면 안내 문구가 보이고 화
 
 test('빈 닉네임, 20자 초과 닉네임은 저장 전에 막는다', async () => {
   fakeLogin('u-new');
-  start('/');
+  start('/welcome');
   const input = await screen.findByLabelText('닉네임');
   fireEvent.change(input, { target: { value: '   ' } });
   fireEvent.click(screen.getByRole('button', { name: '시작하기' }));

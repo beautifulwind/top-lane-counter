@@ -53,13 +53,15 @@ export const TABLES = {
   post_votes: [],
   reports: [],
   doc_comments: [],
+  // 017 닉네임 변경 기록 (본인 것만 넣는다)
+  nickname_changes: [],
   xp_levels: [[1, 0], [2, 100], [3, 300], [4, 600], [5, 1000], [6, 1500], [7, 2100], [8, 2800], [9, 3600], [10, 4500]]
     .map(([level, min_xp]) => ({ level, min_xp })),
   xp_rules: [
     ['new_counter', 100], ['doc_edit', 50], ['build', 30], ['vote', 2], ['vote_daily_cap', 40], ['level_step', 1000],
     ['title_top_addict', 1], ['title_tool_hater', 10], ['title_solid_heavy', 25], ['title_butcher_owner', 50],
     ['title_general', 100], ['title_offmeta', 5],
-    ['post_edit_minutes', 60], ['comment_edit_minutes', 10], ['edit_grace_minutes', 5],
+    ['post_edit_minutes', 60], ['comment_edit_minutes', 10], ['edit_grace_minutes', 5], ['nickname_change_days', 30],
   ].map(([key, value]) => ({ key, value })),
 };
 
@@ -86,6 +88,7 @@ export function fakeProposal(extra = {}) {
 export const fakeState = {
   error: null, session: null, initError: null, oauthCalls: [], linkCalls: [], linkError: null, listeners: new Set(),
   inserts: [], insertError: null, rpcCalls: [], rpcError: null, boardError: null,
+  functionCalls: [], functionError: null, // Edge Function 호출 (017 delete-account)
 };
 const INITIAL_PROFILES = TABLES.profiles.map((p) => ({ ...p }));
 
@@ -112,7 +115,10 @@ export function resetFake() {
   TABLES.post_votes = [];
   TABLES.reports = [];
   TABLES.doc_comments = [];
+  TABLES.nickname_changes = [];
   TABLES.builds = INITIAL_BUILDS();
+  fakeState.functionCalls = [];
+  fakeState.functionError = null;
   fakeState.inserts = [];
   fakeState.insertError = null;
   fakeState.rpcCalls = [];
@@ -180,6 +186,7 @@ function query(table) {
       return q;
     },
     maybeSingle: () => { single = true; return q; },
+    limit: (n) => { rows = rows.slice(0, n); return q; },
     then: (ok, fail) => Promise.resolve(run()).then(ok, fail),
   };
   function run() {
@@ -223,6 +230,18 @@ function query(table) {
   }
   return q;
 }
+
+// Edge Function 흉내: delete-account는 탈퇴하면 세션을 끝낸다. 실패는 fakeState.functionError (DB 문구)
+const functions = {
+  invoke: async (name, { body } = {}) => {
+    fakeState.functionCalls.push({ name, body });
+    if (fakeState.functionError) {
+      const message = fakeState.functionError;
+      return { data: null, error: { message: 'Edge Function returned a non-2xx status code', context: { json: async () => ({ error: message }) } } };
+    }
+    return { data: { ok: true }, error: null };
+  },
+};
 
 const auth = {
   // 진짜 supabase-js처럼: code 교환 실패는 던지지 않고 { error }로만 돌려준다
@@ -460,5 +479,5 @@ function boardRpc(name, args) {
 }
 
 export function db() {
-  return { from: query, auth, rpc };
+  return { from: query, auth, rpc, functions };
 }

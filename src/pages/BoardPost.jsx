@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   POST_COMMENT_OPS, deleteMyPost, getEditRules, getPost, hidePost, reportPost, restorePost, votePost,
 } from '../api/board';
-import { useAuth } from '../lib/auth';
+import { canWrite, useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
 import { canEditNow, useNow } from '../lib/editWindow';
 import { ErrorBox, Loading } from '../components/Status';
@@ -88,7 +88,7 @@ function PostActions({ post, mine, auth, onDone }) {
   const navigate = useNavigate();
   const [mode, setMode] = useState(null); // 'delete' | 'report' | 'hide'
   const [vote, setVote] = useState({ up: post.up_count, mine: post.voted, busy: false, error: null });
-  const signedIn = auth.status === 'signedIn';
+  const signedIn = canWrite(auth); // 추천·신고는 닉네임이 있어야
   const visible = post.status === 'visible';
   const now = useNow();
 

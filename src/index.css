@@ -483,3 +483,6 @@ a.op-link, .op-link { color: var(--op-dark); }
 .report-preview.body { font-size: 13px; color: var(--muted); }
 .board-notice-msg { margin: 0; }
 .comment-form .edit-deadline { margin: 0; }
+.delete-account-list { padding-left: 18px; margin: 4px 0 10px; }
+.delete-account-list li { margin: 2px 0; }
+.nick-form .note-form-actions .btn { margin-top: 0; }

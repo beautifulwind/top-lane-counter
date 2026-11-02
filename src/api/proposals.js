@@ -111,7 +111,7 @@ export async function markNotificationsRead(ids) {
  * 새 카운터 제안은 글 + 빌드(필수), 문서 수정 제안은 글만 (build = null)
  */
 export const resubmitProposal = (id, content, build, patch) =>
-  rpc('resubmit_proposal', { p_id: id, p_content: cleanDoc(content), p_build: build ? toProposalBuild(build, patch) : null }, '다시 제출하지 못했어요.');
+  rpc('resubmit_proposal', { p_id: id, p_content: cleanDoc(content), p_build: build ? toProposalBuild(build, patch) : null }, '다시 보내지 못했어요.');
 
 /**
  * 승인 대기 중인 내 제안 고치기 (순서는 그대로, 운영자에게 "제안자가 고침" 표시). 본인만 (DB 함수가 확인)

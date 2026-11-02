@@ -14,9 +14,10 @@ import BuildCard from '../components/BuildCard';
 import DiffView from '../components/DiffView';
 import MyRewards from '../components/MyRewards';
 import { matchupTitle } from '../lib/josa';
+import AccountSettings from '../components/AccountSettings';
 
 /**
- * 내 활동 (/me): 내 제안·내 빌드 목록과 상태, 로그인 연결.
+ * 내 활동 (/me): 내 제안·내 빌드 목록과 상태, 로그인 연결, 닉네임 바꾸기·회원 탈퇴.
  * 레벨·경험치·칭호는 6단계에서 채운다 (SPEC 3장).
  */
 export default function Me() {
@@ -39,6 +40,7 @@ export default function Me() {
       )}
       <MyActivity userId={auth.user.id} operator={auth.isOperator} />
       <LinkedLogins userId={auth.user.id} />
+      <AccountSettings auth={auth} />
     </article>
   );
 }

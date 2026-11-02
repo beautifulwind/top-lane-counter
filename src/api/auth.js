@@ -216,9 +216,41 @@ export async function saveNickname(userId, raw) {
     .maybeSingle();
   if (error) {
     if (error.code === '23505') throw new Error('이미 사용 중인 닉네임이에요. 다른 닉네임을 정해 주세요.');
+    if (error.code === 'P0001') throw new Error(error.message); // 30일에 한 번 (DB 문구에 다음 날짜가 들어 있다)
     if (error.code === '23514') throw new Error(`닉네임은 앞뒤 공백 없이 1~${NICKNAME_MAX}자로 정해 주세요.`);
     throw new Error(`닉네임을 저장하지 못했어요. (${error.message})`);
   }
   if (!data) throw new Error('프로필을 찾지 못했어요. 로그아웃 후 다시 로그인해 주세요.');
   return data;
+}
+
+// ---------------- 닉네임 변경 · 회원 탈퇴 (017, SPEC 6-8) ----------------
+
+/** 닉네임 변경 규칙: 마지막으로 바꾼 때와 다음에 바꿀 수 있는 때 (처음 정한 것은 변경이 아님). 기록은 본인만 읽는다 */
+export async function getNicknameRule(userId) {
+  const [changes, rule] = await Promise.all([
+    db().from('nickname_changes').select('changed_at').eq('user_id', userId).order('changed_at', { ascending: false }).limit(1),
+    db().from('xp_rules').select('value').eq('key', 'nickname_change_days').maybeSingle(),
+  ]);
+  if (changes.error || rule.error) throw new Error('닉네임 변경 정보를 불러오지 못했어요.');
+  const days = rule.data?.value ?? 30;
+  const last = changes.data?.[0]?.changed_at ?? null;
+  const next = last ? new Date(Date.parse(last) + days * 86400000).toISOString() : null;
+  return { days, last, next };
+}
+
+/**
+ * 회원 탈퇴: Edge Function delete-account (DB delete_my_account + 카카오 연결 끊기). confirm = 내 닉네임 그대로.
+ * 성공하면 이 브라우저의 로그인도 지운다 (서버 세션은 계정과 함께 이미 없어짐).
+ */
+export async function deleteMyAccount(confirm) {
+  const { error } = await db().functions.invoke('delete-account', { body: { confirm } });
+  if (error) {
+    let message = null;
+    try {
+      message = (await error.context?.json?.())?.error ?? null;
+    } catch { /* 문구 없음 */ }
+    throw new Error(message ?? `탈퇴하지 못했어요. (${error.message})`);
+  }
+  await db().auth.signOut({ scope: 'local' }).catch(() => {});
 }

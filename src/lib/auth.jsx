@@ -7,12 +7,14 @@ import { finishLoginFromUrl, getProfile, getSession, onAuthChange } from '../api
  * profile: 로그인했을 때 내 프로필 (불러오는 중이면 undefined)
  */
 const AuthContext = createContext(null);
-const SIGNED_OUT = { status: 'signedOut', session: null, user: null, profile: null, isOperator: false, setProfile: () => {}, loginError: null, clearLoginError: () => {}, notice: null, clearNotice: () => {} };
+const SIGNED_OUT = { status: 'signedOut', session: null, user: null, profile: null, isOperator: false, setProfile: () => {}, loginError: null, clearLoginError: () => {}, notice: null, clearNotice: () => {}, cameBack: false, clearCameBack: () => {} };
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined); // undefined = 아직 확인 중
   const [loginError, setLoginError] = useState(null); // 구글/카카오에서 돌아왔는데 로그인·연결이 안 됐을 때
   const [notice, setNotice] = useState(null); // 기존 계정에 합쳐짐 / 연결함 안내
+  // 구글·카카오에서 막 돌아왔나 (처음 가입한 사람은 닉네임 정하기를 한 번 보여 준다 — 건너뛸 수 있음)
+  const [cameBack, setCameBack] = useState(() => /[?&]code=/.test(window.location.search));
   const [loaded, setLoaded] = useState({ userId: null, profile: undefined, error: null });
 
   useEffect(() => {
@@ -46,6 +48,7 @@ export function AuthProvider({ children }) {
   const setProfile = useCallback((profile) => setLoaded({ userId, profile, error: null }), [userId]);
   const clearLoginError = useCallback(() => setLoginError(null), []);
   const clearNotice = useCallback(() => setNotice(null), []);
+  const clearCameBack = useCallback(() => setCameBack(false), []);
 
   let value;
   if (session === undefined) value = { ...SIGNED_OUT, status: 'loading' };
@@ -65,6 +68,8 @@ export function AuthProvider({ children }) {
       clearLoginError,
       notice,
       clearNotice,
+      cameBack,
+      clearCameBack,
     };
   }
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -77,3 +82,18 @@ export function useAuth() {
 
 /** 로그인했고 프로필도 불러왔는데 닉네임이 아직 없는가 */
 export const needsNickname = (auth) => auth.status === 'signedIn' && auth.profile !== undefined && !auth.profile?.nickname;
+
+/** 쓰기(제안·빌드·투표·글·댓글·신고)를 할 수 있나 = 로그인 + 닉네임. 실제 검사는 DB가 한다 */
+export const canWrite = (auth) => auth.status === 'signedIn' && !!auth.profile?.nickname;
+
+/**
+ * 닉네임을 정해야 열리는 화면 (쓰기 화면과 /me). 닉네임이 없어도 읽기는 어디서나 된다 (SPEC 3장).
+ * 이 주소로 오면 닉네임 정하기로 보내고, 정하면 돌아온다.
+ */
+export const NICKNAME_ROUTES = [
+  /^\/champion\/[^/]+\/propose$/,
+  /^\/champion\/[^/]+\/counter\/[^/]+\/(edit|build\/new)$/,
+  /^\/board\/(new|\d+\/edit)$/,
+  /^\/me(\/|$)/,
+];
+export const needsNicknameFor = (pathname) => NICKNAME_ROUTES.some((r) => r.test(pathname));

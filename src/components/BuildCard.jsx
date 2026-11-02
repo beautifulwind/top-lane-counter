@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { hideBuild, voteBuild } from '../api/builds';
-import { useAuth } from '../lib/auth';
+import { canWrite, useAuth } from '../lib/auth';
 import { isOutdated, patchMinor } from '../lib/buildContent';
 import UserName from './UserName';
 import NoteForm from './NoteForm';
@@ -147,6 +147,10 @@ function BuildActions({ build, onHidden, lastOne }) {
   const vote = async (value) => {
     if (!signedIn) {
       navigate('/login', { state: { from: location.pathname + '#builds' } });
+      return;
+    }
+    if (!canWrite(auth)) {
+      navigate('/welcome', { state: { from: location.pathname + '#builds' } });
       return;
     }
     if (own || busy) return;

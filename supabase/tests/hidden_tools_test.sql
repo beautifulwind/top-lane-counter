@@ -132,7 +132,7 @@ select t.ok('기록(resubmit, 제안자)',
 select t.ok('승인 대기 목록에 들어옴', (select count(*) = 1 from edit_proposals where status = 'pending' and id = (select v from ids where k = 'garen_p')));
 select t.fails('승인 대기 중 다시 공개', format($$select restore_counter(%s, '공개')$$, :garen), '승인 대기 중');
 select t.fails('승인 대기 중 삭제', format($$select delete_counter(%s, 'Garen', '중복')$$, :garen), '승인 대기 중');
-select t.fails('승인 대기 중 재검토 요청', format($$select request_revision(%s, '또')$$, :garen), '이미 다시 제출');
+select t.fails('승인 대기 중 재검토 요청', format($$select request_revision(%s, '또')$$, :garen), '이미 다시 보냈어요');
 
 -- ===== 6. 거절 → 계속 숨김, 다시 요청 가능 =====
 select reject_proposal((select v from ids where k = 'garen_p'), '아직 부족해요', t.pv((select v from ids where k = 'garen_p')));

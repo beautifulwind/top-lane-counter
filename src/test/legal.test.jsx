@@ -60,11 +60,11 @@ test('개인정보처리방침: 수집 항목·탈퇴 요청·만 14세 미만 �
   await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' });
   expect(screen.getByText('구글 계정 이메일, 이름, 프로필 사진')).toBeDefined();
   expect(screen.getByText('카카오계정 이메일(필수 동의), 카카오 닉네임, 프로필 사진')).toBeDefined();
-  expect(screen.getByRole('heading', { name: '9. 회원 탈퇴(계정 삭제) 요청' })).toBeDefined();
+  expect(screen.getByRole('heading', { name: '9. 회원 탈퇴(계정 삭제)' })).toBeDefined();
   expect(screen.getByText(/만 14세 미만 아동의 회원 가입을 받지 않습니다/)).toBeDefined();
 });
 
-test('닉네임을 아직 안 정한 로그인 상태에서도 두 페이지는 닉네임 설정으로 끌려가지 않는다', async () => {
+test('닉네임을 아직 안 정한 로그인 상태에서도 두 페이지(와 다른 읽기 화면)는 닉네임 설정으로 끌려가지 않는다', async () => {
   fakeLogin('u-new'); // 닉네임 없음
   start('/privacy');
   expect(await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' })).toBeDefined();
@@ -73,7 +73,7 @@ test('닉네임을 아직 안 정한 로그인 상태에서도 두 페이지는 
   expect(await screen.findByRole('heading', { level: 1, name: '이용약관' })).toBeDefined();
   expect(where()).toBe('/terms');
   fireEvent.click(screen.getByRole('link', { name: '탑 카운터 위키' }));
-  await vi.waitFor(() => expect(where()).toBe('/welcome')); // 다른 페이지는 그대로 닉네임 설정으로
+  await vi.waitFor(() => expect(where()).toBe('/')); // 읽기 화면은 닉네임 없이도 (017)
 });
 
 test('로그인 화면: 버튼 아래 동의 문구와 두 링크, 만 14세 이상 안내', async () => {

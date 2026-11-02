@@ -174,7 +174,7 @@
   - 운영자도 빌드 상태·따봉을 표에서 직접 고칠 수 없다 (함수로만).
 - 카운터 목록의 **순서는 운영자만** 정한다. 극상성/상성 같은 단계 구분은 없다.
 - 다른 유저를 관리자로 지정/해제하는 기능은 **나중에 정함**. 지금은 화면도 DB 함수도 만들지 않는다.
-- 로그인한 사람만 제안·투표·글쓰기가 가능하다. 보기는 누구나 가능. (닉네임을 정하기 전에는 불가)
+- 로그인한 사람만 제안·투표·글쓰기가 가능하다. 보기는 누구나 가능. 닉네임을 정하기 전에도 둘러보기는 된다 (017) — 쓰기(제안·빌드·투표·글·댓글·신고)와 `/me`는 닉네임을 정해야 한다. 자세한 것은 6-8.
 
 ### 회원 등급
 | 등급 | 누구 | 권한 | 표시 |
@@ -286,11 +286,27 @@
 - DB가 `edit_post`·`edit_comment`·`edit_doc_comment`에서 막는다: "고칠 수 있는 시간이 지났어요. 지우고 다시 쓸 수는 있어요."
 - 화면: 시간이 지나면 [고치기]를 숨긴다 (30초마다 다시 확인). 고치는 화면에 "HH:MM까지 저장할 수 있어요". 늦게 저장해서 막히면 안내하고 쓴 내용은 입력칸에 그대로 둔다.
 
+### 6-8. 계정: 닉네임 바꾸기 · 회원 탈퇴 · 카카오 연결 끊기 (묶음 B, 2026-11-02, 017)
+- **닉네임 없이 둘러보기**: 처음 로그인하고 돌아온 직후(`?code=`)에는 한 번 `/welcome`으로 보낸다. [나중에 정할게요]를 누르면 읽던 화면으로 (쓰기 화면에서 왔으면 홈). 그 뒤에는 화면 위에 "닉네임을 정하면 … 쓸 수 있어요" 띠 + [닉네임 정하기]. 쓰기 화면(제안·편집·빌드 등록·글쓰기·글 고치기)과 `/me`에 가면 `/welcome`으로. 따봉·비추를 누르면 `/welcome`, 댓글 칸 자리에는 "닉네임을 정하면 댓글을 달 수 있어요."
+- **닉네임 바꾸기**: `/me` → "닉네임 바꾸기". **30일에 한 번** (`xp_rules.nickname_change_days`, 0이면 제한 없음). 처음 정하는 것은 세지 않는다. 대소문자만 바꿔도 변경. 막히면 "닉네임은 30일에 한 번 바꿀 수 있어요. YYYY-MM-DD HH:MM부터 다시 바꿀 수 있어요." (한국 시각). 변경 기록 `nickname_changes`는 본인·운영자만 본다. 운영자도 같은 규칙.
+- **회원 탈퇴**: `/me` → "회원 탈퇴" → [탈퇴] → 내 닉네임을 그대로 입력 → [탈퇴 확정] (빨간색). 운영자 계정은 탈퇴할 수 없다 (버튼 없음 + DB에서 막음). 끝나면 로그아웃하고 홈에서 "탈퇴했어요 …" 안내.
+  - 경로: 화면 → Edge Function `delete-account`(로그인 토큰) → DB `delete_my_account(확인 문구)`가 `auth.users`를 지우고(정리 규칙은 아래 "탈퇴 시" 메모) 카카오 회원번호를 돌려줌 → 카카오 "연결 끊기" API(어드민 키). 카카오 쪽이 실패해도 탈퇴는 끝난 것으로 둔다 (로그만).
+  - 경험치·칭호·닉네임 변경 기록도 프로필과 함께 지워진다.
+- **카카오 쪽에서 연결 끊기**: 이용자가 카카오 설정에서 이 사이트 연결을 끊으면 카카오가 Edge Function `kakao-unlink`를 부른다 (어드민 키로 확인) → DB `kakao_unlinked(카카오 회원번호)`:
+  - 구글도 연결돼 있으면 **카카오 연결만 뗀다** (`auth.identities` 카카오 줄 삭제 + `raw_app_meta_data.providers` 정리) → 'unlinked'
+  - 카카오만 있으면 **탈퇴 처리** → 'deleted'
+  - 카카오만 연결된 운영자 계정은 지우지 않는다 → 'operator_kept' (로그에만)
+  - 모르는 번호(이미 탈퇴·우리 [탈퇴]가 끊은 뒤 오는 알림) → 'not_found'
+  - 로그에는 결과만 남기고 카카오 회원번호·이메일은 남기지 않는다.
+- **비밀 값**: 카카오 어드민 키는 Supabase 대시보드 → Edge Functions → Secrets의 `KAKAO_ADMIN_KEY`에만 둔다. 코드·`.env`·저장소에 넣지 않는다. (설정 순서는 11-8)
+- **DB 오류 문구 정리 (017)**: 조사 자리표시 "은(는)/을(를)" → `public.josa()`로 받침에 맞게, "다시 제출" → "다시 보내기" (화면 버튼 이름과 같게).
+
 ## 7. 데이터 구조 (Supabase 초안)
 
 챔피언·아이템·룬·소환사 주문은 Data Dragon의 ID(예: 챔피언 `"Darius"`, 아이템 `3078`)로 참조한다.
 
-- **profiles**: `id`(auth 유저), `nickname`(고유, 대소문자 무시 / 첫 로그인 직후에는 비어 있음), `role`(`user` / `admin` = 운영자), `xp`, `level`(운영자는 0), `main_title`(내가 가진 칭호 중에서만, 비워둘 수 있음), `created_at`
+- **profiles**: `id`(auth 유저), `nickname`(고유, 대소문자 무시 / 첫 로그인 직후에는 비어 있음 / 30일에 한 번 바꿈, 6-8), `role`(`user` / `admin` = 운영자), `xp`, `level`(운영자는 0), `main_title`(내가 가진 칭호 중에서만, 비워둘 수 있음), `created_at`
+- **nickname_changes** (017): `user_id`, `old_nickname`, `new_nickname`, `changed_at` — 트리거 `keep_nickname`만 넣는다. 본인·운영자만 읽기. DB 함수 `delete_my_account(확인)`(로그인한 본인), `kakao_unlinked(카카오 번호)`(service_role만), `josa(낱말, '을/를')`
 - **counters**: `id`, `target_champion`(지는 쪽), `counter_champion`(이기는 쪽), `sort_order`, `status`, `proposed_by`, `created_at` — (`target_champion`, `counter_champion`) 고유
 - **matchup_docs**: `counter_id`, `level_notes`(jsonb: 필수 1/2/3/6 + 추가 레벨 — 010에서 9·11 필수 해제), `lane_cautions`(화면 이름: 특이사항), `summary`(목록에 보일 한 줄 요약), `updated_by`, `updated_at`
 - **doc_revisions**: 승인된 문서 수정 기록 (되돌리기용). `kind`: `create` / `edit` / `revert` / `admin_edit`(운영자가 고쳐서 승인 — 바로 앞 같은 제안의 줄이 제안 원본, 공개 안 됨), `note`(되돌리기·고쳐서 승인 메모)
@@ -347,20 +363,13 @@ RLS 원칙:
   - 호스팅을 Cloudflare가 아닌 곳으로 바꾸면 방침 6번(처리 위탁) 고치기
 - **기능을 추가할 때 방침도 고친다**
   - Google Analytics / MS Clarity: 위 "공개 전 체크리스트"에 적어 둠 (방침 1·6·7번)
-  - 닉네임 변경 기능이 생기면 8번(정정 방법) 고치기
 - 수집 항목 메모 (방침에 반영됨)
   - 구글: 이메일, 이름, 프로필 사진 / 카카오: 이메일(필수 동의), 닉네임, 프로필 사진 — 모두 Supabase `auth.users`에 저장, 화면에는 직접 정한 사이트 닉네임만 씀
   - 이용 중 생기는 정보: 제안과 처리 메모, 문서 수정 기록, 빌드(내용·상태·메모)와 따봉/비추 기록, 자유게시판 글·댓글·추천·신고, 매치업 문서 댓글, 글·댓글을 고치기 시작한 시각(고치기 유예), 알림, 숨김·삭제 기록, 로그인 시각·접속 기록
   - 탈퇴 시: 계정·닉네임·제안·알림·내 표(따봉/비추)·공개되지 않은 내 빌드(대기·거절·재검토 중)·게시판 글(다른 사람 댓글이 달린 글은 내용을 비운 "삭제된 글"로 남김)·댓글·추천·신고·문서 댓글은 삭제, 반영된 문서와 수정 기록·공개(숨김 포함) 빌드·투표 기록·운영자 기록은 작성자 표시만 지움(`on delete set null`)
 
-### 회원 탈퇴 기능 (나중 할 일)
-지금은 탈퇴 버튼이 없어 방침·약관에 "가입한 이메일로 운영자 이메일에 요청"으로 적었다. 운영자는 요청을 받으면 Supabase 대시보드(Authentication → Users)에서 그 계정을 지운다 (`auth.users` 삭제 → 프로필 등 위 규칙대로 정리됨).
-- `/me`에 [탈퇴] 버튼: 확인 단계는 다른 운영 작업과 같이 입력으로 (예: 닉네임 직접 입력)
-- 본인 계정만 지우는 DB 함수 (`auth.users`를 지울 권한이 필요 → security definer 또는 Edge Function)
-- 운영자 계정은 탈퇴할 수 없게 막기 (운영자 1명 규칙)
-- 남기는 기록은 작성자 표시만 지우는 지금 구조 유지
-- 6단계 이후라면 경험치·칭호 기록 처리도 정하기
-- 만들면 방침 8·9번과 약관 제9조의 탈퇴 방법을 고치기
+### 회원 탈퇴 기능 (017에서 만듦 — 6-8)
+`/me`의 [탈퇴] (닉네임 입력 확인, 운영자 불가). 남기는 기록은 작성자 표시만 지우는 구조 그대로, 경험치·칭호는 함께 삭제. 방침 8·9번과 약관 제9조를 이에 맞게 고쳤다. 버튼을 쓸 수 없는 경우(로그인이 안 됨 등)에는 운영자 이메일로 요청 → 운영자가 Supabase 대시보드(Authentication → Users)에서 지운다.
 
 ## 9. 이번에 만들지 않는 것
 - 빌드 댓글
@@ -420,6 +429,7 @@ RLS 원칙:
 14. `supabase/migrations/014_xp_levels_titles.sql`
 15. `supabase/migrations/015_board.sql`
 16. `supabase/migrations/016_doc_comments_edit_window.sql`
+17. `supabase/migrations/017_account.sql` (실행 뒤 11-8)
 - 합쳐서 한 번에 돌리지 않는다: 파일마다 `begin … commit`이라 중간에 실패하면 앞부분만 반영되고, 다시 돌리면 "already exists"가 난다.
 - 새 마이그레이션(010 …)을 만들면 이 목록에 추가한다. `supabase/tests/run.sh`가 빈 DB에 같은 순서로 실행한 뒤 검사용 데이터(`tests/fixtures.sql`)를 넣고 검사한다 (`supabase/tests`는 실제 프로젝트에서 실행하지 않음).
 
@@ -464,3 +474,11 @@ RLS 원칙:
    "UPDATE 1"이면 성공. 트리거가 Lv.0 · 경험치 0 · 칭호 없음으로 맞춘다 (운영자는 1명만 허용)
 3. 새로고침 → `Lv.0 닉네임`, 상단 [관리]
 - 카카오 이메일이 다르면 따로 계정이 생기므로, 운영자 계정의 `/me`에서 [카카오 연결하기]로 붙인다
+
+### 11-8. Edge Functions · 카카오 연결 끊기 (017 실행 뒤)
+- **Edge Functions** (대시보드 → Edge Functions → Deploy a new function → Via Editor). 파일 내용을 그대로 붙여넣는다.
+  - `delete-account` ← `supabase/functions/delete-account/index.ts`, **Verify JWT 켬**
+  - `kakao-unlink` ← `supabase/functions/kakao-unlink/index.ts`, **Verify JWT 끔** (카카오는 Supabase 토큰을 보내지 않음 — 함수가 어드민 키로 확인)
+- **Secrets** (Edge Functions → Secrets): `KAKAO_ADMIN_KEY` = 카카오 앱 키 → **Admin 키**. 선택: `KAKAO_APP_ID` = 앱 ID (다른 앱 알림 거절). `SUPABASE_URL`·`SUPABASE_ANON_KEY`·`SUPABASE_SERVICE_ROLE_KEY`는 자동으로 들어 있다. 비밀 값은 코드·`.env`·저장소·대화에 쓰지 않는다.
+- **Kakao Developers** → 앱 → 카카오 로그인 → **연결 끊기 알림** (메뉴 이름은 콘솔 버전에 따라 "고급"/"Unlink" 등): 콜백 주소 `https://<프로젝트ID>.supabase.co/functions/v1/kakao-unlink`, 방식 GET·POST 아무거나
+- 확인: Edge Functions → kakao-unlink → Logs에 `{"event":"kakao_unlink","result":…}`. 탈퇴는 delete-account Logs에 `{"event":"account_deleted","kakao":"unlinked"}`

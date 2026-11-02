@@ -4,6 +4,7 @@ import { COMMENT_MAX, beginEdit } from '../api/board';
 import { canEditNow, fmtTime, useNow } from '../lib/editWindow';
 import { BoardByline, CharCount, ConfirmInline, HiddenBand, ReportForm } from './BoardParts';
 import NoteForm from './NoteForm';
+import { canWrite } from '../lib/auth';
 
 /**
  * 댓글 칸 (자유게시판 글, 매치업 문서 공통 — SPEC 6-5, 6-6, 고치기 시간 6-7).
@@ -32,8 +33,12 @@ export default function CommentThread({
         </ul>
       )}
       {!open && closedHint && <p className="hint">{closedHint}</p>}
-      {open && (auth.status === 'signedIn' ? (
+      {open && (canWrite(auth) ? (
         <CommentForm ops={ops} parentId={parentId} onDone={onReload} />
+      ) : auth.status === 'signedIn' ? (
+        <p className="hint">
+          <Link to="/welcome" state={{ from: pathname }}>닉네임을 정하면</Link> 댓글을 달 수 있어요.
+        </p>
       ) : (
         <p className="hint">
           <Link to="/login" state={{ from: pathname }}>로그인</Link>하면 댓글을 달 수 있어요.
@@ -51,7 +56,7 @@ function Comment({ comment: c, ops, live, rules, now, auth, onDone, onReload }) 
   const [error, setError] = useState(null);
   const mine = auth.user?.id != null && c.author_id === auth.user.id;
   const visible = c.status === 'visible' && live;
-  const signedIn = auth.status === 'signedIn';
+  const signedIn = canWrite(auth); // 신고는 닉네임이 있어야
   const editable = mine && visible && canEditNow(ops.kind, c, rules, now);
 
   // [고치기]: DB에 "지금 연다"를 알려 유예를 받고 저장 마감을 받아 온다

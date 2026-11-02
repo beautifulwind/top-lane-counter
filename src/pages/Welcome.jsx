@@ -1,5 +1,6 @@
-import { useState } from 'react';
-import { Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { needsNicknameFor } from '../lib/auth';
 import { NICKNAME_MAX, nicknameProblem, saveNickname } from '../api/auth';
 import { useAuth } from '../lib/auth';
 import { ErrorBox, Loading } from '../components/Status';
@@ -13,6 +14,8 @@ export default function Welcome() {
   const [nickname, setNickname] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const { clearCameBack } = auth;
+  useEffect(() => { clearCameBack?.(); }, [clearCameBack]); // 한 번 보여 줬으면 다시 끌고 오지 않는다
 
   if (auth.status === 'loading') return <Loading />;
   if (auth.status === 'signedOut') return <Navigate to="/login" replace />;
@@ -40,7 +43,9 @@ export default function Welcome() {
   return (
     <article className="welcome">
       <h1 className="doc-title">닉네임 정하기</h1>
-      <p className="lead">위키에서 다른 사람에게 보일 이름이에요. 다른 사람과 겹칠 수 없어요.</p>
+      <p className="lead">
+        위키에서 다른 사람에게 보일 이름이에요. 다른 사람과 겹칠 수 없어요. 정한 뒤에는 30일에 한 번 [내 활동]에서 바꿀 수 있어요.
+      </p>
       <form onSubmit={submit} className="nick-form">
         <label htmlFor="nickname">닉네임</label>
         <input
@@ -56,9 +61,13 @@ export default function Welcome() {
         </small>
         {error && <p className="form-error" role="alert">{error}</p>}
         <button type="submit" className="btn" disabled={busy}>
-          {busy ? '저장 중…' : '시작하기'}
+          {busy ? '저장하는 중…' : '시작하기'}
         </button>
       </form>
+      <p className="hint">
+        닉네임 없이도 둘러볼 수 있어요.{' '}
+        <Link to={needsNicknameFor(from.split(/[?#]/)[0]) ? '/' : from}>나중에 정할게요</Link>
+      </p>
     </article>
   );
 }

@@ -88,7 +88,7 @@ select t.ok('막힌 뒤에도 제안은 그대로 승인 대기',
 select request_proposal_revision((select v from ids where k = 'p'), '6레벨을 더 자세히', 2);
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.fails('재검토 중에는 고치기 대신 다시 제출',
-  format($$select edit_my_proposal(%s, %L, %L)$$, (select v from ids where k = 'p'), :'doc', t.build()), '[고쳐서 다시 제출]');
+  format($$select edit_my_proposal(%s, %L, %L)$$, (select v from ids where k = 'p'), :'doc', t.build()), '[고쳐서 다시 보내기]');
 select resubmit_proposal((select v from ids where k = 'p'), :'doc', t.build(array['6631','3047','3053','3065'], '99.1.1'));
 select t.ok('다시 제출도 버전 +1 (3)', (select version = 3 and status = 'pending' from edit_proposals where id = (select v from ids where k = 'p')));
 
@@ -167,7 +167,7 @@ select t.fails('안쪽 빌드 함수는 직접 못 부름',
 select request_build_revision((select v from ids where k = 'b'), '신발을 다시', 2);
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.fails('재검토 중인 빌드는 고치기 대신 다시 제출',
-  format($$select edit_my_build(%s, %L)$$, (select v from ids where k = 'b'), t.build(array['3071','3047','3053'])), '[고쳐서 다시 제출]');
+  format($$select edit_my_build(%s, %L)$$, (select v from ids where k = 'b'), t.build(array['3071','3047','3053'])), '[고쳐서 다시 보내기]');
 select resubmit_build((select v from ids where k = 'b'), t.build(array['3071','3020','3053'], '99.1.1'));
 select t.ok('빌드 다시 제출도 버전 +1 (3)', (select version = 3 and status = 'pending' from builds where id = (select v from ids where k = 'b')));
 
