@@ -20,6 +20,7 @@ import AdminPreview from './pages/admin/AdminPreview';
 import AdminDelete from './pages/admin/AdminDelete';
 import AdminBuild from './pages/admin/AdminBuild';
 import Resubmit from './pages/Resubmit';
+import ResubmitBuild from './pages/ResubmitBuild';
 import Privacy from './pages/Privacy';
 import Terms from './pages/Terms';
 import { AuthProvider } from './lib/auth';
@@ -52,6 +53,7 @@ export function AppRoutes() {
           <Route path="terms" element={<Terms />} />
           <Route path="me" element={<Me />} />
           <Route path="me/resubmit/:id" element={<Resubmit />} />
+          <Route path="me/builds/:id/resubmit" element={<ResubmitBuild />} />
           <Route path="admin" element={<AdminHome />} />
           <Route path="admin/proposals/:id" element={<AdminProposal />} />
           <Route path="admin/order/:championId" element={<AdminOrder />} />

@@ -205,7 +205,7 @@ test('제안 검토: 다시 낸 제안은 메모와 "숨긴 문서 → 고친 �
   fireEvent.change(screen.getByLabelText(/승인 메모/), { target: { value: '고친 내용 확인' } });
   fireEvent.click(screen.getByRole('button', { name: '승인 확정' }));
   expect(await screen.findByText('승인하고 다시 공개했어요: [재검토 후 다시 낸 제안] 가렌(으)로 다리우스 잡는 법')).toBeDefined();
-  expect(fakeState.rpcCalls).toEqual([{ name: 'approve_proposal', args: { p_id: 7, p_note: '고친 내용 확인' } }]);
+  expect(fakeState.rpcCalls).toEqual([{ name: 'approve_proposal', args: { p_id: 7, p_note: '고친 내용 확인', p_content: null, p_build: null } }]);
 });
 
 test('완전 삭제: 지워지는 개수를 보여 주고, 사유 + 챔피언 이름을 정확히 입력해야 눌리며 delete_counter (확인 창 없음)', async () => {

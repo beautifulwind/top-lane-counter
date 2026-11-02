@@ -24,7 +24,7 @@ insert into edit_proposals (type, target_champion, counter_champion, proposer_id
 values ('new_counter', 'Darius', 'Garen', auth.uid(), :'doc', t.build());
 insert into ids select 'garen_p', id from edit_proposals where counter_champion = 'Garen';
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select approve_proposal((select v from ids where k = 'garen_p'), '좋아요') as garen \gset
+select approve_proposal((select v from ids where k = 'garen_p'), '좋아요', null, null) as garen \gset
 insert into ids values ('garen', :garen);
 reset role;
 -- 009: 가렌 제안의 빌드가 승인과 함께 첫 빌드로 공개돼 있다
@@ -152,7 +152,7 @@ select t.ok('거절 뒤 다시 재검토 요청: 출발점은 다시 숨긴 문�
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select resubmit_proposal((select v from ids where k = 'garen_p'), :'v2', t.build());
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select approve_proposal((select v from ids where k = 'garen_p'), ' 고친 내용 확인 ') = :garen as same_counter \gset
+select approve_proposal((select v from ids where k = 'garen_p'), ' 고친 내용 확인 ', null, null) = :garen as same_counter \gset
 select t.ok('승인: 같은 카운터를 살림 (새로 만들지 않음)', :'same_counter'::boolean);
 select t.ok('승인: 공개 + 목록 맨 뒤 (퀸 다음)',
   (select status = 'approved' and sort_order = (select sort_order + 1 from counters where id = (select v from ids where k = 'quinn'))

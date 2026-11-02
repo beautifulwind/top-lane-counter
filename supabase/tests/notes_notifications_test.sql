@@ -25,16 +25,17 @@ insert into ids select 'garen_p', id from edit_proposals where counter_champion 
 -- ===== 1. 메모 없는 예전 함수는 없다 =====
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select t.fails('메모 없는 승인 함수 없음', format('select approve_proposal(%s::bigint)', (select v from ids where k = 'garen_p')), 'does not exist');
+select t.fails('옛 2인자 승인 함수 없음 (012)', format($$select approve_proposal(%s::bigint, 'x'::text)$$, (select v from ids where k = 'garen_p')), 'does not exist');
 select t.fails('메모 없는 다시 공개 함수 없음', format('select restore_counter(%s::bigint)', (select v from ids where k = 'quinn')), 'does not exist');
 select t.fails('메모 없는 되돌리기 함수 없음', 'select revert_doc(1::bigint)', 'does not exist');
 select t.fails('메모 검사 도우미는 직접 못 부름', $$select require_note('a', 'b')$$, 'permission denied');
 
 -- ===== 2. 승인 메모 필수, 제안자에게 보임 =====
-select t.fails('승인: 메모 공백', format($$select approve_proposal(%s, '   ')$$, (select v from ids where k = 'garen_p')), '승인 메모를 적어');
-select t.fails('승인: 메모 null', format('select approve_proposal(%s, null)', (select v from ids where k = 'garen_p')), '승인 메모를 적어');
-select t.fails('승인: 메모 501자', format('select approve_proposal(%s, %L)', (select v from ids where k = 'garen_p'), repeat('a', 501)), '500자');
+select t.fails('승인: 메모 공백', format($$select approve_proposal(%s, '   ', null, null)$$, (select v from ids where k = 'garen_p')), '승인 메모를 적어');
+select t.fails('승인: 메모 null', format('select approve_proposal(%s, null, null, null)', (select v from ids where k = 'garen_p')), '승인 메모를 적어');
+select t.fails('승인: 메모 501자', format('select approve_proposal(%s, %L, null, null)', (select v from ids where k = 'garen_p'), repeat('a', 501)), '500자');
 select t.ok('메모가 없으면 제안은 그대로 대기', (select status = 'pending' from edit_proposals where id = (select v from ids where k = 'garen_p')));
-select approve_proposal((select v from ids where k = 'garen_p'), '  좋은 공략이에요 ') as garen \gset
+select approve_proposal((select v from ids where k = 'garen_p'), '  좋은 공략이에요 ', null, null) as garen \gset
 insert into ids values ('garen', :garen);
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.ok('제안자는 승인 메모(공백 정리)를 봄',
@@ -60,7 +61,7 @@ set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 insert into edit_proposals (type, target_champion, counter_champion, counter_id, proposer_id, content)
 values ('doc_edit', 'x', 'y', (select v from ids where k = 'quinn'), auth.uid(), :'v1');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select approve_proposal((select id from edit_proposals where type = 'doc_edit'), '반영');
+select approve_proposal((select id from edit_proposals where type = 'doc_edit'), '반영', null, null);
 select revert_doc((select id from doc_revisions where counter_id = (select v from ids where k = 'quinn') and kind = 'create'), ' 원래가 맞아요 ');
 select t.ok('되돌리기: 기록(revert)에 메모(공백 정리)',
   (select r.kind = 'revert' and r.note = '원래가 맞아요'

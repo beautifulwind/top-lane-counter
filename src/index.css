@@ -388,3 +388,12 @@ button.champ-cell:disabled { opacity: .4; cursor: default; }
 .build-compare { display: grid; gap: 12px; }
 .build-compare h3 { margin: 0 0 6px; font-size: 14px; color: var(--muted); }
 @media (min-width: 720px) { .build-compare { grid-template-columns: 1fr 1fr; } }
+
+/* [승인] = 고쳐서 승인 · 재검토 기다리는 중 (012) */
+.approve-editor { margin-top: 12px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); }
+.approve-editor .approve-doc { border: 0; padding: 0; margin: 0 0 12px; }
+.approve-changes { margin: 16px 0; }
+.approve-changes h3 { margin: 0 0 8px; font-size: 15px; }
+.edit-link { display: inline-block; margin: 4px 0 8px; font-size: 13px; }
+.edited-by-operator { margin: 8px 0; }
+.edited-by-operator > summary { cursor: pointer; font-size: 13px; }

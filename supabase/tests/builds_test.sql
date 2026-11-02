@@ -91,11 +91,11 @@ select t.fails('작성자도 직접 삭제 불가', 'delete from builds', 'permi
 
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 select t.ok('남의 대기 빌드는 안 보임', (select count(*) = 0 from builds where id = (select v from ids where k = 'b1')));
-select t.fails('일반 유저는 승인 불가', format($$select approve_build(%s, '좋아요')$$, (select v from ids where k = 'b1')), '운영자만');
+select t.fails('일반 유저는 승인 불가', format($$select approve_build(%s, '좋아요', null)$$, (select v from ids where k = 'b1')), '운영자만');
 select t.fails('일반 유저는 거절 불가', format($$select reject_build(%s, '별로')$$, (select v from ids where k = 'b1')), '운영자만');
 set role anon;
 set request.jwt.claim.sub = '';
-select t.fails('비로그인은 승인 함수 못 부름', format($$select approve_build(%s, 'x')$$, (select v from ids where k = 'b1')), 'permission denied');
+select t.fails('비로그인은 승인 함수 못 부름', format($$select approve_build(%s, 'x', null)$$, (select v from ids where k = 'b1')), 'permission denied');
 select t.ok('비로그인: 공개 빌드(작성자 없는 2개)만 보임', (select count(*) = 2 from builds));
 
 -- ===== 4. 승인 (메모 필수, 기록, 알림) =====
@@ -103,16 +103,16 @@ set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select t.fails('운영자도 직접 수정 불가', 'update builds set status = ''approved''', 'permission denied');
 select t.fails('운영자도 직접 삭제 불가', 'delete from builds', 'permission denied');
-select t.fails('승인: 메모 공백', format($$select approve_build(%s, '  ')$$, (select v from ids where k = 'b1')), '승인 메모를 적어');
-select t.fails('승인: 메모 null', format('select approve_build(%s, null)', (select v from ids where k = 'b1')), '승인 메모를 적어');
-select t.fails('승인: 없는 빌드', $$select approve_build(999999, '좋아요')$$, '빌드를 찾지 못했어요');
+select t.fails('승인: 메모 공백', format($$select approve_build(%s, '  ', null)$$, (select v from ids where k = 'b1')), '승인 메모를 적어');
+select t.fails('승인: 메모 null', format('select approve_build(%s, null, null)', (select v from ids where k = 'b1')), '승인 메모를 적어');
+select t.fails('승인: 없는 빌드', $$select approve_build(999999, '좋아요', null)$$, '빌드를 찾지 못했어요');
 select t.fails('대기가 아닌 빌드는 숨기기만 (대기 빌드 숨기기 불가)', format($$select hide_build(%s, '이상함')$$, (select v from ids where k = 'b1')), '공개 중인 빌드만');
-select approve_build((select v from ids where k = 'b1'), '  깔끔한 빌드예요 ');
+select approve_build((select v from ids where k = 'b1'), '  깔끔한 빌드예요 ', null);
 select t.ok('승인: 공개 + 메모(공백 정리) + 처리자',
   (select status = 'approved' and approve_note = '깔끔한 빌드예요' and reviewed_by = auth.uid() and reviewed_at is not null
    from builds where id = (select v from ids where k = 'b1')));
 select t.ok('승인 기록', (select count(*) = 1 from build_status_log where build_id = (select v from ids where k = 'b1') and action = 'approve' and reason = '깔끔한 빌드예요' and actor = auth.uid()));
-select t.fails('두 번 승인 불가', format($$select approve_build(%s, '또')$$, (select v from ids where k = 'b1')), '이미 처리된');
+select t.fails('두 번 승인 불가', format($$select approve_build(%s, '또', null)$$, (select v from ids where k = 'b1')), '이미 처리된');
 select t.fails('승인한 빌드 거절 불가', format($$select reject_build(%s, '취소')$$, (select v from ids where k = 'b1')), '이미 처리된');
 select t.ok('운영자는 남의 알림을 못 봄', (select count(*) = 0 from notifications));
 
@@ -181,7 +181,7 @@ select restore_build((select v from ids where k = 'b1'), '패치 확인했어요
 select t.ok('다시 공개: 공개 + 숨김 사유 지움 + 따봉 유지',
   (select status = 'approved' and hide_reason is null and hidden_at is null and up_count = 2
    from builds where id = (select v from ids where k = 'b1')));
-select t.fails('똑같은 빌드가 공개 중이면 승인 불가', format($$select approve_build(%s, '좋아요')$$, (select v from ids where k = 'b2')), '똑같은 빌드가 이미 공개');
+select t.fails('똑같은 빌드가 공개 중이면 승인 불가', format($$select approve_build(%s, '좋아요', null)$$, (select v from ids where k = 'b2')), '똑같은 빌드가 이미 공개');
 
 -- ===== 7. 거절 =====
 select t.fails('거절: 사유 공백', format($$select reject_build(%s, '')$$, (select v from ids where k = 'b2')), '거절 사유를 적어');
@@ -200,7 +200,7 @@ select pg_temp.add(core => array['3071','3047','3053']);
 insert into ids select 'b3', max(id) from builds where author_id = auth.uid();
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select hide_counter(:quinn, '정리');
-select t.fails('숨긴 카운터의 빌드는 승인 불가', format($$select approve_build(%s, '좋아요')$$, (select v from ids where k = 'b3')), '숨긴 카운터의 빌드');
+select t.fails('숨긴 카운터의 빌드는 승인 불가', format($$select approve_build(%s, '좋아요', null)$$, (select v from ids where k = 'b3')), '숨긴 카운터의 빌드');
 select t.fails('숨긴 카운터의 공개 빌드에는 투표 불가', format('select vote_build(%s, (-1)::smallint)', (select v from ids where k = 'b1')), '공개된 빌드에만');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 select t.fails('숨긴 카운터에는 빌드 등록 불가', 'select pg_temp.add()', '매치업을 찾지 못했어요');
@@ -214,7 +214,7 @@ set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
 values ('new_counter', 'Darius', 'Garen', auth.uid(), :'doc', t.build()), ('new_counter', 'Darius', 'Teemo', auth.uid(), :'doc', t.build());
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select approve_proposal((select id from edit_proposals where counter_champion = 'Garen'), '반영했어요');
+select approve_proposal((select id from edit_proposals where counter_champion = 'Garen'), '반영했어요', null, null);
 select reject_proposal((select id from edit_proposals where counter_champion = 'Teemo'), '근거가 부족해요');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 select t.ok('제안 승인 알림 (메모)', (select count(*) = 1 from notifications where kind = 'proposal_approved' and message = '반영했어요' and build_id is null));
@@ -222,7 +222,7 @@ select t.ok('제안 거절 알림 (사유)', (select count(*) = 1 from notificat
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 insert into edit_proposals (type, counter_id, proposer_id, content)
 values ('doc_edit', :quinn, auth.uid(), :'doc');
-select approve_proposal((select id from edit_proposals where proposer_id = auth.uid()), '내 수정');
+select approve_proposal((select id from edit_proposals where proposer_id = auth.uid()), '내 수정', null, null);
 reset role;
 select t.ok('운영자가 자기 제안을 승인하면 알림 없음', (select count(*) = 0 from notifications where user_id = '00000000-0000-0000-0000-00000000000a'));
 select t.ok('알림 종류 검사', (select count(*) = 0 from notifications where kind not in

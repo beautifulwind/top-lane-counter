@@ -7,7 +7,7 @@ import { proposalBuildBlock, toProposalBuild } from '../lib/buildContent';
 const PERSON = 'nickname, level, main_title';
 const PROPOSAL_COLUMNS =
   'id, type, target_champion, counter_champion, counter_id, content, status, reject_reason, reviewed_at, created_at, base_revision_id, ' +
-  'revoke_reason, revoked_at, approve_note, revision_note, revision_requested_at, resubmitted_at, build, ' +
+  'revoke_reason, revoked_at, approve_note, revision_note, revision_requested_at, resubmitted_at, build, approved_content, approved_build, ' +
   `proposer:profiles!edit_proposals_proposer_id_fkey(${PERSON})`;
 const DOC_COLUMNS = 'counter_id, summary, level_notes, lane_cautions, updated_at, revision_id';
 
@@ -104,12 +104,19 @@ export async function markNotificationsRead(ids) {
   window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED));
 }
 
-/** 재검토 요청 받은 내 제안을 글 + 빌드 고쳐서 다시 제출 → 승인 대기. 본인만 (DB 함수가 확인) */
+/**
+ * 재검토 요청 받은 내 제안을 고쳐서 다시 제출 → 승인 대기. 본인만 (DB 함수가 확인)
+ * 새 카운터 제안은 글 + 빌드(필수), 문서 수정 제안은 글만 (build = null)
+ */
 export const resubmitProposal = (id, content, build, patch) =>
-  rpc('resubmit_proposal', { p_id: id, p_content: cleanDoc(content), p_build: toProposalBuild(build, patch) }, '다시 제출하지 못했어요.');
+  rpc('resubmit_proposal', { p_id: id, p_content: cleanDoc(content), p_build: build ? toProposalBuild(build, patch) : null }, '다시 제출하지 못했어요.');
 
-/** 재검토 후 다시 낸 제안인가 (새 카운터 제안인데 이미 숨긴 카운터가 정해져 있음) */
-export const isResubmission = (p) => p.type === 'new_counter' && p.counter_id != null && p.resubmitted_at != null;
+/** 숨긴 카운터 재검토 흐름의 제안인가 (그 카운터를 만든 새 카운터 제안) — 요청 취소는 [다시 공개]로 */
+export const isHiddenCounterFlow = (p) => p.type === 'new_counter' && p.counter_id != null;
+/** 숨긴 카운터 재검토 후 다시 낸 제안인가 */
+export const isResubmission = (p) => isHiddenCounterFlow(p) && p.resubmitted_at != null;
+/** 운영자가 고쳐서 승인했나 */
+export const approvedWithEdits = (p) => p.status === 'approved' && (p.approved_content != null || p.approved_build != null);
 
 // ---------------- 운영자 ----------------
 
@@ -221,9 +228,32 @@ async function rpc(name, args, fallback) {
   return data;
 }
 
-/** 승인: 메모 필수 (제안자에게 보인다) */
-export const approveProposal = (id, note) => rpc('approve_proposal', { p_id: id, p_note: note }, '승인하지 못했어요.');
+/**
+ * 승인: 메모 필수 (제안자에게 보인다).
+ * edits = { content, build, patch } — 운영자가 고친 것만 넣는다 (안 고친 칸은 빼면 제안 그대로 공개).
+ * build는 등록 화면 값 모양, patch는 지금 Data Dragon 버전 (고친 빌드는 지금 패치로 기록)
+ */
+export const approveProposal = (id, note, { content = null, build = null, patch = null } = {}) =>
+  rpc('approve_proposal', {
+    p_id: id, p_note: note, p_content: content ? cleanDoc(content) : null, p_build: build ? toProposalBuild(build, patch) : null,
+  }, '승인하지 못했어요.');
+/** 거절: 승인 대기·재검토 기다리는 중인 제안 */
 export const rejectProposal = (id, reason) => rpc('reject_proposal', { p_id: id, p_reason: reason }, '거절하지 못했어요.');
+/** 승인 대기 제안에 재검토 요청 (메모 필수, 제안자에게 알림) */
+export const requestProposalRevision = (id, note) =>
+  rpc('request_proposal_revision', { p_id: id, p_note: note }, '재검토를 요청하지 못했어요.');
+/** 재검토 요청 취소 → 원래 제안 그대로 승인 대기 (메모 필수, 제안자에게 알림) */
+export const cancelProposalRevision = (id, note) =>
+  rpc('cancel_proposal_revision', { p_id: id, p_note: note }, '요청을 취소하지 못했어요.');
+
+/** 재검토를 요청하고 제안자가 고쳐 내기를 기다리는 제안 (숨긴 카운터 흐름은 "숨긴 카운터"에서 처리하므로 뺀다) */
+export async function getRevisionProposals() {
+  const rows = await run(
+    db().from('edit_proposals').select(PROPOSAL_COLUMNS).eq('status', 'revision_requested').order('revision_requested_at', { ascending: true }),
+    '재검토 기다리는 제안을 불러오지 못했어요.',
+  );
+  return rows.filter((p) => !isHiddenCounterFlow(p));
+}
 /** ids = 그 챔피언의 공개된 카운터 id 전부, 새 순서대로 */
 export const reorderCounters = (target, ids) => rpc('reorder_counters', { p_target: target, p_ids: ids }, '순서를 저장하지 못했어요.');
 /** 되돌리기: 메모 필수 (수정 기록에 남는다) */

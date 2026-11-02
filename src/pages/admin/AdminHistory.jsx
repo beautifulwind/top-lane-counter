@@ -43,8 +43,15 @@ function History() {
   const total = data.revisions.length;
   const number = Object.fromEntries(data.revisions.map((r, i) => [r.id, total - i])); // 오래된 것이 1번
 
-  const kindText = (r) =>
-    r.kind === 'create' ? '처음 작성' : r.kind === 'revert' ? `되돌림 (${number[r.reverted_from] ?? '?'}번 버전으로)` : '수정 제안 승인';
+  // 운영자가 고쳐서 승인한 제안: 같은 제안의 앞 줄 = 제안 원본(공개 안 됨), admin_edit 줄 = 운영자 수정
+  const editedProposals = new Set(data.revisions.filter((r) => r.kind === 'admin_edit').map((r) => r.proposal_id));
+  const original = (r) => r.kind !== 'admin_edit' && r.proposal_id != null && editedProposals.has(r.proposal_id);
+  const kindText = (r) => {
+    if (r.kind === 'admin_edit') return '운영자 수정 (제안을 고쳐서 승인)';
+    if (r.kind === 'revert') return `되돌림 (${number[r.reverted_from] ?? '?'}번 버전으로)`;
+    const base = r.kind === 'create' ? '처음 작성' : '수정 제안';
+    return original(r) ? `${base} 원본 (공개 안 됨)` : r.kind === 'create' ? base : '수정 제안 승인';
+  };
 
   // 메모 입력이 확인 단계: 실패하면 NoteForm이 이유를 보여 준다
   const revert = async (r, note) => {
@@ -79,7 +86,7 @@ function History() {
                 <span>작성 {who(r.editor)}</span>
                 <span>승인 {who(r.approver)}</span>
               </div>
-              {r.note && <p className="approve-note">되돌리기 메모: {r.note}</p>}
+              {r.note && <p className="approve-note">{r.kind === 'admin_edit' ? '승인 메모' : '되돌리기 메모'}: {r.note}</p>}
               {!isCurrent && (
                 <div className="actions">
                   <button type="button" className="btn btn-small" onClick={() => setOpen(open === r.id ? null : r.id)}>

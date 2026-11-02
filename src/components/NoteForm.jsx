@@ -5,8 +5,11 @@ import { useState } from 'react';
  * 버튼을 누르면 그 자리에 열리고, 메모(앞뒤 공백 제외)를 써야 확정 버튼이 눌린다.
  * onSubmit(note): 실패하면 Error를 던진다 → 폼 아래에 이유를 보여 주고 그대로 둔다.
  * onCancel: [취소] 또는 Esc
+ * autoFocus: 열리면 바로 메모 칸에 (편집 칸 아래에 붙을 때는 false), children: 메모 칸 아래에 덧붙일 것 (예: [내용 고치기] 링크)
  */
-export default function NoteForm({ id, label, confirmLabel, busyLabel = '처리하는 중…', hint, onSubmit, onCancel }) {
+export default function NoteForm({
+  id, label, confirmLabel, busyLabel = '처리하는 중…', hint, onSubmit, onCancel, autoFocus = true, children,
+}) {
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -33,8 +36,9 @@ export default function NoteForm({ id, label, confirmLabel, busyLabel = '처리�
     >
       <label htmlFor={id}>{label}</label>
       {/* eslint-disable-next-line jsx-a11y/no-autofocus -- 버튼을 눌러 연 입력창이라 바로 쓰게 한다 */}
-      <textarea id={id} rows={2} value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} autoFocus />
+      <textarea id={id} rows={2} value={note} onChange={(e) => setNote(e.target.value)} maxLength={500} autoFocus={autoFocus} />
       {hint && <small className="hint">{hint}</small>}
+      {children}
       <div className="note-form-actions">
         <button type="submit" className="btn btn-small" disabled={!ready || busy}>
           {busy ? busyLabel : confirmLabel}

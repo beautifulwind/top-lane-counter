@@ -1,7 +1,10 @@
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../../api/ddragon';
-import { approveProposal, getProposalForReview, rejectProposal } from '../../api/proposals';
+import {
+  approveProposal, approvedWithEdits, cancelProposalRevision, getProposalForReview, isHiddenCounterFlow, rejectProposal,
+  requestProposalRevision,
+} from '../../api/proposals';
 import { useAsync } from '../../lib/useAsync';
 import { STATUS_LABEL, TYPE_LABEL, fmtDateTime } from '../../lib/format';
 import { ErrorBox, Loading } from '../../components/Status';
@@ -10,9 +13,10 @@ import DiffView from '../../components/DiffView';
 import UserName from '../../components/UserName';
 import NoteForm from '../../components/NoteForm';
 import BuildCard from '../../components/BuildCard';
+import ApproveEditor from '../../components/ApproveEditor';
 import { proposalBuildBlock, sameBuild } from '../../lib/buildContent';
 
-/** 제안 하나 검토: 기존 ↔ 제안 비교, 승인 / 거절(사유 필수) */
+/** 제안 하나 검토: 기존 ↔ 제안 비교, [승인](고쳐서 승인 가능) / [재검토 요청] / [거절] — 모두 메모 필수. ?approve=1이면 [승인]을 연 채로 */
 export default function AdminProposal() {
   return (
     <RequireOperator>
@@ -24,13 +28,15 @@ export default function AdminProposal() {
 function Review() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [search] = useSearchParams();
   const { data, error, loading, retry } = useAsync(async () => {
     const [champs, review, items, runes, spells, latest] = await Promise.all([
       getChampionMap(), getProposalForReview(Number(id)), getItems(), getRunes(), getSummonerSpells(), getLatestVersion(),
     ]);
     return { champs, review, game: { items, runes, spells, latest } };
   }, [id]);
-  const [open, setOpen] = useState(null); // 'approve' | 'reject' | null — 메모 입력창
+  // 'approve'(고쳐서 승인 편집기) | 'revision' | 'reject' | 'cancel' | null — 목록 줄의 [내용 고치기]로 오면 [승인]이 열려 있다
+  const [open, setOpen] = useState(search.get('approve') ? 'approve' : null);
 
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
@@ -45,12 +51,14 @@ function Review() {
   const title = `${name(p.counter_champion)}(으)로 ${name(p.target_champion)} 잡는 법`;
   const label = resubmitted ? '재검토 후 다시 낸 제안' : TYPE_LABEL[p.type];
 
+  const hiddenFlow = isHiddenCounterFlow(p);
+  const cannotApprove = hidden || (p.type === 'new_counter' && exists) || noBuild;
+  const done = (what) => navigate('/admin', { state: { done: `${what}: [${label}] ${title}` } });
   // 메모 입력이 확인 단계: 실패하면 NoteForm이 이유를 보여 주고 그대로 둔다
-  const act = async (kind, note) => {
-    if (kind === 'approve') await approveProposal(p.id, note);
-    else await rejectProposal(p.id, note);
-    const what = kind === 'approve' ? (resubmitted ? '승인하고 다시 공개' : '승인') : '거절';
-    navigate('/admin', { state: { done: `${what}했어요: [${label}] ${title}` } });
+  const approve = async ({ note, content, build }) => {
+    await approveProposal(p.id, note, { content, build, patch: data.game.latest });
+    const how = content || build ? '고쳐서 ' : '';
+    done(resubmitted ? `${how}승인하고 다시 공개했어요` : `${how}승인했어요`);
   };
   const toggle = (kind) => setOpen(open === kind ? null : kind);
 
@@ -132,31 +140,45 @@ function Review() {
         </section>
       )}
 
-      {p.status === 'pending' ? (
+      {approvedWithEdits(p) && <EditedByOperator p={p} card={card} />}
+
+      {p.status === 'pending' && (
         <section className="section">
           <div className="row-actions">
-            <button
-              type="button"
-              className="btn"
-              onClick={() => toggle('approve')}
-              disabled={hidden || (p.type === 'new_counter' && exists) || noBuild}
-              aria-expanded={open === 'approve'}
-            >
+            <button type="button" className="btn" onClick={() => toggle('approve')} disabled={cannotApprove} aria-expanded={open === 'approve'}>
               승인
+            </button>
+            <button type="button" className="btn" onClick={() => toggle('revision')} aria-expanded={open === 'revision'}>
+              재검토 요청
             </button>
             <button type="button" className="btn" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>
               거절
             </button>
           </div>
-          {open === 'approve' && (
-            <NoteForm
-              id="approve-note"
-              label="승인 메모 (필수, 제안자에게 보여요)"
+          {open === 'approve' && !cannotApprove && (
+            <ApproveEditor
+              doc={p.content}
+              build={isNew ? p.build : null}
+              game={data.game}
+              author={p.proposer}
+              noteLabel="승인 메모 (필수, 제안자에게 보여요)"
               hint={resubmitted ? '승인하면 고친 내용으로 다시 공개돼요 (목록 맨 뒤).' : undefined}
-              confirmLabel="승인 확정"
-              busyLabel="승인 중…"
               onCancel={() => setOpen(null)}
-              onSubmit={(note) => act('approve', note)}
+              onSubmit={approve}
+            />
+          )}
+          {open === 'revision' && (
+            <NoteForm
+              id="revision-note"
+              label="재검토 요청 메모 (필수, 제안자에게 보여요)"
+              hint="제안자가 [내 활동]에서 고쳐서 다시 내면 승인 대기로 돌아와요."
+              confirmLabel="재검토 요청 확정"
+              busyLabel="보내는 중…"
+              onCancel={() => setOpen(null)}
+              onSubmit={async (note) => {
+                await requestProposalRevision(p.id, note);
+                done('재검토를 요청했어요');
+              }}
             />
           )}
           {open === 'reject' && (
@@ -166,11 +188,62 @@ function Review() {
               confirmLabel="거절 확정"
               busyLabel="거절 중…"
               onCancel={() => setOpen(null)}
-              onSubmit={(note) => act('reject', note)}
+              onSubmit={async (note) => {
+                await rejectProposal(p.id, note);
+                done('거절했어요');
+              }}
             />
           )}
         </section>
-      ) : (
+      )}
+
+      {p.status === 'revision_requested' && (
+        <section className="section">
+          <div className="revision-note" role="note">
+            <p><strong>재검토 요청 중</strong> — 제안자가 고쳐서 다시 내기를 기다리고 있어요.{p.revision_requested_at && <small> ({fmtDateTime(p.revision_requested_at)})</small>}</p>
+            <p>보낸 메모: {p.revision_note}</p>
+          </div>
+          {hiddenFlow ? (
+            <p className="hint">숨긴 카운터의 재검토 요청이에요. 취소하려면 운영자 페이지 "숨긴 카운터"의 [다시 공개]를 써 주세요.</p>
+          ) : (
+            <>
+              <div className="row-actions">
+                <button type="button" className="btn" onClick={() => toggle('cancel')} aria-expanded={open === 'cancel'}>요청 취소</button>
+                <button type="button" className="btn" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>거절</button>
+              </div>
+              {open === 'cancel' && (
+                <NoteForm
+                  id="cancel-note"
+                  label="요청 취소 메모 (필수, 제안자에게 보여요)"
+                  hint="원래 제안 그대로 승인 대기로 돌아가요."
+                  confirmLabel="요청 취소 확정"
+                  busyLabel="취소하는 중…"
+                  onCancel={() => setOpen(null)}
+                  onSubmit={async (note) => {
+                    await cancelProposalRevision(p.id, note);
+                    done('재검토 요청을 취소했어요');
+                  }}
+                />
+              )}
+              {open === 'reject' && (
+                <NoteForm
+                  id="reject-note"
+                  label="거절 사유 (필수, 제안자에게 보여요)"
+                  confirmLabel="거절 확정"
+                  busyLabel="거절 중…"
+                  onCancel={() => setOpen(null)}
+                  onSubmit={async (note) => {
+                    await rejectProposal(p.id, note);
+                    done('거절했어요');
+                  }}
+                />
+              )}
+            </>
+          )}
+        </section>
+      )}
+
+      {!['pending', 'revision_requested'].includes(p.status) && (
         <>
           {p.status === 'approved' && p.approve_note && <p className="approve-note">승인 메모: {p.approve_note}</p>}
           {p.reject_reason && <p className="reject-reason">거절 사유: {p.reject_reason}</p>}
@@ -178,5 +251,27 @@ function Review() {
         </>
       )}
     </article>
+  );
+}
+
+/** 운영자가 고쳐서 승인한 제안: 원래 제안 → 고친 내용 (제안자 /me와 같은 비교) */
+export function EditedByOperator({ p, card }) {
+  return (
+    <section className="section edited-by-operator">
+      <h2 className="section-title">운영자가 고쳐서 승인했어요 (원래 제안 → 고친 내용)</h2>
+      {p.approved_content && <DiffView before={p.content} after={p.approved_content} />}
+      {p.approved_build && (
+        <div className="build-compare">
+          <div>
+            <h3>원래 제안한 빌드</h3>
+            {card(p.build)}
+          </div>
+          <div>
+            <h3>고친 빌드</h3>
+            {card(p.approved_build)}
+          </div>
+        </div>
+      )}
+    </section>
   );
 }

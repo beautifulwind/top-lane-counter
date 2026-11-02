@@ -315,7 +315,7 @@ test('/admin 빌드 승인 대기: 걸리는 점이 없으면 줄에서 메모 �
   TABLES.builds.find((b) => b.id === 104).status = 'approved';
   fireEvent.click(confirm);
   expect(await screen.findByText('빌드를 승인했어요: 퀸(으)로 다리우스 잡는 법 (대기중)')).toBeDefined();
-  expect(rpcCalls('approve_build')).toEqual([{ p_id: 104, p_note: '좋아요' }]);
+  expect(rpcCalls('approve_build')).toEqual([{ p_id: 104, p_note: '좋아요', p_build: null }]);
 });
 
 test('/admin 빌드 승인 대기: 구버전 패치·게임 데이터에 없는 값·숨긴 카운터는 [자세히]에서만 승인', async () => {
@@ -353,18 +353,18 @@ test('/admin/builds/:id: 구버전이면 경고를 보고 승인할 수 있다',
   click('승인 확정');
   await vi.waitFor(() => expect(where()).toBe('/admin'));
   expect(await screen.findByText('빌드를 승인했어요: 퀸(으)로 다리우스 잡는 법 (대기중)')).toBeDefined();
-  expect(rpcCalls('approve_build')).toEqual([{ p_id: 104, p_note: '패치 확인함' }]);
+  expect(rpcCalls('approve_build')).toEqual([{ p_id: 104, p_note: '패치 확인함', p_build: null }]);
 });
 
-test('/admin/builds/:id: 똑같은 빌드가 공개돼 있으면 승인 불가, 처리 기록이 보인다', async () => {
+test('/admin/builds/:id: 똑같은 빌드가 공개돼 있으면 그대로는 승인 불가(고쳐서 승인은 가능), 처리 기록이 보인다', async () => {
   const op = { nickname: '영자(운)', level: 0, main_title: null };
   Object.assign(TABLES.builds.find((x) => x.id === 104), {
     logs: [{ id: 1, action: 'reject', reason: '예전 거절', created_at: '2026-11-02T00:00:00Z', actor: op }],
   });
   asOperator();
   start('/admin/builds/104');
-  expect(await screen.findByText(/똑같은 빌드가 이미 공개돼 있어요. 승인할 수 없어요/)).toBeDefined();
-  expect(screen.getByRole('button', { name: '승인' })).toBeDisabled();
+  expect(await screen.findByText(/똑같은 빌드가 이미 공개돼 있어요. 그대로는 승인할 수 없어요 \(고쳐서 승인하거나 거절해 주세요\)/)).toBeDefined();
+  expect(screen.getByRole('button', { name: '승인' })).not.toBeDisabled();
   expect(document.querySelector('.log-list li').textContent).toMatch(/거절 · Lv\.0 영자\(운\) · 예전 거절$/);
 });
 

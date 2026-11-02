@@ -42,10 +42,10 @@ insert into ids select 'quinn_p', id from edit_proposals where type = 'doc_edit'
 
 -- ===== 2. 승인: 9·11 없는 문서도 표 제약을 통과 =====
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select approve_proposal((select v from ids where k = 'garen_p'), '승인') as garen \gset
+select approve_proposal((select v from ids where k = 'garen_p'), '승인', null, null) as garen \gset
 select t.ok('9·11 없는 새 카운터 문서가 생김',
   (select level_notes = '{"1":"a","2":"b","3":"c","6":"d"}'::jsonb from matchup_docs where counter_id = :garen));
-select approve_proposal((select v from ids where k = 'quinn_p'), '9·11 정리');
+select approve_proposal((select v from ids where k = 'quinn_p'), '9·11 정리', null, null);
 select t.ok('수정 제안으로 퀸 문서의 9·11을 뺄 수 있음',
   (select not (level_notes ? '9') and not (level_notes ? '11') and level_notes ?& array['1', '2', '3', '6'] from matchup_docs where counter_id = :quinn));
 select t.ok('뺀 9·11 내용은 수정 기록에 남음',

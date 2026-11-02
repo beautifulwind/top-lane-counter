@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../../api/ddragon';
-import { approveBuild, getBuildForReview, hideBuild, rejectBuild, restoreBuild } from '../../api/builds';
+import {
+  approveBuild, cancelBuildRevision, getBuildForReview, hideBuild, rejectBuild, requestBuildRevision, restoreBuild,
+} from '../../api/builds';
 import { buildReviewFlags, patchMinor } from '../../lib/buildContent';
 import { BUILD_STATUS_LABEL, fmtDateTime } from '../../lib/format';
 import { useAsync } from '../../lib/useAsync';
@@ -10,9 +12,13 @@ import RequireOperator from '../../components/RequireOperator';
 import UserName from '../../components/UserName';
 import NoteForm from '../../components/NoteForm';
 import BuildCard, { BuildAuthor } from '../../components/BuildCard';
+import ApproveEditor from '../../components/ApproveEditor';
 import NotFound from '../NotFound';
 
-/** 운영자: 빌드 하나 자세히 (/admin/builds/:id) — 확인할 점, 처리 기록, 승인·거절·숨기기·다시 공개 */
+/**
+ * 운영자: 빌드 하나 자세히 (/admin/builds/:id) — 확인할 점, 처리 기록,
+ * [승인](고쳐서 승인 가능)·[재검토 요청]·[거절]·[요청 취소]·숨기기·다시 공개. ?approve=1이면 [승인]을 연 채로
+ */
 export default function AdminBuild() {
   return (
     <RequireOperator>
@@ -21,12 +27,16 @@ export default function AdminBuild() {
   );
 }
 
-const LOG_LABEL = { approve: '승인', reject: '거절', hide: '숨김', restore: '다시 공개' };
+const LOG_LABEL = {
+  approve: '승인', reject: '거절', hide: '숨김', restore: '다시 공개',
+  revision_request: '재검토 요청', revision_cancel: '재검토 요청 취소', resubmit: '다시 제출',
+};
 
 function Review() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [open, setOpen] = useState(null);
+  const [search] = useSearchParams();
+  const [open, setOpen] = useState(search.get('approve') ? 'approve' : null);
   const { data, error, loading, retry } = useAsync(async () => {
     const [champs, review, items, runes, spells, latest] = await Promise.all([
       getChampionMap(), getBuildForReview(Number(id)), getItems(), getRunes(), getSummonerSpells(), getLatestVersion(),
@@ -48,12 +58,13 @@ function Review() {
 
   const checks = [
     flags.hiddenCounter && { bad: true, text: '숨긴 카운터의 빌드예요. 승인할 수 없어요 (거절해 주세요).' },
-    flags.duplicate && { bad: true, text: '똑같은 빌드가 이미 공개돼 있어요. 승인할 수 없어요 (거절해 주세요).' },
+    flags.duplicate && { bad: true, text: '똑같은 빌드가 이미 공개돼 있어요. 그대로는 승인할 수 없어요 (고쳐서 승인하거나 거절해 주세요).' },
     flags.unknown && { bad: false, text: `${flags.unknown} (아이콘이 "?"로 보여요)` },
     flags.layout && { bad: false, text: flags.layout },
     flags.outdated && { bad: false, text: `지금 패치(${patchMinor(data.game.latest)})와 다른 패치(${patchMinor(b.patch)})로 등록됐어요.` },
   ].filter(Boolean);
-  const cannotApprove = flags.hiddenCounter || flags.duplicate;
+  // 똑같은 빌드가 공개 중이어도 고쳐서 승인할 수는 있다 (그대로 승인하면 DB가 거부)
+  const cannotApprove = flags.hiddenCounter;
   const lastOne = b.status === 'approved' && !approved.some((x) => x.id !== b.id);
 
   return (
@@ -86,10 +97,25 @@ function Review() {
             <button type="button" className="btn btn-small" onClick={() => toggle('approve')} disabled={cannotApprove} aria-expanded={open === 'approve'}>
               승인
             </button>
+            <button type="button" className="btn btn-small" onClick={() => toggle('revision')} aria-expanded={open === 'revision'} disabled={flags.hiddenCounter}>
+              재검토 요청
+            </button>
             <button type="button" className="btn btn-small" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>
               거절
             </button>
           </div>
+        )}
+        {b.status === 'revision_requested' && (
+          <>
+            <div className="revision-note" role="note">
+              <p><strong>재검토 요청 중</strong> — 작성자가 고쳐서 다시 내기를 기다리고 있어요.{b.revision_requested_at && <small> ({fmtDateTime(b.revision_requested_at)})</small>}</p>
+              <p>보낸 메모: {b.revision_note}</p>
+            </div>
+            <div className="row-actions">
+              <button type="button" className="btn btn-small" onClick={() => toggle('cancel')} aria-expanded={open === 'cancel'}>요청 취소</button>
+              <button type="button" className="btn btn-small" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>거절</button>
+            </div>
+          </>
         )}
         {b.status === 'approved' && (
           <div className="row-actions">
@@ -109,18 +135,61 @@ function Review() {
         )}
         {b.status === 'rejected' && <p className="reject-reason">거절 사유: {b.reject_reason}</p>}
         {b.status === 'approved' && b.approve_note && <p className="approve-note">승인 메모: {b.approve_note}</p>}
+        {b.original_build && ['approved', 'hidden'].includes(b.status) && (
+          <div className="edited-by-operator">
+            <p className="hint">운영자가 고쳐서 승인한 빌드예요 (원래 빌드 → 고친 빌드).</p>
+            <div className="build-compare">
+              <div>
+                <h3>원래 빌드</h3>
+                <BuildCard build={{ ...b.original_build, author: b.author }} {...data.game} />
+              </div>
+              <div>
+                <h3>고친 빌드</h3>
+                <BuildCard build={b} {...data.game} />
+              </div>
+            </div>
+          </div>
+        )}
 
-        {open === 'approve' && (
-          <NoteForm
-            id="approve-build"
-            label="승인 메모 (필수, 작성자에게 보여요)"
+        {open === 'approve' && b.status === 'pending' && !cannotApprove && (
+          <ApproveEditor
+            build={b}
+            game={data.game}
+            author={b.author}
+            noteLabel="승인 메모 (필수, 작성자에게 보여요)"
             hint={checks.length > 0 ? '위의 확인할 점을 보고 승인해 주세요.' : undefined}
-            confirmLabel="승인 확정"
-            busyLabel="승인 중…"
+            onCancel={() => setOpen(null)}
+            onSubmit={async ({ note, build }) => {
+              await approveBuild(b.id, note, build, data.game.latest);
+              done(`빌드를 ${build ? '고쳐서 ' : ''}승인했어요: ${title} (${who})`);
+            }}
+          />
+        )}
+        {open === 'revision' && (
+          <NoteForm
+            id="revision-build"
+            label="재검토 요청 메모 (필수, 작성자에게 보여요)"
+            hint="작성자가 [내 활동]에서 고쳐서 다시 내면 승인 대기로 돌아와요."
+            confirmLabel="재검토 요청 확정"
+            busyLabel="보내는 중…"
             onCancel={() => setOpen(null)}
             onSubmit={async (note) => {
-              await approveBuild(b.id, note);
-              done(`빌드를 승인했어요: ${title} (${who})`);
+              await requestBuildRevision(b.id, note);
+              done(`빌드 재검토를 요청했어요: ${title} (${who})`);
+            }}
+          />
+        )}
+        {open === 'cancel' && (
+          <NoteForm
+            id="cancel-build"
+            label="요청 취소 메모 (필수, 작성자에게 보여요)"
+            hint="원래 빌드 그대로 승인 대기로 돌아가요."
+            confirmLabel="요청 취소 확정"
+            busyLabel="취소하는 중…"
+            onCancel={() => setOpen(null)}
+            onSubmit={async (note) => {
+              await cancelBuildRevision(b.id, note);
+              done(`빌드 재검토 요청을 취소했어요: ${title} (${who})`);
             }}
           />
         )}

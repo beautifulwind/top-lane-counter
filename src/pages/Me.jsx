@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { PROVIDERS, getIdentities, linkProvider } from '../api/auth';
 import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../api/ddragon';
-import { getMyProposals, getMyUnreadNotifications, markNotificationsRead } from '../api/proposals';
+import { approvedWithEdits, getMyProposals, getMyUnreadNotifications, markNotificationsRead } from '../api/proposals';
 import { getMyBuilds } from '../api/builds';
 import { BUILD_STATUS_LABEL, STATUS_LABEL, TYPE_LABEL, fmtDateTime } from '../lib/format';
 import { useAuth } from '../lib/auth';
@@ -10,6 +10,7 @@ import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
 import UserName from '../components/UserName';
 import BuildCard from '../components/BuildCard';
+import DiffView from '../components/DiffView';
 
 /**
  * 내 활동 (/me): 내 제안·내 빌드 목록과 상태, 로그인 연결.
@@ -65,6 +66,34 @@ function MyActivity({ userId }) {
   );
 }
 
+/** 이번에 처음 보는 "재검토 요청 취소" 알림 (메모) — 해야 할 일이 없어지므로 알림으로만 알려 준다 */
+function CancelledNotice({ unread, match }) {
+  const n = unread.find((x) => x.kind === 'revision_cancelled' && match(x));
+  return n ? <p className="notice">운영자가 재검토 요청을 취소했어요. 보낸 내용 그대로 승인 대기 중이에요. 메모: {n.message}</p> : null;
+}
+
+/** 운영자가 고쳐서 승인했을 때: 원래 제안 → 고친 내용 비교 */
+function EditedCompare({ before, after, beforeBuild, afterBuild, author, game }) {
+  return (
+    <details className="edited-by-operator">
+      <summary>운영자가 고쳐서 승인했어요 — 원래 제안 → 고친 내용 보기</summary>
+      {after && <DiffView before={before} after={after} />}
+      {afterBuild && (
+        <div className="build-compare">
+          <div>
+            <h3>원래 빌드</h3>
+            <BuildCard build={{ ...beforeBuild, author }} {...game} />
+          </div>
+          <div>
+            <h3>고친 빌드</h3>
+            <BuildCard build={{ ...afterBuild, author }} {...game} />
+          </div>
+        </div>
+      )}
+    </details>
+  );
+}
+
 function MyProposals({ data }) {
   const name = (id) => data.champs[id]?.name ?? id;
   const isNew = (p) => data.unread.some((n) => n.proposal_id === p.id);
@@ -91,6 +120,13 @@ function MyProposals({ data }) {
                   {p.reviewed_at && <span>처리 {fmtDateTime(p.reviewed_at)}</span>}
                 </div>
                 {p.status === 'approved' && p.approve_note && <p className="approve-note">승인 메모: {p.approve_note}</p>}
+                {approvedWithEdits(p) && (
+                  <EditedCompare
+                    before={p.content} after={p.approved_content} beforeBuild={p.build} afterBuild={p.approved_build}
+                    author={p.proposer} game={data.game}
+                  />
+                )}
+                <CancelledNotice unread={data.unread} match={(n) => n.proposal_id === p.id} />
                 {p.status === 'rejected' && <p className="reject-reason">거절 사유: {p.reject_reason}</p>}
                 {p.status === 'revoked' && (
                   <p className="reject-reason">
@@ -153,6 +189,20 @@ function MyBuilds({ data }) {
                   {['approved', 'hidden'].includes(b.status) && <span>👍 {b.up} · 👎 {b.down}</span>}
                 </div>
                 {b.status === 'approved' && b.approve_note && <p className="approve-note">승인 메모: {b.approve_note}</p>}
+                {b.original_build && ['approved', 'hidden'].includes(b.status) && (
+                  <EditedCompare beforeBuild={b.original_build} afterBuild={b} author={b.author} game={data.game} />
+                )}
+                <CancelledNotice unread={data.unread} match={(n) => n.build_id === b.id} />
+                {b.status === 'revision_requested' && (
+                  <div className="revision-note">
+                    <p>
+                      <strong>재검토 요청</strong>
+                      {b.revision_requested_at && <small> ({fmtDateTime(b.revision_requested_at)})</small>}
+                    </p>
+                    <p>운영자 메모: {b.revision_note}</p>
+                    <Link to={`/me/builds/${b.id}/resubmit`} className="btn btn-small">고쳐서 다시 제출</Link>
+                  </div>
+                )}
                 {b.status === 'rejected' && <p className="reject-reason">거절 사유: {b.reject_reason}</p>}
                 {b.status === 'hidden' && (
                   <p className="reject-reason">

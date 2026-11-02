@@ -60,7 +60,7 @@ test('운영자: [관리] → 대기 목록 → [자세히] → 바뀐 칸만 �
   fireEvent.change(screen.getByLabelText(/승인 메모/), { target: { value: ' 좋은 수정이에요 ' } });
   fireEvent.click(ok);
   expect(await screen.findByText(/승인했어요: \[문서 수정\] 퀸\(으\)로 다리우스 잡는 법/)).toBeDefined();
-  expect(fakeState.rpcCalls).toEqual([{ name: 'approve_proposal', args: { p_id: 501, p_note: '좋은 수정이에요' } }]);
+  expect(fakeState.rpcCalls).toEqual([{ name: 'approve_proposal', args: { p_id: 501, p_note: '좋은 수정이에요', p_content: null, p_build: null } }]);
   expect(where()).toBe('/admin');
   expect(window.confirm).not.toHaveBeenCalled();
 });
@@ -183,7 +183,7 @@ test('대기 목록 줄에서 바로: [승인]·[거절]은 그 자리에 메모
   fireEvent.click(within(row1).getByRole('button', { name: '승인 확정' }));
   expect(await screen.findByText('승인했어요: [문서 수정] 퀸(으)로 다리우스 잡는 법')).toBeDefined();
   expect(where()).toBe('/admin');
-  expect(fakeState.rpcCalls).toEqual([{ name: 'approve_proposal', args: { p_id: 501, p_note: '좋아요' } }]);
+  expect(fakeState.rpcCalls).toEqual([{ name: 'approve_proposal', args: { p_id: 501, p_note: '좋아요', p_content: null, p_build: null } }]);
 
   fakeState.rpcCalls.length = 0;
   const again = (await screen.findAllByRole('listitem', { name: '[문서 수정] 퀸(으)로 다리우스 잡는 법' }))[1];

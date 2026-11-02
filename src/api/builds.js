@@ -1,7 +1,7 @@
 // 빌드 접근 계층. 화면 컴포넌트는 이 모듈만 호출한다.
 // 권한은 DB가 막는다: 등록은 RLS + 검사 트리거(승인 대기로만), 투표는 vote_build(), 승인·거절·숨기기·다시 공개는 운영자 전용 함수.
 import { db } from './supabase';
-import { compareBuilds, toRow } from '../lib/buildContent';
+import { compareBuilds, toProposalBuild, toRow } from '../lib/buildContent';
 
 const PERSON = 'nickname, level, main_title';
 const BUILD_FIELDS =
@@ -9,7 +9,8 @@ const BUILD_FIELDS =
   'up_count, down_count, status, created_at';
 const AUTHOR = `author:profiles!builds_author_id_fkey(${PERSON})`;
 const COUNTER = 'counter:counters!builds_counter_id_fkey(id, target_champion, counter_champion, status)';
-const REVIEW_FIELDS = 'approve_note, reject_reason, hide_reason, hidden_at, reviewed_at';
+const REVIEW_FIELDS =
+  'approve_note, reject_reason, hide_reason, hidden_at, reviewed_at, original_build, revision_note, revision_requested_at, resubmitted_at';
 
 function friendly(error, fallback) {
   const msg = error?.message ?? '';
@@ -75,10 +76,10 @@ export async function getMyBuilds(userId) {
   return rows.map(shape);
 }
 
-/** 내 빌드 하나 ([이 빌드로 다시 쓰기]) */
+/** 내 빌드 하나 ([이 빌드로 다시 쓰기], [고쳐서 다시 제출]) */
 export async function getMyBuild(userId, id) {
   const row = await run(
-    db().from('builds').select(BUILD_FIELDS).eq('author_id', userId).eq('id', id).maybeSingle(),
+    db().from('builds').select(`${BUILD_FIELDS}, ${REVIEW_FIELDS}, ${COUNTER}`).eq('author_id', userId).eq('id', id).maybeSingle(),
     '빌드를 불러오지 못했어요.',
   );
   return row && shape(row);
@@ -130,7 +131,27 @@ export async function getBuildForReview(id) {
   return { build: { ...shape(row), logs: newestFirst(row.logs) }, approved: approved.map(shape) };
 }
 
-export const approveBuild = (id, note) => rpc('approve_build', { p_id: id, p_note: note }, '승인하지 못했어요.');
+/** 재검토를 요청하고 작성자가 고쳐 내기를 기다리는 빌드 */
+export async function getRevisionBuilds() {
+  const rows = await run(
+    db().from('builds').select(`${BUILD_FIELDS}, ${REVIEW_FIELDS}, ${AUTHOR}, ${COUNTER}`).eq('status', 'revision_requested')
+      .order('revision_requested_at', { ascending: true }),
+    '재검토 기다리는 빌드를 불러오지 못했어요.',
+  );
+  return rows.map(shape);
+}
+
+/**
+ * 승인: 메모 필수. edited = 운영자가 고친 빌드(등록 화면 값 모양) | null(그대로), patch = 지금 Data Dragon 버전
+ */
+export const approveBuild = (id, note, edited = null, patch = null) =>
+  rpc('approve_build', { p_id: id, p_note: note, p_build: edited ? toProposalBuild(edited, patch) : null }, '승인하지 못했어요.');
+/** 거절: 승인 대기·재검토 기다리는 중인 빌드 */
 export const rejectBuild = (id, reason) => rpc('reject_build', { p_id: id, p_reason: reason }, '거절하지 못했어요.');
+export const requestBuildRevision = (id, note) => rpc('request_build_revision', { p_id: id, p_note: note }, '재검토를 요청하지 못했어요.');
+export const cancelBuildRevision = (id, note) => rpc('cancel_build_revision', { p_id: id, p_note: note }, '요청을 취소하지 못했어요.');
+/** 재검토 요청 받은 내 빌드를 고쳐서 다시 제출 (지금 패치로) → 승인 대기. 본인만 */
+export const resubmitBuild = (id, build, patch) =>
+  rpc('resubmit_build', { p_id: id, p_build: toProposalBuild(build, patch) }, '다시 제출하지 못했어요.');
 export const hideBuild = (id, reason) => rpc('hide_build', { p_id: id, p_reason: reason }, '숨기지 못했어요.');
 export const restoreBuild = (id, note) => rpc('restore_build', { p_id: id, p_note: note }, '다시 공개하지 못했어요.');
