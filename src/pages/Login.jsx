@@ -28,8 +28,11 @@ export default function Login() {
 
   return (
     <article className="login">
-      <h1 className="doc-title">로그인</h1>
-      <p className="lead">로그인하면 카운터 제안, 문서 수정, 빌드 등록, 투표를 할 수 있어요. 보기는 로그인 없이도 돼요.</p>
+      <h1 className="doc-title">로그인 · 가입</h1>
+      <p className="lead">
+        로그인하면 카운터·문서 수정·빌드를 제안하고, 따봉·비추를 누르고, 게시판과 문서에 글·댓글을 쓸 수 있어요. 보기는 로그인 없이도 돼요.
+      </p>
+      <p className="notice login-join">처음이면 자동으로 가입돼요. 따로 회원가입할 필요 없어요.</p>
       <div className="login-buttons">
         {Object.entries(PROVIDERS).map(([provider, name]) => (
           <button
@@ -40,12 +43,12 @@ export default function Login() {
             disabled={busy !== null}
           >
             {provider === 'kakao' && <KakaoSymbol />}
-            {busy === provider ? `${name}로 이동 중…` : `${name}로 로그인`}
+            {busy === provider ? `${name}로 이동 중…` : `${name}로 시작하기`}
           </button>
         ))}
       </div>
       <p className="login-consent">
-        로그인하면 <Link to="/terms">이용약관</Link>과 <Link to="/privacy">개인정보처리방침</Link>에 동의하는 것으로 봐요.
+        시작하면 <Link to="/terms">이용약관</Link>과 <Link to="/privacy">개인정보처리방침</Link>에 동의하는 것으로 봐요.
         만 14세 이상만 가입할 수 있어요.
       </p>
       {error && <p className="form-error" role="alert">{error}</p>}

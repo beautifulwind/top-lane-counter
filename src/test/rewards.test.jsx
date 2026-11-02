@@ -44,9 +44,9 @@ test('/me: 레벨·경험치 막대·다음 레벨까지, 경험치 내역 (회�
   expect(screen.getByText(/다음 레벨\(Lv.4\)까지 180 남았어요/)).toBeDefined();
   const rows = within(screen.getByRole('list', { name: '경험치 내역' })).getAllByRole('listitem');
   expect(rows.map((r) => r.textContent.replace(/\d{4}-\d\d-\d\d \d\d:\d\d/, ''))).toEqual([
-    '빌드 승인 · 퀸(으)로 다리우스+30',
-    '새 카운터 승인 · 퀸(으)로 다리우스 (카운터 숨김 (승인 취소))−100',
-    '새 카운터 승인 · 퀸(으)로 다리우스+100',
+    '빌드 승인 · 퀸으로 다리우스+30',
+    '새 카운터 승인 · 퀸으로 다리우스 (카운터 숨김 (승인 취소))−100',
+    '새 카운터 승인 · 퀸으로 다리우스+100',
   ]);
 });
 

@@ -8,6 +8,7 @@ import { ErrorBox, Loading } from '../components/Status';
 import DocForm from '../components/DocForm';
 import { RequireLogin } from '../components/RequireOperator';
 import NotFound from './NotFound';
+import { matchupTitle } from '../lib/josa';
 
 /**
  * 매치업 문서 수정 제안: /champion/:targetId/counter/:counterId/edit
@@ -41,7 +42,7 @@ function ProposeEditForm() {
   const counter = data.champs[counterId];
   if (!target || !counter || !data.matchup) return <NotFound />;
   const doc = data.matchup.doc;
-  const title = `${counter.name}(으)로 ${target.name} 잡는 법`;
+  const title = `${matchupTitle(counter.name, target.name)}`;
 
   const submit = async (content) => {
     await proposeDocEdit(auth.user.id, data.matchup.counter, content, doc?.revision_id);
@@ -62,7 +63,10 @@ function ProposeEditForm() {
       ) : (
         <p className="lead">지금 문서 내용이 채워져 있어요. 고칠 부분만 바꿔서 보내 주세요.</p>
       )}
-      <DocForm initial={data.from?.content ?? doc} onSubmit={submit} requireChange={!data.from} />
+      <DocForm
+        initial={data.from?.content ?? doc} onSubmit={submit} requireChange={!data.from}
+        cancelTo={`/champion/${targetId}/counter/${counterId}`}
+      />
     </article>
   );
 }

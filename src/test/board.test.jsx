@@ -71,7 +71,7 @@ test('검색: 주소에 남고, [검색 지우기]로 돌아온다 / 쪽 이동'
 test('글쓰기: 빈 칸이면 못 보냄, 올리면 글로 이동 / 도배 간격 오류는 그대로 보여 준다', async () => {
   fakeLogin('u-old');
   start('/board/new');
-  const send = await screen.findByRole('button', { name: '올리기' });
+  const send = await screen.findByRole('button', { name: '글 올리기' });
   expect(send.disabled).toBe(true);
   fireEvent.change(screen.getByLabelText('제목'), { target: { value: '  첫 글 ' } });
   fireEvent.change(screen.getByLabelText('본문'), { target: { value: '안녕\n하세요' } });
@@ -128,7 +128,7 @@ test('남의 글: 추천 누르기·취소, 신고(이유 필수, 기타는 내�
 
   fireEvent.click(screen.getByRole('button', { name: '신고' }));
   const form = screen.getByRole('group', { name: '글 신고 — 이유를 골라 주세요' }).closest('form');
-  const send = within(form).getByRole('button', { name: '신고하기' });
+  const send = within(form).getByRole('button', { name: '신고 보내기' });
   expect(send.disabled).toBe(true);
   fireEvent.click(within(form).getByLabelText('기타'));
   expect(send.disabled).toBe(true); // 기타는 내용 필수
@@ -140,7 +140,7 @@ test('남의 글: 추천 누르기·취소, 신고(이유 필수, 기타는 내�
   // 같은 글을 또 신고하면 DB가 막는다
   fireEvent.click(await screen.findByRole('button', { name: '신고' }));
   fireEvent.click(screen.getByLabelText('도배·광고'));
-  fireEvent.click(screen.getByRole('button', { name: '신고하기' }));
+  fireEvent.click(screen.getByRole('button', { name: '신고 보내기' }));
   expect((await screen.findByRole('alert')).textContent).toBe('이미 신고한 글이에요.');
 });
 
@@ -193,7 +193,7 @@ test('댓글: 달기(빈 칸이면 못 보냄) → 바로 보임, 내 댓글 고
   TABLES.post_comments.push(fakeComment(11, 1, { author_id: 'u-x', author: OTHER, body: '남의 댓글' }));
   fakeLogin('u-old');
   start('/board/1');
-  const send = await screen.findByRole('button', { name: '댓글 달기' });
+  const send = await screen.findByRole('button', { name: '댓글 올리기' });
   expect(send.disabled).toBe(true);
   fireEvent.change(screen.getByLabelText('댓글 쓰기'), { target: { value: '내 댓글이에요' } });
   fireEvent.click(send);
@@ -210,7 +210,7 @@ test('댓글: 달기(빈 칸이면 못 보냄) → 바로 보임, 내 댓글 고
   fireEvent.click(within(mine).getByRole('button', { name: '고치기' }));
   fireEvent.change(await within(mine).findByLabelText('댓글 고치기'), { target: { value: '고친 댓글' } });
   expect(within(mine).getByText(/까지 저장할 수 있어요/)).toBeDefined();
-  fireEvent.click(within(mine).getByRole('button', { name: '저장' }));
+  fireEvent.click(within(mine).getByRole('button', { name: '고친 내용 저장' }));
   await vi.waitFor(() => expect(document.querySelectorAll('.comment-body')[1]?.textContent).toBe('고친 댓글'));
   const mine2 = within(screen.getByRole('list', { name: '댓글' })).getAllByRole('listitem')[1];
   expect(within(mine2).getByText('수정됨')).toBeDefined();
@@ -219,6 +219,28 @@ test('댓글: 달기(빈 칸이면 못 보냄) → 바로 보임, 내 댓글 고
   fireEvent.click(within(within(mine2).getByRole('group', { name: '댓글을 지울까요?' })).getByRole('button', { name: '지우기' }));
   await vi.waitFor(() => expect(screen.queryByText('고친 댓글')).toBeNull());
   expect(screen.getByRole('heading', { name: '댓글 1' })).toBeDefined();
+});
+
+test('그 자리에 열리는 칸은 Esc로 닫힌다: 댓글 고치기(쓴 내용은 되돌림)·지우기 확인([취소]에 초점)', async () => {
+  TABLES.posts.push(fakePost(1, { author_id: 'u-x', author: OTHER, comment_count: 1 }));
+  TABLES.post_comments.push(fakeComment(12, 1, { author_id: 'u-old', body: '내 댓글', created_at: new Date().toISOString() }));
+  fakeLogin('u-old');
+  start('/board/1');
+  const mine = (await screen.findAllByRole('listitem')).find((li) => li.id === 'comment-12');
+  fireEvent.click(within(mine).getByRole('button', { name: '고치기' }));
+  const box = await within(mine).findByLabelText('댓글 고치기');
+  fireEvent.change(box, { target: { value: '바꾸다 말았어요' } });
+  fireEvent.keyDown(box, { key: 'Escape' });
+  expect(within(mine).queryByLabelText('댓글 고치기')).toBeNull();
+  expect(within(mine).getByText('내 댓글')).toBeDefined();
+  expect(rpcs('edit_comment')).toEqual([]);
+
+  fireEvent.click(within(mine).getByRole('button', { name: '지우기' }));
+  const confirm = within(mine).getByRole('group', { name: '댓글을 지울까요?' });
+  expect(document.activeElement).toBe(within(confirm).getByRole('button', { name: '취소' }));
+  fireEvent.keyDown(document.activeElement, { key: 'Escape' });
+  expect(within(mine).queryByRole('group', { name: '댓글을 지울까요?' })).toBeNull();
+  expect(rpcs('delete_my_comment')).toEqual([]);
 });
 
 test('운영자: 글 [숨기기](보라, 메모 필수) → 숨김 띠·메모 → [다시 공개]', async () => {
@@ -231,7 +253,7 @@ test('운영자: 글 [숨기기](보라, 메모 필수) → 숨김 띠·메모 �
   fireEvent.click(hide);
   const ok = screen.getByRole('button', { name: '숨기기 확정' });
   expect(ok.disabled).toBe(true);
-  fireEvent.change(screen.getByLabelText('숨기는 이유 (필수, 작성자에게 보여요)'), { target: { value: '광고 글' } });
+  fireEvent.change(screen.getByLabelText('숨기는 사유 (필수, 작성자에게 보여요)'), { target: { value: '광고 글' } });
   fireEvent.click(ok);
   expect(await screen.findByText('글을 숨겼어요. 작성자에게 알림이 갔어요.')).toBeDefined();
   expect(rpcs('hide_post')).toEqual([{ p_id: 1, p_note: '광고 글' }]);
@@ -258,7 +280,7 @@ test('운영자: 숨긴 댓글도 보이고 [다시 공개], 보이는 댓글은
   const [hidden, normal] = within(await screen.findByRole('list', { name: '댓글' })).getAllByRole('listitem');
   expect(hidden.textContent).toContain('메모: 욕설');
   fireEvent.click(within(normal).getByRole('button', { name: '숨기기' }));
-  fireEvent.change(within(normal).getByLabelText('숨기는 이유 (필수, 작성자에게 보여요)'), { target: { value: '도배' } });
+  fireEvent.change(within(normal).getByLabelText('숨기는 사유 (필수, 작성자에게 보여요)'), { target: { value: '도배' } });
   fireEvent.click(within(normal).getByRole('button', { name: '숨기기 확정' }));
   expect(await screen.findByText('댓글을 숨겼어요. 작성자에게 알림이 갔어요.')).toBeDefined();
   expect(rpcs('hide_comment')).toEqual([{ p_id: 12, p_note: '도배' }]);
@@ -283,7 +305,7 @@ test('운영자 /admin/reports: 대상별로 묶음 → 숨기기 / 신고 기�
   expect(commentGroup.textContent).toContain('욕설·비하');
 
   fireEvent.click(within(postGroup).getByRole('button', { name: '숨기기' }));
-  fireEvent.change(within(postGroup).getByLabelText('숨기는 이유 (필수, 작성자에게 보여요)'), { target: { value: '광고' } });
+  fireEvent.change(within(postGroup).getByLabelText('숨기는 사유 (필수, 작성자에게 보여요)'), { target: { value: '광고' } });
   fireEvent.click(within(postGroup).getByRole('button', { name: '숨기기 확정' }));
   expect(await screen.findByText('글을 숨겼어요. 신고 2건은 처리됨으로 닫았어요.')).toBeDefined();
   expect(rpcs('hide_post')).toEqual([{ p_id: 1, p_note: '광고' }]);

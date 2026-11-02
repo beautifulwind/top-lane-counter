@@ -21,7 +21,7 @@ const asProposer = () => fakeLogin('u-old', { nickname: '기존유저' });
 const click = (name, root = document.body) => fireEvent.click(within(root).getByRole('button', { name }));
 const note = (label, value, root = document.body) => fireEvent.change(within(root).getByLabelText(label), { target: { value } });
 const rpcCalls = (name) => fakeState.rpcCalls.filter((c) => c.name === name).map((c) => c.args);
-const QUINN_ROW = '[문서 수정] 퀸(으)로 다리우스 잡는 법';
+const QUINN_ROW = '[문서 수정] 퀸으로 다리우스 잡는 법';
 
 // ---------------- 운영자: 목록 줄 ----------------
 
@@ -58,11 +58,11 @@ test('/admin 승인 대기 줄: [재검토 요청]은 메모를 써야 확정 �
 test('/admin 빌드 승인 대기 줄: [재검토 요청] → request_build_revision', async () => {
   asOperator();
   start('/admin');
-  const row = await screen.findByRole('listitem', { name: '[빌드] 퀸(으)로 다리우스 잡는 법' });
+  const row = await screen.findByRole('listitem', { name: '[빌드] 퀸으로 다리우스 잡는 법' });
   click('재검토 요청', row);
   note(/재검토 요청 메모/, '핵심 템을 하나 더', row);
   click('재검토 요청 확정', row);
-  expect(await screen.findByText(/빌드 재검토를 요청했어요: 퀸\(으\)로 다리우스 잡는 법 \(대기중\)/)).toBeDefined();
+  expect(await screen.findByText(/빌드 재검토를 요청했어요: 퀸으로 다리우스 잡는 법 \(대기중\)/)).toBeDefined();
   expect(rpcCalls('request_build_revision')).toEqual([{ p_id: 104, p_note: '핵심 템을 하나 더', p_version: 1 }]);
 });
 
@@ -79,7 +79,7 @@ test('/admin 재검토 기다리는 중: 제안·빌드 모두 보이고 [요청
   expect(await screen.findByRole('heading', { name: '재검토 기다리는 중 (2)' })).toBeDefined();
   expect(screen.queryByText('보낸 메모: 숨김 재검토')).toBeNull();
 
-  const p = screen.getByRole('listitem', { name: '[재검토 중 문서 수정] 퀸(으)로 다리우스 잡는 법' });
+  const p = screen.getByRole('listitem', { name: '[재검토 중 문서 수정] 퀸으로 다리우스 잡는 법' });
   expect(within(p).getByText('보낸 메모: 근거 부족')).toBeDefined();
   click('요청 취소', p);
   expect(within(p).getByText('원래 내용 그대로 승인 대기로 돌아가요.')).toBeDefined();
@@ -88,7 +88,7 @@ test('/admin 재검토 기다리는 중: 제안·빌드 모두 보이고 [요청
   expect(await screen.findByText(/재검토 요청을 취소했어요: \[문서 수정\]/)).toBeDefined();
   expect(rpcCalls('cancel_proposal_revision')).toEqual([{ p_id: 501, p_note: '제가 잘못 봤어요' }]);
 
-  const b = await screen.findByRole('listitem', { name: '[재검토 중 빌드] 퀸(으)로 다리우스 잡는 법' }); // 처리 뒤 목록을 다시 불러온다
+  const b = await screen.findByRole('listitem', { name: '[재검토 중 빌드] 퀸으로 다리우스 잡는 법' }); // 처리 뒤 목록을 다시 불러온다
   click('거절', b);
   note(/거절 사유/, '오래 기다렸어요', b);
   click('거절 확정', b);
@@ -203,40 +203,40 @@ test('/me: 고쳐서 승인된 제안은 원래 제안 → 고친 내용을 펼�
   expect(diff.textContent).toMatch(/\+ 운영자 요약/);
 });
 
-test('/me: 대기 중 문서 수정 제안이 재검토 요청을 받으면 글만 고쳐서 다시 제출 (빌드 칸 없음)', async () => {
+test('/me: 대기 중 문서 수정 제안이 재검토 요청을 받으면 글만 고쳐서 다시 보내기 (빌드 칸 없음)', async () => {
   TABLES.edit_proposals.push(fakeProposal({ status: 'revision_requested', revision_note: '근거를 더', revision_requested_at: '2026-11-03T00:00:00Z' }));
   asProposer();
   start('/me');
   const row = (await screen.findByText('운영자 메모: 근거를 더')).closest('li');
-  fireEvent.click(within(row).getByRole('link', { name: '고쳐서 다시 제출' }));
+  fireEvent.click(within(row).getByRole('link', { name: '고쳐서 다시 보내기' }));
   expect(await screen.findByText(/보낸 글이 채워져 있어요/)).toBeDefined();
   expect(screen.queryByRole('group', { name: '빌드 (필수)' })).toBeNull();
-  click('다시 제출');
+  click('다시 보내기');
   expect(screen.getByRole('alert').textContent).toBe('고친 내용이 없어요. 운영자 메모를 보고 글을 고쳐 주세요.');
   fireEvent.change(screen.getByLabelText('특이사항'), { target: { value: 'E 사거리 주의\n근거: 실험해 봄' } });
-  click('다시 제출');
-  expect(await screen.findByText(/고친 내용을 다시 제출했어요/)).toBeDefined();
+  click('다시 보내기');
+  expect(await screen.findByText(/고친 내용을 다시 보냈어요/)).toBeDefined();
   const p = fakeProposal();
   expect(rpcCalls('resubmit_proposal')).toEqual([{
     p_id: 501, p_content: { ...p.content, lane_cautions: 'E 사거리 주의\n근거: 실험해 봄' }, p_build: null,
   }]);
 });
 
-test('/me: 재검토 요청 받은 빌드 → 고쳐서 다시 제출 (지금 패치), 그대로면 못 보냄', async () => {
+test('/me: 재검토 요청 받은 빌드 → 고쳐서 다시 보내기 (지금 패치), 그대로면 못 보냄', async () => {
   TABLES.builds.push(fakeBuild(130, { nickname: '기존유저', level: 1, main_title: null }, {
     author_id: 'u-old', status: 'revision_requested', revision_note: '선마를 바꿔 주세요', revision_requested_at: '2026-11-03T00:00:00Z',
   }));
   asProposer();
   start('/me');
-  const row = await screen.findByRole('listitem', { name: '내 빌드: 퀸(으)로 다리우스 잡는 법' });
+  const row = await screen.findByRole('listitem', { name: '내 빌드: 퀸으로 다리우스 잡는 법' });
   expect(within(row).getByText('운영자 메모: 선마를 바꿔 주세요')).toBeDefined();
-  fireEvent.click(within(row).getByRole('link', { name: '고쳐서 다시 제출' }));
-  expect(await screen.findByRole('heading', { name: '퀸(으)로 다리우스 잡는 법 — 빌드 고쳐서 다시 제출' })).toBeDefined();
-  click('다시 제출');
+  fireEvent.click(within(row).getByRole('link', { name: '고쳐서 다시 보내기' }));
+  expect(await screen.findByRole('heading', { name: '퀸으로 다리우스 잡는 법 — 빌드 고쳐서 다시 보내기' })).toBeDefined();
+  click('다시 보내기');
   expect(screen.getByRole('alert').textContent).toBe('고친 내용이 없어요. 운영자 메모를 보고 빌드를 고쳐 주세요.');
   pick('선마 순서', '선마 Q › W › E');
-  click('다시 제출');
-  expect(await screen.findByText(/고친 빌드를 다시 제출했어요/)).toBeDefined();
+  click('다시 보내기');
+  expect(await screen.findByText(/고친 빌드를 다시 보냈어요/)).toBeDefined();
   const b = fakeBuild(130, null);
   expect(rpcCalls('resubmit_build')).toEqual([{
     p_id: 130,
@@ -263,7 +263,7 @@ test('/me: 고쳐서 승인된 빌드는 원래 빌드 → 고친 빌드를 볼 
   TABLES.builds.push({ ...b, original_build: { ...b, skill_order: ['E', 'Q', 'W'] } });
   asProposer();
   start('/me');
-  const row = await screen.findByRole('listitem', { name: '내 빌드: 퀸(으)로 다리우스 잡는 법' });
+  const row = await screen.findByRole('listitem', { name: '내 빌드: 퀸으로 다리우스 잡는 법' });
   const details = within(row).getByText('운영자가 고쳐서 승인했어요 — 원래 제안 → 고친 내용 보기').closest('details');
   expect(within(details).getByRole('heading', { name: '원래 빌드' })).toBeDefined();
   expect(within(details).getByRole('heading', { name: '고친 빌드' })).toBeDefined();

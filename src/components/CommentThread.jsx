@@ -69,6 +69,12 @@ function Comment({ comment: c, ops, live, rules, now, auth, onDone, onReload }) 
     setBusy(false);
   };
 
+  const cancelEdit = () => {
+    setMode(null);
+    setBody(c.body);
+    setError(null);
+  };
+
   const save = async (e) => {
     e.preventDefault();
     setBusy(true);
@@ -90,16 +96,17 @@ function Comment({ comment: c, ops, live, rules, now, auth, onDone, onReload }) 
       )}
       <BoardByline row={c} />
       {mode === 'edit' ? (
-        <form className="comment-form" onSubmit={save}>
+        <form className="comment-form" onSubmit={save} onKeyDown={(e) => e.key === 'Escape' && !busy && cancelEdit()}>
           <label htmlFor={`edit-comment-${c.id}`} className="sr-only">댓글 고치기</label>
-          <textarea id={`edit-comment-${c.id}`} rows={3} value={body} onChange={(e) => setBody(e.target.value)} />
+          {/* eslint-disable-next-line jsx-a11y/no-autofocus -- [고치기]를 눌러 연 칸이라 바로 쓰게 한다 */}
+          <textarea id={`edit-comment-${c.id}`} rows={3} value={body} onChange={(e) => setBody(e.target.value)} autoFocus />
           {deadline && <small className="hint edit-deadline">{fmtTime(deadline)}까지 저장할 수 있어요.</small>}
           <div className="comment-form-foot">
             <CharCount value={body} max={COMMENT_MAX} />
             <button type="submit" className="btn btn-small" disabled={busy || !body.trim() || body.trim().length > COMMENT_MAX}>
-              {busy ? '저장하는 중…' : '저장'}
+              {busy ? '저장하는 중…' : '고친 내용 저장'}
             </button>
-            <button type="button" className="btn btn-small" disabled={busy} onClick={() => { setMode(null); setBody(c.body); setError(null); }}>취소</button>
+            <button type="button" className="btn btn-small" disabled={busy} onClick={cancelEdit}>취소</button>
           </div>
           {error && <p className="form-error" role="alert">{error}</p>}
         </form>
@@ -141,7 +148,7 @@ function Comment({ comment: c, ops, live, rules, now, auth, onDone, onReload }) 
       {mode === 'hide' && (
         <NoteForm
           id={`hide-${ops.kind}-${c.id}`}
-          label="숨기는 이유 (필수, 작성자에게 보여요)"
+          label="숨기는 사유 (필수, 작성자에게 보여요)"
           confirmLabel="숨기기 확정"
           busyLabel="숨기는 중…"
           onCancel={() => setMode(null)}
@@ -185,7 +192,7 @@ function CommentForm({ ops, parentId, onDone }) {
       <div className="comment-form-foot">
         <CharCount value={body} max={COMMENT_MAX} />
         <button type="submit" className="btn btn-small btn-primary" disabled={busy || n === 0 || n > COMMENT_MAX}>
-          {busy ? '올리는 중…' : '댓글 달기'}
+          {busy ? '올리는 중…' : '댓글 올리기'}
         </button>
       </div>
       {error && <p className="form-error" role="alert">{error}</p>}

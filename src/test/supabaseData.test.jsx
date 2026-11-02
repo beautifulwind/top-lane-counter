@@ -27,7 +27,7 @@ test('닉네임 표시: 대표 칭호가 없으면 칭호 자리 없이 "Lv.3 �
 
 test('매치업 빌드: 승인된 것만, 따봉 점수 높은 순, 작성자는 레벨·칭호와 함께', async () => {
   start('/champion/Darius/counter/Quinn');
-  await screen.findByText(/퀸\(으\)로 다리우스 잡는 법/);
+  await screen.findByText(/퀸으로 다리우스 잡는 법/);
   const authors = [...document.querySelectorAll('.build-author')].map((e) => e.textContent);
   expect(authors).toEqual(['Lv.7 단단묵직 · 탑고수', 'Lv.3 칭호없음', '(탈퇴한 유저)', 'Lv.0 영자(운)']);
   expect(screen.queryByText(/대기중/)).toBeNull();

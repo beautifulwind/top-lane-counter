@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { Link } from 'react-router-dom';
 import { ALL_LEVELS, LIMITS, REQUIRED_LEVELS, docProblem, sameDoc, sortedLevels } from '../lib/docContent';
 
 /** 저장된 문서 내용 → 입력 값 (필수 레벨 칸은 비어 있어도 보이게) */
@@ -14,10 +15,11 @@ export function docToForm(initial) {
  * children: 문서 칸 아래, 보내기 버튼 위에 들어갈 것 (새 카운터 제안·다시 제출의 빌드 입력)
  * blocked: 보내기를 막는 이유 (예: 빌드를 아직 다 안 고름) → 글 검사 다음에 이 문구로 막는다
  * onSubmit(content): 실패하면 Error를 던진다 → 폼 아래에 문구로 보여 준다
+ * cancelTo: [취소]를 누르면 갈 곳 (원래 보던 화면), busyLabel: 보내는 동안 버튼 글자
  */
 export default function DocForm({
   initial, onSubmit, submitLabel = '제안 보내기', requireChange = false, changedElsewhere = false,
-  unchangedMessage = '지금 문서와 달라진 내용이 없어요.', children, blocked = null,
+  unchangedMessage = '지금 문서와 달라진 내용이 없어요.', children, blocked = null, cancelTo, busyLabel = '보내는 중…',
 }) {
   const [content, setContent] = useState(() => docToForm(initial));
   const [busy, setBusy] = useState(false);
@@ -45,7 +47,10 @@ export default function DocForm({
       {children}
 
       {error && <p className="form-error" role="alert">{error}</p>}
-      <button type="submit" className="btn" disabled={busy}>{busy ? '보내는 중…' : submitLabel}</button>
+      <div className="actions">
+        <button type="submit" className="btn" disabled={busy}>{busy ? busyLabel : submitLabel}</button>
+        {cancelTo && <Link to={cancelTo} className="btn">취소</Link>}
+      </div>
       <p className="hint">보낸 제안은 운영자가 승인하면 반영돼요. 진행 상황은 [내 활동]에서 볼 수 있어요.</p>
     </form>
   );

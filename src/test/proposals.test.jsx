@@ -21,7 +21,7 @@ const send = () => fireEvent.click(screen.getByRole('button', { name: '제안 �
 test('로그인 안 했으면 [새 카운터 제안]은 로그인 화면으로 보낸다', async () => {
   start('/champion/Darius');
   fireEvent.click(await screen.findByRole('link', { name: '+ 새 카운터 제안' }));
-  expect(await screen.findByRole('heading', { name: '로그인' })).toBeDefined();
+  expect(await screen.findByRole('heading', { name: '로그인 · 가입' })).toBeDefined();
   expect(where()).toBe('/login');
 });
 
@@ -29,13 +29,13 @@ test('새 카운터 제안: 이미 있는 카운터는 못 고르고, 필수 칸
   fakeLogin('u-old');
   start('/champion/Darius');
   fireEvent.click(await screen.findByRole('link', { name: '+ 새 카운터 제안' }));
-  expect(await screen.findByRole('heading', { name: '다리우스을(를) 이기는 챔피언 제안' })).toBeDefined();
+  expect(await screen.findByRole('heading', { name: '다리우스를 이기는 챔피언 제안' })).toBeDefined();
   expect(screen.getByRole('button', { name: /퀸 \(등록됨\)/ }).disabled).toBe(true);
   expect(screen.queryByRole('button', { name: /다리우스/ })).toBeNull(); // 자기 자신은 목록에 없음
 
   fireEvent.change(screen.getByLabelText('이기는 챔피언 검색'), { target: { value: 'ㄱㄹ' } });
   fireEvent.click(screen.getByRole('button', { name: '가렌' }));
-  expect(screen.getByRole('heading', { name: /가렌\(으\)로 다리우스 잡는 법/ })).toBeDefined();
+  expect(screen.getByRole('heading', { name: /가렌으로 다리우스 잡는 법/ })).toBeDefined();
 
   send();
   expect(screen.getByRole('alert').textContent).toBe('한 줄 요약을 적어 주세요.');
@@ -80,7 +80,7 @@ test('새 카운터 제안: 이미 있는 카운터는 못 고르고, 필수 칸
     },
   }]);
   expect(screen.getByText(/새 카운터 제안을 보냈어요. 운영자가 승인하면 반영돼요/)).toBeDefined();
-  const row = (await screen.findByText('가렌(으)로 다리우스 잡는 법')).closest('li');
+  const row = (await screen.findByText('가렌으로 다리우스 잡는 법')).closest('li');
   expect(within(row).getByText('새 카운터')).toBeDefined();
   expect(within(row).getByText('대기 중')).toBeDefined();
 });
@@ -89,7 +89,7 @@ test('등록 안 된 매치업 화면의 [새 카운터 제안]은 그 챔피언
   fakeLogin('u-old');
   start('/champion/Darius/counter/Teemo');
   fireEvent.click(await screen.findByRole('link', { name: '+ 새 카운터 제안' }));
-  expect(await screen.findByRole('heading', { name: /티모\(으\)로 다리우스 잡는 법/ })).toBeDefined();
+  expect(await screen.findByRole('heading', { name: /티모로 다리우스 잡는 법/ })).toBeDefined();
   expect(screen.getByRole('button', { name: '다시 고르기' })).toBeDefined();
 });
 
@@ -126,6 +126,19 @@ test('문서 수정 제안: 지금 문서가 채워져 있고, 바뀐 게 없으
   });
 });
 
+test('문서 수정 제안·새 카운터 제안에도 [취소] → 원래 보던 화면으로 (보내지 않음)', async () => {
+  fakeLogin('u-old');
+  start('/champion/Darius/counter/Quinn/edit');
+  await screen.findByRole('heading', { name: /수정 제안/ });
+  fireEvent.click(screen.getByRole('link', { name: '취소' }));
+  await vi.waitFor(() => expect(where()).toBe('/champion/Darius/counter/Quinn'));
+  cleanup();
+  start('/champion/Darius/propose?counter=Garen');
+  fireEvent.click(await screen.findByRole('link', { name: '취소' }));
+  await vi.waitFor(() => expect(where()).toBe('/champion/Darius'));
+  expect(fakeState.inserts).toEqual([]);
+});
+
 test('010: 예전 문서의 9·11레벨은 추가 레벨로 보이고, 수정 제안에서 뺄 수 있다', async () => {
   fakeLogin('u-old');
   start('/champion/Darius/counter/Quinn');
@@ -155,9 +168,9 @@ test('/me: 거절된 제안은 거절 사유를, 승인된 제안은 문서 링�
   start('/me');
   const rejected = (await screen.findByText('거절')).closest('li');
   expect(within(rejected).getByText('거절 사유: 근거가 부족해요')).toBeDefined();
-  expect(within(rejected).getByRole('link', { name: '퀸(으)로 다리우스 잡는 법' }).getAttribute('href')).toBe('/me/proposals/1');
+  expect(within(rejected).getByRole('link', { name: '퀸으로 다리우스 잡는 법' }).getAttribute('href')).toBe('/me/proposals/1');
   expect(within(rejected).getByRole('link', { name: '문서 보기' }).getAttribute('href')).toBe('/champion/Darius/counter/Quinn');
-  const pending = screen.getByText('가렌(으)로 다리우스 잡는 법').closest('li');
+  const pending = screen.getByText('가렌으로 다리우스 잡는 법').closest('li');
   expect(within(pending).queryByRole('link', { name: '문서 보기' })).toBeNull(); // 아직 없는 문서라 문서 링크 없음
   expect(within(pending).getByRole('link', { name: '고치기' }).getAttribute('href')).toBe('/me/proposals/2/edit');
   expect(within(pending).getByText('대기 중')).toBeDefined();

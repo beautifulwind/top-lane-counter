@@ -61,7 +61,7 @@ test('code 교환이 성공하면 안내 없이 로그인되고 주소창도 깨
 test('로그인 콜백이 아닌 평소 접속에서는 안내가 뜨지 않는다', async () => {
   fakeState.initError = { message: '아무 오류' };
   returnFromGoogle('', '/');
-  await screen.findByRole('link', { name: '로그인' });
+  await screen.findByRole('link', { name: '로그인 · 가입' });
   expect(screen.queryByText(/로그인하지 못했어요/)).toBeNull();
 });
 

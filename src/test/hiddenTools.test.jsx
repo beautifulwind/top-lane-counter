@@ -40,7 +40,7 @@ function hiddenGaren(origin = {}) {
     }));
   }
 }
-const row = () => screen.findByRole('listitem', { name: '가렌(으)로 다리우스 잡는 법' });
+const row = () => screen.findByRole('listitem', { name: '가렌으로 다리우스 잡는 법' });
 
 test('미리보기: 운영자만 숨긴 문서(딜교·특이사항·빌드)를 읽기 전용으로 본다', async () => {
   hiddenGaren();
@@ -49,7 +49,7 @@ test('미리보기: 운영자만 숨긴 문서(딜교·특이사항·빌드)를 
   fireEvent.click(within(await row()).getByRole('link', { name: '미리보기' }));
   expect(await screen.findByText('숨긴 카운터 미리보기 — 다른 사람에게는 보이지 않아요.')).toBeDefined();
   expect(where()).toBe('/admin/preview/Darius/Garen');
-  expect(screen.getByRole('heading', { name: '가렌(으)로 다리우스 잡는 법' })).toBeDefined();
+  expect(screen.getByRole('heading', { name: '가렌으로 다리우스 잡는 법' })).toBeDefined();
   expect(screen.getByText('숨긴 주의사항')).toBeDefined();
   expect(screen.getByText('9레벨').nextSibling.textContent).toBe('e');
   expect(screen.getByText(/탑고수/)).toBeDefined(); // 빌드 작성자
@@ -83,7 +83,7 @@ test('재검토 요청: 줄에서 바로 메모를 적어야 확정되고 reques
   fireEvent.click(send);
   await vi.waitFor(() =>
     expect(fakeState.rpcCalls).toEqual([{ name: 'request_revision', args: { p_counter_id: 3, p_note: '9레벨을 고쳐 주세요' } }]));
-  expect(await screen.findByText('재검토를 요청했어요: 가렌(으)로 다리우스 잡는 법')).toBeDefined();
+  expect(await screen.findByText('재검토를 요청했어요: 가렌으로 다리우스 잡는 법')).toBeDefined();
   expect(window.confirm).not.toHaveBeenCalled();
 });
 
@@ -110,7 +110,7 @@ test('상태 표시: 재검토 요청 중 / 다시 제출돼 승인 대기 중�
   TABLES.edit_proposals[0].resubmitted_at = '2026-11-04T00:00:00Z';
   start('/admin');
   r = await row();
-  expect(within(r).getByRole('link', { name: '다시 제출됨 (승인 대기 목록에 있음)' }).getAttribute('href')).toBe('/admin/proposals/7');
+  expect(within(r).getByRole('link', { name: '다시 보냄 (승인 대기 목록에 있음)' }).getAttribute('href')).toBe('/admin/proposals/7');
   expect(within(r).getByRole('button', { name: '다시 공개' }).disabled).toBe(true);
   expect(within(r).getByRole('button', { name: '완전 삭제' }).disabled).toBe(true);
   expect(within(r).queryByRole('link', { name: '완전 삭제' })).toBeNull();
@@ -129,7 +129,7 @@ function revisionRequested() {
   fakeLogin('u-old', { nickname: '기존유저' });
 }
 
-test('빨간 점: /me에서 알림을 확인하면 꺼지고, 재검토 요청 내용과 [고쳐서 다시 제출]은 남는다', async () => {
+test('빨간 점: /me에서 알림을 확인하면 꺼지고, 재검토 요청 내용과 [고쳐서 다시 보내기]은 남는다', async () => {
   revisionRequested();
   start('/');
   const dot = await screen.findByRole('img', { name: '새 알림 1개' }); // 읽은 것·남의 것은 세지 않음
@@ -145,28 +145,28 @@ test('빨간 점: /me에서 알림을 확인하면 꺼지고, 재검토 요청 �
   fireEvent.click(await screen.findByRole('link', { name: /기존유저/ }));
   const again = (await screen.findByText('운영자 메모: 9레벨을 고쳐 주세요')).closest('li');
   expect(within(again).getByText('재검토 요청', { selector: '.status-badge' })).toBeDefined();
-  expect(within(again).getByRole('link', { name: '고쳐서 다시 제출' })).toBeDefined();
+  expect(within(again).getByRole('link', { name: '고쳐서 다시 보내기' })).toBeDefined();
   expect(within(again).queryByText('새 알림')).toBeNull();
   expect(screen.queryByRole('img', { name: /새 알림/ })).toBeNull();
   expect(fakeState.rpcCalls).toHaveLength(1); // 읽을 게 없으면 부르지 않음
 });
 
-test('제안자: /me의 [고쳐서 다시 제출] → 숨긴 시점 문서로 채워진 폼 → resubmit_proposal', async () => {
+test('제안자: /me의 [고쳐서 다시 보내기] → 숨긴 시점 문서로 채워진 폼 → resubmit_proposal', async () => {
   revisionRequested();
   start('/me');
   const r = (await screen.findByText('운영자 메모: 9레벨을 고쳐 주세요')).closest('li');
   expect(within(r).queryByRole('link', { name: '문서 보기' })).toBeNull(); // 숨긴 카운터라 문서 링크 없음
-  fireEvent.click(within(r).getByRole('link', { name: '고쳐서 다시 제출' }));
-  expect(await screen.findByRole('heading', { name: '가렌(으)로 다리우스 잡는 법 — 고쳐서 다시 제출' })).toBeDefined();
+  fireEvent.click(within(r).getByRole('link', { name: '고쳐서 다시 보내기' }));
+  expect(await screen.findByRole('heading', { name: '가렌으로 다리우스 잡는 법 — 고쳐서 다시 보내기' })).toBeDefined();
   expect(screen.getByLabelText('한 줄 요약 (필수)').value).toBe('가렌 요약');
   fakeState.rpcCalls.length = 0;
-  fireEvent.click(screen.getByRole('button', { name: '다시 제출' }));
+  fireEvent.click(screen.getByRole('button', { name: '다시 보내기' }));
   expect(screen.getByRole('alert').textContent).toBe('고친 내용이 없어요. 운영자 메모를 보고 글이나 빌드를 고쳐 주세요.');
   expect(fakeState.rpcCalls).toEqual([]);
 
   fireEvent.change(screen.getByLabelText('9레벨'), { target: { value: ' 9렙 고침 ' } });
-  fireEvent.click(screen.getByRole('button', { name: '다시 제출' }));
-  expect(await screen.findByText(/고친 내용을 다시 제출했어요/)).toBeDefined();
+  fireEvent.click(screen.getByRole('button', { name: '다시 보내기' }));
+  expect(await screen.findByText(/고친 내용을 다시 보냈어요/)).toBeDefined();
   expect(where()).toBe('/me');
   expect(fakeState.rpcCalls[0]).toEqual({
     name: 'resubmit_proposal',
@@ -187,7 +187,7 @@ test('고칠 수 없는 상태(승인 취소)면 고치기 화면은 안내만 �
   start('/me/resubmit/7');
   expect(await screen.findByText(/지금은 고칠 수 없는 제안이에요/)).toBeDefined();
   expect(where()).toBe('/me/proposals/7/edit');
-  expect(screen.queryByRole('button', { name: '다시 제출' })).toBeNull();
+  expect(screen.queryByRole('button', { name: '다시 보내기' })).toBeNull();
 });
 
 test('제안 검토: 다시 낸 제안은 메모와 "숨긴 문서 → 고친 내용" 비교, 승인 가능', async () => {
@@ -195,7 +195,7 @@ test('제안 검토: 다시 낸 제안은 메모와 "숨긴 문서 → 고친 �
     content: { ...GAREN_DOC, summary: '가렌 고친 요약' } });
   asOperator();
   start('/admin/proposals/7');
-  expect(await screen.findByRole('heading', { name: '[재검토 후 다시 낸 제안] 가렌(으)로 다리우스 잡는 법' })).toBeDefined();
+  expect(await screen.findByRole('heading', { name: '[재검토 후 다시 낸 제안] 가렌으로 다리우스 잡는 법' })).toBeDefined();
   expect(screen.getByText('보낸 재검토 메모: 9레벨을 고쳐 주세요')).toBeDefined();
   expect(screen.getByRole('heading', { name: '바뀐 부분 (숨긴 문서 → 고친 내용)' })).toBeDefined();
   expect(screen.queryByText(/운영자가 숨긴 카운터예요/)).toBeNull();
@@ -205,7 +205,7 @@ test('제안 검토: 다시 낸 제안은 메모와 "숨긴 문서 → 고친 �
   expect(screen.getByText('승인하면 고친 내용으로 다시 공개돼요 (목록 맨 뒤).')).toBeDefined();
   fireEvent.change(screen.getByLabelText(/승인 메모/), { target: { value: '고친 내용 확인' } });
   fireEvent.click(screen.getByRole('button', { name: '승인 확정' }));
-  expect(await screen.findByText('승인하고 다시 공개했어요: [재검토 후 다시 낸 제안] 가렌(으)로 다리우스 잡는 법')).toBeDefined();
+  expect(await screen.findByText('승인하고 다시 공개했어요: [재검토 후 다시 낸 제안] 가렌으로 다리우스 잡는 법')).toBeDefined();
   expect(fakeState.rpcCalls).toEqual([{ name: 'approve_proposal', args: { p_id: 7, p_note: '고친 내용 확인', p_content: null, p_build: null, p_version: 1 } }]);
 });
 
@@ -236,7 +236,7 @@ test('완전 삭제: 지워지는 개수를 보여 주고, 사유 + 챔피언 �
 
   vi.spyOn(window, 'confirm');
   fireEvent.click(del);
-  expect(await screen.findByText('삭제했어요: 가렌(으)로 다리우스 잡는 법')).toBeDefined();
+  expect(await screen.findByText('삭제했어요: 가렌으로 다리우스 잡는 법')).toBeDefined();
   expect(where()).toBe('/admin');
   expect(fakeState.rpcCalls).toEqual([
     { name: 'delete_counter', args: { p_counter_id: 3, p_confirm: 'Garen', p_reason: '중복 카운터' } },
@@ -270,7 +270,7 @@ test('운영자 페이지: 삭제 기록(누가·언제·왜·어떤 매치업·
   start('/admin');
   expect(await screen.findByRole('heading', { name: '삭제 기록 (1)' })).toBeDefined();
   const r = screen.getByText('사유: 중복 카운터').closest('li');
-  expect(within(r).getByText('가렌(으)로 다리우스 잡는 법')).toBeDefined();
+  expect(within(r).getByText('가렌으로 다리우스 잡는 법')).toBeDefined();
   expect(r.textContent).toMatch(/삭제: Lv\.0 영자\(운\)/);
   expect(r.textContent).toMatch(/원래 제안자: Lv\.1 기존유저/);
   expect(r.textContent).toMatch(/제안 2 · 수정 기록 3 · 빌드 1 · 따봉 4/);

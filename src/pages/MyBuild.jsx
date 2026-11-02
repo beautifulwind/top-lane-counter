@@ -8,6 +8,7 @@ import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
 import { RequireLogin } from '../components/RequireOperator';
 import DocView from '../components/DocView';
+import { matchupTitle } from '../lib/josa';
 
 /**
  * 내 빌드 자세히: /me/builds/:id — 보낸 빌드를 매치업 문서의 빌드 모양으로.
@@ -52,7 +53,7 @@ function BuildView({ b, data, crumbs, sent }) {
   const auth = useAuth();
   const name = (cid) => data.champs[cid]?.name ?? cid;
   const c = b.counter;
-  const title = c ? `${name(c.counter_champion)}(으)로 ${name(c.target_champion)} 잡는 법` : '(숨긴 카운터)';
+  const title = c ? `${matchupTitle(name(c.counter_champion), name(c.target_champion))}` : '(숨긴 카운터)';
   const path = c && `/champion/${c.target_champion}/counter/${c.counter_champion}`;
   const open = c?.status === 'approved';
   const edited = !!b.original_build && ['approved', 'hidden'].includes(b.status);
@@ -66,13 +67,13 @@ function BuildView({ b, data, crumbs, sent }) {
       {crumbs}
       {sent && <p className="notice" role="status">{sent}</p>}
       <h1 className="doc-title">
-        <span className="proposal-type">빌드</span> {title}
+        [빌드] {title}
       </h1>
       <div className="proposal-meta">
         <span className={`status-badge ${b.status}`}>{BUILD_STATUS_LABEL[b.status]}</span>
         <span>보낸 날 {fmtDateTime(b.created_at)}</span>
         {b.edited_at && b.status === 'pending' && <span>고친 때 {fmtDateTime(b.edited_at)}</span>}
-        {b.resubmitted_at && <span>다시 제출 {fmtDateTime(b.resubmitted_at)}</span>}
+        {b.resubmitted_at && <span>다시 보낸 날 {fmtDateTime(b.resubmitted_at)}</span>}
         {b.reviewed_at && <span>처리 {fmtDateTime(b.reviewed_at)}</span>}
         {['approved', 'hidden'].includes(b.status) && <span>👍 {b.up} · 👎 {b.down}</span>}
       </div>
@@ -90,7 +91,7 @@ function BuildView({ b, data, crumbs, sent }) {
             {b.revision_requested_at && <small> ({fmtDateTime(b.revision_requested_at)})</small>}
           </p>
           <p>운영자 메모: {b.revision_note}</p>
-          <Link to={`/me/builds/${b.id}/edit`} className="btn btn-small">고쳐서 다시 제출</Link>
+          <Link to={`/me/builds/${b.id}/edit`} className="btn btn-small">고쳐서 다시 보내기</Link>
         </div>
       )}
       {b.status === 'approved' && (

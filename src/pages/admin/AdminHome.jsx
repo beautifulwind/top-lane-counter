@@ -19,6 +19,7 @@ import NoteForm from '../../components/NoteForm';
 import { EditedBadge, useAuthorChanged } from '../../components/AuthorChanged';
 import OffmetaPicks from '../../components/OffmetaPicks';
 import BoardAdmin from '../../components/BoardAdmin';
+import { matchupTitle } from '../../lib/josa';
 
 /**
  * 운영자 페이지: 승인 대기·재검토 기다리는 중·숨긴 카운터·빌드 승인 대기·숨긴 빌드를 목록에서 바로 처리
@@ -160,7 +161,7 @@ function PendingList() {
             <ul className="proposal-list">
               {data.deletions.map((d) => (
                 <li key={d.id} className="proposal-row">
-                  <div className="proposal-main">{name(d.counter_champion)}(으)로 {name(d.target_champion)} 잡는 법</div>
+                  <div className="proposal-main">{matchupTitle(name(d.counter_champion), name(d.target_champion))}</div>
                   <div className="proposal-meta">
                     <span>{fmtDateTime(d.deleted_at)}</span>
                     <span>삭제: {d.deleter ? <UserName profile={d.deleter} /> : '—'}</span>
@@ -181,14 +182,14 @@ function PendingList() {
 }
 
 const ACTION_LABEL = {
-  hide: '숨김', restore: '다시 공개', revision_request: '재검토 요청', resubmit: '다시 제출', reject: '다시 낸 제안 거절',
+  hide: '숨김', restore: '다시 공개', revision_request: '재검토 요청', resubmit: '다시 보냄', reject: '다시 낸 제안 거절',
 };
 
 /** 숨긴 카운터의 원래 제안 상태 → 운영자에게 보여 줄 문구 */
 function originState(origin) {
   if (!origin) return { text: '제안 없이 생긴 카운터 (재검토 요청 불가)', canRequest: false, waiting: false };
   if (origin.status === 'revision_requested') return { text: '재검토 요청 중 (제안자 수정 대기)', canRequest: false, waiting: false };
-  if (origin.status === 'pending') return { text: '다시 제출됨 (승인 대기 목록에 있음)', canRequest: false, waiting: true };
+  if (origin.status === 'pending') return { text: '다시 보냄 (승인 대기 목록에 있음)', canRequest: false, waiting: true };
   if (origin.status === 'rejected') return { text: '다시 낸 제안을 거절함 (재검토 다시 요청 가능)', canRequest: true, waiting: false };
   return { text: null, canRequest: origin.status === 'revoked', waiting: false };
 }
@@ -200,7 +201,7 @@ function originState(origin) {
 function PendingRow({ proposal: p, name, game, onDone, onReload }) {
   const [open, setOpen] = useState(null); // 'approve' | 'revision' | 'reject' | null
   const { guard, notice } = useAuthorChanged(onReload);
-  const title = `${name(p.counter_champion)}(으)로 ${name(p.target_champion)} 잡는 법`;
+  const title = `${matchupTitle(name(p.counter_champion), name(p.target_champion))}`;
   const label = p.resubmitted ? '재검토 후 다시 낸 제안' : TYPE_LABEL[p.type];
   const toggle = (kind) => setOpen(open === kind ? null : kind);
 
@@ -284,7 +285,7 @@ function PendingRow({ proposal: p, name, game, onDone, onReload }) {
 /** 숨긴 카운터 한 줄: [재검토 요청] [다시 공개]는 그 자리에 메모 입력창 */
 function HiddenRow({ counter: c, name, onDone }) {
   const [open, setOpen] = useState(null); // 'revision' | 'restore' | null
-  const title = `${name(c.counter_champion)}(으)로 ${name(c.target_champion)} 잡는 법`;
+  const title = `${matchupTitle(name(c.counter_champion), name(c.target_champion))}`;
   const lastHide = c.logs.find((l) => l.action === 'hide');
   const state = originState(c.origin);
   const path = `${c.target_champion}/${c.counter_champion}`;
@@ -378,7 +379,7 @@ function HiddenRow({ counter: c, name, onDone }) {
 /** 빌드의 매치업 제목 (숨긴 카운터도 운영자는 읽는다) */
 function buildTitle(build, name) {
   const c = build.counter;
-  return c ? `${name(c.counter_champion)}(으)로 ${name(c.target_champion)} 잡는 법` : '(알 수 없는 매치업)';
+  return c ? `${matchupTitle(name(c.counter_champion), name(c.target_champion))}` : '(알 수 없는 매치업)';
 }
 
 /** 빌드 승인 대기 한 줄: [승인] [재검토 요청] [거절]은 그 자리에 메모 입력창. 위험하면 [승인]을 잠그고 [자세히]로 */
@@ -514,7 +515,7 @@ function HiddenBuildRow({ build: b, game, name, onDone }) {
 function WaitingRow({ kind, item, name, game, onDone }) {
   const [open, setOpen] = useState(null); // 'cancel' | 'reject' | null
   const isBuild = kind === 'build';
-  const title = isBuild ? buildTitle(item, name) : `${name(item.counter_champion)}(으)로 ${name(item.target_champion)} 잡는 법`;
+  const title = isBuild ? buildTitle(item, name) : `${matchupTitle(name(item.counter_champion), name(item.target_champion))}`;
   const label = isBuild ? '빌드' : TYPE_LABEL[item.type];
   const who = isBuild ? (item.author?.nickname ?? '탈퇴한 유저') : (item.proposer?.nickname ?? '탈퇴한 유저');
   const detail = isBuild ? `/admin/builds/${item.id}` : `/admin/proposals/${item.id}`;

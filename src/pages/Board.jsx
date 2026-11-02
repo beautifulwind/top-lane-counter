@@ -79,7 +79,7 @@ export default function Board() {
                   {p.comment_count > 0 && <span className="post-count" aria-label={`댓글 ${p.comment_count}개`}>[{p.comment_count}]</span>}
                 </span>
                 <span className="post-meta">
-                  {p.author ? <UserName profile={p.author} /> : <span>탈퇴한 유저</span>}
+                  {p.author ? <UserName profile={p.author} /> : <span>(탈퇴한 유저)</span>}
                   <span>{fmtDateTime(p.created_at)}</span>
                   {p.up_count > 0 && <span aria-label={`추천 ${p.up_count}`}>👍 {p.up_count}</span>}
                 </span>

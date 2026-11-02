@@ -13,6 +13,7 @@ import UserName from '../components/UserName';
 import BuildCard from '../components/BuildCard';
 import DiffView from '../components/DiffView';
 import MyRewards from '../components/MyRewards';
+import { matchupTitle } from '../lib/josa';
 
 /**
  * 내 활동 (/me): 내 제안·내 빌드 목록과 상태, 로그인 연결.
@@ -28,7 +29,7 @@ export default function Me() {
 
   return (
     <article className="me-page">
-      <h1 className="doc-title">
+      <h1 className="doc-title" data-page-title="내 활동">
         <UserName profile={auth.profile} />
       </h1>
       {sent && (
@@ -96,7 +97,7 @@ function BoardNotices({ unread, champs }) {
           <li key={n.id} className="proposal-row">
             <p className="board-notice-msg"><span className="new-badge">새 알림</span>{n.message}</p>
             <div className="proposal-meta">
-              {n.counter && <span>{name(n.counter.counter_champion)}(으)로 {name(n.counter.target_champion)} 잡는 법</span>}
+              {n.counter && <span>{matchupTitle(name(n.counter.counter_champion), name(n.counter.target_champion))}</span>}
               <span>{fmtDateTime(n.created_at)}</span>
               {n.post_id && !['post_hidden'].includes(n.kind) && <Link to={`/board/${n.post_id}`}>글 보기</Link>}
               {n.counter?.status === 'approved' && (
@@ -149,7 +150,7 @@ function MyProposals({ data }) {
       {data && data.proposals.length > 0 && (
         <ul className="proposal-list">
           {data.proposals.map((p) => {
-            const title = `${name(p.counter_champion)}(으)로 ${name(p.target_champion)} 잡는 법`;
+            const title = `${matchupTitle(name(p.counter_champion), name(p.target_champion))}`;
             const live = p.status === 'approved' || (p.type === 'doc_edit' && !['revoked', 'revision_requested'].includes(p.status));
             return (
               <li key={p.id} className={`proposal-row ${p.status}`}>
@@ -186,7 +187,7 @@ function MyProposals({ data }) {
                       {p.revision_requested_at && <small> ({fmtDateTime(p.revision_requested_at)})</small>}
                     </p>
                     <p>운영자 메모: {p.revision_note}</p>
-                    <Link to={`/me/proposals/${p.id}/edit`} className="btn btn-small">고쳐서 다시 제출</Link>
+                    <Link to={`/me/proposals/${p.id}/edit`} className="btn btn-small">고쳐서 다시 보내기</Link>
                   </div>
                 )}
                 {p.type === 'new_counter' && p.build && (
@@ -222,7 +223,7 @@ function MyBuilds({ data }) {
         <ul className="proposal-list">
           {data.builds.map((b) => {
             const c = b.counter;
-            const title = c ? `${name(c.counter_champion)}(으)로 ${name(c.target_champion)} 잡는 법` : '(숨긴 카운터)';
+            const title = c ? `${matchupTitle(name(c.counter_champion), name(c.target_champion))}` : '(숨긴 카운터)';
             const path = c && `/champion/${c.target_champion}/counter/${c.counter_champion}`;
             const open = c?.status === 'approved';
             return (
@@ -251,7 +252,7 @@ function MyBuilds({ data }) {
                       {b.revision_requested_at && <small> ({fmtDateTime(b.revision_requested_at)})</small>}
                     </p>
                     <p>운영자 메모: {b.revision_note}</p>
-                    <Link to={`/me/builds/${b.id}/edit`} className="btn btn-small">고쳐서 다시 제출</Link>
+                    <Link to={`/me/builds/${b.id}/edit`} className="btn btn-small">고쳐서 다시 보내기</Link>
                   </div>
                 )}
                 {b.status === 'rejected' && <p className="reject-reason">거절 사유: {b.reject_reason}</p>}

@@ -87,7 +87,7 @@ function OrderEditor() {
       <p className="hint">위에 있을수록 더 확실한 카운터예요. ⠿를 끌거나 ▲▼로 옮긴 뒤 [순서 저장]을 눌러 주세요.</p>
 
       {order.length === 0 ? (
-        <p className="empty">아직 등록된 카운터가 없습니다</p>
+        <p className="empty">아직 등록된 카운터가 없어요.</p>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={order} strategy={verticalListSortingStrategy}>
@@ -115,7 +115,7 @@ function OrderEditor() {
           {busy ? '저장 중…' : '순서 저장'}
         </button>
         {changed && (
-          <button type="button" className="btn" onClick={() => setOrder(saved)} disabled={busy}>
+          <button type="button" className="btn btn-op" onClick={() => setOrder(saved)} disabled={busy}>
             되돌리기
           </button>
         )}

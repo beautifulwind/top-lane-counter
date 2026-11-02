@@ -9,6 +9,7 @@ import { ErrorBox, Loading } from '../components/Status';
 import { RequireLogin } from '../components/RequireOperator';
 import DocView from '../components/DocView';
 import DiffView from '../components/DiffView';
+import { matchupTitle } from '../lib/josa';
 
 /**
  * 내 제안 자세히: /me/proposals/:id — 보낸 글·빌드 전체를 매치업 문서 모양으로.
@@ -51,7 +52,7 @@ function Detail() {
 
 function ProposalView({ p, data, crumbs, sent }) {
   const name = (cid) => data.champs[cid]?.name ?? cid;
-  const title = `${name(p.counter_champion)}(으)로 ${name(p.target_champion)} 잡는 법`;
+  const title = `${matchupTitle(name(p.counter_champion), name(p.target_champion))}`;
   const docPath = `/champion/${p.target_champion}/counter/${p.counter_champion}`;
   const edited = approvedWithEdits(p);
   const [shown, setShown] = useState('sent'); // 운영자가 고쳐서 승인했을 때: sent(보낸 내용) | published(공개된 내용)
@@ -68,13 +69,13 @@ function ProposalView({ p, data, crumbs, sent }) {
       {crumbs}
       {sent && <p className="notice" role="status">{sent}</p>}
       <h1 className="doc-title">
-        <span className="proposal-type">{TYPE_LABEL[p.type]}</span> {title}
+        [{TYPE_LABEL[p.type]}] {title}
       </h1>
       <div className="proposal-meta">
         <span className={`status-badge ${p.status}`}>{STATUS_LABEL[p.status]}</span>
         <span>보낸 날 {fmtDateTime(p.created_at)}</span>
         {p.edited_at && p.status === 'pending' && <span>고친 때 {fmtDateTime(p.edited_at)}</span>}
-        {p.resubmitted_at && <span>다시 제출 {fmtDateTime(p.resubmitted_at)}</span>}
+        {p.resubmitted_at && <span>다시 보낸 날 {fmtDateTime(p.resubmitted_at)}</span>}
         {p.reviewed_at && <span>처리 {fmtDateTime(p.reviewed_at)}</span>}
       </div>
 
@@ -91,7 +92,7 @@ function ProposalView({ p, data, crumbs, sent }) {
             {p.revision_requested_at && <small> ({fmtDateTime(p.revision_requested_at)})</small>}
           </p>
           <p>운영자 메모: {p.revision_note}</p>
-          <Link to={`/me/proposals/${p.id}/edit`} className="btn btn-small">고쳐서 다시 제출</Link>
+          <Link to={`/me/proposals/${p.id}/edit`} className="btn btn-small">고쳐서 다시 보내기</Link>
         </div>
       )}
       {p.status === 'approved' && (

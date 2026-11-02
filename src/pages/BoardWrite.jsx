@@ -93,7 +93,7 @@ function PostForm({ post = null, deadline = null }) {
         {error && <p className="form-error" role="alert">{error}</p>}
         <div className="actions">
           <button type="submit" className="btn btn-primary" disabled={!ready || busy}>
-            {busy ? '보내는 중…' : post ? '고친 내용 저장' : '올리기'}
+            {busy ? (post ? '저장하는 중…' : '올리는 중…') : post ? '고친 내용 저장' : '글 올리기'}
           </button>
           <Link to={post ? `/board/${post.id}` : '/board'} className="btn">취소</Link>
         </div>

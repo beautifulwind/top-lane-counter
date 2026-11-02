@@ -8,6 +8,7 @@ import { ErrorBox, Loading } from '../../components/Status';
 import RequireOperator from '../../components/RequireOperator';
 import UserName from '../../components/UserName';
 import NoteForm from '../../components/NoteForm';
+import { matchupTitle } from '../../lib/josa';
 
 /**
  * 운영자: 게시판·문서 댓글 신고 (/admin/reports). 같은 글·댓글의 신고는 한 줄로 묶는다.
@@ -61,7 +62,7 @@ function ReportGroup({ group: g, champs, onDone }) {
   const label = `${what} 신고 ${g.reports.length}건`;
   const counter = g.docComment?.counter;
   const name = (id) => champs[id]?.name ?? id;
-  const matchup = counter && `${name(counter.counter_champion)}(으)로 ${name(counter.target_champion)} 잡는 법`;
+  const matchup = counter && `${matchupTitle(name(counter.counter_champion), name(counter.target_champion))}`;
   const goTo = isDoc
     ? counter && (counter.status === 'approved'
       ? `/champion/${counter.target_champion}/counter/${counter.counter_champion}#comments`
@@ -77,7 +78,7 @@ function ReportGroup({ group: g, champs, onDone }) {
       <p className="report-preview">{preview}</p>
       {isPost && !deleted && g.post?.body && <p className="report-preview body">{g.post.body.slice(0, 200)}{g.post.body.length > 200 ? '…' : ''}</p>}
       <div className="proposal-meta">
-        <span>작성자: {target?.author ? <UserName profile={target.author} /> : '탈퇴한 유저'}</span>
+        <span>작성자: {target?.author ? <UserName profile={target.author} /> : '(탈퇴한 유저)'}</span>
         {target?.status === 'hidden' && <span className="op-badge">이미 숨김</span>}
       </div>
       <ul className="log-list" aria-label="신고 내용">
@@ -101,7 +102,7 @@ function ReportGroup({ group: g, champs, onDone }) {
       {mode === 'hide' && (
         <NoteForm
           id={`hide-${g.key}`}
-          label="숨기는 이유 (필수, 작성자에게 보여요)"
+          label="숨기는 사유 (필수, 작성자에게 보여요)"
           confirmLabel="숨기기 확정"
           busyLabel="숨기는 중…"
           onCancel={() => setMode(null)}

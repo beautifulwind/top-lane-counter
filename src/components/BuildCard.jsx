@@ -42,7 +42,7 @@ export default function BuildCard({ build, items, runes, spells, latest, interac
   const r = build.runes;
   const outdated = isOutdated(build.patch, latest);
   return (
-    <article className="build" aria-label={`빌드: ${build.author?.nickname ?? '탈퇴한 유저'}`}>
+    <article className="build" aria-label={`빌드: ${build.author?.nickname ?? '(탈퇴한 유저)'}`}>
       <div className="build-head">
         <span className="build-author">
           <BuildAuthor build={build} />

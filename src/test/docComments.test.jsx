@@ -55,7 +55,7 @@ test('문서 댓글 달기 → 바로 보임 / 남의 댓글은 신고 / 빌드 
   start(MATCHUP);
   const sec = await section();
   fireEvent.change(within(sec).getByLabelText('댓글 쓰기'), { target: { value: '좋은 문서예요' } });
-  fireEvent.click(within(sec).getByRole('button', { name: '댓글 달기' }));
+  fireEvent.click(within(sec).getByRole('button', { name: '댓글 올리기' }));
   await vi.waitFor(() => expect(within(sec).getByRole('heading').textContent).toBe('4. 댓글 2'));
   expect(rpcs('create_doc_comment')).toEqual([{ p_counter: 1, p_body: '좋은 문서예요' }]);
   expect(document.querySelectorAll('.build-card .comment-list')).toHaveLength(0);
@@ -63,7 +63,7 @@ test('문서 댓글 달기 → 바로 보임 / 남의 댓글은 신고 / 빌드 
   const other = within(within(sec).getByRole('list', { name: '댓글' })).getAllByRole('listitem')[0];
   fireEvent.click(within(other).getByRole('button', { name: '신고' }));
   fireEvent.click(within(other).getByLabelText('욕설·비하'));
-  fireEvent.click(within(other).getByRole('button', { name: '신고하기' }));
+  fireEvent.click(within(other).getByRole('button', { name: '신고 보내기' }));
   expect(await screen.findByText('신고했어요. 운영자가 확인할게요.')).toBeDefined();
   expect(rpcs('report_doc_comment')).toEqual([{ p_id: 1, p_reason: 'abuse', p_detail: null }]);
 });
@@ -88,7 +88,7 @@ test('내 문서 댓글: 10분 안이면 [고치기](유예 받고 마감 표시
   // 저장 전에 시간이 지나면 DB가 막는다 → 안내, 쓴 내용은 그대로
   fireEvent.change(box, { target: { value: '고친 내용' } });
   fakeState.boardError = '고칠 수 있는 시간이 지났어요. 지우고 다시 쓸 수는 있어요.';
-  fireEvent.click(within(fresh).getByRole('button', { name: '저장' }));
+  fireEvent.click(within(fresh).getByRole('button', { name: '고친 내용 저장' }));
   expect((await within(fresh).findByRole('alert')).textContent).toBe('고칠 수 있는 시간이 지났어요. 지우고 다시 쓸 수는 있어요.');
   expect(within(fresh).getByLabelText('댓글 고치기').value).toBe('고친 내용');
 });
@@ -131,7 +131,7 @@ test('운영자: 문서 댓글 [숨기기](메모 필수) → 숨김 띠 → [�
   const hide = within(sec).getByRole('button', { name: '숨기기' });
   expect(hide.classList.contains('op-link')).toBe(true);
   fireEvent.click(hide);
-  fireEvent.change(within(sec).getByLabelText('숨기는 이유 (필수, 작성자에게 보여요)'), { target: { value: '욕설' } });
+  fireEvent.change(within(sec).getByLabelText('숨기는 사유 (필수, 작성자에게 보여요)'), { target: { value: '욕설' } });
   fireEvent.click(within(sec).getByRole('button', { name: '숨기기 확정' }));
   expect(await screen.findByText('댓글을 숨겼어요. 작성자에게 알림이 갔어요.')).toBeDefined();
   expect(rpcs('hide_doc_comment')).toEqual([{ p_id: 1, p_note: '욕설' }]);
@@ -164,10 +164,10 @@ test('운영자 /admin/reports: 문서 댓글 신고 — 매치업 이름, [보�
   start('/admin/reports');
   const row = await screen.findByRole('listitem', { name: '문서 댓글 신고 1건' });
   expect(row.textContent).toContain('나쁜 문서 댓글');
-  expect(row.textContent).toContain('퀸(으)로 다리우스 잡는 법');
+  expect(row.textContent).toContain('퀸으로 다리우스 잡는 법');
   expect(within(row).getByRole('link', { name: '보러 가기' }).getAttribute('href')).toBe('/champion/Darius/counter/Quinn#comments');
   fireEvent.click(within(row).getByRole('button', { name: '숨기기' }));
-  fireEvent.change(within(row).getByLabelText('숨기는 이유 (필수, 작성자에게 보여요)'), { target: { value: '광고' } });
+  fireEvent.change(within(row).getByLabelText('숨기는 사유 (필수, 작성자에게 보여요)'), { target: { value: '광고' } });
   fireEvent.click(within(row).getByRole('button', { name: '숨기기 확정' }));
   expect(await screen.findByText('댓글을 숨겼어요. 신고 1건은 처리됨으로 닫았어요.')).toBeDefined();
   expect(rpcs('hide_doc_comment')).toEqual([{ p_id: 5, p_note: '광고' }]);
@@ -187,8 +187,8 @@ test('/me: 문서 댓글 알림 — 매치업 이름과 [문서 보기], 경험�
   const sec = (await screen.findByRole('heading', { name: '댓글·게시판 알림' })).closest('section');
   const item = within(sec).getByRole('listitem');
   expect(item.textContent).toContain('새 댓글 2개');
-  expect(item.textContent).toContain('퀸(으)로 다리우스 잡는 법');
+  expect(item.textContent).toContain('퀸으로 다리우스 잡는 법');
   expect(within(item).getByRole('link', { name: '문서 보기' }).getAttribute('href')).toBe('/champion/Darius/counter/Quinn#comments');
   const xp = within(screen.getByRole('list', { name: '경험치 내역' })).getByRole('listitem');
-  expect(xp.textContent).toContain('문서 댓글 · 퀸(으)로 다리우스');
+  expect(xp.textContent).toContain('문서 댓글 · 퀸으로 다리우스');
 });

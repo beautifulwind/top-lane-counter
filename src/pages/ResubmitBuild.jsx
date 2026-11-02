@@ -9,6 +9,7 @@ import { buildProblem, buildToForm, patchMinor, sameBuild } from '../lib/buildCo
 import { ErrorBox, Loading } from '../components/Status';
 import { RequireLogin } from '../components/RequireOperator';
 import BuildFields from '../components/BuildFields';
+import { matchupTitle } from '../lib/josa';
 
 /**
  * 내 빌드 고치기: /me/builds/:id/edit (옛 주소 /me/builds/:id/resubmit는 여기로 보낸다). 고친 빌드는 지금 패치로.
@@ -65,7 +66,7 @@ function Editor({ b, data, crumbs }) {
   const [error, setError] = useState(null);
   const name = (cid) => data.champs[cid]?.name ?? cid;
   const c = b.counter;
-  const title = c ? `${name(c.counter_champion)}(으)로 ${name(c.target_champion)} 잡는 법` : '(알 수 없는 매치업)';
+  const title = c ? `${matchupTitle(name(c.counter_champion), name(c.target_champion))}` : '(알 수 없는 매치업)';
   const problem = buildProblem(build, data.game);
   const resubmit = b.status === 'revision_requested';
 
@@ -78,7 +79,7 @@ function Editor({ b, data, crumbs }) {
     try {
       if (resubmit) {
         await resubmitBuild(b.id, build, data.game.latest);
-        navigate('/me', { state: { sent: `${title} — 고친 빌드를 다시 제출했어요.` } });
+        navigate('/me', { state: { sent: `${title} — 고친 빌드를 다시 보냈어요.` } });
       } else {
         await editMyBuild(b.id, build, data.game.latest);
         navigate(`/me/builds/${b.id}`, { state: { sent: '고친 빌드를 저장했어요. 승인 대기 순서는 그대로예요.' } });
@@ -92,7 +93,7 @@ function Editor({ b, data, crumbs }) {
   return (
     <article>
       {crumbs}
-      <h1 className="doc-title">{title} — {resubmit ? '빌드 고쳐서 다시 제출' : '빌드 고치기'}</h1>
+      <h1 className="doc-title">{title} — {resubmit ? '빌드 고쳐서 다시 보내기' : '빌드 고치기'}</h1>
       {resubmit && (
         <div className="revision-note" role="note">
           <strong>운영자 메모</strong>
@@ -102,7 +103,7 @@ function Editor({ b, data, crumbs }) {
       )}
       <p className="lead">
         {resubmit
-          ? '보낸 빌드가 채워져 있어요. 메모를 보고 고친 뒤 다시 제출하면 다시 승인 대기로 들어가요.'
+          ? '보낸 빌드가 채워져 있어요. 메모를 보고 고친 뒤 다시 보내면 다시 승인 대기로 들어가요.'
           : '승인 대기 중인 빌드예요. 고쳐서 저장하면 운영자는 고친 빌드를 보게 되고, 대기 순서는 그대로예요.'}
         {' '}패치 {patchMinor(data.game.latest)} 기준으로 다시 기록돼요.
       </p>
@@ -110,7 +111,7 @@ function Editor({ b, data, crumbs }) {
         <BuildFields game={data.game} value={build} onChange={setBuild} author={auth.profile} />
         {error && <p className="form-error" role="alert">{error}</p>}
         <div className="actions">
-          <button type="submit" className="btn" disabled={!!problem || busy}>{busy ? '보내는 중…' : resubmit ? '다시 제출' : '고친 내용 저장'}</button>
+          <button type="submit" className="btn" disabled={!!problem || busy}>{busy ? (resubmit ? '보내는 중…' : '저장하는 중…') : resubmit ? '다시 보내기' : '고친 내용 저장'}</button>
           <Link to={`/me/builds/${b.id}`} className="btn">취소</Link>
         </div>
       </form>

@@ -13,6 +13,7 @@ import NoteForm from '../components/NoteForm';
 import { hideCounter } from '../api/proposals';
 import { LevelList } from '../components/DocView';
 import NotFound from './NotFound';
+import { matchupTitle } from '../lib/josa';
 
 
 export default function Matchup() {
@@ -55,7 +56,7 @@ export default function Matchup() {
       <article>
         {crumbs}
         <h1 className="doc-title">
-          {counter.name}(으)로 {target.name} 잡는 법
+          {matchupTitle(counter.name, target.name)}
         </h1>
         <p className="empty">아직 등록되지 않은 카운터예요. 새 카운터로 제안할 수 있어요.</p>
         <div className="actions">
@@ -78,7 +79,7 @@ export default function Matchup() {
         </span>
       </header>
       <h1 className="doc-title">
-        {counter.name}(으)로 {target.name} 잡는 법
+        {matchupTitle(counter.name, target.name)}
       </h1>
       {doc?.updated_at && <p className="doc-sub">최근 수정: {doc.updated_at}</p>}
 
@@ -123,7 +124,7 @@ export default function Matchup() {
             onCancel={() => setHiding(false)}
             onSubmit={async (reason) => {
               await hideCounter(data.matchup.counter.id, reason);
-              navigate(`/champion/${targetId}`, { state: { done: `숨겼어요: ${counter.name}(으)로 ${target.name} 잡는 법` } });
+              navigate(`/champion/${targetId}`, { state: { done: `숨겼어요: ${matchupTitle(counter.name, target.name)}` } });
             }}
           />
         )}

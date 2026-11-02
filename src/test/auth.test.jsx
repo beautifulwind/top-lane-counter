@@ -18,22 +18,22 @@ const where = () => screen.getByTestId('where').textContent;
 
 test('로그인 전: 상단에 [로그인] → 로그인 화면에서 구글 로그인을 시작하면 원래 페이지로 돌아오게 요청한다', async () => {
   start('/champion/Darius');
-  fireEvent.click(await screen.findByRole('link', { name: '로그인' }));
+  fireEvent.click(await screen.findByRole('link', { name: '로그인 · 가입' }));
   expect(where()).toBe('/login');
-  fireEvent.click(screen.getByRole('button', { name: '구글로 로그인' }));
+  fireEvent.click(screen.getByRole('button', { name: '구글로 시작하기' }));
   await screen.findByRole('button', { name: '구글로 이동 중…' });
   expect(fakeState.oauthCalls).toEqual([
-    { provider: 'google', options: { redirectTo: `${window.location.origin}/champion/Darius` } },
+    { provider: 'google', options: { redirectTo: `${window.location.origin}/champion/Darius`, queryParams: { prompt: 'select_account' } } },
   ]);
 });
 
 test('로그인 화면에서 카카오 로그인을 시작하면 provider kakao로 요청하고, 이동 중에는 두 버튼 모두 잠긴다', async () => {
   start('/login');
-  fireEvent.click(await screen.findByRole('button', { name: '카카오로 로그인' }));
+  fireEvent.click(await screen.findByRole('button', { name: '카카오로 시작하기' }));
   expect((await screen.findByRole('button', { name: '카카오로 이동 중…' })).disabled).toBe(true);
-  expect(screen.getByRole('button', { name: '구글로 로그인' }).disabled).toBe(true);
+  expect(screen.getByRole('button', { name: '구글로 시작하기' }).disabled).toBe(true);
   expect(fakeState.oauthCalls).toEqual([
-    { provider: 'kakao', options: { redirectTo: `${window.location.origin}/` } },
+    { provider: 'kakao', options: { redirectTo: `${window.location.origin}/`, queryParams: { prompt: 'login' } } },
   ]);
 });
 
@@ -46,7 +46,7 @@ test('카카오 첫 로그인(이메일 없음)도 구글과 똑같이 닉네임
 
   fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '카카오탑' } });
   fireEvent.click(screen.getByRole('button', { name: '시작하기' }));
-  expect(await screen.findByText(/다리우스을\(를\) 이기는 챔피언/)).toBeDefined();
+  expect(await screen.findByText(/다리우스를 이기는 챔피언/)).toBeDefined();
   expect(where()).toBe('/champion/Darius');
   expect(document.querySelector('.me').textContent).toBe('Lv.1 카카오탑');
 });
@@ -59,7 +59,7 @@ test('첫 로그인(닉네임 없음): 어느 페이지든 닉네임 설정으�
 
   fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '  탑고수 ' } });
   fireEvent.click(screen.getByRole('button', { name: '시작하기' }));
-  expect(await screen.findByText(/다리우스을\(를\) 이기는 챔피언/)).toBeDefined();
+  expect(await screen.findByText(/다리우스를 이기는 챔피언/)).toBeDefined();
   expect(where()).toBe('/champion/Darius');
   expect(document.querySelector('.me').textContent).toBe('Lv.1 탑고수'); // 칭호 없으면 칭호 자리 없음
 });
@@ -91,7 +91,7 @@ test('닉네임이 있는 유저: 상단에 "Lv.7 칭호 · 닉네임", 로그�
   await screen.findByText('탑고수');
   expect(document.querySelector('.me').textContent).toBe('Lv.7 단단묵직 · 탑고수');
   fireEvent.click(screen.getByRole('button', { name: '로그아웃' }));
-  expect(await screen.findByRole('link', { name: '로그인' })).toBeDefined();
+  expect(await screen.findByRole('link', { name: '로그인 · 가입' })).toBeDefined();
 });
 
 test('운영자: 상단에 "Lv.0 닉네임"만 보이고 "운영자"·"관리자" 글자는 붙지 않는다', async () => {
@@ -120,12 +120,12 @@ test('이미 로그인한 상태로 /login에 오면 원래 페이지로 보낸�
 
 test('로그인하지 않고 /welcome에 오면 로그인 화면으로 보낸다', async () => {
   start('/welcome');
-  expect(await screen.findByRole('button', { name: '구글로 로그인' })).toBeDefined();
+  expect(await screen.findByRole('button', { name: '구글로 시작하기' })).toBeDefined();
 });
 
 test('다른 탭에서 로그인해도(상태 변경 알림) 바로 반영된다', async () => {
   start('/');
-  await screen.findByRole('link', { name: '로그인' });
+  await screen.findByRole('link', { name: '로그인 · 가입' });
   await act(async () => fakeLogin('u-old'));
   expect(await screen.findByRole('button', { name: '로그아웃' })).toBeDefined();
 });

@@ -10,6 +10,7 @@ import { ErrorBox, Loading } from '../components/Status';
 import { RequireLogin } from '../components/RequireOperator';
 import BuildFields from '../components/BuildFields';
 import NotFound from './NotFound';
+import { matchupTitle } from '../lib/josa';
 
 /**
  * 빌드 등록: /champion/:targetId/counter/:counterId/build/new[?from=내 빌드 id]
@@ -52,7 +53,7 @@ function BuildEditor({ data, target, counter, fromId }) {
   const [error, setError] = useState(null);
   const game = { items: data.items, runes: data.runes, spells: data.spells, latest: data.latest };
   const problem = buildProblem(build, game);
-  const title = `${counter.name}(으)로 ${target.name} 잡는 법`;
+  const title = `${matchupTitle(counter.name, target.name)}`;
 
   const submit = async (e) => {
     e.preventDefault();

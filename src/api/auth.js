@@ -7,6 +7,14 @@ export const NICKNAME_MAX = 20;
 export const PROVIDERS = { google: '구글', kakao: '카카오' };
 
 /**
+ * 브라우저에 이미 로그인된 구글·카카오 계정으로 자동으로 들어가지 않게, 매번 계정을 고르게 한다.
+ * (로그아웃은 이 사이트의 세션만 끝낸다 — 구글·카카오 로그인은 브라우저에 남아 있으므로 여기서 다시 묻는다)
+ *   구글: prompt=select_account → 계정 선택 화면,  카카오: prompt=login → 카카오 로그인 화면
+ * Supabase가 이 값을 그대로 구글·카카오 로그인 주소에 붙여 준다.
+ */
+export const PROVIDER_PROMPT = { google: { prompt: 'select_account' }, kakao: { prompt: 'login' } };
+
+/**
  * 소셜 로그인 시작 → 구글/카카오 → Supabase → 지금 접속한 주소(origin)의 returnTo 경로로 돌아온다.
  * 카카오: Supabase가 account_email·profile_nickname·profile_image를 항상 요청한다 (scopes로 뺄 수 없음).
  *   이메일은 카카오 동의항목에서 "필수 동의"다 (카카오 비즈 앱 필요). 같은 이메일의 구글·카카오 계정을
@@ -17,7 +25,7 @@ export async function signIn(provider, returnTo = '/') {
   rememberPending('signIn', provider);
   const { error } = await db().auth.signInWithOAuth({
     provider,
-    options: { redirectTo: window.location.origin + returnTo },
+    options: { redirectTo: window.location.origin + returnTo, queryParams: PROVIDER_PROMPT[provider] },
   });
   if (error) {
     forgetPending();
@@ -34,7 +42,7 @@ export async function linkProvider(provider) {
   rememberPending('link', provider);
   const { error } = await db().auth.linkIdentity({
     provider,
-    options: { redirectTo: window.location.origin + '/me' },
+    options: { redirectTo: window.location.origin + '/me', queryParams: PROVIDER_PROMPT[provider] },
   });
   if (error) {
     forgetPending();

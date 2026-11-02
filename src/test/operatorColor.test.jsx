@@ -53,7 +53,7 @@ test('운영자 페이지: 처리 버튼·메모 확정은 운영자 색, 메모
   TABLES.edit_proposals.push(fakeProposal());
   asOperator();
   start('/admin');
-  const row = await screen.findByRole('listitem', { name: '[문서 수정] 퀸(으)로 다리우스 잡는 법' });
+  const row = await screen.findByRole('listitem', { name: '[문서 수정] 퀸으로 다리우스 잡는 법' });
   for (const name of ['승인', '재검토 요청', '거절']) expect(isOp(within(row).getByRole('button', { name }))).toBe(true);
   expect(isOp(within(row).getByRole('link', { name: '자세히' }))).toBe(true);
   fireEvent.click(within(row).getByRole('button', { name: '거절' }));

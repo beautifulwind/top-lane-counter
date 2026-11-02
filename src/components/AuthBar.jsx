@@ -5,7 +5,7 @@ import { getMyUnreadNotifications, onNotificationsChanged } from '../api/proposa
 import { useAuth } from '../lib/auth';
 import UserName from './UserName';
 
-/** 상단 바 오른쪽: 로그인 전 [로그인], 로그인 후 "Lv.1 닉네임"(운영자는 "Lv.0 닉네임") + [로그아웃] */
+/** 상단 바 오른쪽: 로그인 전 [로그인 · 가입], 로그인 후 "Lv.1 닉네임"(운영자는 "Lv.0 닉네임") + [로그아웃] */
 export default function AuthBar() {
   const auth = useAuth();
   const { pathname, search } = useLocation();
@@ -16,7 +16,7 @@ export default function AuthBar() {
     return (
       <div className="auth-bar">
         <Link to="/login" state={{ from: pathname + search }} className="top-btn">
-          로그인
+          로그인 · 가입
         </Link>
       </div>
     );

@@ -32,7 +32,7 @@ function hiddenGaren(proposal = {}) {
     id: 7, type: 'new_counter', counter_champion: 'Garen', counter_id: 3, content: GAREN_DOC, ...proposal,
   }));
 }
-const send = () => fireEvent.click(screen.getByRole('button', { name: '다시 제출' }));
+const send = () => fireEvent.click(screen.getByRole('button', { name: '다시 보내기' }));
 
 // ---------------- 다시 제출: 글 + 빌드 ----------------
 
@@ -40,7 +40,7 @@ test('다시 제출: 첫 빌드가 채워져 있고, 빌드만 고쳐도 보낼 
   hiddenGaren({ status: 'revision_requested', revision_note: '빌드를 고쳐 주세요' });
   fakeLogin('u-old', { nickname: '기존유저' });
   start('/me/resubmit/7');
-  expect(await screen.findByRole('heading', { name: /고쳐서 다시 제출/ })).toBeDefined();
+  expect(await screen.findByRole('heading', { name: /고쳐서 다시 보내기/ })).toBeDefined();
   const core = screen.getByRole('list', { name: '고른 핵심 템트리' });
   expect(within(core).getAllByRole('listitem').map((li) => li.textContent.replace(/←|빼기/g, ''))).toEqual(['스테락의 도전', '강철판 장화', '선혈포식자']);
   send();
@@ -67,7 +67,7 @@ test('다시 제출: 예전 제안이라 빌드가 없으면 빌드를 채워야
 
 // ---------------- 운영자: 새 카운터 제안의 빌드 ----------------
 
-const pendingRow = () => screen.findByRole('listitem', { name: '[새 카운터] 가렌(으)로 다리우스 잡는 법' });
+const pendingRow = () => screen.findByRole('listitem', { name: '[새 카운터] 가렌으로 다리우스 잡는 법' });
 
 test('/admin: 새 카운터 제안 줄에서 함께 공개될 첫 빌드를 보고 바로 승인', async () => {
   TABLES.edit_proposals.push(fakeProposal({ id: 8, type: 'new_counter', counter_champion: 'Garen', counter_id: null }));

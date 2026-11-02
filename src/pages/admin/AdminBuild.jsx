@@ -15,6 +15,7 @@ import BuildCard, { BuildAuthor } from '../../components/BuildCard';
 import ApproveEditor from '../../components/ApproveEditor';
 import { EditedBadge, useAuthorChanged } from '../../components/AuthorChanged';
 import NotFound from '../NotFound';
+import { matchupTitle } from '../../lib/josa';
 
 /**
  * 운영자: 빌드 하나 자세히 (/admin/builds/:id) — 확인할 점, 처리 기록,
@@ -30,7 +31,7 @@ export default function AdminBuild() {
 
 const LOG_LABEL = {
   approve: '승인', reject: '거절', hide: '숨김', restore: '다시 공개',
-  revision_request: '재검토 요청', revision_cancel: '재검토 요청 취소', resubmit: '다시 제출',
+  revision_request: '재검토 요청', revision_cancel: '재검토 요청 취소', resubmit: '다시 보냄',
 };
 
 function Review() {
@@ -52,7 +53,7 @@ function Review() {
   const { build: b, approved } = data.review;
   const name = (cid) => data.champs[cid]?.name ?? cid;
   const c = b.counter;
-  const title = c ? `${name(c.counter_champion)}(으)로 ${name(c.target_champion)} 잡는 법` : '(알 수 없는 매치업)';
+  const title = c ? `${matchupTitle(name(c.counter_champion), name(c.target_champion))}` : '(알 수 없는 매치업)';
   const flags = buildReviewFlags(b, data.game, approved);
   const who = b.author?.nickname ?? '탈퇴한 유저';
   const done = (message) => navigate('/admin', { state: { done: message } });
@@ -72,7 +73,7 @@ function Review() {
   return (
     <article>
       <nav className="crumbs"><Link to="/admin">운영자 페이지</Link> › 빌드 자세히</nav>
-      <h1 className="doc-title">{title} — 빌드</h1>
+      <h1 className="doc-title">[빌드] {title}</h1>
       <div className="proposal-meta">
         <span className={`status-badge ${b.status}`}>{BUILD_STATUS_LABEL[b.status]}</span>
         <span>작성자: <BuildAuthor build={b} /></span>

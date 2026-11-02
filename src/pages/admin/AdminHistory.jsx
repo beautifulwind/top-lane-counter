@@ -11,6 +11,7 @@ import DiffView from '../../components/DiffView';
 import UserName from '../../components/UserName';
 import NoteForm from '../../components/NoteForm';
 import NotFound from '../NotFound';
+import { matchupTitle } from '../../lib/josa';
 
 /** 매치업 문서 수정 기록 + 예전 버전으로 되돌리기 */
 export default function AdminHistory() {
@@ -66,7 +67,7 @@ function History() {
     <article>
       <nav className="crumbs">
         <Link to="/admin">운영자 페이지</Link> ›{' '}
-        <Link to={`/champion/${targetId}/counter/${counterId}`}>{counter.name}(으)로 {target.name} 잡는 법</Link> › 수정 기록
+        <Link to={`/champion/${targetId}/counter/${counterId}`}>{matchupTitle(counter.name, target.name)}</Link> › 수정 기록
       </nav>
       <h1 className="doc-title">수정 기록</h1>
       {message && <p className="notice" role="status">{message}</p>}

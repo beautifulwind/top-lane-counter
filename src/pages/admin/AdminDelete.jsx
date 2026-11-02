@@ -6,6 +6,7 @@ import { useAsync } from '../../lib/useAsync';
 import { ErrorBox, Loading } from '../../components/Status';
 import RequireOperator from '../../components/RequireOperator';
 import NotFound from '../NotFound';
+import { josa, josaOf, matchupTitle } from '../../lib/josa';
 
 /** 숨긴 카운터 완전 삭제: /admin/delete/:targetId/:counterId — 챔피언 이름을 직접 입력해야 버튼이 눌린다 */
 export default function AdminDelete() {
@@ -34,7 +35,7 @@ function DeleteForm() {
   const target = data.champs[targetId];
   const counter = data.champs[counterId];
   if (!target || !counter) return <NotFound />;
-  const title = `${counter.name}(으)로 ${target.name} 잡는 법`;
+  const title = `${matchupTitle(counter.name, target.name)}`;
   const crumbs = <nav className="crumbs"><Link to="/admin">운영자 페이지</Link> › 완전 삭제</nav>;
 
   if (!data.matchup) {
@@ -42,7 +43,7 @@ function DeleteForm() {
       <article>
         {crumbs}
         <h1 className="doc-title">카운터 완전 삭제</h1>
-        <p className="empty">숨긴 카운터만 삭제할 수 있어요. {title}은(는) 숨긴 카운터가 아니에요.</p>
+        <p className="empty">숨긴 카운터만 삭제할 수 있어요. {josa(title, '은/는')} 숨긴 카운터가 아니에요.</p>
       </article>
     );
   }
@@ -82,7 +83,7 @@ function DeleteForm() {
         <label htmlFor="delete-reason">삭제 사유 (필수)</label>
         <textarea id="delete-reason" rows={3} value={reason} onChange={(e) => setReason(e.target.value)} maxLength={500} />
         <label htmlFor="delete-confirm">
-          확인을 위해 챔피언 이름 <strong>{counter.name}</strong>을(를) 그대로 입력해 주세요
+          확인을 위해 챔피언 이름 <strong>{counter.name}</strong>{josaOf(counter.name, '을/를')} 그대로 입력해 주세요
         </label>
         <input id="delete-confirm" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" />
         <button type="button" className="btn btn-danger" onClick={remove} disabled={busy || !reason.trim() || !nameOk}>

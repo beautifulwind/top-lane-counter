@@ -8,6 +8,7 @@ import { useAuth } from '../lib/auth';
 import { hideCounter } from '../api/proposals';
 import NoteForm from '../components/NoteForm';
 import NotFound from './NotFound';
+import { josa, matchupTitle } from '../lib/josa';
 
 export default function Champion() {
   const { id } = useParams();
@@ -44,18 +45,18 @@ export default function Champion() {
       {done && <p className="notice" role="status">{done}</p>}
       <section className="section">
         <h2 className="section-title">
-          <span className="num">1.</span> {target.name}을(를) 이기는 챔피언
+          <span className="num">1.</span> {josa(target.name, '을/를')} 이기는 챔피언
         </h2>
         <p className="hint">위에 있을수록 더 확실하게 이기는 카운터예요. 순서는 운영자가 정합니다.</p>
 
         {data.counters.length === 0 ? (
-          <p className="empty">아직 등록된 카운터가 없습니다</p>
+          <p className="empty">아직 등록된 카운터가 없어요.</p>
         ) : (
           <ol className="counter-list">
             {data.counters.map((c, i) => {
               const champ = data.champs[c.counter_champion];
               if (!champ) return null;
-              const title = `${champ.name}(으)로 ${target.name} 잡는 법`;
+              const title = `${matchupTitle(champ.name, target.name)}`;
               return (
                 <li key={c.id}>
                   <div className="counter-item">

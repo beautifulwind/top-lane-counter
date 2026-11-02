@@ -52,7 +52,7 @@ test('운영자: 매치업 문서 [카운터 숨기기] → 그 자리에 사유
   expect(ok.disabled).toBe(true);
   fireEvent.change(screen.getByLabelText(/숨기는 사유/), { target: { value: ' 잘못 승인했어요 ' } });
   fireEvent.click(ok);
-  expect(await screen.findByText('숨겼어요: 퀸(으)로 다리우스 잡는 법')).toBeDefined();
+  expect(await screen.findByText('숨겼어요: 퀸으로 다리우스 잡는 법')).toBeDefined();
   expect(where()).toBe('/champion/Darius');
   expect(fakeState.rpcCalls).toEqual([{ name: 'hide_counter', args: { p_counter_id: 1, p_reason: '잘못 승인했어요' } }]);
   expect(window.confirm).not.toHaveBeenCalled();
@@ -73,7 +73,7 @@ test('운영자: 챔피언 문서 목록 줄의 [숨기기] → 사유 입력 �
   fireEvent.click(hideBtn);
   fireEvent.change(screen.getByLabelText(/퀸 숨기는 사유/), { target: { value: '중복' } });
   fireEvent.click(screen.getByRole('button', { name: '숨기기 확정' }));
-  expect(await screen.findByText('숨겼어요: 퀸(으)로 다리우스 잡는 법')).toBeDefined();
+  expect(await screen.findByText('숨겼어요: 퀸으로 다리우스 잡는 법')).toBeDefined();
   expect(where()).toBe('/champion/Darius');
   expect(fakeState.rpcCalls).toEqual([{ name: 'hide_counter', args: { p_counter_id: 1, p_reason: '중복' } }]);
 });
@@ -95,7 +95,7 @@ test('운영자 페이지: 숨긴 카운터와 사유·기록이 보이고, [다
   asOperator();
   vi.spyOn(window, 'confirm');
   start('/admin');
-  const row = await screen.findByRole('listitem', { name: '가렌(으)로 다리우스 잡는 법' });
+  const row = await screen.findByRole('listitem', { name: '가렌으로 다리우스 잡는 법' });
   expect(within(row).getByText('사유: 잘못 승인했어요')).toBeDefined();
   expect(within(row).getByText('숨김·공개 기록 2개')).toBeDefined();
   expect(row.querySelector('.log-list').textContent).toMatch(/숨김 · Lv\.0 영자\(운\) · 잘못 승인했어요/);
@@ -107,7 +107,7 @@ test('운영자 페이지: 숨긴 카운터와 사유·기록이 보이고, [다
   fireEvent.change(within(row).getByLabelText('다시 공개 메모 (필수)'), { target: { value: ' 확인해 보니 맞음 ' } });
   fireEvent.click(ok);
   await vi.waitFor(() => expect(fakeState.rpcCalls).toEqual([{ name: 'restore_counter', args: { p_counter_id: 3, p_note: '확인해 보니 맞음' } }]));
-  expect(await screen.findByText('다시 공개했어요: 가렌(으)로 다리우스 잡는 법')).toBeDefined();
+  expect(await screen.findByText('다시 공개했어요: 가렌으로 다리우스 잡는 법')).toBeDefined();
   expect(window.confirm).not.toHaveBeenCalled();
 });
 

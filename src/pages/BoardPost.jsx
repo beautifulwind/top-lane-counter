@@ -156,7 +156,7 @@ function PostActions({ post, mine, auth, onDone }) {
       {mode === 'hide' && (
         <NoteForm
           id={`hide-post-${post.id}`}
-          label="숨기는 이유 (필수, 작성자에게 보여요)"
+          label="숨기는 사유 (필수, 작성자에게 보여요)"
           confirmLabel="숨기기 확정"
           busyLabel="숨기는 중…"
           onCancel={() => setMode(null)}

@@ -12,6 +12,7 @@ import DocForm from '../components/DocForm';
 import BuildFields from '../components/BuildFields';
 import { RequireLogin } from '../components/RequireOperator';
 import NotFound from './NotFound';
+import { josa, matchupTitle } from '../lib/josa';
 
 /**
  * 새 카운터 제안: /champion/:id/propose (?counter=Quinn 으로 미리 고를 수 있음). 글 + 빌드 1개(필수)
@@ -61,7 +62,7 @@ function ProposeCounterForm() {
 
   const submit = async (content) => {
     await proposeNewCounter(auth.user.id, id, counter.id, content, build, data.game.latest);
-    navigate('/me', { state: { sent: `${counter.name}(으)로 ${target.name} 잡는 법 — 새 카운터 제안을 보냈어요.` } });
+    navigate('/me', { state: { sent: `${matchupTitle(counter.name, target.name)} — 새 카운터 제안을 보냈어요.` } });
   };
 
   return (
@@ -69,7 +70,7 @@ function ProposeCounterForm() {
       <nav className="crumbs">
         <Link to="/">홈</Link> › <Link to={`/champion/${id}`}>{target.name}</Link> › 새 카운터 제안
       </nav>
-      <h1 className="doc-title">{target.name}을(를) 이기는 챔피언 제안</h1>
+      <h1 className="doc-title">{josa(target.name, '을/를')} 이기는 챔피언 제안</h1>
 
       <section className="section">
         <h2 className="section-title"><span className="num">1.</span> 이기는 챔피언 고르기</h2>
@@ -115,7 +116,7 @@ function ProposeCounterForm() {
 
       {counter && (
         <section className="section">
-          <h2 className="section-title"><span className="num">2.</span> {counter.name}(으)로 {target.name} 잡는 법</h2>
+          <h2 className="section-title"><span className="num">2.</span> {matchupTitle(counter.name, target.name)}</h2>
           {from && counter.id === from.counter_champion && (
             <p className="notice" role="status">거절된 내 제안의 글과 빌드를 채워 뒀어요. 거절 사유를 보고 고쳐서 보내 주세요.</p>
           )}
@@ -124,6 +125,7 @@ function ProposeCounterForm() {
             initial={from && counter.id === from.counter_champion ? from.content : undefined}
             onSubmit={submit}
             blocked={buildMissing(build, data.game)}
+            cancelTo={`/champion/${target.id}`}
           >
             <fieldset className="pick-group build-in-doc">
               <legend>빌드 (필수)</legend>

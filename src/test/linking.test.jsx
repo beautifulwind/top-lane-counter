@@ -58,7 +58,7 @@ test('예전에 이미 합쳐진 계정으로 평소처럼 로그인하면 안�
 
 test('/me: 로그인 안 했으면 로그인 화면으로 보낸다', async () => {
   render_('/me');
-  expect(await screen.findByRole('heading', { name: '로그인' })).toBeDefined();
+  expect(await screen.findByRole('heading', { name: '로그인 · 가입' })).toBeDefined();
   expect(where()).toBe('/login');
 });
 
@@ -75,7 +75,7 @@ test('/me: 연결된 방식은 "연결됨", 안 된 방식은 [연결하기] →
   fireEvent.click(screen.getByRole('button', { name: '카카오 연결하기' }));
   expect((await screen.findByRole('button', { name: '카카오로 이동 중…' })).disabled).toBe(true);
   expect(fakeState.linkCalls).toEqual([
-    { provider: 'kakao', options: { redirectTo: `${window.location.origin}/me` } },
+    { provider: 'kakao', options: { redirectTo: `${window.location.origin}/me`, queryParams: { prompt: 'login' } } },
   ]);
   expect(JSON.parse(sessionStorage.getItem('auth:pending'))).toEqual({ kind: 'link', provider: 'kakao' });
 });

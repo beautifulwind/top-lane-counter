@@ -78,7 +78,7 @@ test('닉네임을 아직 안 정한 로그인 상태에서도 두 페이지는 
 
 test('로그인 화면: 버튼 아래 동의 문구와 두 링크, 만 14세 이상 안내', async () => {
   start('/login');
-  await screen.findByRole('heading', { name: '로그인' });
+  await screen.findByRole('heading', { name: '로그인 · 가입' });
   const consent = document.querySelector('.login-consent');
   expect(consent.textContent).toMatch(/이용약관과 개인정보처리방침에 동의하는 것으로 봐요/);
   expect(consent.textContent).toMatch(/만 14세 이상만 가입할 수 있어요/);

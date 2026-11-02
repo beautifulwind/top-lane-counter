@@ -7,6 +7,7 @@ import { fmtDateTime } from '../lib/format';
 import { ErrorBox, Loading } from './Status';
 import UserName from './UserName';
 import NoteForm from './NoteForm';
+import { matchupTitle } from '../lib/josa';
 
 /** 운영자 페이지의 "자유게시판·댓글" 칸: 처리할 신고 수 → /admin/reports, 숨긴 글·댓글·문서 댓글 + [다시 공개] */
 export default function BoardAdmin() {
@@ -67,9 +68,9 @@ function HiddenBoardRow({ kind, row, champs, onDone }) {
       <div className="proposal-main">
         <span className="proposal-type">{KIND_LABEL[kind]}</span> <span className="report-preview">{text}</span>
       </div>
-      {k && <p className="hint">{name(k.counter_champion)}(으)로 {name(k.target_champion)} 잡는 법</p>}
+      {k && <p className="hint">{matchupTitle(name(k.counter_champion), name(k.target_champion))}</p>}
       <div className="proposal-meta">
-        <span>작성자: {row.author ? <UserName profile={row.author} /> : '탈퇴한 유저'}</span>
+        <span>작성자: {row.author ? <UserName profile={row.author} /> : '(탈퇴한 유저)'}</span>
         <span>숨긴 날 {fmtDateTime(row.hidden_at)}</span>
       </div>
       <p className="reject-reason">메모: {row.hidden_note}</p>

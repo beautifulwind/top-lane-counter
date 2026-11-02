@@ -16,6 +16,7 @@ import BuildCard from '../../components/BuildCard';
 import ApproveEditor from '../../components/ApproveEditor';
 import { EditedBadge, useAuthorChanged } from '../../components/AuthorChanged';
 import { proposalBuildBlock, sameBuild } from '../../lib/buildContent';
+import { matchupTitle } from '../../lib/josa';
 
 /** 제안 하나 검토: 기존 ↔ 제안 비교, [승인](고쳐서 승인 가능) / [재검토 요청] / [거절] — 모두 메모 필수. ?approve=1이면 [승인]을 연 채로 */
 export default function AdminProposal() {
@@ -50,7 +51,7 @@ function Review() {
   const buildChanged = resubmitted && !sameBuild(firstBuild, p.build);
   const card = (b, extra = {}) => <BuildCard build={{ ...b, author: p.proposer, ...extra }} {...data.game} />;
   const name = (cid) => data.champs[cid]?.name ?? cid;
-  const title = `${name(p.counter_champion)}(으)로 ${name(p.target_champion)} 잡는 법`;
+  const title = `${matchupTitle(name(p.counter_champion), name(p.target_champion))}`;
   const label = resubmitted ? '재검토 후 다시 낸 제안' : TYPE_LABEL[p.type];
 
   const hiddenFlow = isHiddenCounterFlow(p);

@@ -8,6 +8,7 @@ import RequireOperator from '../../components/RequireOperator';
 import DocView from '../../components/DocView';
 import { useAuth } from '../../lib/auth';
 import { DocComments } from '../Matchup';
+import { matchupTitle } from '../../lib/josa';
 
 /** 숨긴 카운터 미리보기 (읽기 전용): /admin/preview/:targetId/:counterId — 숨긴 문서·빌드는 DB가 운영자에게만 보여 준다 */
 export default function AdminPreview() {
@@ -31,7 +32,7 @@ function Preview() {
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
   const name = (id) => data.champs[id]?.name ?? id;
-  const title = `${name(counterId)}(으)로 ${name(targetId)} 잡는 법`;
+  const title = `${matchupTitle(name(counterId), name(targetId))}`;
   const crumbs = <nav className="crumbs"><Link to="/admin">운영자 페이지</Link> › 미리보기</nav>;
 
   if (!data.matchup) {

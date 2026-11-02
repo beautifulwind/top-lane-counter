@@ -10,6 +10,7 @@ import DocForm from '../components/DocForm';
 import BuildFields from '../components/BuildFields';
 import { buildMissing, buildToForm, emptyBuild, sameBuild } from '../lib/buildContent';
 import { RequireLogin } from '../components/RequireOperator';
+import { matchupTitle } from '../lib/josa';
 
 /**
  * 내 제안 고치기: /me/proposals/:id/edit (옛 주소 /me/resubmit/:id는 여기로 보낸다)
@@ -67,12 +68,12 @@ function ResubmitEditor({ p, data, crumbs }) {
   const hiddenFlow = isHiddenCounterFlow(p);
   const [build, setBuild] = useState(() => (p.build ? buildToForm(p.build) : emptyBuild()));
   const name = (cid) => data.champs[cid]?.name ?? cid;
-  const title = `${name(p.counter_champion)}(으)로 ${name(p.target_champion)} 잡는 법`;
+  const title = `${matchupTitle(name(p.counter_champion), name(p.target_champion))}`;
 
   const submit = async (content) => {
     if (resubmit) {
       await resubmitProposal(p.id, content, isNew ? build : null, data.game.latest);
-      navigate('/me', { state: { sent: `${title} — 고친 내용을 다시 제출했어요.` } });
+      navigate('/me', { state: { sent: `${title} — 고친 내용을 다시 보냈어요.` } });
     } else {
       await editMyProposal(p.id, content, isNew ? build : null, data.game.latest);
       navigate(`/me/proposals/${p.id}`, { state: { sent: '고친 내용을 저장했어요. 승인 대기 순서는 그대로예요.' } });
@@ -82,7 +83,7 @@ function ResubmitEditor({ p, data, crumbs }) {
   return (
     <article>
       {crumbs}
-      <h1 className="doc-title">{title} — {resubmit ? '고쳐서 다시 제출' : '고치기'}</h1>
+      <h1 className="doc-title">{title} — {resubmit ? '고쳐서 다시 보내기' : '고치기'}</h1>
       {resubmit && (
         <div className="revision-note" role="note">
           <strong>운영자 메모</strong>
@@ -97,19 +98,21 @@ function ResubmitEditor({ p, data, crumbs }) {
         </p>
       ) : hiddenFlow ? (
         <p className="lead">
-          숨기기 전의 문서와 첫 빌드가 채워져 있어요. 메모를 보고 글이나 빌드를 고친 뒤 다시 제출해 주세요.
+          숨기기 전의 문서와 첫 빌드가 채워져 있어요. 메모를 보고 글이나 빌드를 고친 뒤 다시 보내 주세요.
           빌드를 바꾸면 승인될 때 원래 첫 빌드 대신 고친 빌드가 공개돼요.
         </p>
       ) : (
         <p className="lead">
-          보낸 {isNew ? '글과 빌드가' : '글이'} 채워져 있어요. 메모를 보고 고친 뒤 다시 제출하면 다시 승인 대기로 들어가요.
+          보낸 {isNew ? '글과 빌드가' : '글이'} 채워져 있어요. 메모를 보고 고친 뒤 다시 보내면 다시 승인 대기로 들어가요.
         </p>
       )}
       {isNew && !p.build && <p className="notice" role="status">이 제안에는 빌드가 없어요. 이제 새 카운터에는 빌드가 꼭 있어야 하니 빌드도 채워 주세요.</p>}
       <DocForm
         initial={p.content}
         onSubmit={submit}
-        submitLabel={resubmit ? '다시 제출' : '고친 내용 저장'}
+        submitLabel={resubmit ? '다시 보내기' : '고친 내용 저장'}
+        busyLabel={resubmit ? '보내는 중…' : '저장하는 중…'}
+        cancelTo={`/me/proposals/${p.id}`}
         requireChange
         changedElsewhere={isNew && !sameBuild(p.build, build)}
         unchangedMessage={resubmit ? `고친 내용이 없어요. 운영자 메모를 보고 ${isNew ? '글이나 빌드를' : '글을'} 고쳐 주세요.` : '고친 내용이 없어요.'}
