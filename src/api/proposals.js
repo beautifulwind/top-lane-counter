@@ -92,7 +92,8 @@ export function onNotificationsChanged(cb) {
 /** 안 읽은 내 알림 (최근 순). RLS가 내 것만 돌려준다. */
 export function getMyUnreadNotifications(userId) {
   return run(
-    db().from('notifications').select('id, kind, proposal_id, build_id, post_id, message, created_at')
+    db().from('notifications')
+      .select('id, kind, proposal_id, build_id, post_id, counter_id, message, created_at, counter:counters!notifications_counter_id_fkey(target_champion, counter_champion, status)')
       .eq('user_id', userId).is('read_at', null).order('created_at', { ascending: false }),
     '알림을 불러오지 못했어요.',
   );
@@ -357,16 +358,17 @@ export const requestRevision = (counterRowId, note) =>
 
 /** 완전 삭제할 때 함께 지워지는 것 개수 */
 export async function getDeletionCounts(counterRowId) {
-  const [proposals, revisions, builds] = await Promise.all([
+  const [proposals, revisions, builds, comments] = await Promise.all([
     run(db().from('edit_proposals').select('id').eq('counter_id', counterRowId), '개수를 세지 못했어요.'),
     run(db().from('doc_revisions').select('id').eq('counter_id', counterRowId), '개수를 세지 못했어요.'),
     run(db().from('builds').select('id').eq('counter_id', counterRowId), '개수를 세지 못했어요.'),
+    run(db().from('doc_comments').select('id').eq('counter_id', counterRowId), '개수를 세지 못했어요.'),
   ]);
   const votes = builds.length === 0 ? [] : await run(
     db().from('build_votes').select('build_id').in('build_id', builds.map((b) => b.id)),
     '개수를 세지 못했어요.',
   );
-  return { proposals: proposals.length, revisions: revisions.length, builds: builds.length, votes: votes.length };
+  return { proposals: proposals.length, revisions: revisions.length, builds: builds.length, votes: votes.length, comments: comments.length };
 }
 
 /** 완전 삭제: 숨긴 카운터만. confirmChampion = 이기는 챔피언 ID (DB가 실제 카운터와 같은지 확인) */
@@ -379,7 +381,7 @@ export function getDeletions() {
     db()
       .from('counter_deletions')
       .select(
-        'id, target_champion, counter_champion, reason, deleted_at, proposals_count, revisions_count, builds_count, votes_count, ' +
+        'id, target_champion, counter_champion, reason, deleted_at, proposals_count, revisions_count, builds_count, votes_count, comments_count, ' +
           `deleter:profiles!counter_deletions_deleted_by_fkey(${PERSON}), proposer:profiles!counter_deletions_proposer_id_fkey(${PERSON})`,
       )
       .order('deleted_at', { ascending: false }),

@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../api/ddragon';
 import { getMatchup } from '../api/content';
 import { getBuilds } from '../api/builds';
+import { DOC_COMMENT_OPS, getDocComments, getEditRules } from '../api/board';
+import CommentThread from '../components/CommentThread';
 import { useAsync } from '../lib/useAsync';
 import { useAuth } from '../lib/auth';
 import { ErrorBox, Loading } from '../components/Status';
@@ -15,7 +17,8 @@ import NotFound from './NotFound';
 
 export default function Matchup() {
   const { targetId, counterId } = useParams();
-  const { isOperator, user } = useAuth();
+  const auth = useAuth();
+  const { isOperator, user } = auth;
   const userId = user?.id ?? null;
   const navigate = useNavigate();
   const [hiding, setHiding] = useState(false);
@@ -85,6 +88,7 @@ export default function Matchup() {
           <li><a href="#levels">레벨별 딜교법</a></li>
           <li><a href="#cautions">특이사항</a></li>
           <li><a href="#builds">빌드</a></li>
+          <li><a href="#comments">댓글</a></li>
         </ol>
       </nav>
 
@@ -150,6 +154,41 @@ export default function Matchup() {
           <Link to={`/champion/${targetId}/counter/${counterId}/build/new`} className="btn">+ 빌드 등록</Link>
         </div>
       </section>
+
+      <DocComments counterRowId={data.matchup.counter.id} auth={auth} live title={<><span className="num">4.</span> 댓글</>} />
     </article>
+  );
+}
+
+/**
+ * 문서 댓글 (SPEC 6-5): 문서와 따로 불러온다 → 댓글을 달거나 처리해도 문서 전체가 다시 그려지지 않는다.
+ * live = 카운터가 공개 중인가 (숨긴 카운터 미리보기에서는 false: 새 댓글·고치기·신고 없음, 운영자 숨기기·다시 공개만)
+ */
+export function DocComments({ counterRowId, auth, live, title }) {
+  const [notice, setNotice] = useState(null);
+  const { data, error, loading, retry } = useAsync(async () => {
+    const [comments, rules] = await Promise.all([getDocComments(counterRowId), getEditRules()]);
+    return { comments, rules };
+  }, [counterRowId]);
+  const last = useRef(null);
+  if (data) last.current = data;
+  const shown = data ?? (loading ? last.current : null);
+
+  if (!shown && loading) return <Loading />;
+  if (error) return <ErrorBox error={error} onRetry={retry} />;
+  return (
+    <>
+      {notice && <p className="notice" role="status">{notice}</p>}
+      <CommentThread
+        ops={DOC_COMMENT_OPS} parentId={counterRowId} comments={shown.comments} auth={auth} rules={shown.rules}
+        open={live} live={live} title={title}
+        closedHint={live ? null : '숨긴 카운터라 새 댓글은 달 수 없어요.'}
+        onDone={(message) => {
+          setNotice(message);
+          retry();
+        }}
+        onReload={retry}
+      />
+    </>
   );
 }

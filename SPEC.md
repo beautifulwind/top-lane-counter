@@ -39,7 +39,7 @@
 |---|---|---|
 | 홈 | `/` | 전체 챔피언 아이콘 격자 + 검색창. **초성 검색** 지원 (`ㄷㄹㅇㅅ` → 다리우스) |
 | 챔피언 문서 | `/champion/:id` | 이 챔피언을 **이기는** 카운터 목록 (운영자가 정한 순서). 항목: 카운터 아이콘, 이름, 한 줄 요약. [새 카운터 제안] 버튼 |
-| 매치업 문서 | `/champion/:targetId/counter/:counterId` | 레벨별 딜교, 특이사항, 빌드 목록, [수정 제안] 버튼, [빌드 등록] 버튼 |
+| 매치업 문서 | `/champion/:targetId/counter/:counterId` | 레벨별 딜교, 특이사항, 빌드 목록, [수정 제안] 버튼, [빌드 등록] 버튼, **4. 댓글**(문서 전체에 — 빌드 카드에는 없음, 6-6) |
 | 새 카운터 제안 | `/champion/:id/propose` (`?from=내 제안 id`: 거절된 제안 [다시 쓰기]) | 이기는 챔피언 고르기(초성 검색, 이미 있는 카운터는 못 고름) + 첫 문서 내용 + **빌드 1개(필수, 빌드 등록과 같은 입력)** → 제출하면 승인 대기 |
 | 수정 제안 작성 | `/champion/:targetId/counter/:counterId/edit` (`?from=내 제안 id`: 거절된 제안 [다시 쓰기] — 그 글로 시작) | 현재 문서 내용을 불러와 편집 → 제출하면 승인 대기 (바뀐 게 없으면 제출 불가) |
 | 빌드 등록 | `/champion/:targetId/counter/:counterId/build/new` (`?from=내 빌드 id`: [이 빌드로 다시 쓰기]) | 특성·주문·아이템·스킬을 **아이콘 클릭으로 선택**(아이템은 초성 검색) + 미리보기 → 제출하면 승인 대기. 로그인 필요 |
@@ -48,7 +48,7 @@
 | 내 제안·빌드 고치기 | `/me/proposals/:id/edit`, `/me/builds/:id/edit` (옛 주소 `/me/resubmit/:id`, `/me/builds/:id/resubmit`는 여기로) | 승인 대기면 그대로 고치기, 재검토 요청이면 고쳐서 다시 제출 |
 | 운영자 페이지 | `/admin`, `/admin/proposals/:id`, `/admin/order/:championId`, `/admin/history/:targetId/:counterId`, `/admin/preview/…`, `/admin/delete/…`, `/admin/builds/:id` | 운영자만 접근. 승인 대기 목록(줄에서 바로 승인/거절, 내용은 [자세히]), 빌드 승인 대기·숨긴 빌드 목록, 기존 내용과 바뀐 부분 비교, 승인/거절(메모·사유 필수), 카운터 순서 변경(드래그 또는 ▲▼), 문서 수정 기록과 예전 버전으로 되돌리기, 비주류 픽 목록(칭호 "비주류" 기준). 승인·거절·순서·되돌리기는 DB의 운영자 전용 함수로만 가능 (운영자도 표를 직접 못 고침). (관리자 지정 기능은 나중에 정함 — 만들지 않음) |
 | 자유게시판 | `/board`(`?q=검색어&page=쪽`), `/board/:id`, `/board/new`, `/board/:id/edit` | 읽기는 누구나, 쓰기는 로그인 + 닉네임. 목록: 최신순 20개씩 쪽 번호, 제목·본문 검색, 댓글 수·추천 수, 삭제된 글은 "(삭제된 글)". 글 보기: 본문(글자만, 줄바꿈 유지), 수정됨 표시, 추천(내 글 제외), 내 글 [고치기][지우기], 남의 글 [신고], 댓글(내 댓글 고치기·지우기, 남의 댓글 신고). 운영자는 글·댓글 [숨기기]/[다시 공개] (자세히는 6-5) |
-| 운영자: 게시판 신고 | `/admin/reports` | 신고를 글·댓글별로 묶어 보여 줌 → [숨기기](메모 필수) / [신고 기각](메모 선택) / [보러 가기]. `/admin`의 "자유게시판" 칸에 처리할 신고 수와 숨긴 글·댓글([다시 공개]) |
+| 운영자: 신고 | `/admin/reports` | 게시판 글·댓글과 문서 댓글 신고를 대상별로 묶어 보여 줌 → [숨기기](메모 필수) / [신고 기각](메모 선택) / [보러 가기]. `/admin`의 "자유게시판·댓글" 칸에 처리할 신고 수와 숨긴 글·댓글·문서 댓글([다시 공개]). 숨긴 카운터 미리보기에도 그 문서의 댓글이 보인다 |
 | 개인정보처리방침 · 이용약관 | `/privacy`, `/terms` | 로그인·닉네임 설정 없이도 열림. 모든 화면 푸터에 링크(개인정보처리방침은 굵게) + Riot 고지 문구. 운영자 이메일·Supabase 서버 지역·시행일은 `src/lib/legal.js` 한곳에서 채우고, 비어 있으면 노란 칸으로 표시. 로그인 화면 버튼 아래에 "로그인하면 약관·방침에 동의, 만 14세 이상" 문구 |
 | 로그인 | `/login` | 구글, 카카오 로그인 (Supabase Auth). 첫 로그인 시 닉네임 설정. 같은 이메일로 가입된 계정이 있으면 Supabase가 자동으로 그 계정에 합치고, 화면에 "기존 계정에 연결했어요" 안내 |
 
@@ -185,7 +185,7 @@
 | 빌드 승인됨 | +30 | 새 카운터의 첫 빌드는 제외 |
 | 내 빌드가 따봉 받음 | +2 | 하루(한국 시간) 최대 +40. 같은 사람이 같은 빌드에 누른 따봉은 처음 1번만 |
 | 자유게시판 글 작성 | +5 | 하루(한국 시간) 최대 +25. 숨기거나 지우면 회수 |
-| 자유게시판 댓글 작성 | +1 | 하루 최대 +10. 숨기거나 지우면 회수 |
+| 댓글 작성 (자유게시판 댓글 + 문서 댓글) | +1 | 둘을 합쳐서 하루 최대 +10. 숨기거나 지우면 회수 |
 | 제안만 하거나 거절됨 | 0 | |
 
 - 숫자는 모두 DB 설정 표 `xp_rules`(경험치·하루 상한·칭호 기준)와 `xp_levels`(레벨표) 한 곳에 있다. 바꾼 뒤 SQL Editor에서 `select public.recalc_all_xp();`를 실행하면 모두 다시 계산되고, 달라진 만큼만 "규칙 변경" 줄로 기록된다.
@@ -194,7 +194,7 @@
 - 따봉 취소·비추로 바꿔도 이미 준 따봉 경험치는 회수하지 않는다 (1차). 그 사람이 다시 따봉을 눌러도 또 주지 않는다.
 
 **계산 방식 — "지금 받아야 할 양"과 "이미 받은 양"의 차이만 기록**
-- 지급할 일마다 키가 있다: `proposal:<제안 id>` / `build:<빌드 id>` / `vote:<투표 기록 id>` / `post:<글 id>` / `comment:<댓글 id>`. DB 함수 `sync_rewards(유저)`가 원래 기록(제안·빌드·카운터 상태, `build_vote_log`)에서 키마다 지금 받아야 할 양을 계산하고, `xp_events`에 쌓인 합과 다르면 차이만큼 한 줄(+ 지급 / − 회수 / ± 규칙 변경)을 더한다. 지급 기록은 지우지 않는다.
+- 지급할 일마다 키가 있다: `proposal:<제안 id>` / `build:<빌드 id>` / `vote:<투표 기록 id>` / `post:<글 id>` / `comment:<댓글 id>` / `doc_comment:<문서 댓글 id>`. DB 함수 `sync_rewards(유저)`가 원래 기록(제안·빌드·카운터 상태, `build_vote_log`)에서 키마다 지금 받아야 할 양을 계산하고, `xp_events`에 쌓인 합과 다르면 차이만큼 한 줄(+ 지급 / − 회수 / ± 규칙 변경)을 더한다. 지급 기록은 지우지 않는다.
 - 그래서 숨김↔다시 공개, 재검토 후 다시 승인을 몇 번 반복해도 키마다 남는 양은 한 번분이고(중복 지급 없음), 받아야 할 양은 늘 0 이상이라 경험치가 0 아래로 내려가지 않는다. 레벨은 매번 다시 계산한다 (내려갈 수 있음).
 - 언제: 제안·빌드·카운터 상태, 따봉 수, 투표 기록, 삭제가 바뀌면 **트랜잭션이 끝날 때** 관련된 사람을 다시 계산한다 (`deferrable` 트리거). 승인·숨김·완전 삭제처럼 여러 표를 바꾸는 함수도 끝난 뒤 최종 상태로 계산하므로, 예전 마이그레이션의 "(6단계)" 주석 자리에 따로 코드를 넣지 않았다.
 - 키마다 받아야 할 양:
@@ -228,7 +228,7 @@
 
 | 칭호 (키) | 조건 |
 |---|---|
-| 탑신병자 (`top_addict`) | 처음으로 승인받은 기여 1개 (새 카운터·문서 수정·빌드 중 아무거나) 또는 자유게시판 글·댓글 1개 (숨김·삭제된 것은 빼고 셈) |
+| 탑신병자 (`top_addict`) | 처음으로 승인받은 기여 1개 (새 카운터·문서 수정·빌드 중 아무거나) 또는 자유게시판 글·댓글·문서 댓글 1개 (숨김·삭제된 것은 빼고 셈, `has_visible_writing()`) |
 | 도구혐오자 (`tool_hater`) | 카운터 관련 승인(새 카운터 + 문서 수정) 10개 |
 | 단단묵직 (`solid_heavy`) | 카운터 관련 승인 25개 |
 | 백정주인 (`butcher_owner`) | 카운터 관련 승인 50개 |
@@ -251,7 +251,7 @@
 - 쓰기·고치기·지우기·추천·신고·숨기기는 **모두 DB 함수로만** (`create_post`, `edit_post`, `delete_my_post`, `vote_post`, `create_comment`, `edit_comment`, `delete_my_comment`, `report_post`, `report_comment`, `hide_post`, `restore_post`, `hide_comment`, `restore_comment`, `dismiss_reports`). 직접 insert/update/delete 권한은 없다. 목록·검색은 `board_page(검색어, 쪽, 20)`.
 - 길이: 제목 1~100자, 본문 1~10,000자, 댓글 1~1,000자 (앞뒤 공백 제외).
 - **도배 방지**: 같은 사람이 글은 **30초**, 댓글은 **5초** 안에 다시 못 쓴다 ("글은 30초에 한 번 쓸 수 있어요. N초 뒤에 다시 해 주세요."). 숫자는 `xp_rules`의 `post_interval`·`comment_interval`. 마지막으로 쓴 때는 `board_last_write`에 따로 남겨, 지우고 다시 써도 간격이 유지된다. 화면은 보내는 동안 버튼을 잠근다.
-- **고치기**: 내 글·댓글만, 보이는 상태일 때만. 내용이 실제로 바뀌면 `edited_at` → "수정됨". 고쳐도 경험치는 그대로.
+- **고치기**: 내 글·댓글만, 보이는 상태일 때만, **정해진 시간 안에만** (6-7). 내용이 실제로 바뀌면 `edited_at` → "수정됨". 고쳐도 경험치는 그대로.
 - **지우기**: 내 글에 **다른 사람 댓글이 있으면** 제목·본문을 비우고 "작성자가 삭제한 글"로 남긴다 (`deleted_at`). 댓글과 댓글 쓴 사람들의 경험치는 그대로, 글쓴이의 경험치만 회수. 삭제된 글에는 새 댓글·고치기·추천·신고가 막힌다. 남은 댓글이 모두 없어지면 그때 완전히 지운다. 다른 사람 댓글이 없으면 바로 완전히 지운다 (내 댓글 포함). 댓글은 바로 지운다.
 - **추천**: 한 사람 한 번, 다시 누르면 취소, 내 글은 안 됨. 경험치·칭호·알림과 연결하지 않는다.
 - **신고**: 이유(욕설·비하 / 도배·광고 / 개인정보 노출 / 기타 — 기타는 내용 필수) + 내용(선택, 500자). 같은 사람이 같은 글·댓글은 한 번만 (기각된 뒤에도). 내 글, 숨긴 글, 삭제된 글은 신고할 수 없다. 신고는 운영자만 본다. **자동 숨김 없음** — 운영자가 `/admin/reports`에서 [숨기기](그 대상의 열린 신고는 "처리됨") 또는 [신고 기각](메모 선택, 글은 그대로).
@@ -259,6 +259,22 @@
 - **경험치**: 키 `post:<id>`·`comment:<id>`. 그날(한국 시간) 쓴 **보이는** 글·댓글을 먼저 쓴 순서대로 상한까지 받는다 — 하나를 숨기거나 지우면 상한 밖이던 다음 것이 들어온다 (총량은 같아서 지우고 다시 쓰기로 늘릴 수 없음). 회수 이유: 글 숨김 / 글 삭제 / 댓글 숨김 / 댓글 삭제.
 - **알림**: `post_comment`(내 글에 남이 댓글 — 안 읽은 알림이 있으면 새로 만들지 않고 "새 댓글 N개"로 합침, 내 글에 내 댓글은 없음), `post_hidden`·`post_restored`·`comment_hidden`·`comment_restored`(메모 포함). `/me`의 "게시판 알림"에 한 번 보이고 [글 보기]로 이동 (숨김 알림은 링크 없음).
 - **탈퇴**: 다른 사람 댓글이 달린 내 글은 "삭제된 글"로 남기고(작성자 비움), 나머지 내 글·내 댓글·추천·신고는 지운다.
+
+### 6-6. 문서 댓글 (2026-11-02, 016)
+- 매치업 문서 전체에 댓글 칸 하나("4. 댓글"). 빌드 카드에는 댓글 없음 (9장 유지).
+- 자유게시판 댓글과 같은 방식: 로그인 + 닉네임, 승인 없이 바로, 1~1,000자, 본인 고치기(시간 제한 6-7)·지우기, 남의 댓글 신고(`reports.doc_comment_id`, 같은 사람 한 번만), 운영자 [숨기기]/[다시 공개](메모 필수, 보라). 함수: `create_doc_comment`, `edit_doc_comment`, `delete_my_doc_comment`, `report_doc_comment`, `hide_doc_comment`, `restore_doc_comment`, `dismiss_reports(…, p_doc_comment)`.
+- **도배 간격은 게시판 댓글과 공유** (`comment_interval`, 게시판에 댓글을 단 뒤 5초 안에는 문서 댓글도 못 닮).
+- **경험치** +1, 하루 상한은 게시판 댓글과 **합쳐서** 10 (그날 먼저 쓴 순서). 내역에는 "문서 댓글 · 퀸(으)로 다리우스"처럼 매치업 이름을 복사해 둔다 (`ref_id` = `카운터 id:댓글 id`).
+- **카운터 숨김**: 댓글도 운영자만 본다 (숨긴 카운터 미리보기에서 숨기기·다시 공개 가능). 새 댓글·고치기·신고는 막히고, 경험치는 그대로. 다시 공개하면 댓글도 돌아온다.
+- **카운터 완전 삭제**: 댓글도 같이 지우고 경험치 회수 (이유: 카운터 삭제). 삭제 확인 화면과 삭제 기록(`counter_deletions.comments_count`)에 댓글 수.
+- **알림**: 카운터 **첫 제안자**에게만 `doc_comment` ("내가 제안한 카운터 문서에 새 댓글이 달렸어요" — 안 읽은 알림이 있으면 "새 댓글 N개"로 합침). 본인 댓글이거나 제안자가 없거나(초기 데이터) 탈퇴했으면 보내지 않는다. 숨김·다시 공개는 `doc_comment_hidden`·`doc_comment_restored`. `/me` "댓글·게시판 알림"에 매치업 이름과 [문서 보기].
+- **탈퇴**: 내 문서 댓글은 지운다.
+
+### 6-7. 고치기 시간 제한 (2026-11-02, 016)
+- 자유게시판 **글은 쓴 뒤 60분**, 게시판 댓글·문서 댓글은 **10분**이 지나면 고칠 수 없다. **지우기는 언제든.** 숫자는 `xp_rules`의 `post_edit_minutes`·`comment_edit_minutes`.
+- **유예**: 마감 전에 고치는 화면을 열면(`begin_edit(종류, id)`) 그 글·댓글에 `edit_grace_until = 지금 + edit_grace_minutes(5분)`을 남긴다. 저장은 "쓴 때 + 제한 시간"과 `edit_grace_until` 중 늦은 때까지 → 아무리 늦어도 마감 + 5분. 마감이 지난 뒤에 열면 유예 없음.
+- DB가 `edit_post`·`edit_comment`·`edit_doc_comment`에서 막는다: "고칠 수 있는 시간이 지났어요. 지우고 다시 쓸 수는 있어요."
+- 화면: 시간이 지나면 [고치기]를 숨긴다 (30초마다 다시 확인). 고치는 화면에 "HH:MM까지 저장할 수 있어요". 늦게 저장해서 막히면 안내하고 쓴 내용은 입력칸에 그대로 둔다.
 
 ## 7. 데이터 구조 (Supabase 초안)
 
@@ -273,19 +289,20 @@
 - **build_votes**: `build_id`, `user_id`, `value`(+1 / −1) — (build_id, user_id) 고유. 본인 것만 읽기, 쓰기는 `vote_build()`만
 - **build_status_log**: 빌드 승인·거절·숨김·다시 공개·재검토 요청·요청 취소·다시 제출 기록 + 메모·사유 + 처리자 (운영자만 읽기)
 - **build_vote_log**: 표가 바뀔 때마다 한 줄 (`build_id`, `counter_id`, `author_id`, `voter_id`, `old_value`, `new_value`, `created_at`) — 빌드·카운터와 연결하지 않음, 운영자만 읽기, 6단계 경험치 계산용
-- **posts**: `id`, `author_id`(탈퇴하면 비움 — 삭제된 글로 남을 때만), `title`, `body`, `status`(visible/hidden), `hidden_note`·`hidden_at`·`hidden_by`, `edited_at`, `deleted_at`(삭제된 글), `comment_count`(보이는 댓글, 트리거가 셈), `up_count`, `created_at`
-- **post_comments**: `id`, `post_id`, `author_id`, `body`, `status`, `hidden_note`·`hidden_at`·`hidden_by`, `edited_at`, `created_at`
+- **posts**: `id`, `author_id`(탈퇴하면 비움 — 삭제된 글로 남을 때만), `title`, `body`, `status`(visible/hidden), `hidden_note`·`hidden_at`·`hidden_by`, `edited_at`, `edit_grace_until`(고치기 유예, 6-7), `deleted_at`(삭제된 글), `comment_count`(보이는 댓글, 트리거가 셈), `up_count`, `created_at`
+- **post_comments**: `id`, `post_id`, `author_id`, `body`, `status`, `hidden_note`·`hidden_at`·`hidden_by`, `edited_at`, `edit_grace_until`, `created_at`
+- **doc_comments**: 문서 댓글 — `id`, `counter_id`(카운터를 지우면 같이 지움), `author_id`, `body`, `status`, `hidden_note`·`hidden_at`·`hidden_by`, `edited_at`, `edit_grace_until`, `created_at`. 보이는 댓글 + 공개 중인 카운터만 누구나 읽기, 나머지는 운영자
 - **post_votes**: 글 추천 (`post_id`, `user_id`) — 본인 것만 읽기
-- **reports**: 게시판 신고 — `reporter_id`, `post_id` 또는 `comment_id`, `reason`, `detail`, `status`(open/resolved/dismissed), `handled_by`·`handled_at`·`handled_note`. (신고자, 대상) 고유, 운영자만 읽기
+- **reports**: 신고 — `reporter_id`, `post_id`·`comment_id`·`doc_comment_id` 중 하나, `reason`, `detail`, `status`(open/resolved/dismissed), `handled_by`·`handled_at`·`handled_note`. (신고자, 대상) 고유, 운영자만 읽기
 - **board_last_write**: 도배 방지용 마지막으로 쓴 때 (아무도 직접 못 읽음)
 - **xp_events**: 경험치 기록 (지우지 않고 차이만 쌓음) — `user_id`, `type`(new_counter/doc_edit/build/vote), `amount`(+/−), `ref_id`, `source_key`(지급할 일의 키), `change`(grant/revoke/adjust), `reason`, `target_champion`·`counter_champion`(매치업 이름 복사), `created_at`. 본인·운영자만 읽기, 쓰기는 DB 함수만
 - **xp_rules**(경험치·하루 상한·칭호 기준), **xp_levels**(레벨표): 누구나 읽기, 바꾸기는 SQL Editor에서만
 - **user_titles**: `user_id`, `title_key`, `earned_at` — 누구나 읽기, 쓰기는 DB 함수만
 - **offmeta_champions**: 운영자가 지정한 비주류 픽 목록 (`add_offmeta`·`remove_offmeta`로만). 기여에는 승인할 때의 여부를 `edit_proposals.offmeta`·`builds.offmeta`로 고정
 - **build_vote_log.first_up**: 그 사람이 그 빌드에 처음 누른 따봉인가 (따봉 경험치 대상, 투표할 때 고정)
-- **notifications**: `user_id`, `kind`, `proposal_id`, `build_id`, `post_id`, `message`, `created_at`, `read_at`(확인하면 채워짐) — 본인만 읽기, 만들기·읽음 처리는 DB 함수만
+- **notifications**: `user_id`, `kind`, `proposal_id`, `build_id`, `post_id`, `counter_id`(문서 댓글 알림), `message`, `created_at`, `read_at`(확인하면 채워짐) — 본인만 읽기, 만들기·읽음 처리는 DB 함수만
 - **counter_status_log**: 숨긴 카운터의 숨김·다시 공개·재검토 요청·다시 제출·거절 기록 (운영자만 읽기)
-- **counter_deletions**: 완전 삭제 기록 — 카운터와 연결하지 않아 카운터가 지워져도 남는다 (운영자만 읽기)
+- **counter_deletions**: 완전 삭제 기록 — 카운터와 연결하지 않아 카운터가 지워져도 남는다 (운영자만 읽기). 지운 개수(제안·수정 기록·빌드·따봉·`comments_count` 문서 댓글)
 
 RLS 원칙:
 - 승인된 데이터는 누구나 읽기 가능
@@ -354,7 +371,7 @@ RLS 원칙:
 - 레벨 시스템 있음
 - 칭호 (2026-11-02 교체): 탑신병자 / 도구혐오자 10 / 단단묵직 25 / 백정주인 50 / 장군(따봉 100) / 비주류(비주류 픽 기여 5, 승인 때 목록 기준 고정). 명예 칭호(권한 없음), 조건이 깨지면 회수
 - 경험치: 기록 표에 차이만 쌓고 언제든 다시 계산, 기존 데이터는 014에서 알림 없이 계산
-- 커뮤니티: 자유게시판 (글·댓글은 승인 없이 바로 올라감). 2026-11-02: 말머리 없음, 추천만(경험치 없음), 남의 댓글이 달린 글은 "삭제된 글"로 남김, 신고 자동 숨김 없음
+- 커뮤니티: 자유게시판 (글·댓글은 승인 없이 바로 올라감). 2026-11-02: 말머리 없음, 추천만(경험치 없음), 남의 댓글이 달린 글은 "삭제된 글"로 남김, 신고 자동 숨김 없음. 문서 댓글(게시판 댓글과 같은 방식, 상한 합산, 첫 제안자 알림), 고치기 시간 제한(글 60분·댓글 10분, 열면 5분 유예)
 - 다른 라인 확장은 보류, 나중에 모바일 앱 출시 예정
 
 ### 초안 값 (임의로 정한 것 — 바꿔도 됨)
@@ -388,6 +405,7 @@ RLS 원칙:
 13. `supabase/migrations/013_proposer_edit.sql`
 14. `supabase/migrations/014_xp_levels_titles.sql`
 15. `supabase/migrations/015_board.sql`
+16. `supabase/migrations/016_doc_comments_edit_window.sql`
 - 합쳐서 한 번에 돌리지 않는다: 파일마다 `begin … commit`이라 중간에 실패하면 앞부분만 반영되고, 다시 돌리면 "already exists"가 난다.
 - 새 마이그레이션(010 …)을 만들면 이 목록에 추가한다. `supabase/tests/run.sh`가 빈 DB에 같은 순서로 실행한 뒤 검사용 데이터(`tests/fixtures.sql`)를 넣고 검사한다 (`supabase/tests`는 실제 프로젝트에서 실행하지 않음).
 

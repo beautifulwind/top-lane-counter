@@ -71,29 +71,37 @@ function MyActivity({ userId, operator }) {
       ) : (
         <MyRewards rewards={data.rewards} unread={data.unread} champs={data.champs} />
       )}
-      <BoardNotices unread={data.unread} />
+      <BoardNotices unread={data.unread} champs={data.champs} />
       <MyProposals data={data} />
       <MyBuilds data={data} />
     </>
   );
 }
 
-const BOARD_KINDS = ['post_comment', 'post_hidden', 'post_restored', 'comment_hidden', 'comment_restored'];
+const BOARD_KINDS = [
+  'post_comment', 'post_hidden', 'post_restored', 'comment_hidden', 'comment_restored',
+  'doc_comment', 'doc_comment_hidden', 'doc_comment_restored',
+];
 
-/** 게시판 알림 (새 댓글·숨김·다시 공개): 이번에 처음 보는 것만, [글 보기]로 이동 */
-function BoardNotices({ unread }) {
+/** 댓글·게시판 알림 (새 댓글·숨김·다시 공개): 이번에 처음 보는 것만, [글 보기]·[문서 보기]로 이동 */
+function BoardNotices({ unread, champs }) {
   const list = unread.filter((n) => BOARD_KINDS.includes(n.kind));
   if (list.length === 0) return null;
+  const name = (id) => champs[id]?.name ?? id;
   return (
     <section className="me-section" aria-labelledby="board-notices">
-      <h2 id="board-notices">게시판 알림</h2>
+      <h2 id="board-notices">댓글·게시판 알림</h2>
       <ul className="proposal-list">
         {list.map((n) => (
           <li key={n.id} className="proposal-row">
             <p className="board-notice-msg"><span className="new-badge">새 알림</span>{n.message}</p>
             <div className="proposal-meta">
+              {n.counter && <span>{name(n.counter.counter_champion)}(으)로 {name(n.counter.target_champion)} 잡는 법</span>}
               <span>{fmtDateTime(n.created_at)}</span>
               {n.post_id && !['post_hidden'].includes(n.kind) && <Link to={`/board/${n.post_id}`}>글 보기</Link>}
+              {n.counter?.status === 'approved' && (
+                <Link to={`/champion/${n.counter.target_champion}/counter/${n.counter.counter_champion}#comments`}>문서 보기</Link>
+              )}
             </div>
           </li>
         ))}

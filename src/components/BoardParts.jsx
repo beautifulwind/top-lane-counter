@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { REPORT_REASONS } from '../api/board';
 import { fmtDateTime } from '../lib/format';
 import UserName from './UserName';
+import NoteForm from './NoteForm';
 
 /** 글쓴이 · 시간 · 수정됨 (탈퇴하면 "탈퇴한 유저") */
 export function BoardByline({ row }) {
@@ -90,5 +91,35 @@ export function ReportForm({ id, what, onSubmit, onCancel }) {
       </div>
       {error && <p className="form-error" role="alert">{error}</p>}
     </form>
+  );
+}
+
+/** 운영자에게만: 숨김 띠 + [다시 공개] */
+export function HiddenBand({ row, what, onRestore, onDone }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="op-band">
+      <p>
+        <strong>숨김</strong> · {fmtDateTime(row.hidden_at)} · 메모: {row.hidden_note}
+        <br />
+        <small>운영자에게만 보여요.</small>
+      </p>
+      {!open && (
+        <button type="button" className="btn btn-small btn-op" onClick={() => setOpen(true)}>다시 공개</button>
+      )}
+      {open && (
+        <NoteForm
+          id={`restore-${what}-${row.id}`}
+          label="다시 공개 메모 (필수, 작성자에게 보여요)"
+          confirmLabel="다시 공개 확정"
+          busyLabel="공개하는 중…"
+          onCancel={() => setOpen(false)}
+          onSubmit={async (note) => {
+            await onRestore(note);
+            onDone(`${what}을 다시 공개했어요.`);
+          }}
+        />
+      )}
+    </div>
   );
 }

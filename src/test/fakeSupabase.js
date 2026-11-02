@@ -52,12 +52,14 @@ export const TABLES = {
   post_comments: [],
   post_votes: [],
   reports: [],
+  doc_comments: [],
   xp_levels: [[1, 0], [2, 100], [3, 300], [4, 600], [5, 1000], [6, 1500], [7, 2100], [8, 2800], [9, 3600], [10, 4500]]
     .map(([level, min_xp]) => ({ level, min_xp })),
   xp_rules: [
     ['new_counter', 100], ['doc_edit', 50], ['build', 30], ['vote', 2], ['vote_daily_cap', 40], ['level_step', 1000],
     ['title_top_addict', 1], ['title_tool_hater', 10], ['title_solid_heavy', 25], ['title_butcher_owner', 50],
     ['title_general', 100], ['title_offmeta', 5],
+    ['post_edit_minutes', 60], ['comment_edit_minutes', 10], ['edit_grace_minutes', 5],
   ].map(([key, value]) => ({ key, value })),
 };
 
@@ -109,6 +111,7 @@ export function resetFake() {
   TABLES.post_comments = [];
   TABLES.post_votes = [];
   TABLES.reports = [];
+  TABLES.doc_comments = [];
   TABLES.builds = INITIAL_BUILDS();
   fakeState.inserts = [];
   fakeState.insertError = null;
@@ -129,6 +132,11 @@ export function fakeLogin(id, profile = {}, user = {}) {
   fakeState.listeners.forEach((cb) => cb('SIGNED_IN', fakeState.session));
 }
 
+const withCounter = (c) => {
+  if (!c) return null;
+  const k = TABLES.counters.find((x) => x.id === c.counter_id);
+  return { ...c, counter: k ? { id: k.id, target_champion: k.target_champion, counter_champion: k.counter_champion, status: k.status } : null };
+};
 const isAdminNow = () => TABLES.profiles.find((p) => p.id === fakeState.session?.user.id)?.role === 'admin';
 /** RLS 흉내: 숨긴 글·댓글(숨긴 글의 댓글 포함)은 운영자에게만 */
 function visibleRows(table) {
@@ -139,7 +147,13 @@ function visibleRows(table) {
       ...r,
       post: r.post_id != null ? TABLES.posts.find((p) => p.id === r.post_id) ?? null : null,
       comment: r.comment_id != null ? TABLES.post_comments.find((c) => c.id === r.comment_id) ?? null : null,
+      doc_comment: r.doc_comment_id != null ? withCounter(TABLES.doc_comments.find((c) => c.id === r.doc_comment_id)) : null,
     }));
+  }
+  if (table === 'doc_comments') {
+    const all = rows.map(withCounter);
+    // RLS 흉내: 숨긴 댓글·숨긴 카운터의 댓글은 운영자에게만
+    return isAdminNow() ? all : all.filter((c) => c.status === 'visible' && c.counter?.status === 'approved');
   }
   if (isAdminNow()) return rows;
   if (table === 'posts') return rows.filter((p) => p.status === 'visible');
@@ -285,6 +299,14 @@ export function fakePost(id, extra = {}) {
     created_at: `2026-11-01T0${id % 10}:00:00Z`, ...extra,
   };
 }
+/** 테스트에서 쓰는 문서 댓글 한 줄 (기본: 퀸 매치업, 기존유저) */
+export function fakeDocComment(id, extra = {}) {
+  return {
+    id, counter_id: 1, author_id: 'u-old', author: { nickname: '기존유저', level: 1, main_title: null }, body: `문서 댓글 ${id}`,
+    status: 'visible', hidden_note: null, hidden_at: null, edited_at: null, edit_grace_until: null,
+    created_at: new Date().toISOString(), ...extra,
+  };
+}
 export function fakeComment(id, postId, extra = {}) {
   return {
     id, post_id: postId, author_id: 'u-old', author: { nickname: '기존유저', level: 1, main_title: null }, body: `댓글 ${id}`,
@@ -323,6 +345,42 @@ function boardRpc(name, args) {
       }));
       return ok(id);
     }
+    case 'begin_edit': {
+      if (fakeState.boardError) return fail(fakeState.boardError);
+      return ok(new Date(Date.now() + 5 * 60_000).toISOString());
+    }
+    case 'create_doc_comment': {
+      if (fakeState.boardError) return fail(fakeState.boardError);
+      const id = 900 + TABLES.doc_comments.length;
+      TABLES.doc_comments.push(fakeDocComment(id, {
+        counter_id: args.p_counter, author_id: me(), author: person(me()), body: args.p_body.trim(),
+      }));
+      return ok(id);
+    }
+    case 'edit_doc_comment':
+      if (fakeState.boardError) return fail(fakeState.boardError);
+      Object.assign(TABLES.doc_comments.find((c) => c.id === args.p_id), { body: args.p_body.trim(), edited_at: new Date().toISOString() });
+      return ok();
+    case 'delete_my_doc_comment':
+      TABLES.doc_comments = TABLES.doc_comments.filter((c) => c.id !== args.p_id);
+      return ok();
+    case 'report_doc_comment':
+      TABLES.reports.push({
+        id: 600 + TABLES.reports.length, reporter_id: me(), post_id: null, comment_id: null, doc_comment_id: args.p_id,
+        reason: args.p_reason, detail: args.p_detail, status: 'open', created_at: new Date().toISOString(), reporter: person(me()),
+      });
+      return ok();
+    case 'hide_doc_comment':
+    case 'restore_doc_comment': {
+      const row = TABLES.doc_comments.find((c) => c.id === args.p_id);
+      if (name === 'hide_doc_comment') {
+        Object.assign(row, { status: 'hidden', hidden_note: args.p_note, hidden_at: new Date().toISOString() });
+        TABLES.reports.filter((r) => r.doc_comment_id === row.id && r.status === 'open').forEach((r) => { r.status = 'resolved'; });
+      } else {
+        Object.assign(row, { status: 'visible', hidden_note: null, hidden_at: null });
+      }
+      return ok();
+    }
     case 'edit_post':
       Object.assign(post(args.p_id), { title: args.p_title.trim(), body: args.p_body.trim(), edited_at: new Date().toISOString() });
       return ok();
@@ -353,6 +411,7 @@ function boardRpc(name, args) {
       return ok(id);
     }
     case 'edit_comment':
+      if (fakeState.boardError) return fail(fakeState.boardError);
       Object.assign(comment(args.p_id), { body: args.p_body.trim(), edited_at: new Date().toISOString() });
       return ok();
     case 'delete_my_comment': {
@@ -390,7 +449,8 @@ function boardRpc(name, args) {
     }
     case 'dismiss_reports': {
       const open = TABLES.reports.filter((r) => r.status === 'open'
-        && ((args.p_post != null && r.post_id === args.p_post) || (args.p_comment != null && r.comment_id === args.p_comment)));
+        && ((args.p_post != null && r.post_id === args.p_post) || (args.p_comment != null && r.comment_id === args.p_comment)
+          || (args.p_doc_comment != null && r.doc_comment_id === args.p_doc_comment)));
       open.forEach((r) => { r.status = 'dismissed'; });
       return ok(open.length);
     }

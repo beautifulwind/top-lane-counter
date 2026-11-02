@@ -142,7 +142,7 @@ function PendingList() {
       )}
 
       <section className="section">
-        <h2 className="section-title">자유게시판</h2>
+        <h2 className="section-title">자유게시판·댓글</h2>
         <BoardAdmin />
       </section>
 
@@ -168,7 +168,7 @@ function PendingList() {
                   </div>
                   <p className="reject-reason">사유: {d.reason}</p>
                   <small className="hint">
-                    지운 것: 제안 {d.proposals_count} · 수정 기록 {d.revisions_count} · 빌드 {d.builds_count} · 따봉 {d.votes_count}
+                    지운 것: 제안 {d.proposals_count} · 수정 기록 {d.revisions_count} · 빌드 {d.builds_count} · 따봉 {d.votes_count} · 댓글 {d.comments_count ?? 0}
                   </small>
                 </li>
               ))}

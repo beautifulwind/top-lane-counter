@@ -482,3 +482,4 @@ a.op-link, .op-link { color: var(--op-dark); }
 .report-preview { margin: 4px 0; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
 .report-preview.body { font-size: 13px; color: var(--muted); }
 .board-notice-msg { margin: 0; }
+.comment-form .edit-deadline { margin: 0; }

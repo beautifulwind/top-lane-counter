@@ -1,13 +1,17 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { BODY_MAX, TITLE_MAX, createPost, editPost, getPost } from '../api/board';
+import { BODY_MAX, TITLE_MAX, beginEdit, createPost, editPost, getPost } from '../api/board';
+import { fmtTime } from '../lib/editWindow';
 import { useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
 import { RequireLogin } from '../components/RequireOperator';
 import { CharCount } from '../components/BoardParts';
 
-/** 글쓰기 (/board/new) · 고치기 (/board/:id/edit). 로그인 + 닉네임 필요 (닉네임은 Layout이 먼저 보낸다) */
+/**
+ * 글쓰기 (/board/new) · 고치기 (/board/:id/edit). 로그인 + 닉네임 필요 (닉네임은 Layout이 먼저 보낸다)
+ * 고치기는 쓴 뒤 정해진 시간 안에만 (SPEC 6-7). 화면을 열 때 DB에 알려(begin_edit) 마감 전이면 유예를 받는다.
+ */
 export default function BoardWrite() {
   return (
     <RequireLogin>
@@ -19,23 +23,32 @@ export default function BoardWrite() {
 function WriteOrEdit() {
   const { id } = useParams();
   const auth = useAuth();
-  const { data, error, loading, retry } = useAsync(() => (id ? getPost(Number(id)) : null), [id]);
+  const { data, error, loading, retry } = useAsync(async () => {
+    if (!id) return null;
+    const post = await getPost(Number(id));
+    if (!post || post.author_id !== auth.user.id || post.deleted_at || post.status !== 'visible') return { post: null };
+    try {
+      return { post, deadline: await beginEdit('post', post.id) };
+    } catch (e) {
+      return { post: null, closed: e.message };
+    }
+  }, [id]);
   if (!id) return <PostForm />;
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
-  if (!data || data.author_id !== auth.user.id || data.deleted_at || data.status !== 'visible') {
+  if (!data.post) {
     return (
       <article>
         <h1 className="doc-title">글 고치기</h1>
-        <p className="empty">고칠 수 있는 내 글이 아니에요.</p>
-        <p><Link to="/board">← 자유게시판</Link></p>
+        <p className="empty">{data.closed ?? '고칠 수 있는 내 글이 아니에요.'}</p>
+        <p><Link to={data.closed ? `/board/${id}` : '/board'}>← {data.closed ? '글로 돌아가기' : '자유게시판'}</Link></p>
       </article>
     );
   }
-  return <PostForm post={data} />;
+  return <PostForm post={data.post} deadline={data.deadline} />;
 }
 
-function PostForm({ post = null }) {
+function PostForm({ post = null, deadline = null }) {
   const navigate = useNavigate();
   const [title, setTitle] = useState(post?.title ?? '');
   const [body, setBody] = useState(post?.body ?? '');
@@ -69,6 +82,7 @@ function PostForm({ post = null }) {
       <nav className="crumbs"><Link to={post ? `/board/${post.id}` : '/board'}>← {post ? '글로 돌아가기' : '자유게시판'}</Link></nav>
       <h1 className="doc-title">{post ? '글 고치기' : '글쓰기'}</h1>
       <p className="lead">승인 없이 바로 올라가요. 욕설·도배·개인정보는 운영자가 숨길 수 있어요.</p>
+      {deadline && <p className="notice edit-deadline">{fmtTime(deadline)}까지 저장할 수 있어요. 그 뒤에는 지우기만 할 수 있어요.</p>}
       <form className="doc-form post-form" onSubmit={submit}>
         <label htmlFor="post-title">제목</label>
         <input id="post-title" value={title} onChange={(e) => setTitle(e.target.value)} autoComplete="off" />

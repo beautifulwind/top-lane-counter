@@ -1,15 +1,15 @@
 import { useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
-  COMMENT_MAX, createComment, deleteMyComment, deleteMyPost, editComment, getPost, hideComment, hidePost,
-  reportComment, reportPost, restoreComment, restorePost, votePost,
+  POST_COMMENT_OPS, deleteMyPost, getEditRules, getPost, hidePost, reportPost, restorePost, votePost,
 } from '../api/board';
 import { useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
-import { fmtDateTime } from '../lib/format';
+import { canEditNow, useNow } from '../lib/editWindow';
 import { ErrorBox, Loading } from '../components/Status';
 import NoteForm from '../components/NoteForm';
-import { BoardByline, CharCount, ConfirmInline, ReportForm } from '../components/BoardParts';
+import { BoardByline, ConfirmInline, HiddenBand, ReportForm } from '../components/BoardParts';
+import CommentThread from '../components/CommentThread';
 
 /**
  * 글 보기 (/board/:id): 본문, 추천, 내 글이면 [고치기][지우기], 남의 글이면 [신고], 운영자는 [숨기기]/[다시 공개].
@@ -24,7 +24,11 @@ export default function BoardPost() {
   const location = useLocation();
   const [done, setDone] = useState(location.state?.done ?? null);
   const { data, error, loading, retry } = useAsync(
-    () => (auth.status === 'loading' ? new Promise(() => {}) : getPost(postId, userId)),
+    async () => {
+      if (auth.status === 'loading') return new Promise(() => {});
+      const [post, rules] = await Promise.all([getPost(postId, userId), getEditRules()]);
+      return post && { ...post, rules };
+    },
     [postId, userId, auth.status],
   );
   const finished = (message) => {
@@ -70,38 +74,13 @@ export default function BoardPost() {
         </>
       )}
 
-      <Comments post={post} auth={auth} onDone={finished} onReload={retry} />
+      <CommentThread
+        ops={POST_COMMENT_OPS} parentId={post.id} comments={post.comments} auth={auth} rules={post.rules}
+        open={!deleted && post.status === 'visible'} live={post.status === 'visible'}
+        closedHint={deleted ? '삭제된 글에는 댓글을 달 수 없어요.' : null}
+        onDone={finished} onReload={retry}
+      />
     </article>
-  );
-}
-
-/** 운영자에게만: 숨김 띠 + [다시 공개] */
-function HiddenBand({ row, what, onRestore, onDone }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="op-band">
-      <p>
-        <strong>숨김</strong> · {fmtDateTime(row.hidden_at)} · 메모: {row.hidden_note}
-        <br />
-        <small>운영자에게만 보여요.</small>
-      </p>
-      {!open && (
-        <button type="button" className="btn btn-small btn-op" onClick={() => setOpen(true)}>다시 공개</button>
-      )}
-      {open && (
-        <NoteForm
-          id={`restore-${what}-${row.id}`}
-          label="다시 공개 메모 (필수, 작성자에게 보여요)"
-          confirmLabel="다시 공개 확정"
-          busyLabel="공개하는 중…"
-          onCancel={() => setOpen(false)}
-          onSubmit={async (note) => {
-            await onRestore(note);
-            onDone(`${what}을 다시 공개했어요.`);
-          }}
-        />
-      )}
-    </div>
   );
 }
 
@@ -111,6 +90,7 @@ function PostActions({ post, mine, auth, onDone }) {
   const [vote, setVote] = useState({ up: post.up_count, mine: post.voted, busy: false, error: null });
   const signedIn = auth.status === 'signedIn';
   const visible = post.status === 'visible';
+  const now = useNow();
 
   const toggleVote = async () => {
     setVote((v) => ({ ...v, busy: true, error: null }));
@@ -135,7 +115,9 @@ function PostActions({ post, mine, auth, onDone }) {
         ) : (
           <span className="vote-count" aria-label={`추천 ${vote.up}`}>👍 {vote.up}</span>
         )}
-        {mine && visible && <Link to={`/board/${post.id}/edit`} className="btn btn-small">고치기</Link>}
+        {mine && visible && canEditNow('post', post, post.rules, now) && (
+          <Link to={`/board/${post.id}/edit`} className="btn btn-small">고치기</Link>
+        )}
         {mine && <button type="button" className="btn btn-small" onClick={() => setMode('delete')}>지우기</button>}
         {signedIn && !mine && visible && !auth.isOperator && (
           <button type="button" className="btn btn-small" onClick={() => setMode('report')}>신고</button>
@@ -186,162 +168,5 @@ function PostActions({ post, mine, auth, onDone }) {
         />
       )}
     </div>
-  );
-}
-
-function Comments({ post, auth, onDone, onReload }) {
-  const { pathname } = useLocation();
-  const deleted = post.deleted_at != null;
-  return (
-    <section className="section comments" aria-labelledby="comments-title">
-      <h2 className="section-title" id="comments-title">댓글 {post.comments.filter((c) => c.status === 'visible').length}</h2>
-      {post.comments.length === 0 && <p className="hint">아직 댓글이 없어요.</p>}
-      {post.comments.length > 0 && (
-        <ul className="comment-list" aria-label="댓글">
-          {post.comments.map((c) => (
-            <Comment key={c.id} comment={c} post={post} auth={auth} onDone={onDone} onReload={onReload} />
-          ))}
-        </ul>
-      )}
-      {deleted && <p className="hint">삭제된 글에는 댓글을 달 수 없어요.</p>}
-      {!deleted && post.status === 'visible' && (auth.status === 'signedIn' ? (
-        <CommentForm postId={post.id} onDone={onReload} />
-      ) : (
-        <p className="hint">
-          <Link to="/login" state={{ from: pathname }}>로그인</Link>하면 댓글을 달 수 있어요.
-        </p>
-      ))}
-    </section>
-  );
-}
-
-function Comment({ comment: c, post, auth, onDone, onReload }) {
-  const [mode, setMode] = useState(null); // 'edit' | 'delete' | 'report' | 'hide'
-  const [body, setBody] = useState(c.body);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
-  const mine = auth.user?.id != null && c.author_id === auth.user.id;
-  const visible = c.status === 'visible' && post.status === 'visible';
-  const signedIn = auth.status === 'signedIn';
-
-  const save = async (e) => {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      await editComment(c.id, body);
-      setMode(null);
-      onReload();
-    } catch (err) {
-      setError(err.message);
-    }
-    setBusy(false);
-  };
-
-  return (
-    <li className={c.status === 'hidden' ? 'comment hidden-row' : 'comment'} id={`comment-${c.id}`}>
-      {c.status === 'hidden' && (
-        <HiddenBand row={c} what="댓글" onRestore={(note) => restoreComment(c.id, note)} onDone={onDone} />
-      )}
-      <BoardByline row={c} />
-      {mode === 'edit' ? (
-        <form className="comment-form" onSubmit={save}>
-          <label htmlFor={`edit-comment-${c.id}`} className="sr-only">댓글 고치기</label>
-          <textarea id={`edit-comment-${c.id}`} rows={3} value={body} onChange={(e) => setBody(e.target.value)} />
-          <div className="comment-form-foot">
-            <CharCount value={body} max={COMMENT_MAX} />
-            <button type="submit" className="btn btn-small" disabled={busy || !body.trim() || body.trim().length > COMMENT_MAX}>
-              {busy ? '저장하는 중…' : '저장'}
-            </button>
-            <button type="button" className="btn btn-small" disabled={busy} onClick={() => { setMode(null); setBody(c.body); }}>취소</button>
-          </div>
-          {error && <p className="form-error" role="alert">{error}</p>}
-        </form>
-      ) : (
-        <div className="comment-body">{c.body}</div>
-      )}
-      {mode === null && (
-        <div className="comment-actions">
-          {mine && visible && <button type="button" className="link-btn" onClick={() => setMode('edit')}>고치기</button>}
-          {mine && <button type="button" className="link-btn" onClick={() => setMode('delete')}>지우기</button>}
-          {signedIn && !mine && visible && !auth.isOperator && (
-            <button type="button" className="link-btn" onClick={() => setMode('report')}>신고</button>
-          )}
-          {auth.isOperator && c.status === 'visible' && (
-            <button type="button" className="link-btn op-link" onClick={() => setMode('hide')}>숨기기</button>
-          )}
-        </div>
-      )}
-      {mode === 'delete' && (
-        <ConfirmInline
-          question="댓글을 지울까요?" confirmLabel="지우기" onCancel={() => setMode(null)}
-          onConfirm={async () => {
-            await deleteMyComment(c.id);
-            onReload();
-          }}
-        />
-      )}
-      {mode === 'report' && (
-        <ReportForm
-          id={`report-comment-${c.id}`} what="댓글" onCancel={() => setMode(null)}
-          onSubmit={async (reason, detail) => {
-            await reportComment(c.id, reason, detail);
-            setMode(null);
-            onDone('신고했어요. 운영자가 확인할게요.');
-          }}
-        />
-      )}
-      {mode === 'hide' && (
-        <NoteForm
-          id={`hide-comment-${c.id}`}
-          label="숨기는 이유 (필수, 작성자에게 보여요)"
-          confirmLabel="숨기기 확정"
-          busyLabel="숨기는 중…"
-          onCancel={() => setMode(null)}
-          onSubmit={async (note) => {
-            await hideComment(c.id, note);
-            setMode(null);
-            onDone('댓글을 숨겼어요. 작성자에게 알림이 갔어요.');
-          }}
-        />
-      )}
-    </li>
-  );
-}
-
-/** 댓글 달기: 보내는 동안 버튼을 잠가 두 번 눌러도 한 번만 */
-function CommentForm({ postId, onDone }) {
-  const [body, setBody] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
-  const n = body.trim().length;
-
-  const submit = async (e) => {
-    e.preventDefault();
-    if (busy || n === 0 || n > COMMENT_MAX) return;
-    setBusy(true);
-    setError(null);
-    try {
-      await createComment(postId, body);
-      setBody('');
-      onDone();
-    } catch (err) {
-      setError(err.message);
-    }
-    setBusy(false);
-  };
-
-  return (
-    <form className="comment-form" onSubmit={submit}>
-      <label htmlFor="new-comment" className="sr-only">댓글 쓰기</label>
-      <textarea id="new-comment" rows={3} placeholder="댓글을 남겨 주세요" value={body} onChange={(e) => setBody(e.target.value)} />
-      <div className="comment-form-foot">
-        <CharCount value={body} max={COMMENT_MAX} />
-        <button type="submit" className="btn btn-small btn-primary" disabled={busy || n === 0 || n > COMMENT_MAX}>
-          {busy ? '올리는 중…' : '댓글 달기'}
-        </button>
-      </div>
-      {error && <p className="form-error" role="alert">{error}</p>}
-    </form>
   );
 }

@@ -6,7 +6,7 @@ import { TITLES, titleCondition, titleName } from '../lib/titles';
 import { fmtDateTime } from '../lib/format';
 
 export const REWARD_KINDS = ['level_up', 'level_down', 'title_earned', 'title_revoked'];
-const KIND_LABEL = { new_counter: '새 카운터 승인', doc_edit: '문서 수정 승인', build: '빌드 승인', vote: '따봉 받음', post: '게시판 글', comment: '게시판 댓글' };
+const KIND_LABEL = { new_counter: '새 카운터 승인', doc_edit: '문서 수정 승인', build: '빌드 승인', vote: '따봉 받음', post: '게시판 글', comment: '게시판 댓글', doc_comment: '문서 댓글' };
 const PAGE = 30;
 
 /**

@@ -145,11 +145,13 @@ test('남의 글: 추천 누르기·취소, 신고(이유 필수, 기타는 내�
 });
 
 test('내 글: 고치기 → 수정됨, 지우기 (남의 댓글 있으면 "삭제된 글"로 남음)', async () => {
-  TABLES.posts.push(fakePost(1, { comment_count: 1 }));
+  TABLES.posts.push(fakePost(1, { comment_count: 1, created_at: new Date().toISOString() })); // 방금 쓴 글 (고칠 수 있는 시간 안)
   TABLES.post_comments.push(fakeComment(11, 1, { author_id: 'u-x', author: OTHER, body: '남의 댓글' }));
   fakeLogin('u-old');
   start('/board/1');
   fireEvent.click(await screen.findByRole('link', { name: '고치기' }));
+  expect(await screen.findByText(/까지 저장할 수 있어요/)).toBeDefined();
+  expect(rpcs('begin_edit')).toEqual([{ p_kind: 'post', p_id: 1 }]);
   const title = await screen.findByLabelText('제목');
   expect(title.value).toBe('글 1');
   fireEvent.change(title, { target: { value: '글 1 (고침)' } });
@@ -206,7 +208,8 @@ test('댓글: 달기(빈 칸이면 못 보냄) → 바로 보임, 내 댓글 고
   expect(within(mine).queryByRole('button', { name: '신고' })).toBeNull();
 
   fireEvent.click(within(mine).getByRole('button', { name: '고치기' }));
-  fireEvent.change(within(mine).getByLabelText('댓글 고치기'), { target: { value: '고친 댓글' } });
+  fireEvent.change(await within(mine).findByLabelText('댓글 고치기'), { target: { value: '고친 댓글' } });
+  expect(within(mine).getByText(/까지 저장할 수 있어요/)).toBeDefined();
   fireEvent.click(within(mine).getByRole('button', { name: '저장' }));
   await vi.waitFor(() => expect(document.querySelectorAll('.comment-body')[1]?.textContent).toBe('고친 댓글'));
   const mine2 = within(screen.getByRole('list', { name: '댓글' })).getAllByRole('listitem')[1];
@@ -291,7 +294,7 @@ test('운영자 /admin/reports: 대상별로 묶음 → 숨기기 / 신고 기�
   fireEvent.click(dismiss);
   fireEvent.click(within(left).getByRole('button', { name: '기각 확정' })); // 메모는 선택
   expect(await screen.findByText('신고 1건을 기각했어요.')).toBeDefined();
-  expect(rpcs('dismiss_reports')).toEqual([{ p_post: null, p_comment: 11, p_note: null }]);
+  expect(rpcs('dismiss_reports')).toEqual([{ p_post: null, p_comment: 11, p_note: null, p_doc_comment: null }]);
   expect(await screen.findByText('처리할 신고가 없어요.')).toBeDefined();
 });
 
@@ -319,7 +322,7 @@ test('/me: 게시판 알림 (새 댓글은 [글 보기], 숨김은 링크 없음
   );
   fakeLogin('u-old');
   start('/me');
-  const sec = (await screen.findByRole('heading', { name: '게시판 알림' })).closest('section');
+  const sec = (await screen.findByRole('heading', { name: '댓글·게시판 알림' })).closest('section');
   const [comment, hidden] = within(sec).getAllByRole('listitem');
   expect(comment.textContent).toContain('새 댓글 3개');
   expect(within(comment).getByRole('link', { name: '글 보기' }).getAttribute('href')).toBe('/board/5');
