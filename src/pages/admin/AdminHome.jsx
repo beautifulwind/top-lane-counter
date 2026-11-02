@@ -17,10 +17,11 @@ import RequireOperator from '../../components/RequireOperator';
 import UserName from '../../components/UserName';
 import NoteForm from '../../components/NoteForm';
 import { EditedBadge, useAuthorChanged } from '../../components/AuthorChanged';
+import OffmetaPicks from '../../components/OffmetaPicks';
 
 /**
  * 운영자 페이지: 승인 대기·재검토 기다리는 중·숨긴 카운터·빌드 승인 대기·숨긴 빌드를 목록에서 바로 처리
- * (메모 입력이 확인 단계), 삭제 기록. 승인 대기 줄은 [승인] [재검토 요청] [거절] — 고쳐서 승인은 [자세히]에서
+ * (메모 입력이 확인 단계), 비주류 픽 목록, 삭제 기록. 승인 대기 줄은 [승인] [재검토 요청] [거절] — 고쳐서 승인은 [자세히]에서
  */
 export default function AdminHome() {
   return (
@@ -138,6 +139,11 @@ function PendingList() {
           )}
         </section>
       )}
+
+      <section className="section">
+        <h2 className="section-title">비주류 픽</h2>
+        <OffmetaPicks />
+      </section>
 
       {data && (
         <section className="section">

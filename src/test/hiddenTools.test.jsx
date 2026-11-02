@@ -52,7 +52,7 @@ test('미리보기: 운영자만 숨긴 문서(딜교·특이사항·빌드)를 
   expect(screen.getByRole('heading', { name: '가렌(으)로 다리우스 잡는 법' })).toBeDefined();
   expect(screen.getByText('숨긴 주의사항')).toBeDefined();
   expect(screen.getByText('9레벨').nextSibling.textContent).toBe('e');
-  expect(screen.getByText(/탑신병자/)).toBeDefined(); // 빌드 작성자
+  expect(screen.getByText(/탑고수/)).toBeDefined(); // 빌드 작성자
   expect(screen.queryByRole('link', { name: '문서 수정 제안' })).toBeNull();
   cleanup();
   start('/admin/preview/Darius/Quinn'); // 공개 중인 카운터는 미리보기 대상이 아님

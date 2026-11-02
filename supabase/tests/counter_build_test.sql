@@ -64,7 +64,7 @@ select t.ok('비로그인에게 새 카운터와 첫 빌드가 보임',
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.ok('알림은 제안 승인 하나만 (빌드 승인 알림 따로 없음)',
-  (select array_agg(kind) = array['proposal_approved'] from notifications));
+  (select array_agg(kind) = array['proposal_approved'] from notifications where kind not in ('level_up', 'title_earned')));
 select t.ok('/me: 첫 빌드가 내 빌드로 보임', (select count(*) = 1 from builds where author_id = auth.uid()));
 
 -- ===== 3. 거절 → 빌드도 같이 거절 (빌드 표에는 안 들어감) =====

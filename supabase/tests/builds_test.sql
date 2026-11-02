@@ -120,7 +120,7 @@ set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.ok('작성자: 승인 알림 1개 (빌드 연결, 메모)',
   (select count(*) = 1 from notifications where kind = 'build_approved' and read_at is null
      and build_id = (select v from ids where k = 'b1') and message = '깔끔한 빌드예요' and proposal_id is null));
-select t.ok('알림 확인 → 꺼짐', (select mark_notifications_read(array(select id from notifications)) = 1));
+select t.ok('알림 확인 → 꺼짐', (select mark_notifications_read(array(select id from notifications where kind = 'build_approved')) = 1));
 select t.fails('똑같은 빌드는 다시 못 냄 (패치만 달라도)', $$select pg_temp.add(starting => array['1055','2003','2003'], patch => '16.22')$$, '똑같은 빌드가 이미 공개');
 select t.ok('작성자는 처리 기록을 못 봄 (운영자만)', (select count(*) = 0 from build_status_log));
 
@@ -226,7 +226,8 @@ select approve_proposal((select id from edit_proposals where proposer_id = auth.
 reset role;
 select t.ok('운영자가 자기 제안을 승인하면 알림 없음', (select count(*) = 0 from notifications where user_id = '00000000-0000-0000-0000-00000000000a'));
 select t.ok('알림 종류 검사', (select count(*) = 0 from notifications where kind not in
-  ('revision_request','proposal_approved','proposal_rejected','build_approved','build_rejected','build_hidden','build_restored')));
+  ('revision_request','proposal_approved','proposal_rejected','build_approved','build_rejected','build_hidden','build_restored',
+   'level_up','level_down','title_earned','title_revoked')));
 
 -- ===== 10. 탈퇴(계정 삭제) =====
 -- 유저(b): 공개 빌드 b1(따봉 2), 거절 b2·b3 / 유저2(d): b1에 따봉

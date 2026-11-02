@@ -57,11 +57,11 @@ test('첫 로그인(닉네임 없음): 어느 페이지든 닉네임 설정으�
   expect(await screen.findByRole('heading', { name: '닉네임 정하기' })).toBeDefined();
   expect(where()).toBe('/welcome');
 
-  fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '  탑신병자 ' } });
+  fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '  탑고수 ' } });
   fireEvent.click(screen.getByRole('button', { name: '시작하기' }));
   expect(await screen.findByText(/다리우스을\(를\) 이기는 챔피언/)).toBeDefined();
   expect(where()).toBe('/champion/Darius');
-  expect(document.querySelector('.me').textContent).toBe('Lv.1 탑신병자'); // 칭호 없으면 칭호 자리 없음
+  expect(document.querySelector('.me').textContent).toBe('Lv.1 탑고수'); // 칭호 없으면 칭호 자리 없음
 });
 
 test('닉네임 중복(대소문자 무시)이면 안내 문구가 보이고 화면에 머문다', async () => {
@@ -86,10 +86,10 @@ test('빈 닉네임, 20자 초과 닉네임은 저장 전에 막는다', async (
 });
 
 test('닉네임이 있는 유저: 상단에 "Lv.7 칭호 · 닉네임", 로그아웃하면 [로그인]으로 바뀐다', async () => {
-  fakeLogin('u-user', { nickname: '탑신병자', level: 7, main_title: 'senior_researcher' });
+  fakeLogin('u-user', { nickname: '탑고수', level: 7, main_title: 'solid_heavy' });
   start('/');
-  await screen.findByText('탑신병자');
-  expect(document.querySelector('.me').textContent).toBe('Lv.7 수석 연구원 · 탑신병자');
+  await screen.findByText('탑고수');
+  expect(document.querySelector('.me').textContent).toBe('Lv.7 단단묵직 · 탑고수');
   fireEvent.click(screen.getByRole('button', { name: '로그아웃' }));
   expect(await screen.findByRole('link', { name: '로그인' })).toBeDefined();
 });

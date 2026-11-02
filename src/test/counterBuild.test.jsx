@@ -131,7 +131,7 @@ test('매치업 문서: 공개 빌드가 하나뿐이면 [빌드 숨기기]가 �
   TABLES.builds = TABLES.builds.filter((b) => b.id === 102);
   asOperator();
   start('/champion/Darius/counter/Quinn');
-  const card = await screen.findByRole('article', { name: '빌드: 탑신병자' });
+  const card = await screen.findByRole('article', { name: '빌드: 탑고수' });
   expect(within(card).getByRole('button', { name: '빌드 숨기기' })).toBeDisabled();
   expect(within(card).getByText(/마지막 공개 빌드라 숨길 수 없어요/)).toBeDefined();
 });

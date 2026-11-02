@@ -47,7 +47,7 @@ test('빈 빌드는 고를 것을 차례로 알려 준다', () => {
 test('비로그인: 따봉을 누르면 로그인 화면으로, [+ 빌드 등록]도 로그인부터', async () => {
   start(MATCHUP);
   await screen.findByText(/퀸\(으\)로 다리우스 잡는 법/);
-  click('따봉 5', card('탑신병자'));
+  click('따봉 5', card('탑고수'));
   expect(where()).toBe('/login');
   expect(rpcCalls('vote_build')).toEqual([]);
   cleanup();
@@ -60,7 +60,7 @@ test('따봉 → 같은 버튼 다시 누르면 취소 → 비추로 바꾸기 (
   asUser();
   start(MATCHUP);
   await screen.findByText(/퀸\(으\)로 다리우스 잡는 법/);
-  const c = card('탑신병자');
+  const c = card('탑고수');
   click('따봉 5', c);
   const up = await within(c).findByRole('button', { name: '따봉 6' });
   expect(up.getAttribute('aria-pressed')).toBe('true');
@@ -81,7 +81,7 @@ test('내가 이미 누른 표가 보이고, 내 빌드에는 못 누른다', as
   start(MATCHUP);
   await screen.findByText(/퀸\(으\)로 다리우스 잡는 법/);
   expect(within(card('칭호없음')).getByRole('button', { name: '따봉 2' })).toHaveAttribute('aria-pressed', 'true');
-  const mine = card('탑신병자');
+  const mine = card('탑고수');
   expect(within(mine).getByText('내 빌드')).toBeDefined();
   expect(within(mine).getByRole('button', { name: '따봉 5' })).toBeDisabled();
   expect(within(mine).getByRole('button', { name: '비추 1' })).toBeDisabled();
@@ -92,9 +92,9 @@ test('투표 실패하면 이유를 보여 주고 숫자는 그대로', async ()
   start(MATCHUP);
   await screen.findByText(/퀸\(으\)로 다리우스 잡는 법/);
   fakeState.rpcError = '공개된 빌드에만 투표할 수 있어요.';
-  click('따봉 5', card('탑신병자'));
+  click('따봉 5', card('탑고수'));
   expect(await screen.findByRole('alert')).toHaveTextContent('공개된 빌드에만 투표할 수 있어요.');
-  expect(within(card('탑신병자')).getByRole('button', { name: '따봉 5' })).toBeDefined();
+  expect(within(card('탑고수')).getByRole('button', { name: '따봉 5' })).toBeDefined();
 });
 
 test('정렬: 점수가 같으면 투표가 많은 빌드가 먼저', async () => {
@@ -104,7 +104,7 @@ test('정렬: 점수가 같으면 투표가 많은 빌드가 먼저', async () =
   start(MATCHUP);
   await screen.findByText(/퀸\(으\)로 다리우스 잡는 법/);
   const authors = [...document.querySelectorAll('.build-author')].map((e) => e.textContent);
-  expect(authors).toEqual(['Lv.7 수석 연구원 · 탑신병자', 'Lv.3 칭호없음', '(탈퇴한 유저)', 'Lv.0 영자(운)']);
+  expect(authors).toEqual(['Lv.7 단단묵직 · 탑고수', 'Lv.3 칭호없음', '(탈퇴한 유저)', 'Lv.0 영자(운)']);
 });
 
 test('운영자: 매치업 문서에서 빌드를 바로 숨긴다 (사유 = 확인 단계)', async () => {

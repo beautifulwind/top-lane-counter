@@ -14,7 +14,7 @@ export const fakeBuild = (id, author, extra) => build(id, author, extra);
 
 const INITIAL_BUILDS = () => [
     build(101, null, { patch: '14.1.1', up_count: 1 }),
-    build(102, { nickname: '탑신병자', level: 7, main_title: 'senior_researcher' }, { up_count: 5, down_count: 1 }),
+    build(102, { nickname: '탑고수', level: 7, main_title: 'solid_heavy' }, { up_count: 5, down_count: 1 }),
     build(103, { nickname: '칭호없음', level: 3, main_title: null }, { up_count: 2 }),
     build(104, { nickname: '대기중', level: 1, main_title: null }, { status: 'pending', up_count: 99 }),
     build(105, { nickname: '영자(운)', level: 0, main_title: null }), // 운영자가 쓴 빌드 (점수 0)
@@ -43,6 +43,17 @@ export const TABLES = {
   counter_deletions: [],
   build_votes: [],
   notifications: [],
+  // 014 경험치·칭호 (내 기록만 넣는다 — RLS 흉내는 테스트가 그렇게 넣는 것으로)
+  xp_events: [],
+  user_titles: [],
+  offmeta_champions: [],
+  xp_levels: [[1, 0], [2, 100], [3, 300], [4, 600], [5, 1000], [6, 1500], [7, 2100], [8, 2800], [9, 3600], [10, 4500]]
+    .map(([level, min_xp]) => ({ level, min_xp })),
+  xp_rules: [
+    ['new_counter', 100], ['doc_edit', 50], ['build', 30], ['vote', 2], ['vote_daily_cap', 40], ['level_step', 1000],
+    ['title_top_addict', 1], ['title_tool_hater', 10], ['title_solid_heavy', 25], ['title_butcher_owner', 50],
+    ['title_general', 100], ['title_offmeta', 5],
+  ].map(([key, value]) => ({ key, value })),
 };
 
 /** 테스트에서 쓰는 제안 한 줄 (기본: 기존유저가 보낸 대기 중 문서 수정) */
@@ -86,6 +97,9 @@ export function resetFake() {
   TABLES.counter_deletions = [];
   TABLES.build_votes = [];
   TABLES.notifications = [];
+  TABLES.xp_events = [];
+  TABLES.user_titles = [];
+  TABLES.offmeta_champions = [];
   TABLES.builds = INITIAL_BUILDS();
   fakeState.inserts = [];
   fakeState.insertError = null;
@@ -150,6 +164,10 @@ function query(table) {
       // RLS 흉내: 내 행만 수정 / DB 제약 흉내: 닉네임 중복(대소문자 무시) 금지
       const me = fakeState.session?.user.id;
       rows = rows.filter((r) => r.id === me);
+      // DB 제약 흉내: 대표 칭호는 내가 가진 칭호만 (profiles_main_title_owned)
+      if (patch.main_title && !TABLES.user_titles.some((t) => t.user_id === me && t.title_key === patch.main_title)) {
+        return { data: null, error: { code: '23503', message: 'violates foreign key constraint "profiles_main_title_owned"' } };
+      }
       const nick = patch.nickname?.toLowerCase();
       if (nick && TABLES[table].some((r) => r.id !== me && r.nickname?.toLowerCase() === nick)) {
         return { data: null, error: { code: '23505', message: 'duplicate key value violates unique constraint' } };
@@ -194,6 +212,14 @@ async function rpc(name, args) {
     const mine = TABLES.notifications.filter((n) => args.p_ids.includes(n.id) && n.user_id === me && !n.read_at);
     mine.forEach((n) => { n.read_at = new Date().toISOString(); });
     return { data: mine.length, error: null };
+  }
+  if (name === 'add_offmeta') {
+    TABLES.offmeta_champions.push({ champion_id: args.p_champion, created_at: new Date().toISOString() });
+    return { data: null, error: null };
+  }
+  if (name === 'remove_offmeta') {
+    TABLES.offmeta_champions = TABLES.offmeta_champions.filter((o) => o.champion_id !== args.p_champion);
+    return { data: null, error: null };
   }
   if (name === 'vote_build') {
     // DB 함수처럼: 한 사람 한 표, null = 취소, 따봉 수 다시 세기

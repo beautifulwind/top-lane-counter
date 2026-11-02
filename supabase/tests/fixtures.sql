@@ -39,6 +39,8 @@ from c, (values
     '["Q","W","E"]'::jsonb, '14.1.1' )
 ) as b (runes, spells, starting, core, skills, patch);
 
+-- 014의 경험치 트리거(트랜잭션 끝에 실행)가 기다리는 중이면 표를 못 바꾸니 먼저 실행해 둔다
+set constraints all immediate;
 alter table public.builds enable trigger builds_check_new;
 -- 문서의 "처음 버전" 기록 (예전에는 004의 백필이 만들어 줬다) → 되돌리기 검사용
 with r as (

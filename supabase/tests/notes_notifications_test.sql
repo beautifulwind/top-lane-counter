@@ -94,7 +94,8 @@ select t.fails('제안자도 알림 직접 삭제 불가', $$delete from notific
 select t.ok('008: 가렌 승인 알림도 받음 (메모 포함)',
   (select count(*) = 1 from notifications where kind = 'proposal_approved' and message = '좋은 공략이에요'
      and proposal_id = (select v from ids where k = 'garen_p')));
-select t.ok('/me에서 확인 → 2개 읽음 처리 (승인 + 재검토 요청)', (select mark_notifications_read(array(select id from notifications)) = 2));
+select t.ok('/me에서 확인 → 2개 읽음 처리 (승인 + 재검토 요청)', (select mark_notifications_read(array(select id from notifications where kind not in ('level_up', 'level_down', 'title_earned', 'title_revoked'))) = 2));
+select mark_notifications_read(array(select id from notifications));  -- 경험치·칭호 알림(014)도 확인
 select t.ok('빨간 점 조건이 꺼짐', (select count(*) = 0 from notifications where read_at is null));
 select t.ok('다시 확인해도 0개', (select mark_notifications_read(array(select id from notifications)) = 0));
 select t.ok('확인해도 재검토 요청 상태와 메모는 남음 (다시 제출 가능)',
@@ -134,4 +135,4 @@ select hide_counter(:garen, '중복');
 select request_revision(:garen, '네 번째');
 select delete_counter(:garen, 'Garen', '중복 카운터');
 reset role;
-select t.ok('삭제: 그 제안의 알림도 함께 지워짐', (select count(*) = 0 from notifications where user_id = '00000000-0000-0000-0000-00000000000b'));
+select t.ok('삭제: 그 제안의 알림도 함께 지워짐', (select count(*) = 0 from notifications where user_id = '00000000-0000-0000-0000-00000000000b' and proposal_id is not null));

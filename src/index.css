@@ -400,3 +400,22 @@ a.op-link, .op-link { color: var(--op-dark); }
 .edited-badge { padding: 0 6px; border-radius: 999px; background: var(--op-soft); color: var(--op-dark); font-size: 12px; font-weight: 700; }
 .author-changed { margin: 8px 0; }
 .author-changed p { margin: 0 0 6px; }
+
+/* 레벨·경험치·칭호 (/me) */
+.xp-summary { margin: 4px 0; font-size: 18px; }
+.xp-bar { height: 10px; border-radius: 999px; background: var(--line-soft); overflow: hidden; }
+.xp-bar > span { display: block; height: 100%; background: var(--brand); }
+.title-picker { border: 1px solid var(--line); border-radius: var(--radius); padding: 8px 12px; margin: 0 0 12px; }
+.title-picker legend { font-size: 14px; color: var(--muted); padding: 0 4px; }
+.title-row { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line-soft); cursor: pointer; }
+.title-row:first-of-type { border-top: 0; }
+.title-row input { margin-top: 5px; }
+.title-row.locked { color: var(--muted); cursor: default; }
+.xp-list { list-style: none; margin: 0 0 8px; padding: 0; }
+.xp-row { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; padding: 6px 0; border-top: 1px solid var(--line-soft); font-size: 14px; }
+.xp-row .xp-amount { font-weight: 700; color: var(--brand-dark); }
+.xp-row.minus .xp-amount { color: var(--warn); }
+.xp-row .xp-when { grid-column: 1 / -1; color: var(--muted); }
+/* 운영자: 비주류 픽 목록 */
+.offmeta-list { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
+.offmeta-list li { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }

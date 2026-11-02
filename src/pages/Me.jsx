@@ -4,6 +4,7 @@ import { PROVIDERS, getIdentities, linkProvider } from '../api/auth';
 import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../api/ddragon';
 import { approvedWithEdits, getMyProposals, getMyUnreadNotifications, markNotificationsRead } from '../api/proposals';
 import { getMyBuilds } from '../api/builds';
+import { getMyRewards } from '../api/rewards';
 import { BUILD_STATUS_LABEL, STATUS_LABEL, TYPE_LABEL, fmtDateTime } from '../lib/format';
 import { useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
@@ -11,6 +12,7 @@ import { ErrorBox, Loading } from '../components/Status';
 import UserName from '../components/UserName';
 import BuildCard from '../components/BuildCard';
 import DiffView from '../components/DiffView';
+import MyRewards from '../components/MyRewards';
 
 /**
  * 내 활동 (/me): 내 제안·내 빌드 목록과 상태, 로그인 연결.
@@ -34,20 +36,21 @@ export default function Me() {
           {sent} 운영자가 승인하면 반영돼요.
         </p>
       )}
-      <MyActivity userId={auth.user.id} />
+      <MyActivity userId={auth.user.id} operator={auth.isOperator} />
       <LinkedLogins userId={auth.user.id} />
     </article>
   );
 }
 
-function MyActivity({ userId }) {
+function MyActivity({ userId, operator }) {
   const { data, error, loading, retry } = useAsync(async () => {
-    const [champs, proposals, builds, unread, items, runes, spells, latest] = await Promise.all([
+    const [champs, proposals, builds, unread, items, runes, spells, latest, rewards] = await Promise.all([
       getChampionMap(), getMyProposals(userId), getMyBuilds(userId), getMyUnreadNotifications(userId),
       getItems(), getRunes(), getSummonerSpells(), getLatestVersion(),
+      operator ? null : getMyRewards(userId),
     ]);
-    return { champs, proposals, builds, unread, game: { items, runes, spells, latest } };
-  }, [userId]);
+    return { champs, proposals, builds, unread, rewards, game: { items, runes, spells, latest } };
+  }, [userId, operator]);
 
   // 화면에 보인 알림 = 확인한 것 → 읽음 처리 (상단 빨간 점이 꺼진다).
   // "새 알림" 표시는 이번에 불러온 화면에서만 보인다. 재검토 요청 내용과 [고쳐서 다시 제출]은 제안 상태라 그대로 남는다.
@@ -60,6 +63,14 @@ function MyActivity({ userId }) {
   if (error) return <ErrorBox error={error} onRetry={retry} />;
   return (
     <>
+      {operator ? (
+        <section className="me-section" aria-labelledby="my-level">
+          <h2 id="my-level">레벨·경험치</h2>
+          <p className="hint">운영자는 경험치·레벨·칭호가 없어요 (항상 Lv.0).</p>
+        </section>
+      ) : (
+        <MyRewards rewards={data.rewards} unread={data.unread} champs={data.champs} />
+      )}
       <MyProposals data={data} />
       <MyBuilds data={data} />
     </>
