@@ -12,6 +12,7 @@ beforeEach(() => {
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
   localStorage.clear();
   sessionStorage.clear();
+  vi.stubEnv('VITE_TURNSTILE_SITE_KEY', ''); // .env에 진짜 키가 있어도 기본은 "캡차 없음" (fakeTurnstile이 다시 넣음)
 });
 afterEach(() => {
   cleanup();
@@ -73,6 +74,76 @@ test('캡차: 사이트 키가 있으면 확인을 통과해야 [비회원으로
   fireEvent.click(go);
   await screen.findByRole('heading', { name: '닉네임 정하기' });
   expect(fakeState.anonCalls).toEqual([{ options: { captchaToken: 'tok-2' } }]);
+});
+
+/** 가짜 Turnstile: render 옵션을 잡아 두고 reset 호출을 센다 */
+function fakeTurnstile() {
+  vi.stubEnv('VITE_TURNSTILE_SITE_KEY', 'site-key');
+  const ts = { opts: null, render: vi.fn((_, o) => { ts.opts = o; return 'w1'; }), reset: vi.fn(), remove: vi.fn() };
+  window.turnstile = ts;
+  return ts;
+}
+
+test('캡차: 시작에 실패하면 위젯을 reset해 새 토큰을 받고, 쓴 토큰은 다시 보내지 않는다', async () => {
+  const ts = fakeTurnstile();
+  fakeState.anonError = 'captcha protection: request disallowed (timeout-or-duplicate)';
+  start('/login');
+  fireEvent.click(await screen.findByRole('button', { name: '비회원으로 시작하기' }));
+  await vi.waitFor(() => expect(ts.opts).not.toBeNull());
+  act(() => ts.opts.callback('tok-1'));
+  fireEvent.click(screen.getByRole('button', { name: '비회원으로 시작' }));
+  expect(await screen.findByText('자동 가입 방지 확인을 다시 해 주세요.')).toBeDefined();
+  expect(ts.reset).toHaveBeenCalledWith('w1');
+  const go = screen.getByRole('button', { name: '비회원으로 시작' });
+  expect(go.disabled).toBe(true); // 새 확인을 받을 때까지 잠김
+  fireEvent.click(go);
+  expect(fakeState.anonCalls).toHaveLength(1);
+  fakeState.anonError = null;
+  act(() => ts.opts.callback('tok-2'));
+  fireEvent.click(go);
+  await screen.findByRole('heading', { name: '닉네임 정하기' });
+  expect(fakeState.anonCalls.map((c) => c.options.captchaToken)).toEqual(['tok-1', 'tok-2']);
+});
+
+test('캡차: 시간 초과(timeout)·오류도 버튼을 다시 잠근다', async () => {
+  const ts = fakeTurnstile();
+  start('/login');
+  fireEvent.click(await screen.findByRole('button', { name: '비회원으로 시작하기' }));
+  await vi.waitFor(() => expect(ts.opts).not.toBeNull());
+  const go = screen.getByRole('button', { name: '비회원으로 시작' });
+  for (const event of ['timeout-callback', 'error-callback', 'expired-callback']) {
+    act(() => ts.opts.callback('tok'));
+    expect(go.disabled).toBe(false);
+    act(() => ts.opts[event]());
+    expect(go.disabled).toBe(true);
+  }
+});
+
+test('[비회원으로 시작]을 빠르게 두 번 눌러도 signInAnonymously는 한 번만', async () => {
+  const ts = fakeTurnstile();
+  start('/login');
+  fireEvent.click(await screen.findByRole('button', { name: '비회원으로 시작하기' }));
+  await vi.waitFor(() => expect(ts.opts).not.toBeNull());
+  act(() => ts.opts.callback('tok-1'));
+  const go = screen.getByRole('button', { name: '비회원으로 시작' });
+  fireEvent.click(go);
+  fireEvent.click(go);
+  await screen.findByRole('heading', { name: '닉네임 정하기' });
+  expect(fakeState.anonCalls).toHaveLength(1);
+});
+
+test('캡차 없이(사이트 키 없음)도 두 번 눌러 두 번 시작하지 않는다', async () => {
+  let release;
+  fakeState.anonDelay = new Promise((r) => { release = r; });
+  start('/login');
+  fireEvent.click(await screen.findByRole('button', { name: '비회원으로 시작하기' }));
+  const go = screen.getByRole('button', { name: '비회원으로 시작' });
+  fireEvent.click(go);
+  fireEvent.click(go);
+  expect(await screen.findByRole('button', { name: '시작하는 중…' })).toBeDefined();
+  release();
+  await screen.findByRole('heading', { name: '닉네임 정하기' });
+  expect(fakeState.anonCalls).toHaveLength(1);
 });
 
 test('Supabase에서 익명 로그인이 꺼져 있으면 이유를 알려 준다', async () => {

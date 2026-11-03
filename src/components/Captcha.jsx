@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { forwardRef, useEffect, useImperativeHandle, useRef } from 'react';
 
 const SCRIPT = 'https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit';
 let loading = null;
@@ -22,33 +22,46 @@ function loadTurnstile() {
 export const captchaSiteKey = () => import.meta.env.VITE_TURNSTILE_SITE_KEY || null;
 
 /**
- * 봇 가입 방지 확인 (Cloudflare Turnstile). 통과하면 onToken(토큰), 만료·실패하면 onToken(null).
+ * 봇 가입 방지 확인 (Cloudflare Turnstile). 통과하면 onToken(토큰), 만료·시간 초과·실패하면 onToken(null).
+ * 토큰은 한 번만 쓸 수 있다 (Supabase가 확인하면 소모됨 — 다시 보내면 timeout-or-duplicate).
+ * 그래서 시작에 실패하면 부모가 ref.reset()으로 위젯을 다시 돌려 새 토큰을 받는다.
  * 토큰은 Supabase가 직접 확인한다 (Auth → Attack Protection → Captcha). 앱(Expo)에서는 WebView로 같은 위젯을 띄운다.
  */
-export default function Captcha({ onToken, onError }) {
+const Captcha = forwardRef(function Captcha({ onToken, onError }, ref) {
   const box = useRef(null);
+  const widget = useRef(null);
   const siteKey = captchaSiteKey();
+
+  useImperativeHandle(ref, () => ({
+    reset() {
+      onToken(null);
+      if (widget.current !== null) window.turnstile?.reset?.(widget.current);
+    },
+  }), [onToken]);
 
   useEffect(() => {
     if (!siteKey) return undefined;
     let alive = true;
-    let widget = null;
     loadTurnstile().then((ts) => {
       if (!alive || !box.current) return;
-      widget = ts.render(box.current, {
+      widget.current = ts.render(box.current, {
         sitekey: siteKey,
         language: 'ko',
         callback: (token) => onToken(token),
         'expired-callback': () => onToken(null),
+        'timeout-callback': () => onToken(null),
         'error-callback': () => onToken(null),
       });
     }, (e) => alive && onError?.(e.message));
     return () => {
       alive = false;
-      if (widget !== null) window.turnstile?.remove?.(widget);
+      if (widget.current !== null) window.turnstile?.remove?.(widget.current);
+      widget.current = null;
     };
   }, [siteKey]); // eslint-disable-line react-hooks/exhaustive-deps -- 위젯은 한 번만 그린다
 
   if (!siteKey) return null;
   return <div ref={box} className="captcha" aria-label="자동 가입 방지 확인" />;
-}
+});
+
+export default Captcha;

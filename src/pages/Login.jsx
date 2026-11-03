@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { PROVIDERS, signIn, signInAsGuest } from '../api/auth';
 import { isGuest, useAuth } from '../lib/auth';
@@ -87,6 +87,7 @@ export default function Login() {
             } catch (e) {
               setError(e.message);
               setBusy(null);
+              throw e; // GuestStart가 캡차를 다시 돌린다
             }
           }}
         />
@@ -105,14 +106,31 @@ function GuestStart({ busy, onStart, onCancel }) {
   const needCaptcha = !!captchaSiteKey();
   const [token, setToken] = useState(null);
   const [captchaError, setCaptchaError] = useState(null);
+  const captcha = useRef(null);
+  const starting = useRef(false); // 한 번 누르면 끝날 때까지 다시 부르지 않음 (state보다 먼저 막힘)
+
+  const go = async () => {
+    if (starting.current || busy || (needCaptcha && !token)) return;
+    starting.current = true;
+    const used = token;
+    setToken(null); // 토큰은 한 번만 쓸 수 있다 — 바로 버린다
+    try {
+      await onStart(used);
+    } catch {
+      captcha.current?.reset(); // 실패하면 새 토큰을 받게 위젯을 다시 돌린다 (문구는 부모가 보여 줌)
+    } finally {
+      starting.current = false;
+    }
+  };
+
   return (
     <section className="guest-start" aria-label="비회원으로 시작" onKeyDown={(e) => e.key === 'Escape' && !busy && onCancel()}>
       <p className="warn">{guestNotice('web')}</p>
       <p className="hint">비회원은 읽기·노가리방 글·댓글·문서 댓글·제안을 할 수 있어요. 따봉·비추·추천·신고는 구글·카카오를 연결한 뒤에 돼요.</p>
-      <Captcha onToken={setToken} onError={setCaptchaError} />
+      <Captcha ref={captcha} onToken={setToken} onError={setCaptchaError} />
       {captchaError && <p className="form-error" role="alert">{captchaError}</p>}
       <div className="row-actions">
-        <button type="button" className="btn btn-primary" onClick={() => onStart(token)} disabled={busy || (needCaptcha && !token)}>
+        <button type="button" className="btn btn-primary" onClick={go} disabled={busy || (needCaptcha && !token)}>
           {busy ? '시작하는 중…' : '비회원으로 시작'}
         </button>
         <button type="button" className="btn" onClick={onCancel} disabled={busy}>취소</button>

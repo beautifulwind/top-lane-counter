@@ -92,7 +92,7 @@ export const fakeState = {
   error: null, session: null, initError: null, oauthCalls: [], linkCalls: [], linkError: null, listeners: new Set(),
   inserts: [], insertError: null, rpcCalls: [], rpcError: null, boardError: null,
   functionCalls: [], functionError: null, // Edge Function 호출 (017 delete-account)
-  anonCalls: [], anonError: null, signOutCalls: [], touched: 0, // 비회원 (020)
+  anonCalls: [], anonError: null, anonDelay: null, signOutCalls: [], touched: 0, // 비회원 (020)
 };
 const INITIAL_PROFILES = TABLES.profiles.map((p) => ({ ...p }));
 
@@ -131,6 +131,7 @@ export function resetFake() {
   fakeState.boardError = null;
   fakeState.anonCalls = [];
   fakeState.anonError = null;
+  fakeState.anonDelay = null;
   fakeState.signOutCalls = [];
   fakeState.touched = 0;
 }
@@ -275,6 +276,7 @@ const auth = {
   // 비회원 시작 (020). 진짜처럼 is_anonymous 유저 + 트리거가 is_guest 프로필
   signInAnonymously: async (args) => {
     fakeState.anonCalls.push(args);
+    if (fakeState.anonDelay) await fakeState.anonDelay; // 느린 네트워크 흉내
     if (fakeState.anonError) return { data: null, error: { message: fakeState.anonError } };
     fakeGuestLogin('guest-1');
     return { data: { session: fakeState.session }, error: null };
