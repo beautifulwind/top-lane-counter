@@ -62,10 +62,13 @@ test('문서 댓글 달기 → 바로 보임 / 남의 댓글은 신고 / 빌드 
 
   const other = within(within(sec).getByRole('list', { name: '댓글' })).getAllByRole('listitem')[0];
   fireEvent.click(within(other).getByRole('button', { name: '신고' }));
-  fireEvent.click(within(other).getByLabelText('욕설·비하'));
+  const reasons = within(other).getAllByRole('radio').map((r) => r.closest('label').textContent);
+  expect(reasons.map((t) => t.split(' (')[0])).toEqual(['욕설·인신공격', '혐오·비하', '신상 공개·개인정보', '도배·광고', '기타']);
+  expect(reasons[1]).toContain('실존 인물·고인 비하');
+  fireEvent.click(within(other).getByLabelText(/^혐오·비하/));
   fireEvent.click(within(other).getByRole('button', { name: '신고 보내기' }));
   expect(await screen.findByText('신고했어요. 운영자가 확인할게요.')).toBeDefined();
-  expect(rpcs('report_doc_comment')).toEqual([{ p_id: 1, p_reason: 'abuse', p_detail: null }]);
+  expect(rpcs('report_doc_comment')).toEqual([{ p_id: 1, p_reason: 'hate', p_detail: null }]);
 });
 
 test('내 문서 댓글: 10분 안이면 [고치기](유예 받고 마감 표시), 지나면 [고치기] 없음·[지우기]는 있음', async () => {

@@ -272,7 +272,7 @@
 - **고치기**: 내 글·댓글만, 보이는 상태일 때만, **정해진 시간 안에만** (6-7). 내용이 실제로 바뀌면 `edited_at` → "수정됨". 고쳐도 경험치는 그대로.
 - **지우기**: 내 글에 **다른 사람 댓글이 있으면** 제목·본문을 비우고 "작성자가 삭제한 글"로 남긴다 (`deleted_at`). 댓글과 댓글 쓴 사람들의 경험치는 그대로, 글쓴이의 경험치만 회수. 삭제된 글에는 새 댓글·고치기·추천·신고가 막힌다. 남은 댓글이 모두 없어지면 그때 완전히 지운다. 다른 사람 댓글이 없으면 바로 완전히 지운다 (내 댓글 포함). 댓글은 바로 지운다.
 - **추천**: 한 사람 한 번, 다시 누르면 취소, 내 글은 안 됨. 경험치·칭호·알림과 연결하지 않는다.
-- **신고**: 이유(욕설·비하 / 도배·광고 / 개인정보 노출 / 기타 — 기타는 내용 필수) + 내용(선택, 500자). 같은 사람이 같은 글·댓글은 한 번만 (기각된 뒤에도). 내 글, 숨긴 글, 삭제된 글은 신고할 수 없다. 신고는 운영자만 본다. **자동 숨김 없음** — 운영자가 `/admin/reports`에서 [숨기기](그 대상의 열린 신고는 "처리됨") 또는 [신고 기각](메모 선택, 글은 그대로).
+- **신고**: 이유(욕설·인신공격 / 혐오·비하 / 신상 공개·개인정보 / 도배·광고 / 기타 — 기타는 내용 필수, 021에서 혐오·비하 추가 — 6-11) + 내용(선택, 500자). 같은 사람이 같은 글·댓글은 한 번만 (기각된 뒤에도). 내 글, 숨긴 글, 삭제된 글은 신고할 수 없다. 신고는 운영자만 본다. **자동 숨김 없음** — 운영자가 `/admin/reports`에서 [숨기기](그 대상의 열린 신고는 "처리됨") 또는 [신고 기각](메모 선택, 글은 그대로).
 - **숨기기**(운영자, 메모 필수)·**다시 공개**(메모 필수): 숨긴 글·댓글은 **운영자만** 본다 (글쓴이도 못 봄). 숨긴 글의 댓글도 함께 안 보이지만 댓글 쓴 사람의 경험치는 그대로. 숨기면 글쓴이 경험치 회수, 다시 공개하면 다시 지급 (같은 키, 한 번분). 다시 공개하면 숨김 메모는 지운다. 운영자의 직접 삭제는 없다.
 - **경험치**: 키 `post:<id>`·`comment:<id>`. 그날(한국 시간) 쓴 **보이는** 글·댓글을 먼저 쓴 순서대로 상한까지 받는다 — 하나를 숨기거나 지우면 상한 밖이던 다음 것이 들어온다 (총량은 같아서 지우고 다시 쓰기로 늘릴 수 없음). 회수 이유: 글 숨김 / 글 삭제 / 댓글 숨김 / 댓글 삭제.
 - **알림**: `post_comment`(내 글에 남이 댓글 — 안 읽은 알림이 있으면 새로 만들지 않고 "새 댓글 N개"로 합침, 내 글에 내 댓글은 없음), `post_hidden`·`post_restored`·`comment_hidden`·`comment_restored`(메모 포함). `/me`의 "댓글·노가리방 알림"에 한 번 보이고 [글 보기]로 이동 (숨김 알림은 링크 없음).
@@ -333,6 +333,22 @@
   - 그 구글·카카오가 이미 다른 회원 것이면(`identity_already_exists`/`email_exists`): "이미 가입된 계정이에요. 기존 계정으로 로그인할까요? 비회원 기록은 넘어가지 않아요" + [기존 계정으로 로그인] [닫기]. **합치지 않는다.**
 - **오래 안 쓴 비회원 정리**: 마지막 접속(`profiles.last_seen_at`, 화면이 하루 한 번 `touch_last_seen()`) 기준 — 남긴 기록(글·댓글·문서 댓글·제안·빌드)이 없으면 30일(`xp_rules.guest_empty_days`), 있으면 90일(`guest_idle_days`). `cleanup_guest_accounts()`가 탈퇴와 같은 규칙으로 지운다 (운영자 제외). pg_cron으로 매일 한 번 (11-9).
 
+### 6-11. 운영 규칙 보강 (2026-11-03, 021)
+- **약관 제6조 금지 행위**를 나눠 적음: 욕설·인신공격 / 실존 인물(프로게이머·방송인 등)·고인 비하·조롱 / 혐오 표현(성별·나이·지역·장애·인종·국적·종교·성적 지향 등) / 신상 공개(동의 없는 실명·연락처·주소·학교·직장·사진·게임 아이디).
+  - 제4조 닉네임: 실존 인물 이름을 쓰는 것 자체는 허용 (사칭은 안 됨). 비하·조롱 표현, 혐오 표현, 욕설, 신상 정보가 들어간 닉네임만 금지.
+  - 제7조: 글·댓글은 신고·운영자 발견 시 숨김, 사유를 작성자에게 알림, 금칙어 자동 필터 없음, 숨긴 기록을 남김.
+  - 노가리방 글쓰기 안내: "욕설·혐오·비하·신상 공개·도배는 운영자가 숨길 수 있어요" + [이용약관] 링크.
+- **신고 사유** (키 → 화면): `abuse` 욕설·인신공격 / `hate` 혐오·비하 (새로) / `privacy` 신상 공개·개인정보 / `spam` 도배·광고 / `other` 기타. 혐오·비하·신상 공개에는 짧은 설명을 붙임. 예전 `abuse` 신고는 새 이름으로 보인다.
+- **금칙어 필터는 만들지 않는다.** 신고 → 운영자 [숨기기]로만 처리.
+- **숨김 기록** `hide_log`: 글·댓글·문서 댓글이 숨겨질 때마다 트리거가 한 줄. 다시 공개하면 `unhidden_at` (횟수에서 뺌). 작성자가 숨겨진 글을 지워도 남고, 탈퇴하면 같이 지워진다.
+  - 운영자 신고 목록의 작성자 옆에 **"최근 90일 숨김 N회"** (`hide_counts(작성자들)`, 기간 `xp_rules.hide_count_days`). 1회 이상이면 보라 배지.
+- **반복 위반자 제재는 나중에** (실제로 반복 위반자가 나오면). 그때 계획:
+  - `user_sanctions`(대상, 종류 `write_ban`, 끝나는 때, 사유, 처리자) + 글·댓글·문서 댓글·제안·빌드 쓰기 함수에서 검사
+  - 기준은 숨김 횟수를 보고 정함 (예: 90일에 3회 → 7일 글쓰기 정지)
+  - 제재 알림·마이페이지 안내, 운영자 화면 [글쓰기 정지 (기간)] [해제]
+  - 비회원은 새로 시작하면 새 계정이라 계정 정지가 약함 — 그때 같이 고민
+  - 그 전에 급하면 운영자가 SQL로 계정을 탈퇴 처리 (약관 제7조 "이용 제한")
+
 ## 7. 데이터 구조 (Supabase 초안)
 
 챔피언·아이템·룬·소환사 주문은 Data Dragon의 ID(예: 챔피언 `"Darius"`, 아이템 `3078`)로 참조한다.
@@ -352,7 +368,8 @@
 - **post_comments**: `id`, `post_id`, `author_id`, `body`, `status`, `hidden_note`·`hidden_at`·`hidden_by`, `edited_at`, `edit_grace_until`, `created_at`
 - **doc_comments**: 문서 댓글 — `id`, `counter_id`(카운터를 지우면 같이 지움), `author_id`, `body`, `status`, `hidden_note`·`hidden_at`·`hidden_by`, `edited_at`, `edit_grace_until`, `created_at`. 보이는 댓글 + 공개 중인 카운터만 누구나 읽기, 나머지는 운영자
 - **post_votes**: 글 추천 (`post_id`, `user_id`) — 본인 것만 읽기
-- **reports**: 신고 — `reporter_id`, `post_id`·`comment_id`·`doc_comment_id` 중 하나, `reason`, `detail`, `status`(open/resolved/dismissed), `handled_by`·`handled_at`·`handled_note`. (신고자, 대상) 고유, 운영자만 읽기
+- **reports**: 신고 — `reporter_id`, `post_id`·`comment_id`·`doc_comment_id` 중 하나, `reason`, `detail`, `status`(open/resolved/dismissed), `handled_by`·`handled_at`·`handled_note`. (신고자, 대상) 고유, 운영자만 읽기. `reason`: abuse/hate/spam/privacy/other (hate는 021)
+- **hide_log** (021): `author_id`(탈퇴하면 같이 삭제), `kind`(post/comment/doc_comment), `target_id`(대상과 연결 안 함 — 지워져도 남음), `hidden_at`, `unhidden_at`. 트리거만 쓰고 아무도 직접 못 읽음 — 운영자 함수 `hide_counts`로만
 - **board_last_write**: 도배 방지용 마지막으로 쓴 때 (아무도 직접 못 읽음)
 - **xp_events**: 경험치 기록 (지우지 않고 차이만 쌓음) — `user_id`, `type`(new_counter/doc_edit/build/vote/post/comment/doc_comment), `amount`(+/−), `ref_id`, `source_key`(지급할 일의 키), `change`(grant/revoke/adjust), `reason`, `target_champion`·`counter_champion`(매치업 이름 복사), `created_at`. 본인·운영자만 읽기, 쓰기는 DB 함수만
 - **xp_rules**(경험치·하루 상한·칭호 기준), **xp_levels**(레벨표): 누구나 읽기, 바꾸기는 SQL Editor에서만
@@ -467,6 +484,7 @@ RLS 원칙:
 18. `supabase/migrations/018_build_max_skill_start_gold.sql` (실행 뒤 `/admin`의 "아이템 가격표"가 지금 패치인지 확인)
 19. `supabase/migrations/019_mypage_wording.sql`
 20. `supabase/migrations/020_guest.sql` (실행 **전에** 11-9의 익명 로그인 켜기, 실행 뒤 11-9 나머지)
+21. `supabase/migrations/021_report_reasons_hide_log.sql`
 - 합쳐서 한 번에 돌리지 않는다: 파일마다 `begin … commit`이라 중간에 실패하면 앞부분만 반영되고, 다시 돌리면 "already exists"가 난다.
 - 새 마이그레이션(010 …)을 만들면 이 목록에 추가한다. `supabase/tests/run.sh`가 빈 DB에 같은 순서로 실행한 뒤 검사용 데이터(`tests/fixtures.sql`)를 넣고 검사한다 (`supabase/tests`는 실제 프로젝트에서 실행하지 않음).
 

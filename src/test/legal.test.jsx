@@ -64,6 +64,20 @@ test('개인정보처리방침: 수집 항목·탈퇴 요청·만 14세 미만 �
   expect(screen.getByText(/만 14세 미만 아동의 회원 가입을 받지 않습니다/)).toBeDefined();
 });
 
+test('이용약관 (021): 실존 인물·고인 비하, 혐오 표현, 신상 공개 금지 / 실존 인물 이름 닉네임은 허용', async () => {
+  start('/terms');
+  await screen.findByRole('heading', { level: 1, name: '이용약관' });
+  const banned = screen.getByRole('heading', { name: '제6조 (금지 행위)' }).closest('section').textContent;
+  expect(banned).toContain('실존 인물(프로게이머·방송인 등)과 고인을 비하하거나 조롱하는 행위');
+  expect(banned).toContain('혐오 표현');
+  expect(banned).toContain('신상 공개');
+  const nick = screen.getByRole('heading', { name: '제4조 (닉네임)' }).closest('section').textContent;
+  expect(nick).toContain('실존 인물(프로게이머·방송인 등)의 이름이 들어간 닉네임은 쓸 수 있습니다');
+  expect(nick).toContain('비하하거나 조롱하는 표현');
+  expect(nick).toContain('신상 정보');
+  expect(screen.getByText(/자동으로 걸러 내는 금칙어는 쓰지 않습니다/)).toBeDefined();
+});
+
 test('닉네임을 아직 안 정한 로그인 상태에서도 두 페이지(와 다른 읽기 화면)는 닉네임 설정으로 끌려가지 않는다', async () => {
   fakeLogin('u-new'); // 닉네임 없음
   start('/privacy');

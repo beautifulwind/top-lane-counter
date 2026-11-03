@@ -79,6 +79,10 @@ function ReportGroup({ group: g, champs, onDone }) {
       {isPost && !deleted && g.post?.body && <p className="report-preview body">{g.post.body.slice(0, 200)}{g.post.body.length > 200 ? '…' : ''}</p>}
       <div className="proposal-meta">
         <span>작성자: {target?.author ? <UserName profile={target.author} /> : '(탈퇴한 유저)'}</span>
+        {g.hides && (
+          // 반복 위반 판단용 (021). 제재 기능은 아직 없다 — SPEC 6-11
+          <span className={g.hides.count > 0 ? 'op-badge hide-count' : 'hide-count'}>최근 {g.hides.days}일 숨김 {g.hides.count}회</span>
+        )}
         {target?.status === 'hidden' && <span className="op-badge">이미 숨김</span>}
       </div>
       <ul className="log-list" aria-label="신고 내용">

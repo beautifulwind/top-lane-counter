@@ -81,7 +81,9 @@ function PostForm({ post = null, deadline = null }) {
     <article>
       <nav className="crumbs"><Link to={post ? `/board/${post.id}` : '/board'}>← {post ? '글로 돌아가기' : '노가리방'}</Link></nav>
       <h1 className="doc-title">{post ? '글 고치기' : '글쓰기'}</h1>
-      <p className="lead">승인 없이 바로 올라가요. 욕설·도배·개인정보는 운영자가 숨길 수 있어요.</p>
+      <p className="lead">
+        승인 없이 바로 올라가요. 욕설·혐오·비하·신상 공개·도배는 운영자가 숨길 수 있어요. 자세한 건 <Link to="/terms">이용약관</Link>을 봐 주세요.
+      </p>
       {deadline && <p className="notice edit-deadline">{fmtTime(deadline)}까지 저장할 수 있어요. 그 뒤에는 지우기만 할 수 있어요.</p>}
       <form className="doc-form post-form" onSubmit={submit}>
         <label htmlFor="post-title">제목</label>

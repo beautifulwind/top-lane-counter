@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { REPORT_REASONS } from '../api/board';
+import { REPORT_REASONS, REPORT_REASON_HINTS } from '../api/board';
 import { fmtDateTime } from '../lib/format';
 import UserName from './UserName';
 import NoteForm from './NoteForm';
@@ -81,6 +81,7 @@ export function ReportForm({ id, what, onSubmit, onCancel }) {
           <label key={key} className="report-reason">
             <input type="radio" name={`${id}-reason`} value={key} checked={reason === key} onChange={() => setReason(key)} />
             {label}
+            {REPORT_REASON_HINTS[key] && <small className="hint"> ({REPORT_REASON_HINTS[key]})</small>}
           </label>
         ))}
       </fieldset>

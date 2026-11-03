@@ -7,7 +7,18 @@ export const PAGE_SIZE = 20;
 export const TITLE_MAX = 100;
 export const BODY_MAX = 10000;
 export const COMMENT_MAX = 1000;
-export const REPORT_REASONS = { abuse: '욕설·비하', spam: '도배·광고', privacy: '개인정보 노출', other: '기타' };
+// 신고 사유 (보이는 순서). DB 검사(021 board_report_check)와 같은 키. 예전 abuse 신고도 새 이름으로 보인다
+export const REPORT_REASONS = {
+  abuse: '욕설·인신공격',
+  hate: '혐오·비하',
+  privacy: '신상 공개·개인정보',
+  spam: '도배·광고',
+  other: '기타',
+};
+export const REPORT_REASON_HINTS = {
+  hate: '실존 인물·고인 비하, 성별·지역·장애 등을 이유로 한 비하 포함',
+  privacy: '실명·연락처·사진·학교·직장 등 본인 동의 없는 정보',
+};
 
 const PERSON = 'nickname, level, main_title, is_guest';
 const POST_FIELDS =
@@ -94,9 +105,9 @@ export async function getOpenReports() {
       .select(
         'id, post_id, comment_id, doc_comment_id, reason, detail, created_at, ' +
         `reporter:profiles!reports_reporter_id_fkey(${PERSON}), ` +
-        `post:posts!reports_post_id_fkey(id, title, body, status, deleted_at, author:profiles!posts_author_id_fkey(${PERSON})), ` +
-        `comment:post_comments!reports_comment_id_fkey(id, post_id, body, status, author:profiles!post_comments_author_id_fkey(${PERSON})), ` +
-        `doc_comment:doc_comments!reports_doc_comment_id_fkey(id, counter_id, body, status, author:profiles!doc_comments_author_id_fkey(${PERSON}), ${COUNTER})`,
+        `post:posts!reports_post_id_fkey(id, title, body, status, deleted_at, author_id, author:profiles!posts_author_id_fkey(${PERSON})), ` +
+        `comment:post_comments!reports_comment_id_fkey(id, post_id, body, status, author_id, author:profiles!post_comments_author_id_fkey(${PERSON})), ` +
+        `doc_comment:doc_comments!reports_doc_comment_id_fkey(id, counter_id, body, status, author_id, author:profiles!doc_comments_author_id_fkey(${PERSON}), ${COUNTER})`,
       )
       .eq('status', 'open').order('created_at', { ascending: true }),
     '신고를 불러오지 못했어요.',
@@ -112,7 +123,24 @@ export async function getOpenReports() {
     }
     groups.get(key).reports.push(r);
   }
-  return [...groups.values()];
+  const list = [...groups.values()];
+  const hides = await getHideCounts(list.map((g) => (g.post ?? g.comment ?? g.docComment)?.author_id));
+  for (const g of list) {
+    const author = (g.post ?? g.comment ?? g.docComment)?.author_id;
+    g.hides = hides && author ? { days: hides.days, count: hides.counts[author] ?? 0 } : null;
+  }
+  return list;
+}
+
+/**
+ * 운영자: 작성자별 최근 N일 숨김 횟수 (021 hide_counts, 다시 공개한 것은 빼고 작성자가 지운 것은 셈).
+ * 실패하면 null — 신고 목록은 횟수 없이 그대로 보인다.
+ */
+async function getHideCounts(authorIds) {
+  const ids = [...new Set(authorIds.filter(Boolean))];
+  if (ids.length === 0) return null;
+  const { data, error } = await db().rpc('hide_counts', { p_users: ids });
+  return error || !data ? null : data;
 }
 
 /** 숨긴 글·댓글·문서 댓글 (최근에 숨긴 순) */

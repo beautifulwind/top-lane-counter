@@ -294,6 +294,7 @@ test('운영자 /admin/reports: 대상별로 묶음 → 숨기기 / 신고 기�
     created_at: `2026-11-01T0${id}:00:00Z`, reporter: { nickname: `신고자${id}`, level: 1, main_title: null }, ...extra,
   });
   TABLES.reports.push(rep(1, { post_id: 1 }), rep(2, { post_id: 1, reason: 'other', detail: '홍보' }), rep(3, { comment_id: 11, reason: 'abuse' }));
+  fakeState.hideCounts = { 'u-x': 2 }; // 021: 작성자 최근 숨김 횟수
   asOp();
   start('/admin/reports');
   const list = await screen.findByRole('list', { name: '신고 목록' });
@@ -302,7 +303,9 @@ test('운영자 /admin/reports: 대상별로 묶음 → 숨기기 / 신고 기�
   expect(postGroup.textContent).toContain('기타 — 홍보');
   expect(postGroup.textContent).toContain('신고자1');
   const commentGroup = within(list).getByRole('listitem', { name: '댓글 신고 1건' });
-  expect(commentGroup.textContent).toContain('욕설·비하');
+  expect(commentGroup.textContent).toContain('욕설·인신공격'); // 예전 abuse 신고도 새 이름
+  const badge = within(postGroup).getByText('최근 90일 숨김 2회');
+  expect(badge.classList.contains('op-badge')).toBe(true);
 
   fireEvent.click(within(postGroup).getByRole('button', { name: '숨기기' }));
   fireEvent.change(within(postGroup).getByLabelText('숨기는 사유 (필수, 작성자에게 보여요)'), { target: { value: '광고' } });

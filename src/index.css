@@ -527,3 +527,7 @@ a.op-link, .op-link { color: var(--op-dark); }
 .delete-account-list { padding-left: 18px; margin: 4px 0 10px; }
 .delete-account-list li { margin: 2px 0; }
 .nick-form .note-form-actions .btn { margin-top: 0; }
+
+/* 운영자 신고 목록: 작성자 최근 숨김 횟수 (021) */
+.hide-count { font-size: 12px; color: var(--muted); }
+.op-badge.hide-count { color: var(--on-brand); }

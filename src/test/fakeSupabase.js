@@ -92,7 +92,7 @@ export const fakeState = {
   error: null, session: null, initError: null, oauthCalls: [], linkCalls: [], linkError: null, listeners: new Set(),
   inserts: [], insertError: null, rpcCalls: [], rpcError: null, boardError: null,
   functionCalls: [], functionError: null, // Edge Function 호출 (017 delete-account)
-  anonCalls: [], anonError: null, anonDelay: null, signOutCalls: [], touched: 0, // 비회원 (020)
+  anonCalls: [], anonError: null, anonDelay: null, hideCounts: {}, signOutCalls: [], touched: 0, // 비회원 (020)
 };
 const INITIAL_PROFILES = TABLES.profiles.map((p) => ({ ...p }));
 
@@ -132,6 +132,7 @@ export function resetFake() {
   fakeState.anonCalls = [];
   fakeState.anonError = null;
   fakeState.anonDelay = null;
+  fakeState.hideCounts = {};
   fakeState.signOutCalls = [];
   fakeState.touched = 0;
 }
@@ -291,6 +292,11 @@ const auth = {
 
 // 운영자 전용 DB 함수 호출 기록. 오류는 fakeState.rpcError로 흉내 낸다 (예: '운영자만 할 수 있어요.')
 async function rpc(name, args) {
+  if (name === 'hide_counts') {
+    // 운영자 신고 목록이 알아서 부르는 것이라 rpcCalls에는 넣지 않는다. fakeState.hideCounts = { 작성자id: 횟수 }
+    if (!isAdminNow()) return { data: null, error: { message: '운영자만 할 수 있어요.', code: '42501' } };
+    return { data: { days: 90, counts: Object.fromEntries(args.p_users.map((u) => [u, fakeState.hideCounts[u] ?? 0])) }, error: null };
+  }
   if (name === 'touch_last_seen') {
     fakeState.touched += 1; // 화면이 알아서 부르는 것이라 rpcCalls에는 넣지 않는다
     return { data: null, error: null };
