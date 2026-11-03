@@ -214,6 +214,21 @@ kbd {
 .login-btn.kakao, .login-btn-sm.kakao { background: var(--kakao); color: var(--on-kakao); border-color: var(--kakao); }
 .login-btn.kakao:hover:not(:disabled), .login-btn-sm.kakao:hover:not(:disabled) { background: var(--kakao-hover); border-color: var(--kakao-hover); }
 .btn:disabled { opacity: .6; cursor: default; }
+
+/* 비회원 (020) */
+.login-btn.guest { background: transparent; }
+.guest-start, .guest-dialog { margin-top: 12px; max-width: 480px; display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); }
+.guest-start .warn, .guest-dialog .warn { margin: 0; }
+.guest-choice { display: flex; flex-direction: column; gap: 2px; }
+.guest-choice .btn { align-self: flex-start; }
+.captcha { min-height: 65px; }
+.guest-badge {
+  display: inline-block; margin-left: 4px; padding: 0 5px; border: 1px solid var(--line); border-radius: 4px;
+  font-size: 11px; font-weight: 600; line-height: 16px; color: var(--muted); vertical-align: middle; white-space: nowrap;
+}
+.guest-upgrade { padding: 12px 14px; border: 2px solid var(--brand); border-radius: var(--radius); }
+.guest-upgrade h2 { margin-top: 0; }
+.guest-hint { margin: 6px 0 0; }
 .nick-form { display: flex; flex-direction: column; gap: 6px; max-width: 360px; }
 .nick-form label { font-weight: 600; font-size: 14px; }
 .nick-form input {

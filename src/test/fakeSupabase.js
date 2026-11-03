@@ -92,6 +92,7 @@ export const fakeState = {
   error: null, session: null, initError: null, oauthCalls: [], linkCalls: [], linkError: null, listeners: new Set(),
   inserts: [], insertError: null, rpcCalls: [], rpcError: null, boardError: null,
   functionCalls: [], functionError: null, // Edge Function 호출 (017 delete-account)
+  anonCalls: [], anonError: null, signOutCalls: [], touched: 0, // 비회원 (020)
 };
 const INITIAL_PROFILES = TABLES.profiles.map((p) => ({ ...p }));
 
@@ -128,6 +129,15 @@ export function resetFake() {
   fakeState.rpcCalls = [];
   fakeState.rpcError = null;
   fakeState.boardError = null;
+  fakeState.anonCalls = [];
+  fakeState.anonError = null;
+  fakeState.signOutCalls = [];
+  fakeState.touched = 0;
+}
+
+/** 비회원(익명 로그인)으로 들어온 상태. DB 트리거처럼 is_guest 프로필을 만든다 */
+export function fakeGuestLogin(id, profile = {}) {
+  fakeLogin(id, { is_guest: true, ...profile }, { is_anonymous: true });
 }
 
 /**
@@ -262,7 +272,15 @@ const auth = {
   },
   // 진짜처럼 user.identities를 돌려준다 (fakeLogin의 user 인자로 넣는다)
   getUserIdentities: async () => ({ data: { identities: fakeState.session?.user.identities ?? [] }, error: null }),
-  signOut: async () => {
+  // 비회원 시작 (020). 진짜처럼 is_anonymous 유저 + 트리거가 is_guest 프로필
+  signInAnonymously: async (args) => {
+    fakeState.anonCalls.push(args);
+    if (fakeState.anonError) return { data: null, error: { message: fakeState.anonError } };
+    fakeGuestLogin('guest-1');
+    return { data: { session: fakeState.session }, error: null };
+  },
+  signOut: async (args) => {
+    fakeState.signOutCalls.push(args);
     fakeState.session = null;
     fakeState.listeners.forEach((cb) => cb('SIGNED_OUT', null));
     return { error: null };
@@ -271,6 +289,10 @@ const auth = {
 
 // 운영자 전용 DB 함수 호출 기록. 오류는 fakeState.rpcError로 흉내 낸다 (예: '운영자만 할 수 있어요.')
 async function rpc(name, args) {
+  if (name === 'touch_last_seen') {
+    fakeState.touched += 1; // 화면이 알아서 부르는 것이라 rpcCalls에는 넣지 않는다
+    return { data: null, error: null };
+  }
   fakeState.rpcCalls.push({ name, args });
   if (fakeState.rpcError) return { data: null, error: { message: fakeState.rpcError, code: '42501' } };
   if (name === 'mark_notifications_read') {

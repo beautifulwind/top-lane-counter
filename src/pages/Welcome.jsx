@@ -5,6 +5,8 @@ import { NICKNAME_MAX, nicknameProblem, saveNickname } from '../api/auth';
 import { useAuth } from '../lib/auth';
 import { ErrorBox, Loading } from '../components/Status';
 import { safePath } from './Login';
+import { isGuest } from '../lib/auth';
+import { DeleteAccount } from '../components/AccountSettings';
 
 /** 첫 로그인 시 닉네임 설정 */
 export default function Welcome() {
@@ -68,6 +70,13 @@ export default function Welcome() {
         닉네임 없이도 둘러볼 수 있어요.{' '}
         <Link to={needsNicknameFor(from.split(/[?#]/)[0]) ? '/' : from}>나중에 정할게요</Link>
       </p>
+      {isGuest(auth) && (
+        <>
+          <p className="hint">비회원이에요. 다른 사람에게는 닉네임 옆에 &ldquo;비회원&rdquo;이 붙어 보여요.</p>
+          {/* 닉네임 없는 비회원은 /me에 못 가므로 여기서 지운다 (로그아웃 대신) */}
+          <DeleteAccount auth={auth} />
+        </>
+      )}
     </article>
   );
 }

@@ -1,5 +1,6 @@
 // 로그인·프로필 접근 계층. 화면 컴포넌트는 이 모듈만 호출한다.
 import { db } from './supabase';
+import { ALREADY_MEMBER_TEXT } from '../lib/guest';
 
 export const NICKNAME_MAX = 20;
 
@@ -37,9 +38,9 @@ export async function signIn(provider, returnTo = '/') {
  * 로그인한 계정에 다른 로그인 방식을 붙인다 (Supabase 수동 연결 = linkIdentity).
  * 구글/카카오에 다녀와서 /me로 돌아온다. Supabase에서 "Allow manual linking"이 켜져 있어야 한다.
  */
-export async function linkProvider(provider) {
+export async function linkProvider(provider, { guest = false } = {}) {
   if (!PROVIDERS[provider]) throw new Error(`지원하지 않는 로그인 방식이에요. (${provider})`);
-  rememberPending('link', provider);
+  rememberPending(guest ? 'upgrade' : 'link', provider);
   const { error } = await db().auth.linkIdentity({
     provider,
     options: { redirectTo: window.location.origin + '/me', queryParams: PROVIDER_PROMPT[provider] },
@@ -51,6 +52,41 @@ export async function linkProvider(provider) {
     }
     throw new Error(`${PROVIDERS[provider]} 연결을 시작하지 못했어요. (${error.message})`);
   }
+}
+
+/**
+ * 비회원으로 시작 (Supabase 익명 로그인). captchaToken: Turnstile 토큰 (Supabase Auth에서 캡차를 켰을 때 필요).
+ * Supabase에서 "Allow anonymous sign-ins"가 켜져 있어야 한다.
+ */
+export async function signInAsGuest(captchaToken) {
+  const { error } = await db().auth.signInAnonymously(captchaToken ? { options: { captchaToken } } : undefined);
+  if (!error) return;
+  if (/anonymous sign-ins are disabled/i.test(error.message)) {
+    throw new Error('비회원 시작이 아직 꺼져 있어요. (Supabase에서 Allow anonymous sign-ins를 켜야 해요)');
+  }
+  if (/captcha/i.test(error.message)) throw new Error('자동 가입 방지 확인을 다시 해 주세요.');
+  if (/rate limit|too many/i.test(error.message)) throw new Error('잠시 뒤에 다시 시도해 주세요. (짧은 시간에 너무 많이 시작했어요)');
+  throw new Error(`비회원으로 시작하지 못했어요. (${error.message})`);
+}
+
+/**
+ * 비회원이 [새 계정으로 시작하기]·[기존 계정으로 로그인]: 이 기기에서만 비회원 세션을 지우고 구글·카카오로 로그인.
+ * 비회원 계정은 다시 들어올 수 없다 (기록은 남고, 오래 안 쓴 비회원 정리 규칙을 따른다).
+ */
+export async function startFresh(provider, returnTo = '/') {
+  await db().auth.signOut({ scope: 'local' });
+  await signIn(provider, returnTo);
+}
+
+/** 마지막 접속 기록 (비회원 정리 기준). 하루 한 번만 부른다 — 실패해도 조용히 */
+export async function touchLastSeen(userId) {
+  const key = `seen:${userId}`;
+  const today = new Date().toISOString().slice(0, 10);
+  try {
+    if (localStorage.getItem(key) === today) return;
+    localStorage.setItem(key, today);
+  } catch { /* 저장소를 못 쓰면 매번 부른다 (DB가 1시간 안에는 다시 쓰지 않음) */ }
+  await db().rpc('touch_last_seen').then(() => {}, () => {});
 }
 
 /** 내 계정에 붙어 있는 로그인 방식들 [{ provider, email, createdAt }] */
@@ -118,6 +154,7 @@ function loginNotice(pending, user) {
   if (!pending) return null;
   const { kind, provider } = pending;
   if (kind === 'link') return { type: 'linked', provider };
+  if (kind === 'upgrade') return { type: 'upgraded', provider };
   const identities = user?.identities ?? [];
   const mine = identities.find((i) => i.provider === provider);
   const others = [...new Set(identities.map((i) => i.provider).filter((p) => p !== provider && PROVIDERS[p]))];
@@ -130,6 +167,7 @@ function loginNotice(pending, user) {
 /** 안내(notice)를 사람이 읽을 문장으로 */
 export function noticeText(notice) {
   const name = PROVIDERS[notice.provider];
+  if (notice.type === 'upgraded') return `${name} 로그인을 연결해서 정식 계정이 됐어요. 글·제안·경험치·닉네임은 그대로예요.`;
   if (notice.type === 'linked') return `${name} 로그인을 이 계정에 연결했어요. 이제 ${name}로 로그인해도 같은 계정이에요.`;
   const others = notice.others.map((p) => PROVIDERS[p]).join('·');
   return `같은 이메일로 이미 가입된 계정(${others})이 있어서, ${name} 로그인을 그 계정에 연결했어요. 앞으로 어느 쪽으로 로그인해도 같은 계정이에요.`;
@@ -144,10 +182,19 @@ function clearCallbackParams() {
 
 function loginError(error, providerError, providerCode, pending) {
   const raw = error?.message ?? providerError ?? '';
-  const linking = pending?.kind === 'link';
+  const upgrading = pending?.kind === 'upgrade';
+  const linking = pending?.kind === 'link' || upgrading;
   const name = PROVIDERS[pending?.provider] ?? '';
   let message;
-  if (providerCode === 'identity_already_exists' || /already linked|identity_already_exists/i.test(raw)) {
+  const taken = providerCode === 'identity_already_exists' || /already linked|identity_already_exists/i.test(raw)
+    || ((providerCode === 'email_exists' || /email.*(already|exists)|already.*registered/i.test(raw)) && upgrading);
+  if (taken && upgrading) {
+    // 비회원이 연결하려던 구글·카카오가 이미 다른 회원 계정 → 기존 계정으로 로그인할지 묻는다 (합치지 않음)
+    return Object.assign(new Error(ALREADY_MEMBER_TEXT), {
+      detail: raw || null, title: '연결하지 못했어요.', retryTo: '/me', existing: pending.provider,
+    });
+  }
+  if (taken) {
     message = `이 ${name || '로그인'} 계정은 이미 다른 회원 계정에 연결돼 있어요. 그 계정으로 로그인하거나, 다른 ${name || '로그인'} 계정으로 연결해 주세요.`;
   } else if (/manual linking/i.test(raw)) {
     message = '계정 연결 기능이 아직 꺼져 있어요. (Supabase에서 Allow manual linking을 켜야 해요)';
@@ -188,7 +235,7 @@ export function onAuthChange(cb) {
   return () => data.subscription.unsubscribe();
 }
 
-const PROFILE_COLUMNS = 'id, nickname, role, xp, level, main_title';
+const PROFILE_COLUMNS = 'id, nickname, role, xp, level, main_title, is_guest';
 
 /** 내 프로필 (첫 로그인 시 DB 트리거가 만든다. nickname이 null이면 닉네임 설정 전) */
 export async function getProfile(userId) {

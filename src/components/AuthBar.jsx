@@ -2,17 +2,17 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { signOut } from '../api/auth';
 import { getMyUnreadNotifications, onNotificationsChanged } from '../api/proposals';
-import { useAuth } from '../lib/auth';
+import { isGuest, useAuth } from '../lib/auth';
 import UserName from './UserName';
 
 /**
  * 상단 바의 계정 종류. 상단 바·마이페이지 계정 줄이 이 값 하나로 버튼을 정한다.
- * 'loading' | 'signedOut' | 'noNickname'(로그인했지만 닉네임 전) | 'member' | 'operator'
- * (나중에 비회원 로그인이 생기면 'guest'를 더한다: [마이페이지]만, 로그아웃 없음)
+ * 'loading' | 'signedOut' | 'guest'(비회원: [마이페이지]만, 로그아웃 없음) | 'noNickname'(로그인했지만 닉네임 전) | 'member' | 'operator'
  */
 export function accountKind(auth) {
   if (auth.status === 'loading') return 'loading';
   if (auth.status !== 'signedIn') return 'signedOut';
+  if (isGuest(auth)) return 'guest';
   if (!auth.profile?.nickname) return 'noNickname';
   return auth.isOperator ? 'operator' : 'member';
 }
@@ -22,6 +22,7 @@ export const logout = () => signOut().catch((e) => alert(e.message));
 /**
  * 상단 바 오른쪽 (SPEC 3장 상단 바):
  * - 로그인 전: [로그인 · 가입]
+ * - 비회원: [마이페이지●] + 넓은 화면에서 닉네임(비회원 표시)만. 로그아웃은 어디에도 없다 (같이 쓰는 기기는 [비회원 기록 지우기])
  * - 로그인 후: [마이페이지●](새 알림 빨간 점) + 넓은 화면에서만 닉네임(글자만, 누르면 아무 동작 없음)·[관리](운영자)·[로그아웃]
  *   휴대폰 폭에서는 [관리]·[로그아웃]이 마이페이지 맨 위(AccountRow)로 간다.
  */
@@ -64,11 +65,12 @@ function useUnreadCount(userId, pathname) {
 }
 
 function SignedIn({ auth, kind, pathname }) {
-  const count = useUnreadCount(kind === 'noNickname' ? null : auth.user.id, pathname);
+  const named = !!auth.profile?.nickname;
+  const count = useUnreadCount(named ? auth.user.id : null, pathname);
   const here = pathname === '/me' || pathname.startsWith('/me/');
   return (
     <div className="auth-bar">
-      {kind !== 'noNickname' && (
+      {named && (
         // 운영자도 역할 글자 없이 "Lv.0 닉네임"으로만 표시 (SPEC 3장). 글자만 — 누르는 동작 없음
         <span className="me-name wide-only"><UserName profile={auth.profile} /></span>
       )}
@@ -84,9 +86,11 @@ function SignedIn({ auth, kind, pathname }) {
       {kind === 'operator' && (
         <Link to="/admin" className="top-btn op wide-only">관리</Link>
       )}
-      <button type="button" className="top-btn wide-only" onClick={logout}>
-        로그아웃
-      </button>
+      {kind !== 'guest' && (
+        <button type="button" className="top-btn wide-only" onClick={logout}>
+          로그아웃
+        </button>
+      )}
     </div>
   );
 }

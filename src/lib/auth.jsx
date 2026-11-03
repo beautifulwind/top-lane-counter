@@ -1,5 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { finishLoginFromUrl, getProfile, getSession, onAuthChange } from '../api/auth';
+import { finishLoginFromUrl, getProfile, getSession, onAuthChange, touchLastSeen } from '../api/auth';
+import { isGuest } from './guest';
 
 /**
  * 로그인 상태를 앱 전체에 공유한다.
@@ -45,6 +46,11 @@ export function AuthProvider({ children }) {
     return () => { alive = false; };
   }, [userId]);
 
+  // 마지막 접속 (오래 안 쓴 비회원 정리 기준, 하루 한 번)
+  useEffect(() => {
+    if (userId) touchLastSeen(userId);
+  }, [userId]);
+
   const setProfile = useCallback((profile) => setLoaded({ userId, profile, error: null }), [userId]);
   const clearLoginError = useCallback(() => setLoginError(null), []);
   const clearNotice = useCallback(() => setNotice(null), []);
@@ -85,6 +91,11 @@ export const needsNickname = (auth) => auth.status === 'signedIn' && auth.profil
 
 /** 쓰기(제안·빌드·투표·글·댓글·신고)를 할 수 있나 = 로그인 + 닉네임. 실제 검사는 DB가 한다 */
 export const canWrite = (auth) => auth.status === 'signedIn' && !!auth.profile?.nickname;
+
+/** 따봉/비추·추천·신고를 할 수 있나 = 쓰기 + 비회원 아님 (020, 실제 검사는 DB 트리거) */
+export const canVote = (auth) => canWrite(auth) && !isGuest(auth);
+
+export { isGuest };
 
 /**
  * 닉네임을 정해야 열리는 화면 (쓰기 화면과 /me). 닉네임이 없어도 읽기는 어디서나 된다 (SPEC 3장).

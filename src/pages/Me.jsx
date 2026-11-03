@@ -6,7 +6,9 @@ import { approvedWithEdits, getMyProposals, getMyUnreadNotifications, markNotifi
 import { getMyBuilds } from '../api/builds';
 import { getMyRewards } from '../api/rewards';
 import { BUILD_STATUS_LABEL, STATUS_LABEL, TYPE_LABEL, fmtDateTime } from '../lib/format';
-import { useAuth } from '../lib/auth';
+import { isGuest, useAuth } from '../lib/auth';
+import { GUEST_UPGRADE_TEXT } from '../lib/guest';
+import GuestLinkDialog from '../components/GuestLinkDialog';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
 import { AccountRow } from '../components/AuthBar';
@@ -35,15 +37,35 @@ export default function Me() {
         <UserName profile={auth.profile} />
       </h1>
       <AccountRow />
+      {isGuest(auth) && <GuestUpgrade />}
       {sent && (
         <p className="notice" role="status">
           {sent} 운영자가 승인하면 반영돼요.
         </p>
       )}
       <MyActivity userId={auth.user.id} operator={auth.isOperator} />
-      <LinkedLogins userId={auth.user.id} />
+      {!isGuest(auth) && <LinkedLogins userId={auth.user.id} />}
       <AccountSettings auth={auth} />
     </article>
+  );
+}
+
+/** 비회원에게 마이페이지 맨 위에 크게: 구글·카카오 연결 (#upgrade). 고르면 [지금 계정에 연결하기]/[새 계정으로 시작하기] 선택 창 */
+function GuestUpgrade() {
+  const [choosing, setChoosing] = useState(null);
+  return (
+    <section id="upgrade" className="me-section guest-upgrade" aria-labelledby="guest-upgrade">
+      <h2 id="guest-upgrade">구글·카카오 연결하기</h2>
+      <p>{GUEST_UPGRADE_TEXT}</p>
+      <div className="row-actions">
+        {Object.entries(PROVIDERS).map(([provider, name]) => (
+          <button key={provider} type="button" className={`btn login-btn-sm ${provider}`} onClick={() => setChoosing(provider)} disabled={!!choosing}>
+            {name} 연결하기
+          </button>
+        ))}
+      </div>
+      {choosing && <GuestLinkDialog provider={choosing} returnTo="/me" onClose={() => setChoosing(null)} />}
+    </section>
   );
 }
 

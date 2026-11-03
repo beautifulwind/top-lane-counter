@@ -1,21 +1,32 @@
 import { useState } from 'react';
-import { Link, Navigate, useLocation } from 'react-router-dom';
-import { PROVIDERS, signIn } from '../api/auth';
-import { useAuth } from '../lib/auth';
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { PROVIDERS, signIn, signInAsGuest } from '../api/auth';
+import { isGuest, useAuth } from '../lib/auth';
+import { guestNotice } from '../lib/guest';
 import { Loading } from '../components/Status';
+import Captcha, { captchaSiteKey } from '../components/Captcha';
+import GuestLinkDialog from '../components/GuestLinkDialog';
 
 export default function Login() {
   const auth = useAuth();
   const location = useLocation();
   const from = safePath(location.state?.from);
-  const [busy, setBusy] = useState(null); // 이동 중인 provider ('google' | 'kakao')
+  const navigate = useNavigate();
+  const [busy, setBusy] = useState(null); // 이동 중인 provider ('google' | 'kakao' | 'guest')
   const [error, setError] = useState(null);
+  const [guestOpen, setGuestOpen] = useState(false); // [비회원으로 시작하기] 안내 칸
+  const [choosing, setChoosing] = useState(null); // 비회원이 고른 구글·카카오 → 선택 창
+  const guest = isGuest(auth);
 
   if (auth.status === 'loading') return <Loading />;
-  // 이미 로그인했으면 원래 페이지로 (닉네임이 없으면 Layout이 /welcome으로 보낸다)
-  if (auth.status === 'signedIn') return <Navigate to={from} replace />;
+  // 이미 로그인했으면 원래 페이지로 (닉네임이 없으면 Layout이 /welcome으로 보낸다). 비회원은 여기서 구글·카카오를 연결할 수 있다
+  if (auth.status === 'signedIn' && !guest && busy !== 'guest') return <Navigate to={from} replace />;
 
   const start = async (provider) => {
+    if (guest) {
+      setChoosing(provider);
+      return;
+    }
     setBusy(provider);
     setError(null);
     try {
@@ -32,7 +43,11 @@ export default function Login() {
       <p className="lead">
         로그인하면 카운터·문서 수정·빌드를 제안하고, 따봉·비추를 누르고, 노가리방과 문서에 글·댓글을 쓸 수 있어요. 보기는 로그인 없이도 돼요.
       </p>
-      <p className="notice login-join">처음이면 자동으로 가입돼요. 따로 회원가입할 필요 없어요.</p>
+      {guest ? (
+        <p className="notice login-join">지금은 비회원이에요. 구글·카카오를 고르면 지금 기록을 이어 갈지 정할 수 있어요.</p>
+      ) : (
+        <p className="notice login-join">처음이면 자동으로 가입돼요. 따로 회원가입할 필요 없어요.</p>
+      )}
       <div className="login-buttons">
         {Object.entries(PROVIDERS).map(([provider, name]) => (
           <button
@@ -46,13 +61,63 @@ export default function Login() {
             {busy === provider ? `${name}로 이동 중…` : `${name}로 시작하기`}
           </button>
         ))}
+        {!guest && (
+          <button
+            type="button"
+            className="btn login-btn guest"
+            onClick={() => setGuestOpen(true)}
+            disabled={busy !== null}
+            aria-expanded={guestOpen}
+          >
+            비회원으로 시작하기
+          </button>
+        )}
       </div>
+      {choosing && <GuestLinkDialog provider={choosing} returnTo={from} onClose={() => setChoosing(null)} />}
+      {guestOpen && !guest && (
+        <GuestStart
+          busy={busy === 'guest'}
+          onCancel={() => setGuestOpen(false)}
+          onStart={async (token) => {
+            setBusy('guest');
+            setError(null);
+            try {
+              await signInAsGuest(token);
+              navigate('/welcome', { replace: true, state: { from } }); // 닉네임은 지금 정하거나 나중에
+            } catch (e) {
+              setError(e.message);
+              setBusy(null);
+            }
+          }}
+        />
+      )}
       <p className="login-consent">
         시작하면 <Link to="/terms">이용약관</Link>과 <Link to="/privacy">개인정보처리방침</Link>에 동의하는 것으로 봐요.
         만 14세 이상만 가입할 수 있어요.
       </p>
       {error && <p className="form-error" role="alert">{error}</p>}
     </article>
+  );
+}
+
+/** [비회원으로 시작하기]를 누르면 그 자리에 열리는 안내 + 봇 확인 + [비회원으로 시작] (Esc·[취소]로 닫힘) */
+function GuestStart({ busy, onStart, onCancel }) {
+  const needCaptcha = !!captchaSiteKey();
+  const [token, setToken] = useState(null);
+  const [captchaError, setCaptchaError] = useState(null);
+  return (
+    <section className="guest-start" aria-label="비회원으로 시작" onKeyDown={(e) => e.key === 'Escape' && !busy && onCancel()}>
+      <p className="warn">{guestNotice('web')}</p>
+      <p className="hint">비회원은 읽기·노가리방 글·댓글·문서 댓글·제안을 할 수 있어요. 따봉·비추·추천·신고는 구글·카카오를 연결한 뒤에 돼요.</p>
+      <Captcha onToken={setToken} onError={setCaptchaError} />
+      {captchaError && <p className="form-error" role="alert">{captchaError}</p>}
+      <div className="row-actions">
+        <button type="button" className="btn btn-primary" onClick={() => onStart(token)} disabled={busy || (needCaptcha && !token)}>
+          {busy ? '시작하는 중…' : '비회원으로 시작'}
+        </button>
+        <button type="button" className="btn" onClick={onCancel} disabled={busy}>취소</button>
+      </div>
+    </section>
   );
 }
 

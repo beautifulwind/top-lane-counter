@@ -66,12 +66,12 @@
 - **브라우저 탭 제목**: "화면 제목 - 탑 카운터 위키" (홈은 "탑 카운터 위키", 운영자 화면은 앞에 "[운영]", /me는 "마이페이지"). 화면 제목 = 본문 첫 h1 (`src/lib/pageTitle.js`, Layout이 지켜봄).
 - **상단 버튼**: 로그인 전 [로그인 · 가입] (로그인 화면 제목도 같음).
 - **상단 바** (묶음 C): 사이트 이름 "탑 카운터 위키" 옆에 부제 "탑은 라인전이 전부" (`src/lib/legal.js`의 `SITE_TAGLINE`, 폰 폭에서는 이름 아래 줄), 그 옆 [노가리방]. 탭 제목에는 부제를 넣지 않는다.
-- **상단 바 버튼** (2026-11-03): 계정 종류(`accountKind` — 로그인 전 / 닉네임 전 / 회원 / 운영자, 나중에 비회원)로 정한다.
+- **상단 바 버튼** (2026-11-03): 계정 종류(`accountKind` — 로그인 전 / 비회원 / 닉네임 전 / 회원 / 운영자)로 정한다.
   - 로그인 전: [로그인 · 가입]. 로그인 후: **[마이페이지]**(→ `/me`, 새 알림 빨간 점은 이 버튼 오른쪽 위, 지금 마이페이지면 눌린 모양). 닉네임 전이면 [마이페이지]가 닉네임 정하기로 보낸다.
   - 닉네임(`Lv.7 칭호 · 닉네임`)은 **글자만** — 눌러도 아무 동작 없음 (사이트의 다른 닉네임과 같음. 공개 프로필을 만들면 모든 닉네임을 한 번에 링크로).
   - **넓은 화면(768px 이상)**: 이름·부제·[노가리방] … 닉네임 [마이페이지●] [관리](운영자) [로그아웃]
   - **휴대폰 폭**: 한 줄로 이름(부제는 아래 줄)·[노가리방]·[마이페이지●]만. 닉네임은 숨기고, [관리]·[로그아웃]은 마이페이지 맨 위 계정 줄로.
-  - 비회원 로그인(나중): [마이페이지]만, [로그아웃] 없음 — 휴대폰 상단 바 모양은 회원과 같다.
+  - 비회원 (020, 6-10): [마이페이지]만 (넓은 화면에서는 닉네임·"비회원" 표시도), **[로그아웃]은 어디에도 없다** — 마이페이지 계정 줄도 없음. 휴대폰 상단 바 모양은 회원과 같다.
 - **화면 이름**: "마이페이지"로 통일 (예전 "내 활동"). DB 문구·쌓인 알림 글자는 019에서 바꿈.
 
 ## 4. 매치업 문서 구성
@@ -319,11 +319,25 @@
 - 빌드 카드(매치업 문서·미리보기·운영자 화면·마이페이지 자세히) 스킬 줄은 "선마 [Q]" 하나.
 - **문구**: 게시판 → **노가리방** (상단 바·화면 제목·탭 제목·알림·경험치 내역·방침), "OO을 이기는 챔피언" → "OO 카운터", [+ 새 카운터 제안] → [+ 카운터 등록], 등록 화면 제목 "OO 카운터 선택" (마지막 버튼 [제안 보내기]는 그대로), 챔피언 문서의 "위에 있을수록…" 안내 대신 순위 숫자. 주소 `/board`는 그대로.
 
+### 6-10. 비회원으로 시작하기 (2026-11-03, 020)
+- **로그인 화면**: [구글로 시작하기] [카카오로 시작하기] [비회원으로 시작하기]. 비회원 버튼은 그 자리에 칸을 연다: 안내(`guestNotice('web')` — "이 기기·브라우저에만 저장돼요 … 아이폰 사파리는 7일 … 구글·카카오를 연결하면 유지돼요"), 할 수 있는 것/없는 것, 자동 가입 방지(Cloudflare Turnstile), [비회원으로 시작] [취소]. 시작하면 `/welcome`(닉네임 정하기, 건너뛸 수 있음).
+  - Supabase 익명 로그인 `signInAnonymously({ captchaToken })`. 캡차는 Supabase 내장 기능(Attack Protection)이 확인 — OAuth에는 적용 안 됨. 사이트 키(`VITE_TURNSTILE_SITE_KEY`)가 없으면 캡차 없이 시작 (개발용, 그때는 Supabase 캡차도 꺼 둔다).
+  - 앱(Expo)으로 옮길 때: 안내 문구는 `guestNotice('app')`, 캡차는 WebView, 규칙(`src/lib/guest.js`)은 그대로.
+- **표시**: 닉네임 옆에 "비회원" 표시 (`profiles.is_guest` — 모든 닉네임 자리). 비회원도 닉네임을 직접 정한다.
+- **할 수 있는 것**: 읽기, 노가리방 글·댓글, 문서 댓글, 카운터·문서 수정·빌드 제안. 경험치·칭호도 똑같이 쌓인다.
+- **못 하는 것**: 따봉·비추, 노가리방 추천, 신고 — 화면은 버튼을 숨기거나 누르면 "비회원은 … 수 없어요. [구글·카카오 연결하기]"(→ `/me#upgrade`). DB 트리거 `block_guest_vote`가 `build_votes`·`post_votes`·`reports`에서 막는다.
+- **로그아웃 없음**. 같이 쓰는 기기는 [비회원 기록 지우기] (`/me` 계정 칸, 닉네임 전이면 `/welcome` 아래) — `delete_my_account`와 같고 확인 문구는 닉네임(없으면 "지우기"). 끝나면 홈에서 "비회원 기록을 지웠어요…".
+- **정식 계정으로**: `/me` 맨 위 "구글·카카오 연결하기" 칸(#upgrade). 로그인 화면에서 비회원이 구글·카카오를 눌러도 같은 선택 창:
+  - [지금 계정에 연결하기 (추천)] → `linkIdentity`. 사용자 id가 그대로라 글·제안·경험치·닉네임이 이어진다. Supabase가 `is_anonymous`를 false로 바꾸면 트리거가 `is_guest`도 끈다. 돌아오면 "…정식 계정이 됐어요".
+  - [새 계정으로 시작하기] → 경고("지금 비회원 기록은 이 기기에서 못 찾게 돼요…") → 이 기기에서만 비회원 세션을 지우고(`signOut({scope:'local'})`) 구글·카카오 로그인. 비회원 계정은 아래 정리 규칙으로 지워진다.
+  - 그 구글·카카오가 이미 다른 회원 것이면(`identity_already_exists`/`email_exists`): "이미 가입된 계정이에요. 기존 계정으로 로그인할까요? 비회원 기록은 넘어가지 않아요" + [기존 계정으로 로그인] [닫기]. **합치지 않는다.**
+- **오래 안 쓴 비회원 정리**: 마지막 접속(`profiles.last_seen_at`, 화면이 하루 한 번 `touch_last_seen()`) 기준 — 남긴 기록(글·댓글·문서 댓글·제안·빌드)이 없으면 30일(`xp_rules.guest_empty_days`), 있으면 90일(`guest_idle_days`). `cleanup_guest_accounts()`가 탈퇴와 같은 규칙으로 지운다 (운영자 제외). pg_cron으로 매일 한 번 (11-9).
+
 ## 7. 데이터 구조 (Supabase 초안)
 
 챔피언·아이템·룬·소환사 주문은 Data Dragon의 ID(예: 챔피언 `"Darius"`, 아이템 `3078`)로 참조한다.
 
-- **profiles**: `id`(auth 유저), `nickname`(고유, 대소문자 무시 / 첫 로그인 직후에는 비어 있음 / 30일에 한 번 바꿈, 6-8), `role`(`user` / `admin` = 운영자), `xp`, `level`(운영자는 0), `main_title`(내가 가진 칭호 중에서만, 비워둘 수 있음), `created_at`
+- **profiles**: `id`(auth 유저), `nickname`(고유, 대소문자 무시 / 첫 로그인 직후에는 비어 있음 / 30일에 한 번 바꿈, 6-8), `role`(`user` / `admin` = 운영자), `xp`, `level`(운영자는 0), `main_title`(내가 가진 칭호 중에서만, 비워둘 수 있음), `is_guest`(비회원, `auth.users.is_anonymous`를 트리거로 따라감 — 020), `last_seen_at`(마지막 접속, 하루 한 번 — 비회원 정리 기준), `created_at`
 - **nickname_changes** (017): `user_id`, `old_nickname`, `new_nickname`, `changed_at` — 트리거 `keep_nickname`만 넣는다. 본인·운영자만 읽기. DB 함수 `delete_my_account(확인)`(로그인한 본인), `kakao_unlinked(카카오 번호)`(service_role만), `josa(낱말, '을/를')`
 - **item_prices** (018): `id`(아이템 번호), `gold`, `patch`, `updated_at` — 누구나 읽기, 바꾸기는 운영자 함수 `set_item_prices`만. 시작템 합계 검사용
 - **counters**: `id`, `target_champion`(지는 쪽), `counter_champion`(이기는 쪽), `sort_order`, `status`, `proposed_by`, `created_at` — (`target_champion`, `counter_champion`) 고유
@@ -452,6 +466,7 @@ RLS 원칙:
 17. `supabase/migrations/017_account.sql` (실행 뒤 11-8)
 18. `supabase/migrations/018_build_max_skill_start_gold.sql` (실행 뒤 `/admin`의 "아이템 가격표"가 지금 패치인지 확인)
 19. `supabase/migrations/019_mypage_wording.sql`
+20. `supabase/migrations/020_guest.sql` (실행 **전에** 11-9의 익명 로그인 켜기, 실행 뒤 11-9 나머지)
 - 합쳐서 한 번에 돌리지 않는다: 파일마다 `begin … commit`이라 중간에 실패하면 앞부분만 반영되고, 다시 돌리면 "already exists"가 난다.
 - 새 마이그레이션(010 …)을 만들면 이 목록에 추가한다. `supabase/tests/run.sh`가 빈 DB에 같은 순서로 실행한 뒤 검사용 데이터(`tests/fixtures.sql`)를 넣고 검사한다 (`supabase/tests`는 실제 프로젝트에서 실행하지 않음).
 
@@ -504,3 +519,16 @@ RLS 원칙:
 - **Secrets** (Edge Functions → Secrets): `KAKAO_ADMIN_KEY` = 카카오 앱 키 → **Admin 키**. 선택: `KAKAO_APP_ID` = 앱 ID (다른 앱 알림 거절). `SUPABASE_URL`·`SUPABASE_ANON_KEY`·`SUPABASE_SERVICE_ROLE_KEY`는 자동으로 들어 있다. 비밀 값은 코드·`.env`·저장소·대화에 쓰지 않는다.
 - **Kakao Developers** → 앱 → 카카오 로그인 → **연결 끊기 알림** (메뉴 이름은 콘솔 버전에 따라 "고급"/"Unlink" 등): 콜백 주소 `https://<프로젝트ID>.supabase.co/functions/v1/kakao-unlink`, 방식 GET·POST 아무거나
 - 확인: Edge Functions → kakao-unlink → Logs에 `{"event":"kakao_unlink","result":…}`. 탈퇴는 delete-account Logs에 `{"event":"account_deleted","kakao":"unlinked"}`
+
+### 11-9. 비회원 로그인 (020)
+1. **Authentication → Sign In / Providers → "Allow anonymous sign-ins" 켜기** (020 실행 전). "Allow manual linking"은 이미 켜져 있다 (11-3).
+2. **Cloudflare Turnstile**: Cloudflare 대시보드 → Turnstile → Add widget. 호스트 이름: 배포 도메인(`<프로젝트>.pages.dev`, 커스텀 도메인), `localhost`, 지금 Codespace 주소(`…-3000.app.github.dev`). 모드: Managed.
+   - **Site key** → 앱 환경변수 `VITE_TURNSTILE_SITE_KEY` (`.env` + Cloudflare Pages Production·Preview, 11-6)
+   - **Secret key** → Supabase → Authentication → Attack Protection → **Enable Captcha protection** → Provider: Turnstile → Secret. 저장소·대화에 쓰지 않는다.
+   - 순서: 사이트 키를 앱에 넣고 배포한 **뒤** Supabase 캡차를 켠다 (먼저 켜면 비회원 시작이 "자동 가입 방지 확인"으로 막힌다).
+3. **pg_cron** (오래 안 쓴 비회원 정리): Database → Extensions → `pg_cron` 켜기 → SQL Editor:
+   ```sql
+   select cron.schedule('cleanup-guests', '30 19 * * *', $$select public.cleanup_guest_accounts();$$); -- 매일 한국 시간 새벽 4:30
+   ```
+   확인: `select * from cron.job;` / 기록: `select * from cron.job_run_details order by start_time desc limit 5;`. 끄기: `select cron.unschedule('cleanup-guests');`
+4. 확인: 시크릿 창에서 [비회원으로 시작하기] → Authentication → Users에 "Anonymous" 사용자, `select is_guest from profiles` = true. 그 상태로 `/me`에서 구글 연결 → 같은 줄이 false.

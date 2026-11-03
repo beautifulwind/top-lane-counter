@@ -6,6 +6,7 @@ import { fmtDateTime } from '../lib/format';
 import { josaOf } from '../lib/josa';
 import { CharCount } from './BoardParts';
 import { ErrorBox, Loading } from './Status';
+import { isGuest } from '../lib/guest';
 
 /** /me 아래쪽 "계정": 닉네임 바꾸기(30일에 한 번) · 회원 탈퇴 (SPEC 6-8) */
 export default function AccountSettings({ auth }) {
@@ -86,14 +87,20 @@ function NicknameChange({ auth }) {
   );
 }
 
-function DeleteAccount({ auth }) {
+/**
+ * 회원 탈퇴 / 비회원 기록 지우기 (같은 delete_my_account). 확인 문구 = 닉네임, 닉네임 없는 비회원은 "지우기" (020).
+ * /welcome(닉네임 없는 비회원)에서도 쓴다.
+ */
+export function DeleteAccount({ auth }) {
   const navigate = useNavigate();
+  const guest = isGuest(auth);
   const [open, setOpen] = useState(false);
   const [confirm, setConfirm] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  const nickname = auth.profile.nickname;
-  const ready = confirm.trim() === nickname;
+  const nickname = auth.profile?.nickname ?? null;
+  const word = nickname ?? '지우기';
+  const ready = confirm.trim() === word;
 
   const close = () => {
     setOpen(false);
@@ -107,7 +114,8 @@ function DeleteAccount({ auth }) {
     setError(null);
     try {
       await deleteMyAccount(confirm.trim());
-      navigate('/', { replace: true, state: { siteNotice: '탈퇴했어요. 계정과 내 기록을 지웠어요. 그동안 고마웠어요.' } });
+      const siteNotice = guest ? '비회원 기록을 지웠어요. 이 기기에서 로그인 정보도 지웠어요.' : '탈퇴했어요. 계정과 내 기록을 지웠어요. 그동안 고마웠어요.';
+      navigate('/', { replace: true, state: { siteNotice } });
     } catch (err) {
       setError(err.message);
       setBusy(false);
@@ -116,29 +124,34 @@ function DeleteAccount({ auth }) {
 
   return (
     <section className="me-section" aria-labelledby="delete-account">
-      <h2 id="delete-account">회원 탈퇴</h2>
+      <h2 id="delete-account">{guest ? '비회원 기록 지우기' : '회원 탈퇴'}</h2>
       {auth.isOperator ? (
         <p className="hint">운영자 계정은 탈퇴할 수 없어요.</p>
       ) : (
         <>
+          {guest && <p className="hint">같이 쓰는 기기라면 다 쓴 뒤 지워 주세요. 비회원은 로그아웃이 없어요.</p>}
           <ul className="hint delete-account-list">
             <li><strong>지워져요:</strong> 계정·닉네임, 보낸 제안, 공개되지 않은 빌드, 따봉·비추, 알림, 경험치·칭호, 노가리방 댓글·추천·신고, 문서 댓글, 다른 사람 댓글이 없는 내 글</li>
             <li><strong>작성자만 지우고 남아요:</strong> 문서에 반영된 내용과 수정 기록, 공개된 빌드, 다른 사람 댓글이 달린 내 글(&ldquo;삭제된 글&rdquo;로)</li>
-            <li>카카오로 연결돼 있었으면 카카오 쪽 연결도 끊어요. 되돌릴 수 없어요.</li>
+            {guest ? <li>되돌릴 수 없어요.</li> : <li>카카오로 연결돼 있었으면 카카오 쪽 연결도 끊어요. 되돌릴 수 없어요.</li>}
           </ul>
           {!open ? (
-            <button type="button" className="btn btn-small btn-danger" onClick={() => setOpen(true)}>탈퇴</button>
+            <button type="button" className="btn btn-small btn-danger" onClick={() => setOpen(true)}>{guest ? '비회원 기록 지우기' : '탈퇴'}</button>
           ) : (
             <form className="nick-form" onSubmit={submit} onKeyDown={(e) => e.key === 'Escape' && !busy && close()}>
               <label htmlFor="delete-confirm">
-                확인을 위해 내 닉네임 <strong>{nickname}</strong>{josaOf(nickname, '을/를')} 그대로 입력해 주세요
+                {nickname ? (
+                  <>확인을 위해 내 닉네임 <strong>{nickname}</strong>{josaOf(nickname, '을/를')} 그대로 입력해 주세요</>
+                ) : (
+                  <>확인을 위해 <strong>지우기</strong>를 그대로 입력해 주세요</>
+                )}
               </label>
               {/* eslint-disable-next-line jsx-a11y/no-autofocus -- [탈퇴]를 눌러 연 확인 칸 */}
               <input id="delete-confirm" value={confirm} onChange={(e) => setConfirm(e.target.value)} autoComplete="off" autoFocus />
               {error && <p className="form-error" role="alert">{error}</p>}
               <div className="note-form-actions">
                 <button type="submit" className="btn btn-small btn-danger" disabled={!ready || busy}>
-                  {busy ? '탈퇴하는 중…' : '탈퇴 확정'}
+                  {busy ? (guest ? '지우는 중…' : '탈퇴하는 중…') : guest ? '지우기 확정' : '탈퇴 확정'}
                 </button>
                 <button type="button" className="btn btn-small" onClick={close} disabled={busy}>취소</button>
               </div>

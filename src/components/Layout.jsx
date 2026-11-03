@@ -3,7 +3,7 @@ import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import ErrorBoundary from './ErrorBoundary';
 import AuthBar from './AuthBar';
 import { needsNickname, needsNicknameFor, useAuth } from '../lib/auth';
-import { noticeText } from '../api/auth';
+import { noticeText, startFresh } from '../api/auth';
 import { usePageTitle } from '../lib/pageTitle';
 import { SITE_NAME, SITE_TAGLINE } from '../lib/legal';
 
@@ -41,9 +41,20 @@ export default function Layout() {
           <p><strong>{auth.loginError.title ?? '로그인하지 못했어요.'}</strong> {auth.loginError.message}</p>
           {auth.loginError.detail && <small>상세: {auth.loginError.detail}</small>}
           <div className="login-error-actions">
-            <Link to={auth.loginError.retryTo ?? '/login'} className="btn" onClick={auth.clearLoginError}>
-              {auth.loginError.retryTo === '/me' ? '다시 연결하기' : '다시 로그인'}
-            </Link>
+            {auth.loginError.existing ? (
+              // 비회원이 연결하려던 구글·카카오가 이미 다른 회원 것: 합치지 않고, 원하면 그 계정으로 로그인 (비회원 기록은 넘어가지 않음)
+              <button
+                type="button"
+                className="btn btn-primary"
+                onClick={() => startFresh(auth.loginError.existing, pathname + search).catch((e) => alert(e.message))}
+              >
+                기존 계정으로 로그인
+              </button>
+            ) : (
+              <Link to={auth.loginError.retryTo ?? '/login'} className="btn" onClick={auth.clearLoginError}>
+                {auth.loginError.retryTo === '/me' ? '다시 연결하기' : '다시 로그인'}
+              </Link>
+            )}
             <button type="button" className="btn" onClick={auth.clearLoginError}>닫기</button>
           </div>
         </div>

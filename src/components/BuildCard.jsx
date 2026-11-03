@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { hideBuild, voteBuild } from '../api/builds';
-import { canWrite, useAuth } from '../lib/auth';
+import { canWrite, isGuest, useAuth } from '../lib/auth';
+import GuestHint from './GuestHint';
 import { isOutdated, patchMinor } from '../lib/buildContent';
 import UserName from './UserName';
 import NoteForm from './NoteForm';
@@ -126,6 +127,7 @@ function BuildActions({ build, onHidden, lastOne }) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [hiding, setHiding] = useState(false);
+  const [guestHint, setGuestHint] = useState(false);
   const signedIn = auth.status === 'signedIn';
   const own = signedIn && build.author_id === auth.user.id;
   const score = votes.up - votes.down;
@@ -140,6 +142,10 @@ function BuildActions({ build, onHidden, lastOne }) {
       return;
     }
     if (own || busy) return;
+    if (isGuest(auth)) {
+      setGuestHint(true); // 비회원은 따봉·비추 불가 (DB 트리거도 막는다)
+      return;
+    }
     setBusy(true);
     setError(null);
     try {
@@ -182,6 +188,7 @@ function BuildActions({ build, onHidden, lastOne }) {
         <span className="score">점수 {score > 0 ? `+${score}` : score}</span>
       </div>
       {error && <p className="form-error" role="alert">{error}</p>}
+      {guestHint && <GuestHint what="따봉·비추를 누를" />}
       {auth.isOperator && (
         <div className="row-actions">
           <button type="button" className="btn btn-small btn-op" onClick={() => setHiding((v) => !v)} aria-expanded={hiding} disabled={lastOne}>

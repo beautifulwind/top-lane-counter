@@ -9,7 +9,7 @@ export const BODY_MAX = 10000;
 export const COMMENT_MAX = 1000;
 export const REPORT_REASONS = { abuse: '욕설·비하', spam: '도배·광고', privacy: '개인정보 노출', other: '기타' };
 
-const PERSON = 'nickname, level, main_title';
+const PERSON = 'nickname, level, main_title, is_guest';
 const POST_FIELDS =
   'id, author_id, title, body, status, hidden_note, hidden_at, edited_at, edit_grace_until, deleted_at, comment_count, up_count, created_at';
 const COMMENT_FIELDS = 'id, post_id, author_id, body, status, hidden_note, hidden_at, edited_at, edit_grace_until, created_at';

@@ -3,7 +3,8 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   POST_COMMENT_OPS, deleteMyPost, getEditRules, getPost, hidePost, reportPost, restorePost, votePost,
 } from '../api/board';
-import { canWrite, useAuth } from '../lib/auth';
+import { canVote, isGuest, useAuth } from '../lib/auth';
+import GuestHint from '../components/GuestHint';
 import { useAsync } from '../lib/useAsync';
 import { canEditNow, useNow } from '../lib/editWindow';
 import { ErrorBox, Loading } from '../components/Status';
@@ -88,7 +89,7 @@ function PostActions({ post, mine, auth, onDone }) {
   const navigate = useNavigate();
   const [mode, setMode] = useState(null); // 'delete' | 'report' | 'hide'
   const [vote, setVote] = useState({ up: post.up_count, mine: post.voted, busy: false, error: null });
-  const signedIn = canWrite(auth); // 추천·신고는 닉네임이 있어야
+  const signedIn = canVote(auth); // 추천·신고는 닉네임이 있고 비회원이 아니어야
   const visible = post.status === 'visible';
   const now = useNow();
 
@@ -127,6 +128,7 @@ function PostActions({ post, mine, auth, onDone }) {
         )}
       </div>
       {vote.error && <p className="form-error" role="alert">{vote.error}</p>}
+      {isGuest(auth) && !mine && visible && <GuestHint what="추천·신고를 할" />}
       {mode === 'delete' && (
         <ConfirmInline
           question={post.comment_count > 0 ? '글을 지울까요? 다른 사람 댓글은 남아요.' : '글을 지울까요?'}

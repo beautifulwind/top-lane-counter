@@ -5,7 +5,7 @@ do $$ begin create role authenticated nologin; exception when duplicate_object t
 grant usage on schema public to anon, authenticated;
 create schema auth;
 grant usage on schema auth to anon, authenticated;
-create table auth.users (id uuid primary key, email text, created_at timestamptz default now(), raw_app_meta_data jsonb);
+create table auth.users (id uuid primary key, email text, created_at timestamptz default now(), raw_app_meta_data jsonb, is_anonymous boolean not null default false);
 -- 로그인 방식 (Supabase: 카카오는 provider_id = 카카오 회원번호)
 create table auth.identities (
   id uuid primary key default gen_random_uuid(), user_id uuid not null references auth.users (id) on delete cascade,

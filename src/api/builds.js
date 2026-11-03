@@ -4,7 +4,7 @@ import { db } from './supabase';
 import { getItems, getLatestVersion, getRunes, getSummonerSpells } from './ddragon';
 import { START_GOLD_MAX, compareBuilds, toProposalBuild, toRow } from '../lib/buildContent';
 
-const PERSON = 'nickname, level, main_title';
+const PERSON = 'nickname, level, main_title, is_guest';
 const BUILD_FIELDS =
   'id, counter_id, author_id, proposal_id, runes, summoner_spells, starting_items, core_items, max_skill, patch, ' +
   'up_count, down_count, status, created_at, version, edited_at';
