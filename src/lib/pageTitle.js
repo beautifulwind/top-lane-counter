@@ -1,12 +1,12 @@
-// 브라우저 탭 제목 (SPEC 3장): "화면 제목 - 탑 카운터 위키", 홈은 사이트 이름만, 운영자 화면은 앞에 "[운영]".
+// 브라우저 탭 제목 (SPEC 3장): "화면 제목 - 탑신병자", 홈은 "탑신병자 - 롤 탑 카운터"(검색용), 운영자 화면은 앞에 "[운영]".
 // 화면 제목 = 본문의 첫 h1 글자 (h1에 data-page-title이 있으면 그 값). 페이지마다 따로 적지 않아도
 // 데이터를 불러와 제목이 바뀌면 탭 제목도 따라 바뀐다 (Layout이 본문을 지켜본다).
 import { useEffect } from 'react';
-import { SITE_NAME } from './legal';
+import { SITE_NAME, SITE_SEO_NAME } from './legal';
 
 export function pageTitle(pathname, heading) {
   const h = (heading ?? '').replace(/\s+/g, ' ').trim();
-  if (pathname === '/' || !h) return SITE_NAME;
+  if (pathname === '/' || !h) return SITE_SEO_NAME;
   return `${pathname.startsWith('/admin') ? '[운영] ' : ''}${h} - ${SITE_NAME}`;
 }
 

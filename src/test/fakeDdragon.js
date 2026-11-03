@@ -28,7 +28,7 @@ const DATA = {
   } },
   'summoner.json': { data: {
     SummonerFlash: spell('SummonerFlash', '점멸'), SummonerTeleport: spell('SummonerTeleport', '순간이동'),
-    SummonerDot: spell('SummonerDot', '점화'), SummonerSnowball: spell('SummonerSnowball', '표식', ['ARAM']),
+    SummonerDot: spell('SummonerDot', '점화'), SummonerSmite: spell('SummonerSmite', '강타'), SummonerSnowball: spell('SummonerSnowball', '표식', ['ARAM']),
   } },
   'runesReforged.json': [
     path(8000, '정밀', [8005, 8010], [[9111, 8009], [9104, 9105], [8014, 8299]]),

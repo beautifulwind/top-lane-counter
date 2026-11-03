@@ -92,11 +92,11 @@ function MyActivity({ userId, operator }) {
     <>
       {operator ? (
         <section className="me-section" aria-labelledby="my-level">
-          <h2 id="my-level">레벨·경험치</h2>
+          <h2 id="my-level">Level</h2>
           <p className="hint">운영자는 경험치·레벨·칭호가 없어요 (항상 Lv.0).</p>
         </section>
       ) : (
-        <MyRewards rewards={data.rewards} unread={data.unread} champs={data.champs} />
+        <MyRewards rewards={data.rewards} unread={data.unread} />
       )}
       <BoardNotices unread={data.unread} champs={data.champs} />
       <MyProposals data={data} />
@@ -224,7 +224,7 @@ function MyProposals({ data }) {
                 )}
                 <div className="row-actions">
                   <Link to={`/me/proposals/${p.id}`} className="btn btn-small">자세히</Link>
-                  {p.status === 'pending' && <Link to={`/me/proposals/${p.id}/edit`} className="btn btn-small">고치기</Link>}
+                  {p.status === 'pending' && <Link to={`/me/proposals/${p.id}/edit`} className="btn btn-small">수정</Link>}
                   {live && <Link to={`/champion/${p.target_champion}/counter/${p.counter_champion}`} className="btn btn-small">문서 보기</Link>}
                 </div>
               </li>
@@ -294,7 +294,7 @@ function MyBuilds({ data }) {
                 </details>
                 <div className="row-actions">
                   <Link to={`/me/builds/${b.id}`} className="btn btn-small">자세히</Link>
-                  {open && b.status === 'pending' && <Link to={`/me/builds/${b.id}/edit`} className="btn btn-small">고치기</Link>}
+                  {open && b.status === 'pending' && <Link to={`/me/builds/${b.id}/edit`} className="btn btn-small">수정</Link>}
                   {open && b.status === 'approved' && <Link to={`${path}#builds`} className="btn btn-small">문서 보기</Link>}
                   {open && <Link to={`${path}/build/new?from=${b.id}`} className="btn btn-small">이 빌드로 다시 쓰기</Link>}
                 </div>

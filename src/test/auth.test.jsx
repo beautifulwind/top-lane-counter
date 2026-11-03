@@ -88,11 +88,11 @@ test('빈 닉네임, 20자 초과 닉네임은 저장 전에 막는다', async (
   expect(screen.getByText('닉네임은 20자 이하로 정해 주세요.')).toBeDefined();
 });
 
-test('닉네임이 있는 유저: 상단에 "Lv.7 칭호 · 닉네임", 로그아웃하면 [로그인]으로 바뀐다', async () => {
+test('닉네임이 있는 유저: 상단에 "Lv.7 [칭호] 닉네임", 로그아웃하면 [로그인]으로 바뀐다', async () => {
   fakeLogin('u-user', { nickname: '탑고수', level: 7, main_title: 'solid_heavy' });
   start('/');
   await screen.findByText('탑고수');
-  expect(document.querySelector('.me-name').textContent).toBe('Lv.7 단단묵직 · 탑고수');
+  expect(document.querySelector('.me-name').textContent).toBe('Lv.7 단단묵직 탑고수');
   fireEvent.click(screen.getByRole('button', { name: '로그아웃' }));
   expect(await screen.findByRole('link', { name: '로그인 · 가입' })).toBeDefined();
 });

@@ -19,8 +19,12 @@ export function accountKind(auth) {
 
 export const logout = () => signOut().catch((e) => alert(e.message));
 
+/** 상단 바 [노가리방]: 마이페이지·로그인 버튼 바로 왼쪽 (022) */
+const BoardLink = () => <Link to="/board" className="top-link">노가리방</Link>;
+
 /**
  * 상단 바 오른쪽 (SPEC 3장 상단 바):
+ * - 어느 상태든 맨 왼쪽에 [노가리방] (022: 사이트 이름 옆에서 옮김)
  * - 로그인 전: [로그인 · 가입]
  * - 비회원: [마이페이지●] + 넓은 화면에서 닉네임(비회원 표시)만. 로그아웃은 어디에도 없다 (같이 쓰는 기기는 [비회원 기록 지우기])
  * - 로그인 후: [마이페이지●](새 알림 빨간 점) + 넓은 화면에서만 닉네임(글자만, 누르면 아무 동작 없음)·[관리](운영자)·[로그아웃]
@@ -31,10 +35,11 @@ export default function AuthBar() {
   const { pathname, search } = useLocation();
   const kind = accountKind(auth);
 
-  if (kind === 'loading') return <div className="auth-bar" aria-hidden="true" />;
+  if (kind === 'loading') return <div className="auth-bar"><BoardLink /></div>;
   if (kind === 'signedOut') {
     return (
       <div className="auth-bar">
+        <BoardLink />
         <Link to="/login" state={{ from: pathname + search }} className="top-btn">
           로그인 · 가입
         </Link>
@@ -70,6 +75,7 @@ function SignedIn({ auth, kind, pathname }) {
   const here = pathname === '/me' || pathname.startsWith('/me/');
   return (
     <div className="auth-bar">
+      <BoardLink />
       {named && (
         // 운영자도 역할 글자 없이 "Lv.0 닉네임"으로만 표시 (SPEC 3장). 글자만 — 누르는 동작 없음
         <span className="me-name wide-only"><UserName profile={auth.profile} /></span>

@@ -35,7 +35,7 @@ test('회원: [마이페이지] → /me (지금 화면이면 눌린 모양), 닉
   expect(where()).toBe('/me');
   await screen.findByRole('heading', { level: 1, name: /탑고수/ });
   expect(topbar().getByRole('link', { name: '마이페이지' }).getAttribute('aria-current')).toBe('page');
-  await vi.waitFor(() => expect(document.title).toBe('마이페이지 - 탑 카운터 위키'));
+  await vi.waitFor(() => expect(document.title).toBe('마이페이지 - 탑신병자'));
 });
 
 test('빨간 점은 [마이페이지] 버튼 안에, 개수는 버튼 이름으로 읽힌다', async () => {

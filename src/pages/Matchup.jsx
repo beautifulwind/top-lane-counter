@@ -81,25 +81,52 @@ export default function Matchup() {
       <h1 className="doc-title">
         {matchupTitle(counter.name, target.name)}
       </h1>
+      {doc?.summary && <p className="doc-summary">{doc.summary}</p>}
       {doc?.updated_at && <p className="doc-sub">최근 수정: {doc.updated_at}</p>}
 
       <nav className="toc" aria-label="목차">
         <strong>목차</strong>
         <ol>
+          <li><a href="#builds">빌드</a></li>
           <li><a href="#levels">레벨별 딜교법</a></li>
           <li><a href="#cautions">특이사항</a></li>
-          <li><a href="#builds">빌드</a></li>
           <li><a href="#comments">댓글</a></li>
         </ol>
       </nav>
 
+      <section className="section" id="builds">
+        <h2 className="section-title"><span className="num">1.</span> 빌드</h2>
+        <p className="hint">점수(따봉 − 비추)가 높은 순서예요. 점수가 같으면 투표가 많은 빌드, 그다음 최근 빌드가 먼저예요.</p>
+        {buildNotice && <p className="notice" role="status">{buildNotice}</p>}
+        {data.builds.length === 0 ? (
+          <p className="empty">아직 등록된 빌드가 없어요.</p>
+        ) : (
+          data.builds.map((b) => (
+            <BuildCard
+              key={b.id}
+              build={b}
+              {...data}
+              interactive
+              lastOne={data.builds.length === 1}
+              onHidden={(message) => {
+                setBuildNotice(message);
+                retry();
+              }}
+            />
+          ))
+        )}
+        <div className="actions">
+          <Link to={`/champion/${targetId}/counter/${counterId}/build/new`} className="btn">+ 빌드 등록</Link>
+        </div>
+      </section>
+
       <section className="section" id="levels">
-        <h2 className="section-title"><span className="num">1.</span> 레벨별 딜교법</h2>
+        <h2 className="section-title"><span className="num">2.</span> 레벨별 딜교법</h2>
         <LevelList doc={doc} />
       </section>
 
       <section className="section" id="cautions">
-        <h2 className="section-title"><span className="num">2.</span> 특이사항</h2>
+        <h2 className="section-title"><span className="num">3.</span> 특이사항</h2>
         {doc?.lane_cautions ? (
           <div className="prose">{doc.lane_cautions}</div>
         ) : (
@@ -128,32 +155,6 @@ export default function Matchup() {
             }}
           />
         )}
-      </section>
-
-      <section className="section" id="builds">
-        <h2 className="section-title"><span className="num">3.</span> 빌드</h2>
-        <p className="hint">점수(따봉 − 비추)가 높은 순서예요. 점수가 같으면 투표가 많은 빌드, 그다음 최근 빌드가 먼저예요.</p>
-        {buildNotice && <p className="notice" role="status">{buildNotice}</p>}
-        {data.builds.length === 0 ? (
-          <p className="empty">아직 등록된 빌드가 없어요.</p>
-        ) : (
-          data.builds.map((b) => (
-            <BuildCard
-              key={b.id}
-              build={b}
-              {...data}
-              interactive
-              lastOne={data.builds.length === 1}
-              onHidden={(message) => {
-                setBuildNotice(message);
-                retry();
-              }}
-            />
-          ))
-        )}
-        <div className="actions">
-          <Link to={`/champion/${targetId}/counter/${counterId}/build/new`} className="btn">+ 빌드 등록</Link>
-        </div>
       </section>
 
       <DocComments counterRowId={data.matchup.counter.id} auth={auth} live title={<><span className="num">4.</span> 댓글</>} />

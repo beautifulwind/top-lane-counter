@@ -25,7 +25,7 @@ const GAREN = { type: 'new_counter', counter_champion: 'Garen', counter_id: null
 
 // ---------------- 제안자: 자세히 ----------------
 
-test('/me 제안 제목 → 자세히: 보낸 글·빌드를 문서 모양으로, 승인 대기면 [고치기]', async () => {
+test('/me 제안 제목 → 자세히: 보낸 글·빌드를 문서 모양으로, 승인 대기면 [수정]', async () => {
   TABLES.edit_proposals.push(fakeProposal({ id: 2, ...GAREN }));
   asProposer();
   start('/me');
@@ -33,11 +33,11 @@ test('/me 제안 제목 → 자세히: 보낸 글·빌드를 문서 모양으로
   expect(where()).toBe('/me/proposals/2');
   expect(await screen.findByRole('heading', { name: '[새 카운터] 가렌으로 다리우스 잡는 법' })).toBeDefined();
   expect(screen.getByText('고친 요약')).toBeDefined();
-  expect(screen.getByRole('heading', { name: '1. 레벨별 딜교법' })).toBeDefined();
-  expect(screen.getByRole('heading', { name: '2. 특이사항' })).toBeDefined();
-  expect(screen.getByRole('heading', { name: '3. 빌드' })).toBeDefined();
+  // 022: 한 줄 요약 → 빌드 → 레벨별 딜교법 → 특이사항
+  expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent).filter((t) => /^\d\./.test(t)))
+    .toEqual(['1. 빌드', '2. 레벨별 딜교법', '3. 특이사항']);
   expect(screen.getByText(/승인 대기 중이에요. 운영자가 처리하기 전까지는 직접 고칠 수 있어요/)).toBeDefined();
-  expect(screen.getByRole('link', { name: '고치기' }).getAttribute('href')).toBe('/me/proposals/2/edit');
+  expect(screen.getByRole('link', { name: '수정' }).getAttribute('href')).toBe('/me/proposals/2/edit');
   expect(screen.queryByRole('link', { name: '문서 보기' })).toBeNull();
 });
 
@@ -51,7 +51,7 @@ test('자세히: 운영자가 고쳐서 승인했으면 [보낸 내용] / [공�
   expect(await screen.findByText('승인 메모: 요약을 다듬었어요')).toBeDefined();
   expect(screen.getByText(/승인된 제안은 고칠 수 없어요/)).toBeDefined();
   expect(screen.getByRole('link', { name: '문서 보기' }).getAttribute('href')).toBe('/champion/Darius/counter/Quinn');
-  expect(screen.queryByRole('link', { name: '고치기' })).toBeNull();
+  expect(screen.queryByRole('link', { name: '수정' })).toBeNull();
   expect(screen.getByRole('button', { name: '보낸 내용' }).getAttribute('aria-pressed')).toBe('true');
   expect(screen.getByText('고친 요약')).toBeDefined();
   click('공개된 내용 (운영자가 고침)');
@@ -78,7 +78,7 @@ test('자세히: 거절된 새 카운터 제안 [다시 쓰기] → 글·빌드�
   expect(where()).toBe('/champion/Darius/propose?counter=Garen&from=2');
   expect((await screen.findByLabelText('한 줄 요약 (필수)')).value).toBe('고친 요약');
   expect(screen.getByText(/거절된 내 제안의 글과 빌드를 채워 뒀어요/)).toBeDefined();
-  fireEvent.click(screen.getByRole('button', { name: '제안 보내기' }));
+  fireEvent.click(screen.getByRole('button', { name: '제안' }));
   await vi.waitFor(() => expect(fakeState.inserts.length).toBe(1));
   expect(fakeState.inserts[0].values.build.core_items).toEqual(FAKE_PROPOSAL_BUILD.core_items);
 });
@@ -124,7 +124,7 @@ test('승인된 제안은 고치기 화면에서 안내만 (문서 수정 제안
   expect(screen.queryByRole('button', { name: '고친 내용 저장' })).toBeNull();
 });
 
-test('빌드: /me → 자세히 → [고치기] → edit_my_build (지금 패치), 옛 다시 제출 주소는 새 주소로', async () => {
+test('빌드: /me → 자세히 → [수정] → edit_my_build (지금 패치), 옛 다시 제출 주소는 새 주소로', async () => {
   TABLES.builds.push(fakeBuild(111, null, { author_id: 'u-old', status: 'pending' }));
   asProposer();
   start('/me');
@@ -132,7 +132,7 @@ test('빌드: /me → 자세히 → [고치기] → edit_my_build (지금 패치
   fireEvent.click(within(row).getByRole('link', { name: '퀸으로 다리우스 잡는 법' }));
   expect(await screen.findByRole('heading', { name: '[빌드] 퀸으로 다리우스 잡는 법' })).toBeDefined();
   expect(screen.getByRole('heading', { name: '1. 빌드' })).toBeDefined();
-  fireEvent.click(screen.getByRole('link', { name: '고치기' }));
+  fireEvent.click(screen.getByRole('link', { name: '수정' }));
   expect(await screen.findByRole('heading', { name: '퀸으로 다리우스 잡는 법 — 빌드 고치기' })).toBeDefined();
   pick('선마 (첫 번째로 마스터할 스킬)', '선마 W');
   click('고친 내용 저장');

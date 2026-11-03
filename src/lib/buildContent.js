@@ -6,6 +6,9 @@ export const ITEM_LIMITS = { starting: [1, 4], core: [3, 6] };
 /** 시작 아이템 합계 상한 기본값. 실제 값은 DB xp_rules.starting_gold_max (game.startGoldMax) */
 export const START_GOLD_MAX = 500;
 
+/** 고를 수 없는 소환사 주문 (022: 강타). 이미 공개·등록된 예전 빌드는 그대로 둔다 */
+export const NO_SPELLS = ['SummonerSmite'];
+
 /** game에서 시작 아이템 합계 상한 */
 export const startGoldMax = (game) => game?.startGoldMax ?? START_GOLD_MAX;
 
@@ -59,6 +62,7 @@ export function buildProblem(b, game) {
   if (new Set(all).size !== all.length) return '같은 룬을 두 번 고를 수 없어요.';
   if (b.summoner_spells.length !== 2) return '소환사 주문을 2개 골라 주세요.';
   if (b.summoner_spells[0] === b.summoner_spells[1]) return '같은 소환사 주문을 두 번 고를 수 없어요.';
+  if (b.summoner_spells.some((id) => NO_SPELLS.includes(id))) return '강타는 고를 수 없어요. 다른 소환사 주문을 골라 주세요.';
   const [sMin, sMax] = ITEM_LIMITS.starting;
   if (b.starting_items.length < sMin || b.starting_items.length > sMax) return `시작 아이템은 ${sMin}~${sMax}개 골라 주세요.`;
   const [cMin, cMax] = ITEM_LIMITS.core;

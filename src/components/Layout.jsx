@@ -32,7 +32,6 @@ export default function Layout() {
             </Link>
             <span className="tagline">{SITE_TAGLINE}</span>
           </span>
-          <Link to="/board" className="top-link">노가리방</Link>
         </nav>
         <AuthBar />
       </header>

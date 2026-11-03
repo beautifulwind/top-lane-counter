@@ -16,7 +16,7 @@ export default function Home() {
 
   return (
     <>
-      <h1 className="doc-title">상대 탑 라이너 찾기</h1>
+      <h1 className="doc-title">챔피언 선택</h1>
       <p className="lead">라인에서 만난 상대를 고르면, 그 챔피언을 이기는 카운터와 공략을 볼 수 있어요.</p>
 
       <div className="search">

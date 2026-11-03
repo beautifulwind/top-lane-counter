@@ -4,22 +4,19 @@ import { useAuth } from '../lib/auth';
 import { levelProgress } from '../lib/levels';
 import { TITLES, titleCondition, titleName } from '../lib/titles';
 import { fmtDateTime } from '../lib/format';
-import { matchupShort } from '../lib/josa';
+import { TitleBadge } from './UserName';
 
 export const REWARD_KINDS = ['level_up', 'level_down', 'title_earned', 'title_revoked'];
-const KIND_LABEL = { new_counter: '새 카운터 승인', doc_edit: '문서 수정 승인', build: '빌드 승인', vote: '따봉 받음', post: '노가리방 글', comment: '노가리방 댓글', doc_comment: '문서 댓글' };
-const PAGE = 30;
 
 /**
- * /me 레벨·경험치·칭호 (SPEC 6장). rewards = getMyRewards() 결과, unread = 이번에 처음 보는 알림, champs = 챔피언 이름
+ * /me Level (SPEC 6장): 레벨·경험치 막대와 내가 가진 칭호 (022: 경험치 내역 칸은 없앰, 없는 칭호는 안 보임).
+ * rewards = getMyRewards() 결과, unread = 이번에 처음 보는 알림
  * 지급·회수·레벨은 DB가 정한다. 여기서 바꾸는 건 대표 칭호뿐.
  */
-export default function MyRewards({ rewards, unread, champs }) {
+export default function MyRewards({ rewards, unread }) {
   const auth = useAuth();
-  const name = (id) => champs[id]?.name ?? id;
   const p = levelProgress(rewards.xp ?? 0, rewards.levels, rewards.rules.level_step);
   const notices = unread.filter((n) => REWARD_KINDS.includes(n.kind));
-  const [shown, setShown] = useState(PAGE);
   // 상단 닉네임은 로그인할 때 불러온 값 → 여기서 새로 읽은 레벨·대표 칭호(회수되면 비워짐)로 맞춘다
   const { profile, setProfile } = auth;
   useEffect(() => {
@@ -31,7 +28,7 @@ export default function MyRewards({ rewards, unread, champs }) {
 
   return (
     <section className="me-section" aria-labelledby="my-level">
-      <h2 id="my-level">레벨·경험치</h2>
+      <h2 id="my-level">Level</h2>
       {notices.map((n) => (
         <p key={n.id} className="notice" role="status"><span className="new-badge">새 알림</span>{n.message}</p>
       ))}
@@ -48,40 +45,22 @@ export default function MyRewards({ rewards, unread, champs }) {
 
       <h3>칭호</h3>
       <MainTitlePicker owned={rewards.titles} current={auth.profile?.main_title ?? null} rules={rewards.rules} />
-
-      <h3>경험치 내역</h3>
-      {rewards.events.length === 0 ? (
-        <p className="empty">아직 받은 경험치가 없어요. 제안·빌드가 승인되거나, 내 빌드가 따봉을 받거나, 노가리방 글·댓글·문서 댓글을 쓰면 경험치를 받아요.</p>
-      ) : (
-        <>
-          <ul className="xp-list" aria-label="경험치 내역">
-            {rewards.events.slice(0, shown).map((e) => (
-              <li key={e.id} className={e.amount < 0 ? 'xp-row minus' : 'xp-row'}>
-                <span className="xp-what">
-                  {KIND_LABEL[e.type] ?? e.type}
-                  {e.counter_champion && <> · {matchupShort(name(e.counter_champion), name(e.target_champion))}</>}
-                  {e.reason && <small> ({e.reason})</small>}
-                </span>
-                <span className="xp-amount">{e.amount > 0 ? `+${e.amount}` : `−${-e.amount}`}</span>
-                <small className="xp-when">{fmtDateTime(e.created_at)}</small>
-              </li>
-            ))}
-          </ul>
-          {rewards.events.length > shown && (
-            <button type="button" className="btn btn-small" onClick={() => setShown(shown + PAGE)}>더 보기</button>
-          )}
-        </>
-      )}
     </section>
   );
 }
 
-/** 칭호 6개: 가진 것은 대표 칭호로 고를 수 있고, 없는 것은 조건을 보여 준다 */
+/** 내가 가진 칭호만 (TITLES 순서). 하나를 대표 칭호로 고른다 (없음도 가능) */
 function MainTitlePicker({ owned, current, rules }) {
   const auth = useAuth();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  const has = (key) => owned.find((t) => t.title_key === key);
+  const mine = Object.keys(TITLES)
+    .map((key) => ({ key, row: owned.find((t) => t.title_key === key) }))
+    .filter((t) => t.row);
+
+  if (mine.length === 0) {
+    return <p className="empty">아직 가진 칭호가 없어요. 처음으로 기여가 승인되거나 노가리방에 글·댓글을 쓰면 칭호 '탑신병자'를 받아요.</p>;
+  }
 
   const choose = async (key) => {
     setBusy(true);
@@ -102,18 +81,15 @@ function MainTitlePicker({ owned, current, rules }) {
         <input type="radio" name="main-title" checked={current === null} onChange={() => choose(null)} />
         <span>없음</span>
       </label>
-      {Object.keys(TITLES).map((key) => {
-        const mine = has(key);
-        return (
-          <label key={key} className={mine ? 'title-row' : 'title-row locked'}>
-            <input type="radio" name="main-title" checked={current === key} disabled={!mine} onChange={() => choose(key)} />
-            <span>
-              <strong>{titleName(key)}</strong>
-              <small> — {titleCondition(key, rules)}{mine ? ` · ${fmtDateTime(mine.earned_at)} 얻음` : ' (아직 없음)'}</small>
-            </span>
-          </label>
-        );
-      })}
+      {mine.map(({ key, row }) => (
+        <label key={key} className="title-row">
+          <input type="radio" name="main-title" checked={current === key} onChange={() => choose(key)} aria-label={titleName(key)} />
+          <span>
+            <TitleBadge titleKey={key} />
+            <small> — {titleCondition(key, rules)} · {fmtDateTime(row.earned_at)} 얻음</small>
+          </span>
+        </label>
+      ))}
       {error && <p className="form-error" role="alert">{error}</p>}
     </fieldset>
   );

@@ -9,6 +9,8 @@ export const LEGAL = {
   effectiveDate: '2026-11-01',
 };
 
-export const SITE_NAME = '탑 카운터 위키';
+export const SITE_NAME = '탑신병자';
+/** 검색용 이름: 홈 탭 제목·사이트 설명·앱 이름 ("탑 카운터"를 같이 넣는다) */
+export const SITE_SEO_NAME = '탑신병자 - 롤 탑 카운터';
 /** 상단 바에 사이트 이름과 같이 보이는 부제 */
 export const SITE_TAGLINE = '탑은 라인전이 전부';

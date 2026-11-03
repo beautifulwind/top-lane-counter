@@ -64,6 +64,8 @@ a:hover { text-decoration: underline; }
   padding-bottom: 8px; border-bottom: 2px solid var(--brand);
 }
 .doc-sub { margin: 4px 0 12px; color: var(--muted); font-size: 14px; }
+/* 매치업 한 줄 요약 (022): 제목 바로 아래, 본문보다 조금 크게 */
+.doc-summary { margin: 6px 0 4px; font-size: 16px; font-weight: 600; }
 .lead { color: var(--muted); font-size: 14px; margin: 8px 0 16px; }
 .doc-head { display: flex; gap: 12px; align-items: center; margin-bottom: 8px; }
 .doc-head .doc-title { border-bottom: 0; padding-bottom: 0; }
@@ -215,6 +217,19 @@ kbd {
 .login-btn.kakao:hover:not(:disabled), .login-btn-sm.kakao:hover:not(:disabled) { background: var(--kakao-hover); border-color: var(--kakao-hover); }
 .btn:disabled { opacity: .6; cursor: default; }
 
+/* 칭호 배지 (022): 사이트 이름 "탑신병자"와 구분되게 테두리·색이 있는 작은 칸. 색은 tokens.css의 --title-<키> */
+.title-badge {
+  display: inline-block; padding: 0 6px; border: 1px solid var(--t, var(--line)); border-radius: 10px;
+  background: var(--t-soft, transparent); color: var(--t, var(--muted));
+  font-size: 11px; font-weight: 700; line-height: 16px; vertical-align: middle; white-space: nowrap;
+}
+.title-badge.top_addict { --t: var(--title-top_addict); --t-soft: var(--title-top_addict-soft); }
+.title-badge.tool_hater { --t: var(--title-tool_hater); --t-soft: var(--title-tool_hater-soft); }
+.title-badge.solid_heavy { --t: var(--title-solid_heavy); --t-soft: var(--title-solid_heavy-soft); }
+.title-badge.butcher_owner { --t: var(--title-butcher_owner); --t-soft: var(--title-butcher_owner-soft); }
+.title-badge.general { --t: var(--title-general); --t-soft: var(--title-general-soft); }
+.title-badge.offmeta { --t: var(--title-offmeta); --t-soft: var(--title-offmeta-soft); }
+
 /* 비회원 (020) */
 .login-btn.guest { background: transparent; }
 .guest-start, .guest-dialog { margin-top: 12px; max-width: 480px; display: flex; flex-direction: column; gap: 8px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); }
@@ -290,6 +305,7 @@ button.champ-cell:disabled { opacity: .4; cursor: default; }
 .doc-level .btn { align-self: flex-start; }
 .doc-add-level { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .doc-form .count { color: var(--muted); text-align: right; }
+.doc-form > small.hint { margin: 0; }
 .doc-form > .btn { margin-top: 12px; }
 
 .notice { padding: 10px 12px; border: 1px solid var(--brand); border-radius: var(--radius); background: var(--soft); }
@@ -402,14 +418,24 @@ a.op-link, .op-link { color: var(--op-dark); }
 .pick.on:disabled { opacity: 1; }
 .picked { list-style: none; margin: 6px 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
 .picked .empty { padding: 8px; }
-.picked-item { display: flex; align-items: center; gap: 6px; }
-.picked-item span { flex: 1; min-width: 0; font-size: 14px; }
+.picked-item { display: flex; align-items: center; gap: 6px; background: var(--bg); border-radius: var(--radius); }
+.picked-drag { flex: 1; min-width: 0; display: flex; align-items: center; gap: 6px; min-height: 40px; }
+.picked-name { flex: 1; min-width: 0; font-size: 14px; }
+/* 022: 핵심 템트리는 끌어서 순서 바꾸기 (폰은 꾹 눌러 끌기 — 누르는 동안 글자 선택·길게 누르기 메뉴가 뜨지 않게) */
+.picked-item.movable .picked-drag { cursor: grab; touch-action: manipulation; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; }
+.picked-item.dragging { position: relative; z-index: 1; box-shadow: 0 2px 8px var(--shadow); }
+.picked-item.dragging .picked-drag { cursor: grabbing; }
+.picked-item.movable .picked-drag::before { content: '⋮⋮'; color: var(--muted); font-size: 14px; letter-spacing: -3px; padding: 0 4px 0 2px; }
+.icon-btn {
+  display: inline-flex; align-items: center; justify-content: center; width: 40px; height: 40px; flex: none;
+  border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg); color: var(--muted); cursor: pointer;
+}
+.icon-btn:hover { color: var(--warn); border-color: var(--warn); }
+.gold-over { margin: 4px 0; font-size: 14px; font-weight: 700; color: var(--warn); }
 .item-search { width: 100%; height: 44px; padding: 0 12px; font-size: 16px; border: 1px solid var(--line); border-radius: var(--radius); margin: 4px 0; }
 .ico.missing { display: inline-flex; align-items: center; justify-content: center; color: var(--on-brand); font-size: 12px; }
 .skill-group { display: inline-flex; align-items: center; gap: 4px; }
 .muted { font-size: 11px; color: var(--muted); }
-.gold-total { margin: 4px 0; font-size: 14px; font-weight: 700; color: var(--brand-dark); }
-.gold-total.over { color: var(--warn); }
 .vote.on { border-color: var(--brand); background: var(--soft); font-weight: 700; }
 .vote.on.down { border-color: var(--warn); background: var(--warn-soft); }
 .vote:disabled { cursor: default; opacity: .6; }
@@ -451,19 +477,13 @@ a.op-link, .op-link { color: var(--op-dark); }
 .title-row { display: flex; align-items: flex-start; gap: 8px; padding: 6px 0; border-top: 1px solid var(--line-soft); cursor: pointer; }
 .title-row:first-of-type { border-top: 0; }
 .title-row input { margin-top: 5px; }
-.title-row.locked { color: var(--muted); cursor: default; }
-.xp-list { list-style: none; margin: 0 0 8px; padding: 0; }
-.xp-row { display: grid; grid-template-columns: 1fr auto; gap: 0 8px; padding: 6px 0; border-top: 1px solid var(--line-soft); font-size: 14px; }
-.xp-row .xp-amount { font-weight: 700; color: var(--brand-dark); }
-.xp-row.minus .xp-amount { color: var(--warn); }
-.xp-row .xp-when { grid-column: 1 / -1; color: var(--muted); }
 /* 운영자: 비주류 픽 목록 */
 .offmeta-list { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .offmeta-list li { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
 
 /* 7단계: 노가리방 (모바일 우선 — 한 줄 카드, 손가락 크기 버튼, 가로 스크롤 없음) */
 .top-nav { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 0 1 auto; }
-.top-link { color: var(--on-brand); font-size: 14px; font-weight: 600; padding: 8px 2px; }
+.top-link { color: var(--on-brand); font-size: 14px; font-weight: 600; padding: 8px 2px; white-space: nowrap; }
 .btn-primary { background: var(--brand); color: var(--on-brand); }
 .btn-primary:active { background: var(--brand-dark); }
 .link-btn { min-height: 32px; padding: 0 2px; border: 0; background: none; color: var(--brand-dark); font: inherit; font-size: 13px; cursor: pointer; }

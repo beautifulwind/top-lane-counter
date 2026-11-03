@@ -41,27 +41,36 @@ test('규칙: 선마는 Q·W·E 하나, 예전 모양(선마 순서)으로 채�
 
 // ---------------- 빌드 입력 ----------------
 
-test('빌드 등록: 시작 아이템 목록에는 500골드 이하만, 합계를 넘기는 아이템은 잠긴다', async () => {
+test('빌드 등록: 시작 아이템 목록에는 500골드 이하만, 안내 문장 없이 넘기려 할 때만 "500골드를 넘어요" (022)', async () => {
+  vi.useFakeTimers({ shouldAdvanceTime: true });
   asUser();
   start(`${MATCHUP}/build/new`);
   await screen.findByRole('heading', { name: /빌드 등록/ });
   // 1100골드 탐식의 망치는 시작 아이템에는 없고 핵심 템트리에는 있다
   expect(within(startGroup()).queryByRole('button', { name: '탐식의 망치' })).toBeNull();
   expect(within(screen.getByRole('group', { name: '핵심 템트리 고르기' })).getByRole('button', { name: '탐식의 망치' })).toBeDefined();
-  expect(screen.getByText(/합계 500골드까지/)).toBeDefined();
-  expect(screen.getByLabelText('시작 아이템 골드 합계')).toHaveTextContent('합계 0 / 500골드 · 남은 골드 500');
+  expect(screen.queryByText(/합계 500골드까지/)).toBeNull();
+  expect(screen.queryByText(/1~4개/)).toBeNull();
+  expect(screen.queryByLabelText('시작 아이템 골드 합계')).toBeNull();
+  expect(screen.queryByText(/남은 골드/)).toBeNull();
+  expect(screen.getByLabelText('시작 아이템 검색').getAttribute('placeholder')).toBe('판금장화 ex) ㅍㄱㅈㅎ');
 
   pick('시작 아이템 고르기', '도란의 검');
-  expect(screen.getByLabelText('시작 아이템 골드 합계')).toHaveTextContent('합계 450 / 500골드 · 남은 골드 50');
-  expect(within(startGroup()).getByRole('button', { name: '도란의 방패' })).toBeDisabled(); // 450 + 450 > 500
-  expect(within(startGroup()).getByRole('button', { name: '장화' })).toBeDisabled();
+  expect(screen.queryByText('500골드를 넘어요')).toBeNull();
+  pick('시작 아이템 고르기', '도란의 방패'); // 450 + 450 > 500 → 안 들어가고 잠깐 안내
+  expect(screen.getByText('500골드를 넘어요')).toBeDefined();
+  const picked = () => within(screen.getByRole('list', { name: '고른 시작 아이템' })).getAllByRole('listitem').map((li) => li.textContent);
+  expect(picked()).toEqual(['도란의 검']);
+  await vi.advanceTimersByTimeAsync(2100);
+  expect(screen.queryByText('500골드를 넘어요')).toBeNull();
   pick('시작 아이템 고르기', '체력 물약');
-  expect(screen.getByLabelText('시작 아이템 골드 합계')).toHaveTextContent('합계 500 / 500골드 · 남은 골드 0');
-  expect(within(startGroup()).getByRole('button', { name: '체력 물약' })).toBeDisabled();
+  expect(picked()).toEqual(['도란의 검', '체력 물약']);
 
-  // 빼면 다시 고를 수 있다
+  // [X]로 빼면 다시 고를 수 있다
   fireEvent.click(screen.getByRole('button', { name: '도란의 검 빼기' }));
-  expect(within(startGroup()).getByRole('button', { name: '도란의 방패' })).toBeEnabled();
+  pick('시작 아이템 고르기', '도란의 방패');
+  expect(picked()).toEqual(['체력 물약', '도란의 방패']);
+  vi.useRealTimers();
 });
 
 test('빌드 등록: 스킬은 선마 하나만 (1·2·3레벨·선마 순서 칸 없음), 다시 누르면 바뀐다', async () => {
@@ -155,9 +164,9 @@ test('챔피언 문서: "다리우스 카운터", 순위 숫자, 안내 문구 �
 
 test('상단 바: 사이트 이름 옆에 부제, 노가리방 링크와 화면 제목', async () => {
   start('/board');
-  expect(screen.getByRole('link', { name: '탑 카운터 위키' })).toBeDefined();
+  expect(screen.getByRole('link', { name: '탑신병자' })).toBeDefined();
   expect(screen.getByText('탑은 라인전이 전부')).toBeDefined();
   fireEvent.click(screen.getByRole('link', { name: '노가리방' }));
   expect(await screen.findByRole('heading', { name: '노가리방' })).toBeDefined();
-  await vi.waitFor(() => expect(document.title).toBe('노가리방 - 탑 카운터 위키'));
+  await vi.waitFor(() => expect(document.title).toBe('노가리방 - 탑신병자'));
 });

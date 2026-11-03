@@ -86,7 +86,7 @@ test('닉네임을 아직 안 정한 로그인 상태에서도 두 페이지(와
   fireEvent.click(within(footer()).getByRole('link', { name: '이용약관' }));
   expect(await screen.findByRole('heading', { level: 1, name: '이용약관' })).toBeDefined();
   expect(where()).toBe('/terms');
-  fireEvent.click(screen.getByRole('link', { name: '탑 카운터 위키' }));
+  fireEvent.click(screen.getByRole('link', { name: '탑신병자' }));
   await vi.waitFor(() => expect(where()).toBe('/')); // 읽기 화면은 닉네임 없이도 (017)
 });
 

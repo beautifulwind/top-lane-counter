@@ -55,7 +55,7 @@ select t.ok('탑신병자', pg_temp.titles(:'B') = array['top_addict']);
 select t.ok('알림: 레벨업 1 + 칭호 1',
   pg_temp.notes(:'B', 'level_up') = 1 and pg_temp.notes(:'B', 'title_earned') = 1
   and (select message = '레벨이 올랐어요: Lv.2' from notifications where user_id = :'B' and kind = 'level_up')
-  and (select message like '칭호를 얻었어요: 탑신병자%' from notifications where user_id = :'B' and kind = 'title_earned'));
+  and (select message = '칭호 ''탑신병자''를 얻었어요. [마이페이지]에서 대표 칭호로 고를 수 있어요.' from notifications where user_id = :'B' and kind = 'title_earned'));
 select t.ok('운영자는 처리해도 경험치·칭호 없음', pg_temp.xp(:'A') = 0 and pg_temp.lv(:'A') = 0 and pg_temp.titles(:'A') = '{}'
   and (select count(*) = 0 from xp_events where user_id = :'A'));
 
@@ -83,7 +83,8 @@ reset role;
 select t.ok('숨기면 −100 (이유: 카운터 숨김) → Lv.1, 0 아래로 안 감', pg_temp.xp(:'B') = 0 and pg_temp.lv(:'B') = 1
   and (select count(*) = 1 from xp_events where user_id = :'B' and change = 'revoke' and amount = -100 and reason = '카운터 숨김 (승인 취소)'));
 select t.ok('탑신병자 회수 → 대표 칭호도 비워짐', pg_temp.titles(:'B') = '{}' and (select main_title is null from profiles where id = :'B'));
-select t.ok('알림: 레벨 내려감 + 칭호 회수', pg_temp.notes(:'B', 'level_down') = 1 and pg_temp.notes(:'B', 'title_revoked') = 1);
+select t.ok('알림: 레벨 내려감 + 칭호 회수', pg_temp.notes(:'B', 'level_down') = 1 and pg_temp.notes(:'B', 'title_revoked') = 1
+  and (select message = '칭호 ''탑신병자''가 회수됐어요. (승인 취소·삭제 등으로 조건이 깨졌어요)' from notifications where user_id = :'B' and kind = 'title_revoked'));
 
 set role authenticated;
 set request.jwt.claim.sub = :'A';

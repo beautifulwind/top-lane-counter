@@ -104,7 +104,7 @@ test('정렬: 점수가 같으면 투표가 많은 빌드가 먼저', async () =
   start(MATCHUP);
   await screen.findByText(/퀸으로 다리우스 잡는 법/);
   const authors = [...document.querySelectorAll('.build-author')].map((e) => e.textContent);
-  expect(authors).toEqual(['Lv.7 단단묵직 · 탑고수', 'Lv.3 칭호없음', '(탈퇴한 유저)', 'Lv.0 영자(운)']);
+  expect(authors).toEqual(['Lv.7 단단묵직 탑고수', 'Lv.3 칭호없음', '(탈퇴한 유저)', 'Lv.0 영자(운)']);
 });
 
 test('운영자: 매치업 문서에서 빌드를 바로 숨긴다 (사유 = 확인 단계)', async () => {
@@ -141,8 +141,14 @@ test('빌드 등록: 다 고르면 미리보기가 보이고, 보내면 승인 �
   expect(send).toBeDisabled();
   expect(screen.getByText('아직 고를 것: 선마(첫 번째로 마스터할 스킬)를 골라 주세요.')).toBeDefined();
   pick('선마 (첫 번째로 마스터할 스킬)', '선마 Q');
-  // 핵심 템트리 순서 바꾸기: 강철판 장화를 맨 앞으로
-  fireEvent.click(screen.getByRole('button', { name: '강철판 장화 앞으로' }));
+  // 022: 핵심 템트리는 끌어서 순서를 바꾼다 (▲▼/← 버튼 없음). 여기서는 [X]로 빼고 다시 넣어 순서를 바꾼다
+  const core = screen.getByRole('list', { name: '고른 핵심 템트리' });
+  expect(within(core).queryByRole('button', { name: /앞으로|위로|아래로/ })).toBeNull();
+  expect(within(core).getByRole('button', { name: '강철판 장화 (끌어서 순서 바꾸기)' }).getAttribute('aria-roledescription')).toBe('끌어서 순서 바꾸기');
+  fireEvent.click(screen.getByRole('button', { name: '스테락의 도전 빼기' }));
+  fireEvent.click(screen.getByRole('button', { name: '선혈포식자 빼기' }));
+  pick('핵심 템트리 고르기', '스테락의 도전');
+  pick('핵심 템트리 고르기', '선혈포식자');
   expect(screen.getByRole('article', { name: '빌드: 기존유저' })).toBeDefined();
   expect(send).toBeEnabled();
   fireEvent.click(send);

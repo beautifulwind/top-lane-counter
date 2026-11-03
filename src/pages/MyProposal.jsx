@@ -13,7 +13,7 @@ import { matchupTitle } from '../lib/josa';
 
 /**
  * 내 제안 자세히: /me/proposals/:id — 보낸 글·빌드 전체를 매치업 문서 모양으로.
- * 상태별: 승인 대기 [고치기] / 재검토 요청 [고쳐서 다시 제출] / 승인 [문서 보기] / 거절 [다시 쓰기] / 승인 취소 없음
+ * 상태별: 승인 대기 [수정] / 재검토 요청 [고쳐서 다시 제출] / 승인 [문서 보기] / 거절 [다시 쓰기] / 승인 취소 없음
  */
 export default function MyProposal() {
   return (
@@ -82,7 +82,7 @@ function ProposalView({ p, data, crumbs, sent }) {
       {p.status === 'pending' && (
         <div className="status-box">
           <p>승인 대기 중이에요. 운영자가 처리하기 전까지는 직접 고칠 수 있어요. 고쳐도 대기 순서는 그대로예요.</p>
-          <div className="actions"><Link to={`/me/proposals/${p.id}/edit`} className="btn">고치기</Link></div>
+          <div className="actions"><Link to={`/me/proposals/${p.id}/edit`} className="btn">수정</Link></div>
         </div>
       )}
       {p.status === 'revision_requested' && (

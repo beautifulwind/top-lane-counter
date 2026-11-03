@@ -143,7 +143,7 @@ test('빨간 점: /me에서 알림을 확인하면 꺼지고, 재검토 요청 �
   expect(fakeState.rpcCalls).toEqual([{ name: 'mark_notifications_read', args: { p_ids: [41] } }]);
 
   // 다른 페이지에 갔다가 다시 와도 점은 꺼져 있고, 요청 내용과 버튼은 그대로
-  fireEvent.click(screen.getByRole('link', { name: '탑 카운터 위키' }));
+  fireEvent.click(screen.getByRole('link', { name: '탑신병자' }));
   fireEvent.click(await screen.findByRole('link', { name: '마이페이지' }));
   const again = (await screen.findByText('운영자 메모: 9레벨을 고쳐 주세요')).closest('li');
   expect(within(again).getByText('재검토 요청', { selector: '.status-badge' })).toBeDefined();

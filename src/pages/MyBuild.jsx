@@ -12,7 +12,7 @@ import { matchupTitle } from '../lib/josa';
 
 /**
  * 내 빌드 자세히: /me/builds/:id — 보낸 빌드를 매치업 문서의 빌드 모양으로.
- * 상태별: 승인 대기 [고치기] / 재검토 요청 [고쳐서 다시 제출] / 공개 [문서 보기] / 거절 [다시 쓰기] / 숨김 없음
+ * 상태별: 승인 대기 [수정] / 재검토 요청 [고쳐서 다시 제출] / 공개 [문서 보기] / 거절 [다시 쓰기] / 숨김 없음
  */
 export default function MyBuild() {
   return (
@@ -81,7 +81,7 @@ function BuildView({ b, data, crumbs, sent }) {
       {b.status === 'pending' && (
         <div className="status-box">
           <p>승인 대기 중이에요. 운영자가 처리하기 전까지는 직접 고칠 수 있어요. 고쳐도 대기 순서는 그대로예요.</p>
-          {open && <div className="actions"><Link to={`/me/builds/${b.id}/edit`} className="btn">고치기</Link></div>}
+          {open && <div className="actions"><Link to={`/me/builds/${b.id}/edit`} className="btn">수정</Link></div>}
         </div>
       )}
       {b.status === 'revision_requested' && (

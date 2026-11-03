@@ -1,7 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import {
+  DndContext, KeyboardSensor, MouseSensor, TouchSensor, closestCenter, useSensor, useSensors,
+} from '@dnd-kit/core';
+import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { SHARD_ROWS } from '../api/ddragon';
 import { matchesQuery } from '../lib/chosung';
-import { ITEM_LIMITS, SKILLS, buildProblem, startGold, startGoldMax } from '../lib/buildContent';
+import { ITEM_LIMITS, NO_SPELLS, SKILLS, buildProblem, startGold, startGoldMax } from '../lib/buildContent';
 import BuildCard, { Icon } from './BuildCard';
 
 /**
@@ -19,7 +24,6 @@ export default function BuildFields({ game, value: build, onChange, author }) {
       <ItemPicker
         id="starting"
         title="시작 아이템"
-        hint={`${ITEM_LIMITS.starting[0]}~${ITEM_LIMITS.starting[1]}개, 합계 ${startGoldMax(game)}골드까지 (같은 아이템 여러 개 가능, 예: 포션 2개)`}
         items={game.items}
         value={build.starting_items}
         max={ITEM_LIMITS.starting[1]}
@@ -30,7 +34,7 @@ export default function BuildFields({ game, value: build, onChange, author }) {
       <ItemPicker
         id="core"
         title="핵심 템트리"
-        hint={`${ITEM_LIMITS.core[0]}~${ITEM_LIMITS.core[1]}개, 사는 순서대로`}
+        hint={`${ITEM_LIMITS.core[0]}~${ITEM_LIMITS.core[1]}개, 사는 순서대로 · 끌어서 순서 바꾸기 (폰은 꾹 눌러 끌기)`}
         items={game.items}
         value={build.core_items}
         max={ITEM_LIMITS.core[1]}
@@ -169,7 +173,8 @@ function RunePicker({ runes, value: r, onChange }) {
 }
 
 function SpellPicker({ spells, value, onChange }) {
-  const list = Object.values(spells).filter((s) => s.classic).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
+  // 022: 강타는 고를 수 없다. 예전 빌드를 다시 쓸 때 이미 골라져 있으면 뺄 수 있게만 보여 준다
+  const list = Object.values(spells).filter((s) => s.classic && (!NO_SPELLS.includes(s.id) || value.includes(s.id))).sort((a, b) => a.name.localeCompare(b.name, 'ko'));
   const toggle = (id) => {
     if (value.includes(id)) onChange(value.filter((x) => x !== id));
     else onChange([...(value.length >= 2 ? value.slice(1) : value), id]);
@@ -186,54 +191,80 @@ function SpellPicker({ spells, value, onChange }) {
 
 const SHOW = 60;
 
-/** goldMax: 시작 아이템처럼 골드 합계 상한이 있으면 그 값 (그보다 비싼 아이템은 목록에 없고, 합계를 넘기는 아이템은 잠긴다) */
+/** X 아이콘 (빼기 버튼) */
+const XIcon = () => (
+  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
+    <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+  </svg>
+);
+
+const OVER_MS = 2000;
+
+/**
+ * goldMax: 시작 아이템처럼 골드 합계 상한이 있으면 그 값 (그보다 비싼 아이템은 목록에 없다).
+ * 합계를 넘기는 아이템을 누르면 넣지 않고 "N골드를 넘어요"를 잠깐 보여 준다 (022: 합계·남은 골드 안내는 숨김).
+ * movable: 끌어서 순서 바꾸기 (PC는 마우스로 끌기, 폰은 꾹 눌러 끌기, 키보드는 Space 후 화살표)
+ */
 function ItemPicker({ id, title, hint, items, value, max, goldMax = null, distinct = false, movable = false, order = 'expensive', onChange }) {
   const [query, setQuery] = useState('');
+  const [over, setOver] = useState(false);
+  const timer = useRef(null);
+  useEffect(() => {
+    return () => clearTimeout(timer.current);
+  }, []);
   const budget = goldMax !== null;
   const total = budget ? startGold(value, items) : 0;
   const shop = Object.values(items)
     .filter((it) => it.shop && (!budget || it.gold <= goldMax) && matchesQuery(query, it.name))
     .sort((a, b) => (order === 'cheap' ? a.gold - b.gold : b.gold - a.gold) || a.name.localeCompare(b.name, 'ko'));
   const full = value.length >= max;
-  const move = (i) => onChange(value.map((x, j) => (j === i - 1 ? value[i] : j === i ? value[i - 1] : x)));
+  const name = (itemId) => items[itemId]?.name ?? itemId;
+  const keys = value.map((itemId, i) => `${itemId}-${i}`);
+
+  const add = (it) => {
+    if (budget && total + it.gold > goldMax) {
+      setOver(true);
+      clearTimeout(timer.current);
+      timer.current = setTimeout(() => setOver(false), OVER_MS);
+      return;
+    }
+    onChange([...value, it.id]);
+  };
+  const remove = (i) => onChange(value.filter((_, j) => j !== i));
+
+  const sensors = useSensors(
+    useSensor(MouseSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(TouchSensor, { activationConstraint: { delay: 250, tolerance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  const onDragEnd = ({ active, over: target }) => {
+    if (!target || active.id === target.id) return;
+    onChange(arrayMove(value, keys.indexOf(active.id), keys.indexOf(target.id)));
+  };
+
+  const rows = value.map((itemId, i) => (
+    <PickedItem key={keys[i]} id={keys[i]} movable={movable} entry={items[itemId]} name={name(itemId)} onRemove={() => remove(i)} />
+  ));
 
   return (
     <fieldset className="pick-group">
       <legend>{title}</legend>
-      <small className="hint">{hint}</small>
-      {budget && (
-        <p className={total > goldMax ? 'gold-total over' : 'gold-total'} role="status" aria-label="시작 아이템 골드 합계">
-          합계 {total} / {goldMax}골드 · 남은 골드 {Math.max(goldMax - total, 0)}
-        </p>
-      )}
+      {hint && <small className="hint">{hint}</small>}
       <ol className="picked" aria-label={`고른 ${title}`}>
         {value.length === 0 && <li className="empty">아직 고르지 않았어요.</li>}
-        {value.map((itemId, i) => (
-          <li key={`${itemId}-${i}`} className="picked-item">
-            <Icon entry={items[itemId]} size={32} />
-            <span>{items[itemId]?.name ?? itemId}</span>
-            {movable && i > 0 && (
-              <button type="button" className="btn btn-small" onClick={() => move(i)} aria-label={`${items[itemId]?.name ?? itemId} 앞으로`}>
-                ←
-              </button>
-            )}
-            <button
-              type="button"
-              className="btn btn-small"
-              onClick={() => onChange(value.filter((_, j) => j !== i))}
-              aria-label={`${items[itemId]?.name ?? itemId} 빼기`}
-            >
-              빼기
-            </button>
-          </li>
-        ))}
+        {movable ? (
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
+            <SortableContext items={keys} strategy={verticalListSortingStrategy}>{rows}</SortableContext>
+          </DndContext>
+        ) : rows}
       </ol>
+      {over && <p className="gold-over" role="status">{goldMax}골드를 넘어요</p>}
       <label htmlFor={`${id}-search`} className="sr-only">{title} 검색</label>
       <input
         id={`${id}-search`}
         type="search"
         className="item-search"
-        placeholder="아이템 이름 검색 (초성도 돼요)"
+        placeholder="판금장화 ex) ㅍㄱㅈㅎ"
         value={query}
         onChange={(e) => setQuery(e.target.value)}
         onKeyDown={(e) => e.key === 'Enter' && e.preventDefault()} // 폼 안이라 Enter로 제출되지 않게
@@ -244,8 +275,8 @@ function ItemPicker({ id, title, hint, items, value, max, goldMax = null, distin
             key={it.id}
             entry={it}
             selected={value.includes(it.id)}
-            disabled={full || (distinct && value.includes(it.id)) || (budget && total + it.gold > goldMax)}
-            onClick={() => onChange([...value, it.id])}
+            disabled={full || (distinct && value.includes(it.id))}
+            onClick={() => add(it)}
           />
         ))}
         {shop.length === 0 && <p className="empty">찾는 아이템이 없어요.</p>}
@@ -253,6 +284,30 @@ function ItemPicker({ id, title, hint, items, value, max, goldMax = null, distin
       {shop.length > SHOW && <small className="hint">{shop.length - SHOW}개 더 있어요. 이름으로 검색해 주세요.</small>}
       {full && <small className="hint">{max}개까지 고를 수 있어요.</small>}
     </fieldset>
+  );
+}
+
+/** 고른 아이템 한 줄. movable이면 줄 전체를 끌어서 옮긴다 (손잡이 ⋮⋮는 CSS가 그림, [X]는 끌기와 따로 눌린다) */
+function PickedItem({ id, movable, entry, name, onRemove }) {
+  const sortable = useSortable({ id, disabled: !movable });
+  const { setNodeRef, attributes, listeners, transform, transition, isDragging } = sortable;
+  const dragProps = movable
+    ? { ...attributes, ...listeners, 'aria-roledescription': '끌어서 순서 바꾸기', 'aria-label': `${name} (끌어서 순서 바꾸기)` }
+    : {};
+  return (
+    <li
+      ref={movable ? setNodeRef : undefined}
+      className={`picked-item${movable ? ' movable' : ''}${isDragging ? ' dragging' : ''}`}
+      style={movable ? { transform: CSS.Transform.toString(transform), transition } : undefined}
+    >
+      <span className="picked-drag" {...dragProps}>
+        <Icon entry={entry} size={32} />
+        <span className="picked-name">{name}</span>
+      </span>
+      <button type="button" className="icon-btn" onClick={onRemove} aria-label={`${name} 빼기`} title="빼기">
+        <XIcon />
+      </button>
+    </li>
   );
 }
 

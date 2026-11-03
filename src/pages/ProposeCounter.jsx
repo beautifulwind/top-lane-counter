@@ -117,7 +117,7 @@ function ProposeCounterForm() {
 
       {counter && (
         <section className="section">
-          <h2 className="section-title"><span className="num">2.</span> {matchupTitle(counter.name, target.name)}</h2>
+          <h2 className="section-title"><span className="num">2.</span> 상대법</h2>
           {from && counter.id === from.counter_champion && (
             <p className="notice" role="status">거절된 내 제안의 글과 빌드를 채워 뒀어요. 거절 사유를 보고 고쳐서 보내 주세요.</p>
           )}

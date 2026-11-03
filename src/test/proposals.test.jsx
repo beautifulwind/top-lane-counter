@@ -16,7 +16,7 @@ function Where() { const l = useLocation(); return <output data-testid="where">{
 const start = (path) => render(<MemoryRouter initialEntries={[path]}><AppRoutes /><Where /></MemoryRouter>);
 const where = () => screen.getByTestId('where').textContent;
 const type = (label, value) => fireEvent.change(screen.getByLabelText(label), { target: { value } });
-const send = () => fireEvent.click(screen.getByRole('button', { name: '제안 보내기' }));
+const send = () => fireEvent.click(screen.getByRole('button', { name: '제안' }));
 
 test('로그인 안 했으면 [새 카운터 제안]은 로그인 화면으로 보낸다', async () => {
   start('/champion/Darius');
@@ -35,7 +35,8 @@ test('새 카운터 제안: 이미 있는 카운터는 못 고르고, 필수 칸
 
   fireEvent.change(screen.getByLabelText('카운터 챔피언 검색'), { target: { value: 'ㄱㄹ' } });
   fireEvent.click(screen.getByRole('button', { name: '가렌' }));
-  expect(screen.getByRole('heading', { name: /가렌으로 다리우스 잡는 법/ })).toBeDefined();
+  expect(screen.getByRole('heading', { name: '2. 상대법' })).toBeDefined(); // 022: 제목(OO로 OO 잡는 법) 대신 "상대법"
+  expect(screen.queryByRole('heading', { name: /가렌으로 다리우스 잡는 법/ })).toBeNull();
 
   send();
   expect(screen.getByRole('alert').textContent).toBe('한 줄 요약을 적어 주세요.');
@@ -89,7 +90,8 @@ test('등록 안 된 매치업 화면의 [새 카운터 제안]은 그 챔피언
   fakeLogin('u-old');
   start('/champion/Darius/counter/Teemo');
   fireEvent.click(await screen.findByRole('link', { name: '+ 카운터 등록' }));
-  expect(await screen.findByRole('heading', { name: /티모로 다리우스 잡는 법/ })).toBeDefined();
+  expect(await screen.findByRole('heading', { name: '2. 상대법' })).toBeDefined();
+  expect(screen.getByText('티모', { selector: 'strong' })).toBeDefined();
   expect(screen.getByRole('button', { name: '다시 고르기' })).toBeDefined();
 });
 
@@ -172,6 +174,6 @@ test('/me: 거절된 제안은 거절 사유를, 승인된 제안은 문서 링�
   expect(within(rejected).getByRole('link', { name: '문서 보기' }).getAttribute('href')).toBe('/champion/Darius/counter/Quinn');
   const pending = screen.getByText('가렌으로 다리우스 잡는 법').closest('li');
   expect(within(pending).queryByRole('link', { name: '문서 보기' })).toBeNull(); // 아직 없는 문서라 문서 링크 없음
-  expect(within(pending).getByRole('link', { name: '고치기' }).getAttribute('href')).toBe('/me/proposals/2/edit');
+  expect(within(pending).getByRole('link', { name: '수정' }).getAttribute('href')).toBe('/me/proposals/2/edit');
   expect(within(pending).getByText('대기 중')).toBeDefined();
 });

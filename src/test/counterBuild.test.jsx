@@ -42,7 +42,7 @@ test('다시 제출: 첫 빌드가 채워져 있고, 빌드만 고쳐도 보낼 
   start('/me/resubmit/7');
   expect(await screen.findByRole('heading', { name: /고쳐서 다시 보내기/ })).toBeDefined();
   const core = screen.getByRole('list', { name: '고른 핵심 템트리' });
-  expect(within(core).getAllByRole('listitem').map((li) => li.textContent.replace(/←|빼기/g, ''))).toEqual(['스테락의 도전', '강철판 장화', '선혈포식자']);
+  expect(within(core).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['스테락의 도전', '강철판 장화', '선혈포식자']);
   send();
   expect(screen.getByRole('alert').textContent).toBe('고친 내용이 없어요. 운영자 메모를 보고 글이나 빌드를 고쳐 주세요.');
   fireEvent.click(screen.getByRole('button', { name: '선혈포식자 빼기' }));

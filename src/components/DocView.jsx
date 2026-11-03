@@ -2,7 +2,7 @@ import BuildCard from './BuildCard';
 import { REQUIRED_LEVELS } from '../lib/docContent';
 
 /**
- * 매치업 문서 모양 (읽기 전용): 한 줄 요약 + 1. 레벨별 딜교법 + 2. 특이사항 + 3. 빌드.
+ * 매치업 문서 모양 (읽기 전용, 022 순서): 한 줄 요약 + 빌드 + 레벨별 딜교법 + 특이사항 (번호는 있는 섹션만 차례로).
  * 운영자 미리보기, 내 제안·빌드 상세보기가 같이 쓴다 (매치업 문서는 섹션마다 버튼이 있어 LevelList만 쓴다).
  * doc: { summary, level_notes, lane_cautions } | null (글 섹션을 뺀다)
  * builds: BuildCard에 넘길 빌드들 (author 포함) | null (빌드 섹션을 뺀다), game: Data Dragon { items, runes, spells, latest }
@@ -11,19 +11,7 @@ export default function DocView({ doc, builds = null, game, emptyBuilds = '등�
   let n = 0;
   return (
     <>
-      {doc && (
-        <>
-          {doc.summary && <p className="doc-sub">{doc.summary}</p>}
-          <section className="section">
-            <h2 className="section-title"><span className="num">{++n}.</span> 레벨별 딜교법</h2>
-            <LevelList doc={doc} />
-          </section>
-          <section className="section">
-            <h2 className="section-title"><span className="num">{++n}.</span> 특이사항</h2>
-            {doc.lane_cautions ? <div className="prose">{doc.lane_cautions}</div> : <p className="empty">아직 작성된 내용이 없어요.</p>}
-          </section>
-        </>
-      )}
+      {doc?.summary && <p className="doc-summary">{doc.summary}</p>}
       {builds && (
         <section className="section">
           <h2 className="section-title"><span className="num">{++n}.</span> 빌드</h2>
@@ -33,6 +21,18 @@ export default function DocView({ doc, builds = null, game, emptyBuilds = '등�
             builds.map((b, i) => <BuildCard key={b.id ?? i} build={b} {...game} />)
           )}
         </section>
+      )}
+      {doc && (
+        <>
+          <section className="section">
+            <h2 className="section-title"><span className="num">{++n}.</span> 레벨별 딜교법</h2>
+            <LevelList doc={doc} />
+          </section>
+          <section className="section">
+            <h2 className="section-title"><span className="num">{++n}.</span> 특이사항</h2>
+            {doc.lane_cautions ? <div className="prose">{doc.lane_cautions}</div> : <p className="empty">아직 작성된 내용이 없어요.</p>}
+          </section>
+        </>
       )}
     </>
   );

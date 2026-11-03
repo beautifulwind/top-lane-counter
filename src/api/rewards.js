@@ -17,23 +17,17 @@ async function run(query, fallback) {
 }
 
 /**
- * 내 경험치·칭호: { xp, level, main_title (지금 값), events: 경험치 내역(최근 순), titles: 내 칭호들, levels: 레벨표, rules: { key: value } }
- * RLS: 경험치 내역은 내 것만 보인다.
+ * 내 경험치·칭호: { xp, level, main_title (지금 값), titles: 내 칭호들, levels: 레벨표, rules: { key: value } }
+ * (022: 경험치 내역은 화면에서 뺐다 — xp_events는 DB에 그대로 쌓인다)
  */
 export async function getMyRewards(userId) {
-  const [me, events, titles, levels, rules] = await Promise.all([
+  const [me, titles, levels, rules] = await Promise.all([
     run(db().from('profiles').select('xp, level, main_title').eq('id', userId).maybeSingle(), '경험치를 불러오지 못했어요.'),
-    run(
-      db().from('xp_events')
-        .select('id, type, amount, change, reason, target_champion, counter_champion, created_at')
-        .eq('user_id', userId).order('created_at', { ascending: false }).order('id', { ascending: false }),
-      '경험치 내역을 불러오지 못했어요.',
-    ),
     run(db().from('user_titles').select('title_key, earned_at').eq('user_id', userId), '칭호를 불러오지 못했어요.'),
     run(db().from('xp_levels').select('level, min_xp').order('level', { ascending: true }), '레벨표를 불러오지 못했어요.'),
     run(db().from('xp_rules').select('key, value'), '경험치 설정을 불러오지 못했어요.'),
   ]);
-  return { ...me, events, titles, levels, rules: Object.fromEntries(rules.map((r) => [r.key, r.value])) };
+  return { ...me, titles, levels, rules: Object.fromEntries(rules.map((r) => [r.key, r.value])) };
 }
 
 /** 대표 칭호 고르기 (null = 없음). DB가 "내가 가진 칭호"인지 확인한다. 바뀐 프로필을 돌려준다 */

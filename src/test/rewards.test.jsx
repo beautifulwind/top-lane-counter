@@ -1,4 +1,4 @@
-// 6단계: /me 레벨·경험치·칭호, 대표 칭호 고르기, 경험치 내역, 레벨·칭호 알림, 운영자 비주류 픽 목록
+// 6단계: /me Level·칭호, 대표 칭호 고르기 (022: 경험치 내역 없음, 가진 칭호만), 레벨·칭호 알림, 운영자 비주류 픽 목록
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -32,41 +32,48 @@ test('레벨 계산: 표 안·Lv.10 이후', () => {
   expect(levelProgress(6000, levels, 1000)).toMatchObject({ level: 11, from: 5500, to: 6500, toNext: 500 });
 });
 
-test('/me: 레벨·경험치 막대·다음 레벨까지, 경험치 내역 (회수는 이유와 −)', async () => {
-  TABLES.xp_events.push(
-    ev(1, 'new_counter', 100), ev(2, 'new_counter', -100, { reason: '카운터 숨김 (승인 취소)' }), ev(3, 'build', 30),
-  );
+test('/me Level: 레벨·경험치 막대·다음 레벨까지 (022: 경험치 내역 칸 없음)', async () => {
+  TABLES.xp_events.push(ev(1, 'new_counter', 100), ev(3, 'build', 30));
   asUser();
   start('/me');
+  expect(await screen.findByRole('heading', { name: 'Level' })).toBeDefined();
+  expect(screen.queryByRole('heading', { name: '레벨·경험치' })).toBeNull();
   expect((await screen.findByText(/· 경험치 420/)).textContent).toBe('Lv.3 · 경험치 420');
   const bar = screen.getByRole('progressbar', { name: 'Lv.4까지' });
   expect([bar.getAttribute('aria-valuemin'), bar.getAttribute('aria-valuenow'), bar.getAttribute('aria-valuemax')]).toEqual(['300', '420', '600']);
   expect(screen.getByText(/다음 레벨\(Lv.4\)까지 180 남았어요/)).toBeDefined();
-  const rows = within(screen.getByRole('list', { name: '경험치 내역' })).getAllByRole('listitem');
-  expect(rows.map((r) => r.textContent.replace(/\d{4}-\d\d-\d\d \d\d:\d\d/, ''))).toEqual([
-    '빌드 승인 · 퀸으로 다리우스+30',
-    '새 카운터 승인 · 퀸으로 다리우스 (카운터 숨김 (승인 취소))−100',
-    '새 카운터 승인 · 퀸으로 다리우스+100',
-  ]);
+  expect(screen.queryByRole('list', { name: '경험치 내역' })).toBeNull();
+  expect(screen.queryByText('경험치 내역')).toBeNull();
 });
 
-test('/me 칭호: 6개 모두 보이고, 가진 칭호만 대표로 고를 수 있다 → 상단 닉네임에 바로 반영', async () => {
-  TABLES.user_titles.push({ user_id: ME, title_key: 'top_addict', earned_at: '2026-11-01T00:00:00Z' });
+test('/me 칭호: 가진 칭호만 배지로 보이고 대표로 고를 수 있다 → 상단 닉네임에 배지로 바로 반영', async () => {
+  TABLES.user_titles.push(
+    { user_id: ME, title_key: 'top_addict', earned_at: '2026-11-01T00:00:00Z' },
+    { user_id: ME, title_key: 'tool_hater', earned_at: '2026-11-02T00:00:00Z' },
+  );
   asUser();
   start('/me');
   const picker = await screen.findByRole('group', { name: '대표 칭호 (닉네임 앞에 보여요)' });
-  const radios = within(picker).getAllByRole('radio');
-  expect(radios).toHaveLength(7); // 없음 + 6개
-  expect(within(picker).getByText('탑신병자').closest('label').querySelector('input').disabled).toBe(false);
-  expect(within(picker).getByText('장군').closest('label').querySelector('input').disabled).toBe(true);
-  expect(within(picker).getByText(/공개 중인 내 빌드들의 따봉 합계 100 \(아직 없음\)/)).toBeDefined();
+  expect(within(picker).getAllByRole('radio').map((r) => r.getAttribute('aria-label') ?? '없음')).toEqual(['없음', '탑신병자', '도구혐오자']);
+  expect(within(picker).queryByText('장군')).toBeNull();
+  expect(within(picker).queryByText(/아직 없음/)).toBeNull();
+  expect(within(picker).getByText('도구혐오자').className).toBe('title-badge tool_hater');
   expect(within(picker).getByText(/카운터 관련 승인 10개/)).toBeDefined();
 
-  fireEvent.click(within(picker).getByText('탑신병자'));
-  await vi.waitFor(() => expect(document.querySelector('.me-name').textContent).toContain('Lv.3 탑신병자 · 기존유저'));
+  fireEvent.click(within(picker).getByRole('radio', { name: '탑신병자' }));
+  await vi.waitFor(() => expect(document.querySelector('.me-name .title-badge.top_addict')?.textContent).toBe('탑신병자'));
+  expect(document.querySelector('.me-name').textContent).toBe('Lv.3 탑신병자 기존유저');
+  expect(document.querySelector('.me-name .title-badge').getAttribute('title')).toBe("칭호 '탑신병자'");
   expect(TABLES.profiles.find((p) => p.id === ME).main_title).toBe('top_addict');
   fireEvent.click(within(picker).getByText('없음'));
   await vi.waitFor(() => expect(document.querySelector('.me-name').textContent).toContain('Lv.3 기존유저'));
+});
+
+test('/me 칭호: 하나도 없으면 고르기 칸 대신 안내만', async () => {
+  asUser();
+  start('/me');
+  expect(await screen.findByText(/아직 가진 칭호가 없어요/)).toBeDefined();
+  expect(screen.queryByRole('group', { name: '대표 칭호 (닉네임 앞에 보여요)' })).toBeNull();
 });
 
 test('/me: 상단 닉네임도 새로 읽은 레벨·대표 칭호로 맞춘다 (로그인 뒤에 바뀐 값)', async () => {
@@ -81,12 +88,12 @@ test('/me: 상단 닉네임도 새로 읽은 레벨·대표 칭호로 맞춘다 
 test('/me: 레벨업·칭호 알림은 레벨 칸 위에 "새 알림"으로 한 번 보이고 읽음 처리', async () => {
   TABLES.notifications.push(
     { id: 1, user_id: ME, kind: 'level_up', message: '레벨이 올랐어요: Lv.3', created_at: '2026-11-02T00:00:00Z', read_at: null },
-    { id: 2, user_id: ME, kind: 'title_earned', message: '칭호를 얻었어요: 탑신병자 — [마이페이지]에서 대표 칭호로 고를 수 있어요.', created_at: '2026-11-02T00:00:00Z', read_at: null },
+    { id: 2, user_id: ME, kind: 'title_earned', message: "칭호 '탑신병자'를 얻었어요. [마이페이지]에서 대표 칭호로 고를 수 있어요.", created_at: '2026-11-02T00:00:00Z', read_at: null },
   );
   asUser();
   start('/me');
   expect(await screen.findByText('레벨이 올랐어요: Lv.3')).toBeDefined();
-  expect(screen.getByText(/칭호를 얻었어요: 탑신병자/)).toBeDefined();
+  expect(screen.getByText(/칭호 '탑신병자'를 얻었어요/)).toBeDefined();
   await vi.waitFor(() => expect(TABLES.notifications.every((n) => n.read_at)).toBe(true));
 });
 

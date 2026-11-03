@@ -6,7 +6,7 @@ import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from './Status';
 
 /**
- * 운영자: 비주류 픽 목록 (칭호 "비주류"의 기준, SPEC 6-3).
+ * 운영자: 비주류 픽 목록 (칭호 '비주류'의 기준, SPEC 6-3).
  * 비주류 픽 매치업 = 이기는 쪽 챔피언이 이 목록에 있는 매치업. 기여가 승인될 때 목록에 있었는지를 기록해 고정하므로,
  * 목록을 바꿔도 이미 승인된 기여는 그대로이고 새로 승인되는 것부터 새 목록이 적용된다.
  */
@@ -45,7 +45,7 @@ export default function OffmetaPicks() {
   return (
     <>
       <p className="hint">
-        이기는 쪽 챔피언이 이 목록에 있는 매치업의 기여가 칭호 "비주류"에 들어가요. 승인할 때 목록에 있었는지를 기록하므로,
+        이기는 쪽 챔피언이 이 목록에 있는 매치업의 기여가 칭호 '비주류'에 들어가요. 승인할 때 목록에 있었는지를 기록하므로,
         목록을 바꿔도 이미 승인된 기여는 그대로예요 (새로 승인되는 것부터 적용).
       </p>
       {message && <p className="notice" role="status">{message}</p>}
