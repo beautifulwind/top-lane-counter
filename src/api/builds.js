@@ -1,11 +1,12 @@
 // 빌드 접근 계층. 화면 컴포넌트는 이 모듈만 호출한다.
 // 권한은 DB가 막는다: 등록은 RLS + 검사 트리거(승인 대기로만), 투표는 vote_build(), 승인·거절·숨기기·다시 공개는 운영자 전용 함수.
 import { db } from './supabase';
-import { compareBuilds, toProposalBuild, toRow } from '../lib/buildContent';
+import { getItems, getLatestVersion, getRunes, getSummonerSpells } from './ddragon';
+import { START_GOLD_MAX, compareBuilds, toProposalBuild, toRow } from '../lib/buildContent';
 
 const PERSON = 'nickname, level, main_title';
 const BUILD_FIELDS =
-  'id, counter_id, author_id, proposal_id, runes, summoner_spells, starting_items, core_items, skill_order, early_skills, patch, ' +
+  'id, counter_id, author_id, proposal_id, runes, summoner_spells, starting_items, core_items, max_skill, patch, ' +
   'up_count, down_count, status, created_at, version, edited_at';
 const AUTHOR = `author:profiles!builds_author_id_fkey(${PERSON})`;
 const COUNTER = 'counter:counters!builds_counter_id_fkey(id, target_champion, counter_champion, status)';
@@ -162,3 +163,34 @@ export const resubmitBuild = (id, build, patch) =>
   rpc('resubmit_build', { p_id: id, p_build: toProposalBuild(build, patch) }, '다시 보내지 못했어요.');
 export const hideBuild = (id, reason) => rpc('hide_build', { p_id: id, p_reason: reason }, '숨기지 못했어요.');
 export const restoreBuild = (id, note) => rpc('restore_build', { p_id: id, p_note: note }, '다시 공개하지 못했어요.');
+
+// ---------------- 시작 아이템 합계 상한·아이템 가격표 (018) ----------------
+
+/** 시작 아이템 합계 상한 (xp_rules.starting_gold_max, 없으면 500) */
+export async function getStartGoldMax() {
+  const row = await run(
+    db().from('xp_rules').select('value').eq('key', 'starting_gold_max').maybeSingle(),
+    '빌드 규칙을 불러오지 못했어요.',
+  );
+  return row?.value ?? START_GOLD_MAX;
+}
+
+/** 빌드 입력·검토 화면이 쓰는 게임 데이터 + 시작템 합계 상한 */
+export async function getBuildGame() {
+  const [items, runes, spells, latest, startGoldMax] = await Promise.all([
+    getItems(), getRunes(), getSummonerSpells(), getLatestVersion(), getStartGoldMax(),
+  ]);
+  return { items, runes, spells, latest, startGoldMax };
+}
+
+/** DB 아이템 가격표 상태: 기준 패치와 아이템 수 (비어 있으면 patch = null) */
+export async function getItemPriceInfo() {
+  const rows = await run(db().from('item_prices').select('patch').limit(1), '아이템 가격표를 불러오지 못했어요.');
+  return { patch: rows?.[0]?.patch ?? null };
+}
+
+/** 운영자: DB 가격표를 지금 패치의 상점 아이템 가격으로 통째로 바꾼다. 바뀐 아이템 수를 돌려준다 */
+export async function updateItemPrices(items, patch) {
+  const prices = Object.fromEntries(Object.values(items).filter((it) => it.shop).map((it) => [it.id, it.gold]));
+  return rpc('set_item_prices', { p_patch: patch, p_prices: prices }, '아이템 가격표를 갱신하지 못했어요.');
+}

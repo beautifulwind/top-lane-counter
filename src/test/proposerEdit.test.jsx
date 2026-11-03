@@ -109,10 +109,10 @@ test('[고치기] 새 카운터 제안: 빌드만 고쳐도 저장, 빌드는 �
   asProposer();
   start('/me/proposals/2/edit');
   await screen.findByRole('heading', { name: '가렌으로 다리우스 잡는 법 — 고치기' });
-  pick('선마 순서', '선마 Q › W › E');
+  pick('선마 (첫 번째로 마스터할 스킬)', '선마 W');
   click('고친 내용 저장');
   await screen.findByText(/고친 내용을 저장했어요/);
-  expect(rpcCalls('edit_my_proposal')[0].p_build).toEqual({ ...FAKE_PROPOSAL_BUILD, skill_order: ['Q', 'W', 'E'], patch: '99.1.1' });
+  expect(rpcCalls('edit_my_proposal')[0].p_build).toEqual({ ...FAKE_PROPOSAL_BUILD, max_skill: 'W', patch: '99.1.1' });
 });
 
 test('승인된 제안은 고치기 화면에서 안내만 (문서 수정 제안으로)', async () => {
@@ -134,11 +134,11 @@ test('빌드: /me → 자세히 → [고치기] → edit_my_build (지금 패치
   expect(screen.getByRole('heading', { name: '1. 빌드' })).toBeDefined();
   fireEvent.click(screen.getByRole('link', { name: '고치기' }));
   expect(await screen.findByRole('heading', { name: '퀸으로 다리우스 잡는 법 — 빌드 고치기' })).toBeDefined();
-  pick('선마 순서', '선마 Q › W › E');
+  pick('선마 (첫 번째로 마스터할 스킬)', '선마 W');
   click('고친 내용 저장');
   expect(await screen.findByText('고친 빌드를 저장했어요. 승인 대기 순서는 그대로예요.')).toBeDefined();
   expect(where()).toBe('/me/builds/111');
-  expect(rpcCalls('edit_my_build')[0]).toMatchObject({ p_id: 111, p_build: { skill_order: ['Q', 'W', 'E'], patch: '99.1.1' } });
+  expect(rpcCalls('edit_my_build')[0]).toMatchObject({ p_id: 111, p_build: { max_skill: 'W', patch: '99.1.1' } });
 
   cleanup();
   start('/me/builds/111/resubmit');

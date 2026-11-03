@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../../api/ddragon';
+import { getChampionMap } from '../../api/ddragon';
 import {
-  approveBuild, cancelBuildRevision, getBuildForReview, hideBuild, rejectBuild, requestBuildRevision, restoreBuild,
+  approveBuild, cancelBuildRevision, getBuildForReview, getBuildGame, hideBuild, rejectBuild, requestBuildRevision, restoreBuild,
 } from '../../api/builds';
 import { buildReviewFlags, patchMinor } from '../../lib/buildContent';
 import { BUILD_STATUS_LABEL, fmtDateTime } from '../../lib/format';
@@ -40,10 +40,10 @@ function Review() {
   const [search] = useSearchParams();
   const [open, setOpen] = useState(search.get('approve') ? 'approve' : null);
   const { data, error, loading, retry } = useAsync(async () => {
-    const [champs, review, items, runes, spells, latest] = await Promise.all([
-      getChampionMap(), getBuildForReview(Number(id)), getItems(), getRunes(), getSummonerSpells(), getLatestVersion(),
+    const [champs, review, game] = await Promise.all([
+      getChampionMap(), getBuildForReview(Number(id)), getBuildGame(),
     ]);
-    return { champs, review, game: { items, runes, spells, latest } };
+    return { champs, review, game };
   }, [id]);
   const { guard, notice } = useAuthorChanged(retry, '작성자');
 
@@ -64,6 +64,7 @@ function Review() {
     flags.duplicate && { bad: true, text: '똑같은 빌드가 이미 공개돼 있어요. 그대로는 승인할 수 없어요 (고쳐서 승인하거나 거절해 주세요).' },
     flags.unknown && { bad: false, text: `${flags.unknown} (아이콘이 "?"로 보여요)` },
     flags.layout && { bad: false, text: flags.layout },
+    flags.gold && b.status !== 'approved' && { bad: true, text: `${flags.gold} 그대로는 승인할 수 없어요 (고쳐서 승인하거나 재검토를 요청해 주세요).` },
     flags.outdated && { bad: false, text: `지금 패치(${patchMinor(data.game.latest)})와 다른 패치(${patchMinor(b.patch)})로 등록됐어요.` },
   ].filter(Boolean);
   // 똑같은 빌드가 공개 중이어도 고쳐서 승인할 수는 있다 (그대로 승인하면 DB가 거부)

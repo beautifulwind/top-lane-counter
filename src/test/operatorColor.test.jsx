@@ -26,7 +26,7 @@ test('일반 사용자: 매치업·챔피언 화면에 운영자 색이 없다',
   expect(opMarks()).toHaveLength(0);
   cleanup();
   start('/champion/Darius');
-  await screen.findByRole('link', { name: '+ 새 카운터 제안' });
+  await screen.findByRole('link', { name: '+ 카운터 등록' });
   expect(opMarks()).toHaveLength(0);
 });
 
@@ -46,7 +46,7 @@ test('운영자: 챔피언 화면의 [숨기기] [순서 변경]은 운영자 �
   start('/champion/Darius');
   expect(isOp(await screen.findByRole('link', { name: '순서 변경' }))).toBe(true);
   expect(isOp(screen.getByRole('button', { name: '퀸 숨기기' }))).toBe(true);
-  expect(isOp(screen.getByRole('link', { name: '+ 새 카운터 제안' }))).toBe(false);
+  expect(isOp(screen.getByRole('link', { name: '+ 카운터 등록' }))).toBe(false);
 });
 
 test('운영자 페이지: 처리 버튼·메모 확정은 운영자 색, 메모 [취소]는 보통 색', async () => {

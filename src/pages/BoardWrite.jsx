@@ -41,7 +41,7 @@ function WriteOrEdit() {
       <article>
         <h1 className="doc-title">글 고치기</h1>
         <p className="empty">{data.closed ?? '고칠 수 있는 내 글이 아니에요.'}</p>
-        <p><Link to={data.closed ? `/board/${id}` : '/board'}>← {data.closed ? '글로 돌아가기' : '자유게시판'}</Link></p>
+        <p><Link to={data.closed ? `/board/${id}` : '/board'}>← {data.closed ? '글로 돌아가기' : '노가리방'}</Link></p>
       </article>
     );
   }
@@ -79,7 +79,7 @@ function PostForm({ post = null, deadline = null }) {
 
   return (
     <article>
-      <nav className="crumbs"><Link to={post ? `/board/${post.id}` : '/board'}>← {post ? '글로 돌아가기' : '자유게시판'}</Link></nav>
+      <nav className="crumbs"><Link to={post ? `/board/${post.id}` : '/board'}>← {post ? '글로 돌아가기' : '노가리방'}</Link></nav>
       <h1 className="doc-title">{post ? '글 고치기' : '글쓰기'}</h1>
       <p className="lead">승인 없이 바로 올라가요. 욕설·도배·개인정보는 운영자가 숨길 수 있어요.</p>
       {deadline && <p className="notice edit-deadline">{fmtTime(deadline)}까지 저장할 수 있어요. 그 뒤에는 지우기만 할 수 있어요.</p>}

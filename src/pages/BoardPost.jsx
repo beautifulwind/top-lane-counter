@@ -47,7 +47,7 @@ export default function BoardPost() {
       <article>
         <h1 className="doc-title">글을 찾지 못했어요</h1>
         <p className="empty">지워졌거나 운영자가 숨긴 글이에요.</p>
-        <p><Link to="/board">← 자유게시판</Link></p>
+        <p><Link to="/board">← 노가리방</Link></p>
       </article>
     );
   }
@@ -56,7 +56,7 @@ export default function BoardPost() {
   const deleted = post.deleted_at != null;
   return (
     <article className="board-post">
-      <nav className="crumbs"><Link to="/board">← 자유게시판</Link></nav>
+      <nav className="crumbs"><Link to="/board">← 노가리방</Link></nav>
       {done && <p className="notice" role="status">{done}</p>}
       {post.status === 'hidden' && <HiddenBand row={post} what="글" onRestore={(note) => restorePost(post.id, note)} onDone={finished} />}
 

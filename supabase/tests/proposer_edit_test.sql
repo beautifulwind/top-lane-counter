@@ -17,11 +17,10 @@ insert into ids select 'quinn', id from counters where counter_champion = 'Quinn
 \set doc2 '{"summary":"가렌 요약 (제안자가 고침)","level_notes":{"1":"a","2":"b","3":"c","6":"d"},"lane_cautions":"새 팁"}'
 
 create function pg_temp.add_build(core text[]) returns void language sql as $$
-  insert into public.builds (counter_id, author_id, runes, summoner_spells, starting_items, core_items, skill_order, early_skills, patch)
+  insert into public.builds (counter_id, author_id, runes, summoner_spells, starting_items, core_items, max_skill, patch)
   select (select v from ids where k = 'quinn'), auth.uid(), b -> 'runes',
          array(select jsonb_array_elements_text(b -> 'summoner_spells')), array(select jsonb_array_elements_text(b -> 'starting_items')),
-         array(select jsonb_array_elements_text(b -> 'core_items')), b -> 'skill_order',
-         array(select jsonb_array_elements_text(b -> 'early_skills')), b ->> 'patch'
+         array(select jsonb_array_elements_text(b -> 'core_items')), b ->> 'max_skill', b ->> 'patch'
   from (select t.build(core) as b) x;
 $$;
 grant execute on function pg_temp.add_build(text[]) to authenticated;

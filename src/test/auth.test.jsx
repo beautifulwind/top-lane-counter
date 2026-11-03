@@ -46,7 +46,7 @@ test('카카오 첫 로그인(이메일 없음)도 쓰기 화면에 가면 닉�
 
   fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '카카오탑' } });
   fireEvent.click(screen.getByRole('button', { name: '시작하기' }));
-  expect(await screen.findByRole('heading', { name: '다리우스를 이기는 챔피언 제안' })).toBeDefined();
+  expect(await screen.findByRole('heading', { name: '다리우스 카운터 선택' })).toBeDefined();
   expect(where()).toBe('/champion/Darius/propose');
   expect(document.querySelector('.me').textContent).toBe('Lv.1 카카오탑');
 });
@@ -54,7 +54,7 @@ test('카카오 첫 로그인(이메일 없음)도 쓰기 화면에 가면 닉�
 test('닉네임 없음: 읽기는 그대로 + 위에 [닉네임 정하기] 띠, 정하면 원래 페이지로 돌아간다', async () => {
   fakeLogin('u-new');
   start('/champion/Darius');
-  expect(await screen.findByText(/다리우스를 이기는 챔피언/)).toBeDefined();
+  expect(await screen.findByText(/다리우스 카운터/)).toBeDefined();
   expect(where()).toBe('/champion/Darius');
   fireEvent.click(screen.getByRole('link', { name: '닉네임 정하기' }));
   expect(await screen.findByRole('heading', { name: '닉네임 정하기' })).toBeDefined();
@@ -62,7 +62,7 @@ test('닉네임 없음: 읽기는 그대로 + 위에 [닉네임 정하기] 띠, 
 
   fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '  탑고수 ' } });
   fireEvent.click(screen.getByRole('button', { name: '시작하기' }));
-  expect(await screen.findByText(/다리우스를 이기는 챔피언/)).toBeDefined();
+  expect(await screen.findByText(/다리우스 카운터/)).toBeDefined();
   expect(where()).toBe('/champion/Darius');
   expect(document.querySelector('.me').textContent).toBe('Lv.1 탑고수'); // 칭호 없으면 칭호 자리 없음
 });

@@ -23,7 +23,7 @@ test('게임 데이터를 못 불러오면 오류 문구가 보이고, 다시 �
 
   fetchMock.mockImplementation(fakeFetch());
   fireEvent.click(screen.getByRole('button', { name: '다시 시도' }));
-  expect(await screen.findByText(/다리우스를 이기는 챔피언/)).toBeDefined();
+  expect(await screen.findByText(/다리우스 카운터/)).toBeDefined();
 });
 
 test('응답이 없으면 로딩 문구를 보여주다가 시간 초과 오류로 바뀐다', async () => {

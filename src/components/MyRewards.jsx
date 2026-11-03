@@ -7,7 +7,7 @@ import { fmtDateTime } from '../lib/format';
 import { matchupShort } from '../lib/josa';
 
 export const REWARD_KINDS = ['level_up', 'level_down', 'title_earned', 'title_revoked'];
-const KIND_LABEL = { new_counter: '새 카운터 승인', doc_edit: '문서 수정 승인', build: '빌드 승인', vote: '따봉 받음', post: '게시판 글', comment: '게시판 댓글', doc_comment: '문서 댓글' };
+const KIND_LABEL = { new_counter: '새 카운터 승인', doc_edit: '문서 수정 승인', build: '빌드 승인', vote: '따봉 받음', post: '노가리방 글', comment: '노가리방 댓글', doc_comment: '문서 댓글' };
 const PAGE = 30;
 
 /**
@@ -51,7 +51,7 @@ export default function MyRewards({ rewards, unread, champs }) {
 
       <h3>경험치 내역</h3>
       {rewards.events.length === 0 ? (
-        <p className="empty">아직 받은 경험치가 없어요. 제안·빌드가 승인되거나, 내 빌드가 따봉을 받거나, 게시판 글·댓글·문서 댓글을 쓰면 경험치를 받아요.</p>
+        <p className="empty">아직 받은 경험치가 없어요. 제안·빌드가 승인되거나, 내 빌드가 따봉을 받거나, 노가리방 글·댓글·문서 댓글을 쓰면 경험치를 받아요.</p>
       ) : (
         <>
           <ul className="xp-list" aria-label="경험치 내역">

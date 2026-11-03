@@ -28,8 +28,8 @@ d as (
   returning counter_id
 )
 insert into public.builds
-  (counter_id, author_id, runes, summoner_spells, starting_items, core_items, skill_order, early_skills, patch, status)
-select c.id, null, b.runes, b.spells, b.starting, b.core, b.skills, array(select jsonb_array_elements_text(b.skills)), b.patch, 'approved'
+  (counter_id, author_id, runes, summoner_spells, starting_items, core_items, max_skill, patch, status)
+select c.id, null, b.runes, b.spells, b.starting, b.core, b.skills ->> 0, b.patch, 'approved'
 from c, (values
   ( '{"primaryPath":8000,"keystone":8005,"primary":[9111,9104,8014],"secondaryPath":8100,"secondary":[8143,8106],"shards":[5005,5008,5011]}'::jsonb,
     array['SummonerFlash','SummonerTeleport'], array['1055','2003'], array['6672','3006','3031','3036'],
@@ -59,7 +59,7 @@ returns jsonb language sql immutable as $$
   select jsonb_build_object(
     'runes', '{"primaryPath":8000,"keystone":8010,"primary":[9111,9104,8299],"secondaryPath":8400,"secondary":[8444,8242],"shards":[5005,5008,5011]}'::jsonb,
     'summoner_spells', '["SummonerFlash","SummonerTeleport"]'::jsonb, 'starting_items', '["1055","2003"]'::jsonb,
-    'core_items', to_jsonb(core), 'skill_order', '["Q","E","W"]'::jsonb, 'early_skills', '["Q","E","W"]'::jsonb, 'patch', patch);
+    'core_items', to_jsonb(core), 'max_skill', 'Q', 'patch', patch);
 $$;
 grant execute on function t.build(text[], text) to anon, authenticated;
 

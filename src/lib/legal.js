@@ -10,3 +10,5 @@ export const LEGAL = {
 };
 
 export const SITE_NAME = '탑 카운터 위키';
+/** 상단 바에 사이트 이름과 같이 보이는 부제 */
+export const SITE_TAGLINE = '탑은 라인전이 전부';

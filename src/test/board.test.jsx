@@ -23,9 +23,9 @@ const OTHER = { nickname: '남의글', level: 2, main_title: null };
 const asOp = () => fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
 const rpcs = (name) => fakeState.rpcCalls.filter((c) => c.name === name).map((c) => c.args);
 
-test('상단에 게시판 링크', async () => {
+test('상단에 노가리방 링크', async () => {
   start('/');
-  expect(screen.getByRole('link', { name: '게시판' }).getAttribute('href')).toBe('/board');
+  expect(screen.getByRole('link', { name: '노가리방' }).getAttribute('href')).toBe('/board');
 });
 
 test('비로그인 목록: 최신순, 댓글 수·추천, 삭제된 글, 숨긴 글은 안 보임, [로그인하고 글쓰기]', async () => {
@@ -337,14 +337,14 @@ test('운영자 /admin: 자유게시판 칸 — 처리할 신고 수, 숨긴 글
   expect(rpcs('restore_post')).toEqual([{ p_id: 1, p_note: '괜찮음' }]);
 });
 
-test('/me: 게시판 알림 (새 댓글은 [글 보기], 숨김은 링크 없음)', async () => {
+test('/me: 노가리방 알림 (새 댓글은 [글 보기], 숨김은 링크 없음)', async () => {
   TABLES.notifications.push(
     { id: 1, user_id: 'u-old', kind: 'post_comment', post_id: 5, message: '내 글 「첫 글」에 새 댓글 3개가 달렸어요.', created_at: '2026-11-02T00:00:00Z', read_at: null },
     { id: 2, user_id: 'u-old', kind: 'post_hidden', post_id: 6, message: '내 글 「광고」을 운영자가 숨겼어요. 메모: 광고', created_at: '2026-11-02T00:00:00Z', read_at: null },
   );
   fakeLogin('u-old');
   start('/me');
-  const sec = (await screen.findByRole('heading', { name: '댓글·게시판 알림' })).closest('section');
+  const sec = (await screen.findByRole('heading', { name: '댓글·노가리방 알림' })).closest('section');
   const [comment, hidden] = within(sec).getAllByRole('listitem');
   expect(comment.textContent).toContain('새 댓글 3개');
   expect(within(comment).getByRole('link', { name: '글 보기' }).getAttribute('href')).toBe('/board/5');

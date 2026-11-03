@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../../api/ddragon';
+import { getChampionMap } from '../../api/ddragon';
+import { getBuildGame } from '../../api/builds';
 import {
   approveProposal, approvedWithEdits, cancelProposalRevision, getProposalForReview, isHiddenCounterFlow, rejectProposal,
   requestProposalRevision,
@@ -32,10 +33,10 @@ function Review() {
   const navigate = useNavigate();
   const [search] = useSearchParams();
   const { data, error, loading, retry } = useAsync(async () => {
-    const [champs, review, items, runes, spells, latest] = await Promise.all([
-      getChampionMap(), getProposalForReview(Number(id)), getItems(), getRunes(), getSummonerSpells(), getLatestVersion(),
+    const [champs, review, game] = await Promise.all([
+      getChampionMap(), getProposalForReview(Number(id)), getBuildGame(),
     ]);
-    return { champs, review, game: { items, runes, spells, latest } };
+    return { champs, review, game };
   }, [id]);
   // 'approve'(고쳐서 승인 편집기) | 'revision' | 'reject' | 'cancel' | null — 목록 줄의 [내용 고치기]로 오면 [승인]이 열려 있다
   const [open, setOpen] = useState(search.get('approve') ? 'approve' : null);

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../api/ddragon';
-import { editMyBuild, getMyBuild, resubmitBuild } from '../api/builds';
+import { getChampionMap } from '../api/ddragon';
+import { editMyBuild, getBuildGame, getMyBuild, resubmitBuild } from '../api/builds';
 import { useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
 import { fmtDateTime } from '../lib/format';
@@ -28,10 +28,10 @@ function ResubmitBuildForm() {
   const { id } = useParams();
   const auth = useAuth();
   const { data, error, loading, retry } = useAsync(async () => {
-    const [champs, build, items, runes, spells, latest] = await Promise.all([
-      getChampionMap(), getMyBuild(auth.user.id, Number(id)), getItems(), getRunes(), getSummonerSpells(), getLatestVersion(),
+    const [champs, build, game] = await Promise.all([
+      getChampionMap(), getMyBuild(auth.user.id, Number(id)), getBuildGame(),
     ]);
-    return { champs, build, game: { items, runes, spells, latest } };
+    return { champs, build, game };
   }, [auth.user.id, id]);
 
   if (loading) return <Loading />;

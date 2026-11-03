@@ -17,11 +17,10 @@ select id as quinn from counters where counter_champion = 'Quinn' \gset
 \set fixed '{"summary":"가렌 요약 (운영자 다듬음)","level_notes":{"1":"a","2":"b","3":"c","6":"d 보충"},"lane_cautions":"원래 특이사항"}'
 
 create function pg_temp.add_build(core text[]) returns void language sql as $$
-  insert into public.builds (counter_id, author_id, runes, summoner_spells, starting_items, core_items, skill_order, early_skills, patch)
+  insert into public.builds (counter_id, author_id, runes, summoner_spells, starting_items, core_items, max_skill, patch)
   select (select v from ids where k = 'quinn'), auth.uid(), b -> 'runes',
          array(select jsonb_array_elements_text(b -> 'summoner_spells')), array(select jsonb_array_elements_text(b -> 'starting_items')),
-         array(select jsonb_array_elements_text(b -> 'core_items')), b -> 'skill_order',
-         array(select jsonb_array_elements_text(b -> 'early_skills')), b ->> 'patch'
+         array(select jsonb_array_elements_text(b -> 'core_items')), b ->> 'max_skill', b ->> 'patch'
   from (select t.build(core) as b) x;
 $$;
 grant execute on function pg_temp.add_build(text[]) to authenticated;
@@ -98,7 +97,7 @@ select t.fails('옛 2인자 빌드 승인 함수 없음', format($$select approv
 select t.fails('고친 빌드가 공개 빌드와 똑같으면 불가',
   format($$select approve_build(%s, '메모', %L, t.bv(%1$s))$$, (select v from ids where k = 'b1'),
          (select jsonb_build_object('runes', runes, 'summoner_spells', to_jsonb(summoner_spells), 'starting_items', to_jsonb(starting_items),
-                 'core_items', to_jsonb(core_items), 'skill_order', skill_order, 'early_skills', to_jsonb(early_skills), 'patch', '99.1.1')
+                 'core_items', to_jsonb(core_items), 'max_skill', max_skill, 'patch', '99.1.1')
           from builds where counter_id = :quinn and status = 'approved' order by id limit 1)),
   '똑같은 빌드가 이미 공개');
 select t.ok('실패하면 빌드는 그대로', (select status = 'pending' and original_build is null and core_items = array['3071','3047','3053'] from builds where id = (select v from ids where k = 'b1')));

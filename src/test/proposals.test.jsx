@@ -20,7 +20,7 @@ const send = () => fireEvent.click(screen.getByRole('button', { name: '제안 �
 
 test('로그인 안 했으면 [새 카운터 제안]은 로그인 화면으로 보낸다', async () => {
   start('/champion/Darius');
-  fireEvent.click(await screen.findByRole('link', { name: '+ 새 카운터 제안' }));
+  fireEvent.click(await screen.findByRole('link', { name: '+ 카운터 등록' }));
   expect(await screen.findByRole('heading', { name: '로그인 · 가입' })).toBeDefined();
   expect(where()).toBe('/login');
 });
@@ -28,12 +28,12 @@ test('로그인 안 했으면 [새 카운터 제안]은 로그인 화면으로 �
 test('새 카운터 제안: 이미 있는 카운터는 못 고르고, 필수 칸을 채워야 보내지고, 보내면 /me에 대기 중으로 보인다', async () => {
   fakeLogin('u-old');
   start('/champion/Darius');
-  fireEvent.click(await screen.findByRole('link', { name: '+ 새 카운터 제안' }));
-  expect(await screen.findByRole('heading', { name: '다리우스를 이기는 챔피언 제안' })).toBeDefined();
+  fireEvent.click(await screen.findByRole('link', { name: '+ 카운터 등록' }));
+  expect(await screen.findByRole('heading', { name: '다리우스 카운터 선택' })).toBeDefined();
   expect(screen.getByRole('button', { name: /퀸 \(등록됨\)/ }).disabled).toBe(true);
   expect(screen.queryByRole('button', { name: /다리우스/ })).toBeNull(); // 자기 자신은 목록에 없음
 
-  fireEvent.change(screen.getByLabelText('이기는 챔피언 검색'), { target: { value: 'ㄱㄹ' } });
+  fireEvent.change(screen.getByLabelText('카운터 챔피언 검색'), { target: { value: 'ㄱㄹ' } });
   fireEvent.click(screen.getByRole('button', { name: '가렌' }));
   expect(screen.getByRole('heading', { name: /가렌으로 다리우스 잡는 법/ })).toBeDefined();
 
@@ -56,8 +56,8 @@ test('새 카운터 제안: 이미 있는 카운터는 못 고르고, 필수 칸
   expect(fakeState.inserts).toEqual([]);
   fillBuild();
   send();
-  expect(screen.getByRole('alert').textContent).toBe('빌드를 마저 채워 주세요: 스킬 선마 순서를 골라 주세요.');
-  pick('선마 순서', '선마 Q › E › W');
+  expect(screen.getByRole('alert').textContent).toBe('빌드를 마저 채워 주세요: 선마(첫 번째로 마스터할 스킬)를 골라 주세요.');
+  pick('선마 (첫 번째로 마스터할 스킬)', '선마 Q');
   expect(screen.getByRole('article', { name: '빌드: 기존유저' })).toBeDefined(); // 미리보기
   send();
 
@@ -74,8 +74,8 @@ test('새 카운터 제안: 이미 있는 카운터는 못 고르고, 필수 칸
       },
       build: {
         runes: { primaryPath: 8000, keystone: 8010, primary: [9111, 9104, 8299], secondaryPath: 8400, secondary: [8446, 8444], shards: [5005, 5008, 5011] },
-        summoner_spells: ['SummonerFlash', 'SummonerTeleport'], starting_items: ['1055', '2003', '2003'], core_items: ['3053', '3047', '6631'],
-        skill_order: ['Q', 'E', 'W'], early_skills: ['Q', 'E', 'W'], patch: '99.1.1',
+        summoner_spells: ['SummonerFlash', 'SummonerTeleport'], starting_items: ['1055', '2003'], core_items: ['3053', '3047', '6631'],
+        max_skill: 'Q', patch: '99.1.1',
       },
     },
   }]);
@@ -88,7 +88,7 @@ test('새 카운터 제안: 이미 있는 카운터는 못 고르고, 필수 칸
 test('등록 안 된 매치업 화면의 [새 카운터 제안]은 그 챔피언을 미리 골라 둔다', async () => {
   fakeLogin('u-old');
   start('/champion/Darius/counter/Teemo');
-  fireEvent.click(await screen.findByRole('link', { name: '+ 새 카운터 제안' }));
+  fireEvent.click(await screen.findByRole('link', { name: '+ 카운터 등록' }));
   expect(await screen.findByRole('heading', { name: /티모로 다리우스 잡는 법/ })).toBeDefined();
   expect(screen.getByRole('button', { name: '다시 고르기' })).toBeDefined();
 });
@@ -100,7 +100,7 @@ test('DB가 막으면(예: 그 사이 누가 등록) 그 이유를 보여 주고
   await screen.findByLabelText('한 줄 요약 (필수)');
   type('한 줄 요약 (필수)', '요약');
   for (const lv of [1, 2, 3, 6]) type(`${lv}레벨 (필수)`, 'x');
-  fillBuild({ withSkillOrder: true });
+  fillBuild({ withSkill: true });
   send();
   expect(await screen.findByText('이미 등록된 카운터예요. 문서 수정 제안을 이용해 주세요.')).toBeDefined();
   expect(where()).toBe('/champion/Darius/propose');

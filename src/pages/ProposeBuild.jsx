@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../api/ddragon';
+import { getChampionMap } from '../api/ddragon';
 import { getMatchup } from '../api/content';
-import { getMyBuild, submitBuild } from '../api/builds';
+import { getBuildGame, getMyBuild, submitBuild } from '../api/builds';
 import { useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
 import { buildProblem, buildToForm, emptyBuild, patchMinor } from '../lib/buildContent';
@@ -30,11 +30,11 @@ function ProposeBuildForm() {
   const fromId = Number(search.get('from')) || null;
   const auth = useAuth();
   const { data, error, loading, retry } = useAsync(async () => {
-    const [champs, matchup, items, runes, spells, latest, from] = await Promise.all([
-      getChampionMap(), getMatchup(targetId, counterId), getItems(), getRunes(), getSummonerSpells(), getLatestVersion(),
+    const [champs, matchup, game, from] = await Promise.all([
+      getChampionMap(), getMatchup(targetId, counterId), getBuildGame(),
       fromId ? getMyBuild(auth.user.id, fromId) : null,
     ]);
-    return { champs, matchup, items, runes, spells, latest, from };
+    return { champs, matchup, game, from };
   }, [targetId, counterId, fromId, auth.user.id]);
 
   if (loading) return <Loading />;
@@ -51,7 +51,7 @@ function BuildEditor({ data, target, counter, fromId }) {
   const [build, setBuild] = useState(() => (data.from ? buildToForm(data.from) : emptyBuild()));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  const game = { items: data.items, runes: data.runes, spells: data.spells, latest: data.latest };
+  const { game } = data;
   const problem = buildProblem(build, game);
   const title = `${matchupTitle(counter.name, target.name)}`;
 
@@ -61,7 +61,7 @@ function BuildEditor({ data, target, counter, fromId }) {
     setBusy(true);
     setError(null);
     try {
-      await submitBuild(auth.user.id, data.matchup.counter.id, build, data.latest);
+      await submitBuild(auth.user.id, data.matchup.counter.id, build, game.latest);
       navigate('/me', { state: { sent: `${title} — 빌드를 보냈어요.` } });
     } catch (err) {
       setError(err.message);
@@ -79,7 +79,7 @@ function BuildEditor({ data, target, counter, fromId }) {
       {fromId && data.from && <p className="notice" role="status">내 빌드 내용을 채워 뒀어요. 고쳐서 새 빌드로 보내요. (원래 빌드는 그대로 남아요)</p>}
       {fromId && !data.from && <p className="notice" role="status">불러올 내 빌드를 찾지 못했어요. 빈 칸에서 시작해요.</p>}
       <p className="lead">
-        운영자가 승인하면 매치업 문서에 공개돼요. 패치 {patchMinor(data.latest)} 기준으로 등록돼요.
+        운영자가 승인하면 매치업 문서에 공개돼요. 패치 {patchMinor(game.latest)} 기준으로 등록돼요.
       </p>
 
       <form className="build-form" onSubmit={submit}>

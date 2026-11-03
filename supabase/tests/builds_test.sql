@@ -23,13 +23,12 @@ create function pg_temp.add(
   spells text[] default array['SummonerFlash','SummonerTeleport'],
   starting text[] default array['1055','2003'],
   core text[] default array['6631','3047','3053'],
-  skills jsonb default '["Q","E","W"]',
-  early text[] default array['Q','E','W'],
+  skill text default 'Q',
   patch text default '16.21.1',
   counter bigint default null
 ) returns void language sql as $$
-  insert into public.builds (counter_id, author_id, runes, summoner_spells, starting_items, core_items, skill_order, early_skills, patch)
-  values (coalesce(counter, (select v from ids where k = 'quinn')), auth.uid(), runes, spells, starting, core, skills, early, patch);
+  insert into public.builds (counter_id, author_id, runes, summoner_spells, starting_items, core_items, max_skill, patch)
+  values (coalesce(counter, (select v from ids where k = 'quinn')), auth.uid(), runes, spells, starting, core, skill, patch);
 $$;
 grant execute on function pg_temp.add to authenticated, anon;
 
@@ -66,24 +65,26 @@ select t.fails('핵심 템트리: 2개', $$select pg_temp.add(core => array['663
 select t.fails('핵심 템트리: 7개', $$select pg_temp.add(core => array['1','2','3','4','5','6','7'])$$, '3~6개');
 select t.fails('핵심 템트리: 중복', $$select pg_temp.add(core => array['6631','3047','6631'])$$, '같은 아이템이 두 번');
 select t.fails('아이템: 숫자가 아님', $$select pg_temp.add(core => array['6631','3047','abc'])$$, '형식이 잘못');
-select t.fails('선마: Q·W·E 순열 아님', $$select pg_temp.add(skills => '["Q","Q","W"]')$$, 'Q·W·E를 한 번씩');
-select t.fails('선마: R 포함', $$select pg_temp.add(skills => '["Q","E","R"]')$$, 'Q·W·E를 한 번씩');
-select t.fails('선마: 배열 아님', $$select pg_temp.add(skills => '"QEW"')$$, 'Q·W·E를 한 번씩');
-select t.fails('1·2·3레벨: 2개', $$select pg_temp.add(early => array['Q','E'])$$, '1·2·3레벨');
-select t.fails('1·2·3레벨: R', $$select pg_temp.add(early => array['Q','E','R'])$$, '1·2·3레벨');
-select t.fails('1·2·3레벨: 없음', $$select pg_temp.add(early => null)$$, '1·2·3레벨');
+select t.fails('선마: R', $$select pg_temp.add(skill => 'R')$$, '선마(첫 번째로 마스터할 스킬)');
+select t.fails('선마: 두 개', $$select pg_temp.add(skill => 'QE')$$, '선마(첫 번째로 마스터할 스킬)');
+select t.fails('선마: 없음', $$select pg_temp.add(skill => null)$$, '선마(첫 번째로 마스터할 스킬)');
+select t.ok('018: 예전 스킬 칸은 없음',
+  not exists (select 1 from information_schema.columns where table_name = 'builds' and column_name in ('skill_order', 'early_skills')));
+select t.fails('018: 시작템 합계 500골드 초과 (도란 검 + 도란 방패 = 900)', $$select pg_temp.add(starting => array['1055','1054'])$$, '합계 500골드까지 고를 수 있어요. (지금 900골드)');
+select t.fails('018: 시작템 합계 초과 (물약 여러 개도 개수만큼)', $$select pg_temp.add(starting => array['1055','2003','2003'])$$, '(지금 550골드)');
+select t.fails('018: 가격표에 없는 아이템', $$select pg_temp.add(starting => array['999999'])$$, '가격을 모르는 시작 아이템');
 select t.fails('패치: 형식', $$select pg_temp.add(patch => 'latest')$$, '패치 버전 형식');
 select t.fails('없는 카운터', 'select pg_temp.add(counter => 999999)', '매치업을 찾지 못했어요');
 select t.fails('상태·승인 칸은 직접 못 넣음',
-  format($$insert into builds (counter_id, author_id, runes, summoner_spells, starting_items, core_items, skill_order, early_skills, patch, status)
-           values (%s, auth.uid(), %L, array['SummonerFlash','SummonerTeleport'], array['1055'], array['1','2','3'], '["Q","E","W"]', array['Q','E','W'], '16.21', 'approved')$$,
+  format($$insert into builds (counter_id, author_id, runes, summoner_spells, starting_items, core_items, max_skill, patch, status)
+           values (%s, auth.uid(), %L, array['SummonerFlash','SummonerTeleport'], array['1055'], array['1','2','3'], 'Q', '16.21', 'approved')$$,
          :quinn, :'runes'), 'permission denied');
 
 -- 시작 아이템은 같은 것 여러 개 가능(포션 2개 등), 패치는 앞 두 자리만 써도 됨
-select pg_temp.add(starting => array['1055','2003','2003'], patch => '16.21');
+select pg_temp.add(starting => array['1036','2003','2003'], patch => '16.21');
 select t.ok('등록: 대기 상태, 룬은 숫자로 정리',
   (select count(*) = 1 from builds where author_id = auth.uid() and status = 'pending'
-     and runes -> 'primary' = '[9111,9104,8299]'::jsonb and starting_items = array['1055','2003','2003']));
+     and runes -> 'primary' = '[9111,9104,8299]'::jsonb and starting_items = array['1036','2003','2003']));
 insert into ids select 'b1', id from builds where author_id = auth.uid();
 select t.fails('같은 매치업에 대기 빌드 2개 불가', $$select pg_temp.add(core => array['3071','3047','3053'])$$, '이미 승인 대기 중인');
 select t.fails('작성자도 직접 수정 불가', 'update builds set patch = ''1.1''', 'permission denied');
@@ -121,7 +122,7 @@ select t.ok('작성자: 승인 알림 1개 (빌드 연결, 메모)',
   (select count(*) = 1 from notifications where kind = 'build_approved' and read_at is null
      and build_id = (select v from ids where k = 'b1') and message = '깔끔한 빌드예요' and proposal_id is null));
 select t.ok('알림 확인 → 꺼짐', (select mark_notifications_read(array(select id from notifications where kind = 'build_approved')) = 1));
-select t.fails('똑같은 빌드는 다시 못 냄 (패치만 달라도)', $$select pg_temp.add(starting => array['1055','2003','2003'], patch => '16.22')$$, '똑같은 빌드가 이미 공개');
+select t.fails('똑같은 빌드는 다시 못 냄 (패치만 달라도)', $$select pg_temp.add(starting => array['1036','2003','2003'], patch => '16.22')$$, '똑같은 빌드가 이미 공개');
 select t.ok('작성자는 처리 기록을 못 봄 (운영자만)', (select count(*) = 0 from build_status_log));
 
 -- ===== 5. 따봉/비추 =====
@@ -172,7 +173,7 @@ set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.ok('작성자에겐 숨긴 빌드와 사유가 보임 + 숨김 알림',
   (select status = 'hidden' and hide_reason = '아이템이 바뀌었어요' from builds where id = (select v from ids where k = 'b1'))
   and (select count(*) = 1 from notifications where kind = 'build_hidden' and read_at is null and message = '아이템이 바뀌었어요'));
-select pg_temp.add(starting => array['1055','2003','2003']);
+select pg_temp.add(starting => array['1036','2003','2003']);
 insert into ids select 'b2', max(id) from builds where author_id = auth.uid();
 select t.ok('숨긴 동안에는 같은 빌드를 다시 낼 수 있음 (승인 때 다시 비교)', (select status = 'pending' from builds where id = (select v from ids where k = 'b2')));
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';

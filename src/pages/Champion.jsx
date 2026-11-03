@@ -8,7 +8,7 @@ import { useAuth } from '../lib/auth';
 import { hideCounter } from '../api/proposals';
 import NoteForm from '../components/NoteForm';
 import NotFound from './NotFound';
-import { josa, matchupTitle } from '../lib/josa';
+import { matchupTitle } from '../lib/josa';
 
 export default function Champion() {
   const { id } = useParams();
@@ -45,23 +45,21 @@ export default function Champion() {
       {done && <p className="notice" role="status">{done}</p>}
       <section className="section">
         <h2 className="section-title">
-          <span className="num">1.</span> {josa(target.name, '을/를')} 이기는 챔피언
+          <span className="num">1.</span> {target.name} 카운터
         </h2>
-        <p className="hint">위에 있을수록 더 확실하게 이기는 카운터예요. 순서는 운영자가 정합니다.</p>
 
         {data.counters.length === 0 ? (
           <p className="empty">아직 등록된 카운터가 없어요.</p>
         ) : (
           <ol className="counter-list">
-            {data.counters.map((c, i) => {
+            {data.counters.filter((c) => data.champs[c.counter_champion]).map((c, i) => {
               const champ = data.champs[c.counter_champion];
-              if (!champ) return null;
               const title = `${matchupTitle(champ.name, target.name)}`;
               return (
                 <li key={c.id}>
                   <div className="counter-item">
                     <Link to={`/champion/${id}/counter/${champ.id}`} className="counter-row">
-                      <span className="rank">{i + 1}</span>
+                      <span className={i < 3 ? 'rank top' : 'rank'} aria-label={`${i + 1}위`}>{i + 1}</span>
                       <img src={champ.icon} alt="" width="44" height="44" />
                       <span className="counter-text">
                         <strong>{champ.name}</strong>
@@ -104,7 +102,7 @@ export default function Champion() {
         )}
 
         <div className="actions">
-          <Link to={`/champion/${id}/propose`} className="btn">+ 새 카운터 제안</Link>
+          <Link to={`/champion/${id}/propose`} className="btn">+ 카운터 등록</Link>
           {isOperator && <Link to={`/admin/order/${id}`} className="btn btn-op">순서 변경</Link>}
         </div>
       </section>

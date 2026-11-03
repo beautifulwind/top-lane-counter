@@ -1,6 +1,7 @@
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useState } from 'react';
-import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../api/ddragon';
+import { getChampionMap } from '../api/ddragon';
+import { getBuildGame } from '../api/builds';
 import { editMyProposal, getMyProposal, isHiddenCounterFlow, resubmitProposal } from '../api/proposals';
 import { useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
@@ -30,10 +31,10 @@ function ResubmitForm() {
   const { id } = useParams();
   const auth = useAuth();
   const { data, error, loading, retry } = useAsync(async () => {
-    const [champs, proposal, items, runes, spells, latest] = await Promise.all([
-      getChampionMap(), getMyProposal(auth.user.id, Number(id)), getItems(), getRunes(), getSummonerSpells(), getLatestVersion(),
+    const [champs, proposal, game] = await Promise.all([
+      getChampionMap(), getMyProposal(auth.user.id, Number(id)), getBuildGame(),
     ]);
-    return { champs, proposal, game: { items, runes, spells, latest } };
+    return { champs, proposal, game };
   }, [auth.user.id, id]);
 
   if (loading) return <Loading />;

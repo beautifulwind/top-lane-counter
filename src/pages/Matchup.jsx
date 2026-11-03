@@ -60,7 +60,7 @@ export default function Matchup() {
         </h1>
         <p className="empty">아직 등록되지 않은 카운터예요. 새 카운터로 제안할 수 있어요.</p>
         <div className="actions">
-          <Link to={`/champion/${targetId}/propose?counter=${counterId}`} className="btn">+ 새 카운터 제안</Link>
+          <Link to={`/champion/${targetId}/propose?counter=${counterId}`} className="btn">+ 카운터 등록</Link>
         </div>
       </article>
     );

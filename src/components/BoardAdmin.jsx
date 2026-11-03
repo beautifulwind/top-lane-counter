@@ -9,7 +9,7 @@ import UserName from './UserName';
 import NoteForm from './NoteForm';
 import { matchupTitle } from '../lib/josa';
 
-/** 운영자 페이지의 "자유게시판·댓글" 칸: 처리할 신고 수 → /admin/reports, 숨긴 글·댓글·문서 댓글 + [다시 공개] */
+/** 운영자 페이지의 "노가리방·댓글" 칸: 처리할 신고 수 → /admin/reports, 숨긴 글·댓글·문서 댓글 + [다시 공개] */
 export default function BoardAdmin() {
   const [done, setDone] = useState(null);
   const { data, error, loading, retry } = useAsync(async () => {

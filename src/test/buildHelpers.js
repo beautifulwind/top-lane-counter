@@ -4,8 +4,8 @@ import { expect } from 'vitest';
 
 export const pick = (group, name) => fireEvent.click(within(screen.getByRole('group', { name: group })).getByRole('button', { name }));
 
-/** 선마 순서만 빼고 다 채운다 (선마는 테스트가 고른다). withSkillOrder: 선마까지 */
-export function fillBuild({ withSkillOrder = false } = {}) {
+/** 선마만 빼고 다 채운다 (선마는 테스트가 고른다). withSkill: 선마(Q)까지. 시작 아이템은 도란의 검 + 물약 = 500골드 */
+export function fillBuild({ withSkill = false } = {}) {
   pick('주 경로', '주 경로 정밀');
   pick('핵심 룬', '정복자');
   pick('주 경로 1줄', '승전보');
@@ -21,13 +21,11 @@ export function fillBuild({ withSkillOrder = false } = {}) {
   pick('소환사 주문', '순간이동');
   pick('시작 아이템 고르기', '도란의 검');
   pick('시작 아이템 고르기', '체력 물약');
-  pick('시작 아이템 고르기', '체력 물약');
   pick('핵심 템트리 고르기', '스테락의 도전');
   pick('핵심 템트리 고르기', '강철판 장화');
   pick('핵심 템트리 고르기', '선혈포식자');
-  pick('1레벨 스킬', '1레벨 Q');
-  pick('2레벨 스킬', '2레벨 E');
-  pick('3레벨 스킬', '3레벨 W');
-  if (withSkillOrder) pick('선마 순서', '선마 Q › E › W');
-  expect(screen.getByRole('group', { name: '선마 순서' })).toBeDefined();
+  if (withSkill) pick(SKILL_GROUP, '선마 Q');
+  expect(screen.getByRole('group', { name: SKILL_GROUP })).toBeDefined();
 }
+
+export const SKILL_GROUP = '선마 (첫 번째로 마스터할 스킬)';

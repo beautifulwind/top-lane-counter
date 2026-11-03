@@ -96,23 +96,9 @@ export default function BuildCard({ build, items, runes, spells, latest, interac
       <div className="build-row">
         <span className="label">스킬</span>
         <div className="skills">
-          <span className="skill-group" aria-label={`1·2·3레벨: ${(build.early_skills ?? []).join(' ')}`}>
-            {(build.early_skills ?? []).map((k, i) => (
-              <span key={i} className="early">
-                <small>{i + 1}</small>
-                <kbd>{k}</kbd>
-              </span>
-            ))}
-          </span>
-          <span className="sep" />
-          <span className="skill-group" aria-label={`선마: ${(build.skill_order ?? []).join(' › ')}`}>
+          <span className="skill-group" aria-label={`선마: ${build.max_skill ?? '없음'}`}>
             <small className="muted">선마</small>
-            {(build.skill_order ?? []).map((k, i) => (
-              <span key={i} className="step">
-                {i > 0 && <span className="arrow">›</span>}
-                <kbd>{k}</kbd>
-              </span>
-            ))}
+            <kbd>{build.max_skill ?? '?'}</kbd>
           </span>
         </div>
       </div>

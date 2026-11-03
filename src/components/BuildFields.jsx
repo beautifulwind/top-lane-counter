@@ -1,12 +1,12 @@
 import { useState } from 'react';
 import { SHARD_ROWS } from '../api/ddragon';
 import { matchesQuery } from '../lib/chosung';
-import { ITEM_LIMITS, SKILLS, SKILL_ORDERS, buildProblem } from '../lib/buildContent';
+import { ITEM_LIMITS, SKILLS, buildProblem, startGold, startGoldMax } from '../lib/buildContent';
 import BuildCard, { Icon } from './BuildCard';
 
 /**
  * 빌드 입력 (룬·주문·아이템·스킬 + 미리보기). 빌드 등록·새 카운터 제안·다시 제출 공용.
- * game = { items, runes, spells, latest } (Data Dragon), value = 등록 화면 값(buildContent.emptyBuild 모양)
+ * game = { items, runes, spells, latest, startGoldMax } (Data Dragon + 시작템 합계 상한), value = 등록 화면 값(buildContent.emptyBuild 모양)
  * author: 미리보기에 보일 작성자 프로필
  */
 export default function BuildFields({ game, value: build, onChange, author }) {
@@ -19,10 +19,11 @@ export default function BuildFields({ game, value: build, onChange, author }) {
       <ItemPicker
         id="starting"
         title="시작 아이템"
-        hint={`${ITEM_LIMITS.starting[0]}~${ITEM_LIMITS.starting[1]}개 (같은 아이템 여러 개 가능, 예: 포션 2개)`}
+        hint={`${ITEM_LIMITS.starting[0]}~${ITEM_LIMITS.starting[1]}개, 합계 ${startGoldMax(game)}골드까지 (같은 아이템 여러 개 가능, 예: 포션 2개)`}
         items={game.items}
         value={build.starting_items}
         max={ITEM_LIMITS.starting[1]}
+        goldMax={startGoldMax(game)}
         order="cheap"
         onChange={(starting_items) => set({ starting_items })}
       />
@@ -185,10 +186,13 @@ function SpellPicker({ spells, value, onChange }) {
 
 const SHOW = 60;
 
-function ItemPicker({ id, title, hint, items, value, max, distinct = false, movable = false, order = 'expensive', onChange }) {
+/** goldMax: 시작 아이템처럼 골드 합계 상한이 있으면 그 값 (그보다 비싼 아이템은 목록에 없고, 합계를 넘기는 아이템은 잠긴다) */
+function ItemPicker({ id, title, hint, items, value, max, goldMax = null, distinct = false, movable = false, order = 'expensive', onChange }) {
   const [query, setQuery] = useState('');
+  const budget = goldMax !== null;
+  const total = budget ? startGold(value, items) : 0;
   const shop = Object.values(items)
-    .filter((it) => it.shop && matchesQuery(query, it.name))
+    .filter((it) => it.shop && (!budget || it.gold <= goldMax) && matchesQuery(query, it.name))
     .sort((a, b) => (order === 'cheap' ? a.gold - b.gold : b.gold - a.gold) || a.name.localeCompare(b.name, 'ko'));
   const full = value.length >= max;
   const move = (i) => onChange(value.map((x, j) => (j === i - 1 ? value[i] : j === i ? value[i - 1] : x)));
@@ -197,6 +201,11 @@ function ItemPicker({ id, title, hint, items, value, max, distinct = false, mova
     <fieldset className="pick-group">
       <legend>{title}</legend>
       <small className="hint">{hint}</small>
+      {budget && (
+        <p className={total > goldMax ? 'gold-total over' : 'gold-total'} role="status" aria-label="시작 아이템 골드 합계">
+          합계 {total} / {goldMax}골드 · 남은 골드 {Math.max(goldMax - total, 0)}
+        </p>
+      )}
       <ol className="picked" aria-label={`고른 ${title}`}>
         {value.length === 0 && <li className="empty">아직 고르지 않았어요.</li>}
         {value.map((itemId, i) => (
@@ -235,7 +244,7 @@ function ItemPicker({ id, title, hint, items, value, max, distinct = false, mova
             key={it.id}
             entry={it}
             selected={value.includes(it.id)}
-            disabled={full || (distinct && value.includes(it.id))}
+            disabled={full || (distinct && value.includes(it.id)) || (budget && total + it.gold > goldMax)}
             onClick={() => onChange([...value, it.id])}
           />
         ))}
@@ -247,31 +256,18 @@ function ItemPicker({ id, title, hint, items, value, max, distinct = false, mova
   );
 }
 
+/** 스킬: 선마(첫 번째로 마스터할 스킬) 하나만 */
 function SkillPicker({ value, onChange }) {
-  const setEarly = (lv, k) => onChange({ early_skills: value.early_skills.map((x, i) => (i === lv ? k : x)) });
   return (
     <fieldset className="pick-group">
       <legend>스킬</legend>
-      {[0, 1, 2].map((lv) => (
-        <div key={lv} className="pick-row" role="group" aria-label={`${lv + 1}레벨 스킬`}>
-          <span className="label">{lv + 1}레벨</span>
-          {SKILLS.map((k) => (
-            <Pick key={k} selected={value.early_skills[lv] === k} onClick={() => setEarly(lv, k)} label={`${lv + 1}레벨 ${k}`} text={k} />
-          ))}
-        </div>
-      ))}
-      <div className="pick-row wrap" role="group" aria-label="선마 순서">
+      <div className="pick-row" role="group" aria-label="선마 (첫 번째로 마스터할 스킬)">
         <span className="label">선마</span>
-        {SKILL_ORDERS.map((o) => (
-          <Pick
-            key={o.join('')}
-            selected={value.skill_order?.join('') === o.join('')}
-            onClick={() => onChange({ skill_order: o })}
-            label={`선마 ${o.join(' › ')}`}
-            text={o.join(' › ')}
-          />
+        {SKILLS.map((k) => (
+          <Pick key={k} selected={value.max_skill === k} onClick={() => onChange({ max_skill: k })} label={`선마 ${k}`} text={k} />
         ))}
       </div>
+      <small className="hint">첫 번째로 마스터할 스킬을 골라 주세요.</small>
     </fieldset>
   );
 }

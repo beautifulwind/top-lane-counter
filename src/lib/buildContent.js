@@ -1,11 +1,16 @@
-// 빌드 내용 규칙. DB 검사 트리거(008_builds.sql check_new_build)와 같은 규칙을 화면에서 먼저 확인한다.
+// 빌드 내용 규칙. DB 검사(018 clean_build·check_start_gold)와 같은 규칙을 화면에서 먼저 확인한다.
 import { SHARD_ROWS } from '../api/ddragon';
 
 export const SKILLS = ['Q', 'W', 'E'];
-export const SKILL_ORDERS = [
-  ['Q', 'W', 'E'], ['Q', 'E', 'W'], ['W', 'Q', 'E'], ['W', 'E', 'Q'], ['E', 'Q', 'W'], ['E', 'W', 'Q'],
-];
 export const ITEM_LIMITS = { starting: [1, 4], core: [3, 6] };
+/** 시작 아이템 합계 상한 기본값. 실제 값은 DB xp_rules.starting_gold_max (game.startGoldMax) */
+export const START_GOLD_MAX = 500;
+
+/** game에서 시작 아이템 합계 상한 */
+export const startGoldMax = (game) => game?.startGoldMax ?? START_GOLD_MAX;
+
+/** 시작 아이템 골드 합계 (같은 아이템은 개수만큼). 게임 데이터에 없는 아이템은 0 */
+export const startGold = (ids, items) => ids.reduce((sum, id) => sum + (items?.[id]?.gold ?? 0), 0);
 
 /** 빈 빌드 (등록 화면 시작값) */
 export function emptyBuild() {
@@ -14,8 +19,7 @@ export function emptyBuild() {
     summoner_spells: [],
     starting_items: [],
     core_items: [],
-    skill_order: null,
-    early_skills: [null, null, null],
+    max_skill: null,
   };
 }
 
@@ -34,16 +38,13 @@ export function buildToForm(b) {
     summoner_spells: [...(b.summoner_spells ?? [])],
     starting_items: [...(b.starting_items ?? [])],
     core_items: [...(b.core_items ?? [])],
-    skill_order: b.skill_order ? [...b.skill_order] : null,
-    early_skills: [0, 1, 2].map((i) => b.early_skills?.[i] ?? null),
+    max_skill: SKILLS.includes(b.max_skill) ? b.max_skill : null,
   };
 }
 
-const sameSet = (a, b) => a.length === b.length && [...a].sort().join() === [...b].sort().join();
-
 /**
- * 고쳐야 할 점 (없으면 null). game = { items, runes, spells } (Data Dragon)를 주면 실제로 있는 값인지,
- * 룬이 경로·줄에 맞는지도 본다.
+ * 고쳐야 할 점 (없으면 null). game = { items, runes, spells, startGoldMax } (Data Dragon + DB 기준 금액)를 주면
+ * 실제로 있는 값인지, 룬이 경로·줄에 맞는지, 시작 아이템 합계도 본다.
  */
 export function buildProblem(b, game) {
   const r = b.runes;
@@ -63,11 +64,12 @@ export function buildProblem(b, game) {
   const [cMin, cMax] = ITEM_LIMITS.core;
   if (b.core_items.length < cMin || b.core_items.length > cMax) return `핵심 템트리는 ${cMin}~${cMax}개 골라 주세요.`;
   if (new Set(b.core_items).size !== b.core_items.length) return '핵심 템트리에 같은 아이템이 두 번 들어 있어요.';
-  if (!b.skill_order || !sameSet(b.skill_order, SKILLS)) return '스킬 선마 순서를 골라 주세요.';
-  if (b.early_skills.some((x) => !SKILLS.includes(x))) return '1·2·3레벨에 찍는 스킬을 골라 주세요.';
+  if (!SKILLS.includes(b.max_skill)) return '선마(첫 번째로 마스터할 스킬)를 골라 주세요.';
   if (game) {
     const unknown = unknownParts(b, game);
     if (unknown) return unknown;
+    const gold = startGoldProblem(b, game);
+    if (gold) return gold;
     const wrong = runeLayoutProblem(r, game.runes);
     if (wrong) return wrong;
   }
@@ -82,6 +84,13 @@ export function unknownParts(b, { items, runes, spells }) {
   if (b.summoner_spells.some((id) => !spells[id])) return '게임 데이터에 없는 소환사 주문이 있어요.';
   if ([...b.starting_items, ...b.core_items].some((id) => !items[id])) return '게임 데이터에 없는 아이템이 있어요.';
   return null;
+}
+
+/** 시작 아이템 합계가 상한을 넘는지 (없으면 null) */
+export function startGoldProblem(b, game) {
+  const total = startGold(b.starting_items, game.items);
+  const max = startGoldMax(game);
+  return total > max ? `시작 아이템은 합계 ${max}골드까지 고를 수 있어요. (지금 ${total}골드)` : null;
 }
 
 /** 룬이 고른 경로·줄과 맞는지 (없으면 null) */
@@ -108,8 +117,7 @@ export function toRow(b) {
     summoner_spells: [...b.summoner_spells],
     starting_items: [...b.starting_items],
     core_items: [...b.core_items],
-    skill_order: [...b.skill_order],
-    early_skills: [...b.early_skills],
+    max_skill: b.max_skill,
   };
 }
 
@@ -117,7 +125,7 @@ export function toRow(b) {
 export function buildSignature(b) {
   return JSON.stringify([
     b.runes.primaryPath, b.runes.keystone, b.runes.primary, b.runes.secondaryPath, b.runes.secondary, b.runes.shards,
-    b.summoner_spells, b.starting_items, b.core_items, b.skill_order, b.early_skills,
+    b.summoner_spells, b.starting_items, b.core_items, b.max_skill,
   ]);
 }
 
@@ -134,7 +142,7 @@ export function compareBuilds(a, b) {
 
 /**
  * 운영자가 승인 전에 알아야 할 것.
- * game = { items, runes, spells, latest }, approved = 같은 카운터의 공개 빌드들
+ * game = { items, runes, spells, latest, startGoldMax }, approved = 같은 카운터의 공개 빌드들
  */
 export function buildReviewFlags(build, game, approved = []) {
   const hiddenCounter = build.counter?.status === 'hidden';
@@ -143,7 +151,8 @@ export function buildReviewFlags(build, game, approved = []) {
   const outdated = isOutdated(build.patch, game.latest);
   const sig = buildSignature(build);
   const duplicate = approved.some((x) => x.id !== build.id && x.counter_id === build.counter_id && buildSignature(x) === sig);
-  return { hiddenCounter, unknown, layout, outdated, duplicate };
+  const gold = startGoldProblem(build, game);
+  return { hiddenCounter, unknown, layout, outdated, duplicate, gold };
 }
 
 /** 목록에서 바로 승인하면 위험한 이유 (없으면 null) → 줄에서 [승인]을 잠그고 [자세히]로 보낸다 */
@@ -152,6 +161,7 @@ export function quickBuildBlock(flags, build, latest) {
   if (flags.duplicate) return '똑같은 빌드가 이미 공개돼 있어요.';
   if (flags.unknown) return flags.unknown;
   if (flags.layout) return flags.layout;
+  if (flags.gold) return flags.gold;
   if (flags.outdated) return `지금 패치(${patchMinor(latest)})와 다른 패치(${patchMinor(build.patch)})로 등록됐어요.`;
   return null;
 }
@@ -172,6 +182,8 @@ export function proposalBuildBlock(build, game) {
   if (unknown) return `빌드: ${unknown}`;
   const layout = runeLayoutProblem(build.runes, game.runes);
   if (layout) return `빌드: ${layout}`;
+  const gold = startGoldProblem(build, game);
+  if (gold) return `빌드: ${gold}`;
   if (isOutdated(build.patch, game.latest)) {
     return `빌드가 지금 패치(${patchMinor(game.latest)})와 다른 패치(${patchMinor(build.patch)})로 등록됐어요.`;
   }

@@ -7,7 +7,7 @@ import NoteForm from './NoteForm';
 import { canWrite } from '../lib/auth';
 
 /**
- * 댓글 칸 (자유게시판 글, 매치업 문서 공통 — SPEC 6-5, 6-6, 고치기 시간 6-7).
+ * 댓글 칸 (노가리방 글, 매치업 문서 공통 — SPEC 6-5, 6-6, 고치기 시간 6-7).
  * ops: POST_COMMENT_OPS | DOC_COMMENT_OPS (kind, create(parentId, body), edit, remove, report, hide, restore)
  * parentId: 글 id 또는 카운터 id
  * open: 새 댓글을 달 수 있나 (글·문서가 보이는 상태), closedHint: 못 달 때 안내 (없으면 안내 없이 폼만 숨김)

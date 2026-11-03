@@ -232,7 +232,7 @@ export async function getProposalForReview(id) {
 
 const one = (v) => (Array.isArray(v) ? v[0] ?? null : v ?? null);
 const FIRST_BUILD_COLUMNS =
-  'id, status, runes, summoner_spells, starting_items, core_items, skill_order, early_skills, patch, up_count, down_count';
+  'id, status, runes, summoner_spells, starting_items, core_items, max_skill, patch, up_count, down_count';
 
 async function rpc(name, args, fallback) {
   const { data, error } = await db().rpc(name, args);

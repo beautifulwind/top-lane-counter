@@ -28,7 +28,7 @@ test('일반 유저: /admin은 "운영자만 볼 수 있어요", 상단 [관리]
   expect(screen.queryByRole('link', { name: '수정 기록' })).toBeNull();
   cleanup();
   start('/champion/Darius');
-  await screen.findByRole('link', { name: '+ 새 카운터 제안' });
+  await screen.findByRole('link', { name: '+ 카운터 등록' });
   expect(screen.queryByRole('link', { name: '순서 변경' })).toBeNull();
 });
 

@@ -138,7 +138,7 @@ test('새 카운터 제안 [승인]: 빌드를 고치면 지금 패치로 p_buil
   start('/admin/proposals/501');
   await screen.findByRole('heading', { name: /\[새 카운터\] 가렌/ });
   click('승인');
-  pick('선마 순서', '선마 Q › W › E');
+  pick('선마 (첫 번째로 마스터할 스킬)', '선마 W');
   expect(screen.getByText(/고친 빌드는 지금 패치\(99\.1\)로 기록돼요/)).toBeDefined();
   expect(screen.getByRole('heading', { name: '고친 빌드' })).toBeDefined();
   note(/승인 메모/, '선마를 바꿨어요');
@@ -146,7 +146,7 @@ test('새 카운터 제안 [승인]: 빌드를 고치면 지금 패치로 p_buil
   expect(await screen.findByText(/고쳐서 승인했어요: \[새 카운터\] 가렌/)).toBeDefined();
   expect(rpcCalls('approve_proposal')).toEqual([{
     p_id: 501, p_note: '선마를 바꿨어요', p_content: null, p_version: 1,
-    p_build: { ...FAKE_PROPOSAL_BUILD, skill_order: ['Q', 'W', 'E'], patch: '99.1.1' },
+    p_build: { ...FAKE_PROPOSAL_BUILD, max_skill: 'W', patch: '99.1.1' },
   }]);
 });
 
@@ -155,7 +155,7 @@ test('빌드 [자세히] [승인]: 고쳐서 승인 → approve_build(고친 빌
   start('/admin/builds/104?approve=1');
   expect(await screen.findByRole('region', { name: '고친 부분' })).toBeDefined();
   expect(screen.getByRole('button', { name: '재검토 요청' })).toBeDefined();
-  pick('선마 순서', '선마 Q › W › E');
+  pick('선마 (첫 번째로 마스터할 스킬)', '선마 W');
   note(/승인 메모/, '선마 정리');
   click('고친 내용으로 승인 확정');
   expect(await screen.findByText(/빌드를 고쳐서 승인했어요/)).toBeDefined();
@@ -164,7 +164,7 @@ test('빌드 [자세히] [승인]: 고쳐서 승인 → approve_build(고친 빌
     p_id: 104, p_note: '선마 정리', p_version: 1,
     p_build: {
       runes: b.runes, summoner_spells: b.summoner_spells, starting_items: b.starting_items, core_items: b.core_items,
-      skill_order: ['Q', 'W', 'E'], early_skills: b.early_skills, patch: '99.1.1',
+      max_skill: 'W', patch: '99.1.1',
     },
   }]);
 });
@@ -234,7 +234,7 @@ test('/me: 재검토 요청 받은 빌드 → 고쳐서 다시 보내기 (지금
   expect(await screen.findByRole('heading', { name: '퀸으로 다리우스 잡는 법 — 빌드 고쳐서 다시 보내기' })).toBeDefined();
   click('다시 보내기');
   expect(screen.getByRole('alert').textContent).toBe('고친 내용이 없어요. 운영자 메모를 보고 빌드를 고쳐 주세요.');
-  pick('선마 순서', '선마 Q › W › E');
+  pick('선마 (첫 번째로 마스터할 스킬)', '선마 W');
   click('다시 보내기');
   expect(await screen.findByText(/고친 빌드를 다시 보냈어요/)).toBeDefined();
   const b = fakeBuild(130, null);
@@ -242,7 +242,7 @@ test('/me: 재검토 요청 받은 빌드 → 고쳐서 다시 보내기 (지금
     p_id: 130,
     p_build: {
       runes: b.runes, summoner_spells: b.summoner_spells, starting_items: b.starting_items, core_items: b.core_items,
-      skill_order: ['Q', 'W', 'E'], early_skills: b.early_skills, patch: '99.1.1',
+      max_skill: 'W', patch: '99.1.1',
     },
   }]);
 });
@@ -260,7 +260,7 @@ test('/me: 운영자가 재검토 요청을 취소하면 그 메모를 알림으
 
 test('/me: 고쳐서 승인된 빌드는 원래 빌드 → 고친 빌드를 볼 수 있다', async () => {
   const b = fakeBuild(131, { nickname: '기존유저', level: 1, main_title: null }, { author_id: 'u-old', approve_note: '선마 정리' });
-  TABLES.builds.push({ ...b, original_build: { ...b, skill_order: ['E', 'Q', 'W'] } });
+  TABLES.builds.push({ ...b, original_build: { ...b, max_skill: 'E' } });
   asProposer();
   start('/me');
   const row = await screen.findByRole('listitem', { name: '내 빌드: 퀸으로 다리우스 잡는 법' });

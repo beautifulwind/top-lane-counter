@@ -30,7 +30,7 @@ export default function Login() {
     <article className="login">
       <h1 className="doc-title">로그인 · 가입</h1>
       <p className="lead">
-        로그인하면 카운터·문서 수정·빌드를 제안하고, 따봉·비추를 누르고, 게시판과 문서에 글·댓글을 쓸 수 있어요. 보기는 로그인 없이도 돼요.
+        로그인하면 카운터·문서 수정·빌드를 제안하고, 따봉·비추를 누르고, 노가리방과 문서에 글·댓글을 쓸 수 있어요. 보기는 로그인 없이도 돼요.
       </p>
       <p className="notice login-join">처음이면 자동으로 가입돼요. 따로 회원가입할 필요 없어요.</p>
       <div className="login-buttons">

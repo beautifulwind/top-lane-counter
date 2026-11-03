@@ -5,7 +5,7 @@ const QUINN = { id: 1, target_champion: 'Darius', counter_champion: 'Quinn', sta
 const build = (id, author, extra = {}) => ({
   id, counter_id: 1, author, author_id: author ? `u-${id}` : null, proposal_id: null, status: 'approved', runes: runes(8005),
   summoner_spells: ['SummonerFlash', 'SummonerTeleport'], starting_items: ['1055', '2003'],
-  core_items: ['6672', '3006', '3031'], skill_order: ['Q', 'E', 'W'], early_skills: ['Q', 'E', 'W'], patch: '99.1.1',
+  core_items: ['6672', '3006', '3031'], max_skill: 'Q', patch: '99.1.1',
   up_count: 0, down_count: 0, created_at: `2026-11-0${id - 100}T00:00:00Z`, counter: QUINN, logs: [],
   approve_note: null, reject_reason: null, hide_reason: null, hidden_at: null, reviewed_at: null, version: 1, edited_at: null, ...extra,
 });
@@ -47,7 +47,7 @@ export const TABLES = {
   xp_events: [],
   user_titles: [],
   offmeta_champions: [],
-  // 015 자유게시판 (author = select가 돌려주는 관계 모양)
+  // 015 노가리방 (author = select가 돌려주는 관계 모양)
   posts: [],
   post_comments: [],
   post_votes: [],
@@ -55,6 +55,8 @@ export const TABLES = {
   doc_comments: [],
   // 017 닉네임 변경 기록 (본인 것만 넣는다)
   nickname_changes: [],
+  // 018 아이템 가격표 (DB 기준 패치만 화면에 쓴다)
+  item_prices: [{ id: '1055', gold: 450, patch: '99.1.1' }, { id: '2003', gold: 50, patch: '99.1.1' }],
   xp_levels: [[1, 0], [2, 100], [3, 300], [4, 600], [5, 1000], [6, 1500], [7, 2100], [8, 2800], [9, 3600], [10, 4500]]
     .map(([level, min_xp]) => ({ level, min_xp })),
   xp_rules: [
@@ -62,6 +64,7 @@ export const TABLES = {
     ['title_top_addict', 1], ['title_tool_hater', 10], ['title_solid_heavy', 25], ['title_butcher_owner', 50],
     ['title_general', 100], ['title_offmeta', 5],
     ['post_edit_minutes', 60], ['comment_edit_minutes', 10], ['edit_grace_minutes', 5], ['nickname_change_days', 30],
+    ['starting_gold_max', 500],
   ].map(([key, value]) => ({ key, value })),
 };
 
@@ -70,7 +73,7 @@ export const TABLES = {
 export const FAKE_PROPOSAL_BUILD = {
   runes: { primaryPath: 8000, keystone: 8010, primary: [9111, 9104, 8299], secondaryPath: 8400, secondary: [8446, 8444], shards: [5005, 5008, 5011] },
   summoner_spells: ['SummonerFlash', 'SummonerTeleport'], starting_items: ['1055', '2003'], core_items: ['3053', '3047', '6631'],
-  skill_order: ['Q', 'E', 'W'], early_skills: ['Q', 'E', 'W'], patch: '99.1.1',
+  max_skill: 'Q', patch: '99.1.1',
 };
 
 export function fakeProposal(extra = {}) {
@@ -116,6 +119,7 @@ export function resetFake() {
   TABLES.reports = [];
   TABLES.doc_comments = [];
   TABLES.nickname_changes = [];
+  TABLES.item_prices = [{ id: '1055', gold: 450, patch: '99.1.1' }, { id: '2003', gold: 50, patch: '99.1.1' }];
   TABLES.builds = INITIAL_BUILDS();
   fakeState.functionCalls = [];
   fakeState.functionError = null;
@@ -275,6 +279,10 @@ async function rpc(name, args) {
     const mine = TABLES.notifications.filter((n) => args.p_ids.includes(n.id) && n.user_id === me && !n.read_at);
     mine.forEach((n) => { n.read_at = new Date().toISOString(); });
     return { data: mine.length, error: null };
+  }
+  if (name === 'set_item_prices') {
+    TABLES.item_prices = Object.entries(args.p_prices).map(([id, gold]) => ({ id, gold, patch: args.p_patch }));
+    return { data: TABLES.item_prices.length, error: null };
   }
   if (name === 'add_offmeta') {
     TABLES.offmeta_champions.push({ champion_id: args.p_champion, created_at: new Date().toISOString() });

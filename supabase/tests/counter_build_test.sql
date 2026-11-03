@@ -31,8 +31,10 @@ select t.fails('빌드 칸이 객체가 아님', $$select pg_temp.propose('Garen
 select t.fails('빌드 룬이 틀림', $$select pg_temp.propose('Garen', t.build() || '{"runes":{}}')$$, '특성(룬)을 모두');
 select t.fails('빌드 핵심 템트리 2개', $$select pg_temp.propose('Garen', t.build(array['6631','3047']))$$, '3~6개');
 select t.fails('빌드 주문 문자 아님', $$select pg_temp.propose('Garen', t.build() || '{"summoner_spells":[1,2]}')$$, '소환사 주문 형식');
-select t.fails('빌드 선마 없음', $$select pg_temp.propose('Garen', t.build() - 'skill_order')$$, 'Q·W·E를 한 번씩');
-select t.fails('빌드 1·2·3레벨 없음', $$select pg_temp.propose('Garen', t.build() - 'early_skills')$$, '1·2·3레벨');
+select t.fails('빌드 선마 없음', $$select pg_temp.propose('Garen', t.build() - 'max_skill')$$, '선마(첫 번째로 마스터할 스킬)');
+select t.fails('빌드 선마 R', $$select pg_temp.propose('Garen', t.build() || '{"max_skill":"R"}')$$, '선마(첫 번째로 마스터할 스킬)');
+select t.fails('018: 빌드 시작템 합계 초과', $$select pg_temp.propose('Garen', t.build() || '{"starting_items":["1055","1054"]}')$$, '합계 500골드까지');
+select t.fails('018: 빌드 시작템 가격 모름', $$select pg_temp.propose('Garen', t.build() || '{"starting_items":["999999"]}')$$, '가격을 모르는 시작 아이템');
 select t.fails('빌드 패치 없음', $$select pg_temp.propose('Garen', t.build() - 'patch')$$, '패치 버전 형식');
 select t.fails('문서 수정 제안에는 빌드 불가',
   format($$insert into edit_proposals (type, counter_id, proposer_id, content, build) values ('doc_edit', %s, auth.uid(), %L, t.build())$$, :quinn, :'doc'),
@@ -53,7 +55,7 @@ insert into ids values ('garen', :garen);
 select t.ok('승인: 첫 빌드 1개 공개 (작성자 = 제안자, 제안 연결, 승인 메모·처리자)',
   (select count(*) = 1 and bool_and(status = 'approved' and author_id = '00000000-0000-0000-0000-00000000000b'
      and proposal_id = (select v from ids where k = 'garen_p') and approve_note = '좋은 매치업' and reviewed_by = auth.uid()
-     and core_items = array['6631','3047','3053'] and early_skills = array['Q','E','W'] and patch = '16.21.1')
+     and core_items = array['6631','3047','3053'] and max_skill = 'Q' and patch = '16.21.1')
    from builds where counter_id = :garen));
 insert into ids select 'g1', id from builds where counter_id = :garen;
 select t.ok('첫 빌드 처리 기록 (승인)', (select count(*) = 1 from build_status_log where build_id = (select v from ids where k = 'g1') and action = 'approve' and reason = '좋은 매치업'));
@@ -78,8 +80,8 @@ select t.ok('거절: 카운터·빌드 없음, 제안에 빌드는 남음 (/me�
 -- ===== 4. 마지막 공개 빌드는 숨길 수 없음 =====
 select t.fails('마지막 공개 빌드 숨기기 불가', format($$select hide_build(%s, '별로')$$, (select v from ids where k = 'g1')), '마지막 공개 빌드라');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
-insert into builds (counter_id, author_id, runes, summoner_spells, starting_items, core_items, skill_order, early_skills, patch)
-select :garen, auth.uid(), b -> 'runes', array['SummonerFlash','SummonerDot'], array['1055'], array['3071','3047','3053'], b -> 'skill_order', array['Q','Q','E'], '16.21.1'
+insert into builds (counter_id, author_id, runes, summoner_spells, starting_items, core_items, max_skill, patch)
+select :garen, auth.uid(), b -> 'runes', array['SummonerFlash','SummonerDot'], array['1055'], array['3071','3047','3053'], 'E', '16.21.1'
 from (select t.build() b) x;
 insert into ids select 'g2', id from builds where author_id = auth.uid();
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';

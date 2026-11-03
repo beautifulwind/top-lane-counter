@@ -5,6 +5,7 @@ import AuthBar from './AuthBar';
 import { needsNickname, needsNicknameFor, useAuth } from '../lib/auth';
 import { noticeText } from '../api/auth';
 import { usePageTitle } from '../lib/pageTitle';
+import { SITE_NAME, SITE_TAGLINE } from '../lib/legal';
 
 export const RIOT_NOTICE =
   '이 사이트는 Riot Games가 보증하거나 후원하지 않으며, Riot Games 또는 League of Legends 제작·관리에 공식적으로 관여한 사람의 견해를 반영하지 않습니다. League of Legends 및 Riot Games는 Riot Games, Inc.의 상표 또는 등록 상표입니다.';
@@ -25,10 +26,13 @@ export default function Layout() {
     <div className="app">
       <header className="topbar">
         <nav className="top-nav" aria-label="사이트">
-          <Link to="/" className="brand">
-            탑 카운터 위키
-          </Link>
-          <Link to="/board" className="top-link">게시판</Link>
+          <span className="brand-wrap">
+            <Link to="/" className="brand">
+              {SITE_NAME}
+            </Link>
+            <span className="tagline">{SITE_TAGLINE}</span>
+          </span>
+          <Link to="/board" className="top-link">노가리방</Link>
         </nav>
         <AuthBar />
       </header>

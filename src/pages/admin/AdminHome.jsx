@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../../api/ddragon';
+import { getChampionMap } from '../../api/ddragon';
 import {
-  approveBuild, cancelBuildRevision, getHiddenBuilds, getPendingBuilds, getRevisionBuilds, rejectBuild, requestBuildRevision, restoreBuild,
+  approveBuild, cancelBuildRevision, getBuildGame, getHiddenBuilds, getPendingBuilds, getRevisionBuilds, rejectBuild, requestBuildRevision, restoreBuild,
 } from '../../api/builds';
 import { buildReviewFlags, quickBuildBlock } from '../../lib/buildContent';
 import BuildCard, { BuildAuthor } from '../../components/BuildCard';
@@ -19,11 +19,12 @@ import NoteForm from '../../components/NoteForm';
 import { EditedBadge, useAuthorChanged } from '../../components/AuthorChanged';
 import OffmetaPicks from '../../components/OffmetaPicks';
 import BoardAdmin from '../../components/BoardAdmin';
+import ItemPrices from '../../components/ItemPrices';
 import { matchupTitle } from '../../lib/josa';
 
 /**
  * 운영자 페이지: 승인 대기·재검토 기다리는 중·숨긴 카운터·빌드 승인 대기·숨긴 빌드를 목록에서 바로 처리
- * (메모 입력이 확인 단계), 자유게시판 신고·숨긴 글, 비주류 픽 목록, 삭제 기록. 승인 대기 줄은 [승인] [재검토 요청] [거절] — 고쳐서 승인은 [자세히]에서
+ * (메모 입력이 확인 단계), 노가리방 신고·숨긴 글, 비주류 픽 목록, 삭제 기록. 승인 대기 줄은 [승인] [재검토 요청] [거절] — 고쳐서 승인은 [자세히]에서
  */
 export default function AdminHome() {
   return (
@@ -37,14 +38,13 @@ function PendingList() {
   const location = useLocation();
   const [done, setDone] = useState(location.state?.done ?? null);
   const { data, error, loading, retry } = useAsync(async () => {
-    const [items, runes, spells, latest] = await Promise.all([getItems(), getRunes(), getSummonerSpells(), getLatestVersion()]);
-    const game = { items, runes, spells, latest };
+    const game = await getBuildGame();
     const [champs, pending, hidden, deletions, builds, hiddenBuilds, revisionProposals, revisionBuilds] = await Promise.all([
       getChampionMap(), getPendingProposals(game), getHiddenCounters(), getDeletions(), getPendingBuilds(), getHiddenBuilds(),
       getRevisionProposals(), getRevisionBuilds(),
     ]);
     const pendingBuilds = builds.pending.map((b) => ({
-      ...b, block: quickBuildBlock(buildReviewFlags(b, game, builds.approved), b, latest),
+      ...b, block: quickBuildBlock(buildReviewFlags(b, game, builds.approved), b, game.latest),
     }));
     const waiting = [
       ...revisionProposals.map((p) => ({ kind: 'proposal', item: p, at: p.revision_requested_at })),
@@ -142,8 +142,15 @@ function PendingList() {
         </section>
       )}
 
+      {data && (
+        <section className="section">
+          <h2 className="section-title">아이템 가격표</h2>
+          <ItemPrices game={data.game} />
+        </section>
+      )}
+
       <section className="section">
-        <h2 className="section-title">자유게시판·댓글</h2>
+        <h2 className="section-title">노가리방·댓글</h2>
         <BoardAdmin />
       </section>
 

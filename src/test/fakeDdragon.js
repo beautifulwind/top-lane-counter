@@ -19,7 +19,7 @@ const DATA = {
   'versions.json': ['99.1.1'],
   'champion.json': { data: { Darius: champ('Darius', '다리우스'), Quinn: champ('Quinn', '퀸'), Vayne: champ('Vayne', '베인'), Kennen: champ('Kennen', '케넨'), Teemo: champ('Teemo', '티모'), Garen: champ('Garen', '가렌') } },
   'item.json': { data: {
-    1055: item('도란의 검', 450), 2003: item('체력 물약', 50), 6631: item('선혈포식자', 3300), 3047: item('강철판 장화', 1100),
+    1055: item('도란의 검', 450), 2003: item('체력 물약', 50), 1054: item('도란의 방패', 450), 1001: item('장화', 300), 3044: item('탐식의 망치', 1100), 6631: item('선혈포식자', 3300), 3047: item('강철판 장화', 1100),
     3053: item('스테락의 도전', 3000), 6672: item('크라켄 학살자', 3100), 3006: item('광전사의 군화', 1100),
     3071: item('칠흑의 양날 도끼', 3000), 3031: item('무한의 대검', 3400),
     3400: item('너만 살 수 있는 아이템', 0, { requiredAlly: 'Ornn' }), // 상점 목록에서 빠져야 함

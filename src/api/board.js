@@ -1,4 +1,4 @@
-// 자유게시판·문서 댓글 접근 계층 (SPEC 3장 /board, 6-5, 6-6). 화면 컴포넌트는 이 모듈만 호출한다.
+// 노가리방·문서 댓글 접근 계층 (SPEC 3장 /board, 6-5, 6-6). 화면 컴포넌트는 이 모듈만 호출한다.
 // 쓰기·고치기·지우기·추천·신고·숨기기는 모두 DB 함수(015)로만 — 로그인·닉네임·도배 간격·길이·권한은 DB가 막는다.
 import { db } from './supabase';
 import { editRulesFrom } from '../lib/editWindow';

@@ -105,9 +105,9 @@ insert into edit_proposals (type, counter_id, proposer_id, content)
 values ('doc_edit', :garen, auth.uid(), '{"summary":"가렌 요약 v2","level_notes":{"1":"a","2":"b","3":"c","6":"d"},"lane_cautions":""}');
 insert into ids select 'edit', max(id) from edit_proposals where type = 'doc_edit';
 set request.jwt.claim.sub = :'D';
-insert into builds (counter_id, author_id, runes, summoner_spells, starting_items, core_items, skill_order, early_skills, patch)
+insert into builds (counter_id, author_id, runes, summoner_spells, starting_items, core_items, max_skill, patch)
 select :garen, auth.uid(), b -> 'runes', array['SummonerFlash','SummonerTeleport'], array['1055','2003'], array['3071','3047','3053'],
-       b -> 'skill_order', array['Q','E','W'], '16.21.1' from (select t.build() as b) x;
+       b ->> 'max_skill', '16.21.1' from (select t.build() as b) x;
 insert into ids select 'dbuild', max(id) from builds where author_id = auth.uid();
 set request.jwt.claim.sub = :'A';
 select approve_proposal((select v from ids where k = 'edit'), '좋아요', null, null, 1);

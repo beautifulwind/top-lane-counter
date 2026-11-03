@@ -139,8 +139,8 @@ test('빌드 등록: 다 고르면 미리보기가 보이고, 보내면 승인 �
   fillBuild();
   const send = screen.getByRole('button', { name: '빌드 보내기' });
   expect(send).toBeDisabled();
-  expect(screen.getByText('아직 고를 것: 스킬 선마 순서를 골라 주세요.')).toBeDefined();
-  pick('선마 순서', '선마 Q › E › W');
+  expect(screen.getByText('아직 고를 것: 선마(첫 번째로 마스터할 스킬)를 골라 주세요.')).toBeDefined();
+  pick('선마 (첫 번째로 마스터할 스킬)', '선마 Q');
   // 핵심 템트리 순서 바꾸기: 강철판 장화를 맨 앞으로
   fireEvent.click(screen.getByRole('button', { name: '강철판 장화 앞으로' }));
   expect(screen.getByRole('article', { name: '빌드: 기존유저' })).toBeDefined();
@@ -154,10 +154,9 @@ test('빌드 등록: 다 고르면 미리보기가 보이고, 보내면 승인 �
       counter_id: 1, author_id: 'u-old', patch: '99.1.1',
       runes: { primaryPath: 8000, keystone: 8010, primary: [9111, 9104, 8299], secondaryPath: 8400, secondary: [8446, 8444], shards: [5005, 5008, 5011] },
       summoner_spells: ['SummonerFlash', 'SummonerTeleport'],
-      starting_items: ['1055', '2003', '2003'],
+      starting_items: ['1055', '2003'],
       core_items: ['3047', '3053', '6631'],
-      skill_order: ['Q', 'E', 'W'],
-      early_skills: ['Q', 'E', 'W'],
+      max_skill: 'Q',
     },
   }]);
   // /me "내 빌드"에 대기 중으로 보인다
@@ -204,7 +203,7 @@ test('빌드 등록: DB가 거절하면 이유를 보여 주고 그대로 남는
   start(`${MATCHUP}/build/new`);
   await screen.findByRole('heading', { name: /빌드 등록/ });
   fillBuild();
-  pick('선마 순서', '선마 Q › E › W');
+  pick('선마 (첫 번째로 마스터할 스킬)', '선마 Q');
   fakeState.insertError = '이 매치업에 이미 승인 대기 중인 내 빌드가 있어요. 처리된 뒤에 다시 등록해 주세요.';
   fireEvent.click(screen.getByRole('button', { name: '빌드 보내기' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('이미 승인 대기 중인 내 빌드가 있어요');

@@ -8,7 +8,7 @@ import { ErrorBox, Loading } from '../components/Status';
 import UserName from '../components/UserName';
 
 /**
- * 자유게시판 목록 (/board): 최신순 20개씩, 제목·본문 검색. 검색어·쪽은 주소(?q=&page=)에 남는다.
+ * 노가리방 목록 (/board): 최신순 20개씩, 제목·본문 검색. 검색어·쪽은 주소(?q=&page=)에 남는다.
  * 읽기는 누구나, 글쓰기는 로그인 + 닉네임 (승인 없이 바로 올라감, SPEC 6-5)
  */
 export default function Board() {
@@ -41,7 +41,7 @@ export default function Board() {
   return (
     <article className="board">
       <div className="board-head">
-        <h1 className="doc-title">자유게시판</h1>
+        <h1 className="doc-title">노가리방</h1>
         {auth.status === 'signedIn' ? (
           <Link to="/board/new" className="btn btn-primary">글쓰기</Link>
         ) : (

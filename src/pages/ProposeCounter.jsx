@@ -1,6 +1,7 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { getChampions, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../api/ddragon';
+import { getChampions } from '../api/ddragon';
+import { getBuildGame } from '../api/builds';
 import { getCountersFor } from '../api/content';
 import { getMyProposal, proposeNewCounter } from '../api/proposals';
 import { useAuth } from '../lib/auth';
@@ -12,10 +13,10 @@ import DocForm from '../components/DocForm';
 import BuildFields from '../components/BuildFields';
 import { RequireLogin } from '../components/RequireOperator';
 import NotFound from './NotFound';
-import { josa, matchupTitle } from '../lib/josa';
+import { matchupTitle } from '../lib/josa';
 
 /**
- * 새 카운터 제안: /champion/:id/propose (?counter=Quinn 으로 미리 고를 수 있음). 글 + 빌드 1개(필수)
+ * 카운터 등록(새 카운터 제안): /champion/:id/propose (?counter=Quinn 으로 미리 고를 수 있음). 글 + 빌드 1개(필수)
  * ?from=내 제안 id: 거절된 내 제안 [다시 쓰기] — 그 글·빌드를 채워서 새 제안으로 보낸다 (원래 제안은 그대로)
  */
 export default function ProposeCounter() {
@@ -33,12 +34,12 @@ function ProposeCounterForm() {
   const navigate = useNavigate();
   const fromId = Number(params.get('from')) || null;
   const { data, error, loading, retry } = useAsync(async () => {
-    const [list, counters, items, runes, spells, latest, mine] = await Promise.all([
-      getChampions(), getCountersFor(id), getItems(), getRunes(), getSummonerSpells(), getLatestVersion(),
+    const [list, counters, game, mine] = await Promise.all([
+      getChampions(), getCountersFor(id), getBuildGame(),
       fromId ? getMyProposal(auth.user.id, fromId) : null,
     ]);
     const from = mine?.type === 'new_counter' && mine.target_champion === id ? mine : null;
-    return { list, existing: new Set(counters.map((c) => c.counter_champion)), game: { items, runes, spells, latest }, from };
+    return { list, existing: new Set(counters.map((c) => c.counter_champion)), game, from };
   }, [id, fromId, auth.user.id]);
   const [picked, setPicked] = useState(params.get('counter'));
   const [query, setQuery] = useState('');
@@ -68,12 +69,12 @@ function ProposeCounterForm() {
   return (
     <article>
       <nav className="crumbs">
-        <Link to="/">홈</Link> › <Link to={`/champion/${id}`}>{target.name}</Link> › 새 카운터 제안
+        <Link to="/">홈</Link> › <Link to={`/champion/${id}`}>{target.name}</Link> › 카운터 등록
       </nav>
-      <h1 className="doc-title">{josa(target.name, '을/를')} 이기는 챔피언 제안</h1>
+      <h1 className="doc-title">{target.name} 카운터 선택</h1>
 
       <section className="section">
-        <h2 className="section-title"><span className="num">1.</span> 이기는 챔피언 고르기</h2>
+        <h2 className="section-title"><span className="num">1.</span> 카운터 고르기</h2>
         {counter ? (
           <p className="picked">
             <img src={counter.icon} alt="" width="44" height="44" /> <strong>{counter.name}</strong>
@@ -87,7 +88,7 @@ function ProposeCounterForm() {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="챔피언 검색 (예: 퀸, ㅋ)"
-                aria-label="이기는 챔피언 검색"
+                aria-label="카운터 챔피언 검색"
                 autoComplete="off"
               />
             </div>
