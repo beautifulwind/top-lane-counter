@@ -48,7 +48,7 @@ test('카카오 첫 로그인(이메일 없음)도 쓰기 화면에 가면 닉�
   fireEvent.click(screen.getByRole('button', { name: '시작하기' }));
   expect(await screen.findByRole('heading', { name: '다리우스 카운터 선택' })).toBeDefined();
   expect(where()).toBe('/champion/Darius/propose');
-  expect(document.querySelector('.me').textContent).toBe('Lv.1 카카오탑');
+  expect(document.querySelector('.me-name').textContent).toBe('Lv.1 카카오탑');
 });
 
 test('닉네임 없음: 읽기는 그대로 + 위에 [닉네임 정하기] 띠, 정하면 원래 페이지로 돌아간다', async () => {
@@ -64,7 +64,7 @@ test('닉네임 없음: 읽기는 그대로 + 위에 [닉네임 정하기] 띠, 
   fireEvent.click(screen.getByRole('button', { name: '시작하기' }));
   expect(await screen.findByText(/다리우스 카운터/)).toBeDefined();
   expect(where()).toBe('/champion/Darius');
-  expect(document.querySelector('.me').textContent).toBe('Lv.1 탑고수'); // 칭호 없으면 칭호 자리 없음
+  expect(document.querySelector('.me-name').textContent).toBe('Lv.1 탑고수'); // 칭호 없으면 칭호 자리 없음
 });
 
 test('닉네임 중복(대소문자 무시)이면 안내 문구가 보이고 화면에 머문다', async () => {
@@ -92,7 +92,7 @@ test('닉네임이 있는 유저: 상단에 "Lv.7 칭호 · 닉네임", 로그�
   fakeLogin('u-user', { nickname: '탑고수', level: 7, main_title: 'solid_heavy' });
   start('/');
   await screen.findByText('탑고수');
-  expect(document.querySelector('.me').textContent).toBe('Lv.7 단단묵직 · 탑고수');
+  expect(document.querySelector('.me-name').textContent).toBe('Lv.7 단단묵직 · 탑고수');
   fireEvent.click(screen.getByRole('button', { name: '로그아웃' }));
   expect(await screen.findByRole('link', { name: '로그인 · 가입' })).toBeDefined();
 });
@@ -102,7 +102,7 @@ test('운영자: 상단에 "Lv.0 닉네임"만 보이고 "운영자"·"관리자
   start('/');
   await screen.findByText('영자(운)');
   const header = document.querySelector('.topbar');
-  expect(header.querySelector('.me').textContent).toBe('Lv.0 영자(운)');
+  expect(header.querySelector('.me-name').textContent).toBe('Lv.0 영자(운)');
   expect(header.textContent).not.toMatch(/운영자|관리자/);
 });
 

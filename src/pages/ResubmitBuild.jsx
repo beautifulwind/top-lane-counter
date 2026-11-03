@@ -39,7 +39,7 @@ function ResubmitBuildForm() {
   const b = data.build;
   const crumbs = (
     <nav className="crumbs">
-      <Link to="/me">내 활동</Link> › {b ? <Link to={`/me/builds/${b.id}`}>빌드 #{b.id}</Link> : '빌드'} › 고치기
+      <Link to="/me">마이페이지</Link> › {b ? <Link to={`/me/builds/${b.id}`}>빌드 #{b.id}</Link> : '빌드'} › 고치기
     </nav>
   );
   if (!b || !['pending', 'revision_requested'].includes(b.status) || b.counter?.status !== 'approved') {

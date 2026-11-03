@@ -63,10 +63,10 @@ test('/me 칭호: 6개 모두 보이고, 가진 칭호만 대표로 고를 수 �
   expect(within(picker).getByText(/카운터 관련 승인 10개/)).toBeDefined();
 
   fireEvent.click(within(picker).getByText('탑신병자'));
-  await vi.waitFor(() => expect(document.querySelector('.me').textContent).toContain('Lv.3 탑신병자 · 기존유저'));
+  await vi.waitFor(() => expect(document.querySelector('.me-name').textContent).toContain('Lv.3 탑신병자 · 기존유저'));
   expect(TABLES.profiles.find((p) => p.id === ME).main_title).toBe('top_addict');
   fireEvent.click(within(picker).getByText('없음'));
-  await vi.waitFor(() => expect(document.querySelector('.me').textContent).toContain('Lv.3 기존유저'));
+  await vi.waitFor(() => expect(document.querySelector('.me-name').textContent).toContain('Lv.3 기존유저'));
 });
 
 test('/me: 상단 닉네임도 새로 읽은 레벨·대표 칭호로 맞춘다 (로그인 뒤에 바뀐 값)', async () => {
@@ -75,13 +75,13 @@ test('/me: 상단 닉네임도 새로 읽은 레벨·대표 칭호로 맞춘다 
   Object.assign(p, { xp: 420, level: 3 }); // 로그인 뒤 DB에서 바뀜
   start('/me');
   await screen.findByText(/· 경험치 420/);
-  await vi.waitFor(() => expect(document.querySelector('.me').textContent).toBe('Lv.3 기존유저'));
+  await vi.waitFor(() => expect(document.querySelector('.me-name').textContent).toBe('Lv.3 기존유저'));
 });
 
 test('/me: 레벨업·칭호 알림은 레벨 칸 위에 "새 알림"으로 한 번 보이고 읽음 처리', async () => {
   TABLES.notifications.push(
     { id: 1, user_id: ME, kind: 'level_up', message: '레벨이 올랐어요: Lv.3', created_at: '2026-11-02T00:00:00Z', read_at: null },
-    { id: 2, user_id: ME, kind: 'title_earned', message: '칭호를 얻었어요: 탑신병자 — [내 활동]에서 대표 칭호로 고를 수 있어요.', created_at: '2026-11-02T00:00:00Z', read_at: null },
+    { id: 2, user_id: ME, kind: 'title_earned', message: '칭호를 얻었어요: 탑신병자 — [마이페이지]에서 대표 칭호로 고를 수 있어요.', created_at: '2026-11-02T00:00:00Z', read_at: null },
   );
   asUser();
   start('/me');

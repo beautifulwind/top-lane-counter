@@ -9,6 +9,7 @@ import { BUILD_STATUS_LABEL, STATUS_LABEL, TYPE_LABEL, fmtDateTime } from '../li
 import { useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
+import { AccountRow } from '../components/AuthBar';
 import UserName from '../components/UserName';
 import BuildCard from '../components/BuildCard';
 import DiffView from '../components/DiffView';
@@ -17,7 +18,7 @@ import { matchupTitle } from '../lib/josa';
 import AccountSettings from '../components/AccountSettings';
 
 /**
- * 내 활동 (/me): 내 제안·내 빌드 목록과 상태, 로그인 연결, 닉네임 바꾸기·회원 탈퇴.
+ * 마이페이지 (/me): 내 제안·내 빌드 목록과 상태, 로그인 연결, 닉네임 바꾸기·회원 탈퇴.
  * 레벨·경험치·칭호는 6단계에서 채운다 (SPEC 3장).
  */
 export default function Me() {
@@ -30,9 +31,10 @@ export default function Me() {
 
   return (
     <article className="me-page">
-      <h1 className="doc-title" data-page-title="내 활동">
+      <h1 className="doc-title" data-page-title="마이페이지">
         <UserName profile={auth.profile} />
       </h1>
+      <AccountRow />
       {sent && (
         <p className="notice" role="status">
           {sent} 운영자가 승인하면 반영돼요.

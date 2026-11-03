@@ -138,3 +138,12 @@ select t.ok('함수 오류 문구에 "다시 제출"·조사 자리표시가 없
   not exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace
               and prosrc ~ 'raise exception ''[^'']*(다시 제출|을\(를\)|은\(는\))'));
 select t.ok('보내기 문구로 바뀜', exists (select 1 from pg_proc where proname = 'resubmit_proposal' and prosrc like '%다시 보낼 수 있어요%'));
+
+-- ===================================================================
+-- 5. 019: 화면 이름 "내 활동" → "마이페이지"
+-- ===================================================================
+select t.ok('019: 함수 문구에 "내 활동"이 없음',
+  not exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace and prosrc like '%내 활동%'));
+select t.ok('019: 재검토·칭호 문구는 [마이페이지]',
+  (select count(*) = 3 from pg_proc where pronamespace = 'public'::regnamespace
+     and proname in ('check_new_proposal', 'check_new_build', 'sync_rewards') and prosrc like '%[마이페이지]%'));

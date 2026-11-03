@@ -262,7 +262,7 @@ function PendingRow({ proposal: p, name, game, onDone, onReload }) {
         <NoteForm
           id={`revision-p-${p.id}`}
           label="재검토 요청 메모 (필수, 제안자에게 보여요)"
-          hint="제안자가 [내 활동]에서 고쳐서 다시 내면 승인 대기로 돌아와요."
+          hint="제안자가 [마이페이지]에서 고쳐서 다시 내면 승인 대기로 돌아와요."
           confirmLabel="재검토 요청 확정"
           busyLabel="보내는 중…"
           onCancel={() => setOpen(null)}
@@ -445,7 +445,7 @@ function PendingBuildRow({ build: b, game, name, onDone, onReload }) {
         <NoteForm
           id={`revision-build-${b.id}`}
           label="재검토 요청 메모 (필수, 작성자에게 보여요)"
-          hint="작성자가 [내 활동]에서 고쳐서 다시 내면 승인 대기로 돌아와요."
+          hint="작성자가 [마이페이지]에서 고쳐서 다시 내면 승인 대기로 돌아와요."
           confirmLabel="재검토 요청 확정"
           busyLabel="보내는 중…"
           onCancel={() => setOpen(null)}

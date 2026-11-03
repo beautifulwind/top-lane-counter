@@ -42,7 +42,7 @@ function ResubmitForm() {
   const p = data.proposal;
   const crumbs = (
     <nav className="crumbs">
-      <Link to="/me">내 활동</Link> › {p ? <Link to={`/me/proposals/${p.id}`}>제안 #{p.id}</Link> : '제안'} › 고치기
+      <Link to="/me">마이페이지</Link> › {p ? <Link to={`/me/proposals/${p.id}`}>제안 #{p.id}</Link> : '제안'} › 고치기
     </nav>
   );
   if (!p || !['pending', 'revision_requested'].includes(p.status)) {

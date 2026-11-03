@@ -36,7 +36,7 @@ function Detail() {
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
   const b = data.build;
-  const crumbs = <nav className="crumbs"><Link to="/me">내 활동</Link> › 빌드 #{id}</nav>;
+  const crumbs = <nav className="crumbs"><Link to="/me">마이페이지</Link> › 빌드 #{id}</nav>;
   if (!b) {
     return (
       <article>

@@ -186,8 +186,21 @@ kbd {
 
 /* 상단 로그인 영역 */
 .auth-bar { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.me { color: var(--on-brand); font-size: 13px; display: flex; align-items: center; gap: 6px; min-width: 0; }
-.me .user-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 닉네임은 글자만 (누르는 동작 없음). 길면 말줄임 */
+.me-name { color: var(--on-brand); font-size: 13px; min-width: 0; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* [마이페이지]: 새 알림 빨간 점은 버튼 오른쪽 위 */
+.top-btn.mypage { position: relative; }
+.top-btn.mypage.on { background: var(--on-brand-hover); }
+.top-btn.mypage .alert-dot { position: absolute; top: -3px; right: -3px; box-shadow: 0 0 0 2px var(--brand); }
+/* 마이페이지 맨 위 계정 줄 ([관리]·[로그아웃], 휴대폰 폭에서만) */
+.account-row { display: flex; flex-wrap: wrap; gap: 8px; margin: -4px 0 12px; }
+/* 휴대폰 폭(768px 미만)은 상단 바를 한 줄로: 이름·노가리방·[마이페이지]만, 나머지는 마이페이지 안으로 */
+@media (max-width: 767px) {
+  .wide-only { display: none !important; }
+}
+@media (min-width: 768px) {
+  .narrow-only { display: none !important; }
+}
 .top-btn {
   flex: none; min-height: 36px; padding: 0 12px; display: inline-flex; align-items: center;
   border: 1px solid var(--on-brand-line); border-radius: var(--radius);
@@ -229,7 +242,7 @@ kbd {
 .login-error-actions { display: flex; gap: 8px; margin-top: 10px; }
 .login-error-actions .btn { min-height: 36px; display: inline-flex; align-items: center; }
 
-/* 내 활동: 로그인 연결 */
+/* 마이페이지: 로그인 연결 */
 .me-section { margin-top: 24px; }
 .me-section h2 { font-size: 18px; margin: 0 0 4px; }
 .identity-list { list-style: none; padding: 0; margin: 12px 0 0; display: flex; flex-direction: column; gap: 8px; max-width: 360px; }

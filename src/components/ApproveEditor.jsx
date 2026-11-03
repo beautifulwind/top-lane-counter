@@ -31,7 +31,7 @@ export default function ApproveEditor({ doc = null, build = null, game, author, 
     <div className="approve-editor">
       <p className="hint">
         제안 내용을 고쳐서 승인할 수 있어요. 안 고치면 그대로 공개돼요. 고치면 원래 제안과 고친 내용이 모두 기록에 남고,
-        제안자도 [내 활동]에서 비교해 볼 수 있어요.
+        제안자도 [마이페이지]에서 비교해 볼 수 있어요.
       </p>
       {doc && (
         <fieldset className="doc-form approve-doc">
