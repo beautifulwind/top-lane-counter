@@ -12,7 +12,7 @@ export const TITLES = {
 
 /** /me에 보여 줄 조건 설명 (rules = xp_rules 값 { title_tool_hater: 10, ... }) */
 export const titleCondition = (key, rules = {}) => ({
-  top_addict: '처음으로 승인받은 기여 1개 (카운터·문서 수정·빌드) 또는 노가리방 글·댓글·문서 댓글 1개 (숨김·삭제된 것은 빼고)',
+  top_addict: '처음으로 승인받은 기여 1개 (카운터·문서 수정·빌드) 또는 자유게시판 글·댓글·문서 댓글 1개 (숨김·삭제된 것은 빼고)',
   tool_hater: `카운터 관련 승인 ${rules.title_tool_hater ?? 10}개 (새 카운터 + 문서 수정)`,
   solid_heavy: `카운터 관련 승인 ${rules.title_solid_heavy ?? 25}개`,
   butcher_owner: `카운터 관련 승인 ${rules.title_butcher_owner ?? 50}개`,

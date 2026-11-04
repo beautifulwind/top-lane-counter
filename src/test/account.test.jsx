@@ -5,6 +5,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
 import { TABLES, fakeLogin, fakeState } from './fakeSupabase';
+import { openMenu } from './menu';
 
 beforeEach(() => {
   vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch());
@@ -108,7 +109,7 @@ test('탈퇴: 닉네임을 그대로 적어야 [탈퇴 확정]이 켜지고, 끝
   expect(await screen.findByText(/탈퇴했어요/)).toBeDefined();
   expect(where()).toBe('/');
   expect(fakeState.functionCalls).toEqual([{ name: 'delete-account', body: { confirm: nickname } }]);
-  expect(screen.getByRole('link', { name: '로그인 · 가입' })).toBeDefined();
+  expect((await openMenu()).getByRole('link', { name: '로그인 · 가입' })).toBeDefined();
 });
 
 test('탈퇴 실패: 서버 문구를 보여 주고 그대로 남는다', async () => {

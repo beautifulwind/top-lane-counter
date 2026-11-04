@@ -5,6 +5,7 @@ import { AppRoutes } from '../App';
 import { safePath } from '../pages/Login';
 import { fakeFetch } from './fakeDdragon';
 import { fakeLogin, fakeState } from './fakeSupabase';
+import { clickMenu, menuUserText, openMenu } from './menu';
 
 beforeEach(() => {
   vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch());
@@ -18,7 +19,7 @@ const where = () => screen.getByTestId('where').textContent;
 
 test('로그인 전: 상단에 [로그인] → 로그인 화면에서 구글 로그인을 시작하면 원래 페이지로 돌아오게 요청한다', async () => {
   start('/champion/Darius');
-  fireEvent.click(await screen.findByRole('link', { name: '로그인 · 가입' }));
+  await clickMenu('로그인 · 가입');
   expect(where()).toBe('/login');
   fireEvent.click(screen.getByRole('button', { name: '구글로 시작하기' }));
   await screen.findByRole('button', { name: '구글로 이동 중…' });
@@ -48,7 +49,7 @@ test('카카오 첫 로그인(이메일 없음)도 쓰기 화면에 가면 닉�
   fireEvent.click(screen.getByRole('button', { name: '시작하기' }));
   expect(await screen.findByRole('heading', { name: '다리우스 카운터 선택' })).toBeDefined();
   expect(where()).toBe('/champion/Darius/propose');
-  expect(document.querySelector('.me-name').textContent).toBe('Lv.1 카카오탑');
+  expect(await menuUserText()).toBe('Lv.1 카카오탑');
 });
 
 test('닉네임 없음: 읽기는 그대로 + 위에 [닉네임 정하기] 띠, 정하면 원래 페이지로 돌아간다', async () => {
@@ -64,7 +65,7 @@ test('닉네임 없음: 읽기는 그대로 + 위에 [닉네임 정하기] 띠, 
   fireEvent.click(screen.getByRole('button', { name: '시작하기' }));
   expect(await screen.findByText(/다리우스 카운터/)).toBeDefined();
   expect(where()).toBe('/champion/Darius');
-  expect(document.querySelector('.me-name').textContent).toBe('Lv.1 탑고수'); // 칭호 없으면 칭호 자리 없음
+  expect(await menuUserText()).toBe('Lv.1 탑고수'); // 칭호 없으면 칭호 자리 없음
 });
 
 test('닉네임 중복(대소문자 무시)이면 안내 문구가 보이고 화면에 머문다', async () => {
@@ -91,19 +92,16 @@ test('빈 닉네임, 20자 초과 닉네임은 저장 전에 막는다', async (
 test('닉네임이 있는 유저: 상단에 "Lv.7 [칭호] 닉네임", 로그아웃하면 [로그인]으로 바뀐다', async () => {
   fakeLogin('u-user', { nickname: '탑고수', level: 7, main_title: 'solid_heavy' });
   start('/');
-  await screen.findByText('탑고수');
-  expect(document.querySelector('.me-name').textContent).toBe('Lv.7 단단묵직 탑고수');
-  fireEvent.click(screen.getByRole('button', { name: '로그아웃' }));
-  expect(await screen.findByRole('link', { name: '로그인 · 가입' })).toBeDefined();
+  expect(await menuUserText()).toBe('Lv.7 단단묵직 탑고수');
+  await clickMenu('로그아웃', 'button');
+  await vi.waitFor(async () => expect((await openMenu()).getByRole('link', { name: '로그인 · 가입' })).toBeDefined());
 });
 
 test('운영자: 상단에 "Lv.0 닉네임"만 보이고 "운영자"·"관리자" 글자는 붙지 않는다', async () => {
   fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
   start('/');
-  await screen.findByText('영자(운)');
-  const header = document.querySelector('.topbar');
-  expect(header.querySelector('.me-name').textContent).toBe('Lv.0 영자(운)');
-  expect(header.textContent).not.toMatch(/운영자|관리자/);
+  expect(await menuUserText()).toBe('Lv.0 영자(운)');
+  expect(document.querySelector('.topbar').textContent).not.toMatch(/운영자|관리자/);
 });
 
 test('운영자 페이지(/admin)에도 관리자 지정 기능은 없다 (SPEC: 나중에 정함)', async () => {
@@ -128,9 +126,10 @@ test('로그인하지 않고 /welcome에 오면 로그인 화면으로 보낸다
 
 test('다른 탭에서 로그인해도(상태 변경 알림) 바로 반영된다', async () => {
   start('/');
-  await screen.findByRole('link', { name: '로그인 · 가입' });
+  const menu = await openMenu();
+  expect(menu.getByRole('link', { name: '로그인 · 가입' })).toBeDefined();
   await act(async () => fakeLogin('u-old'));
-  expect(await screen.findByRole('button', { name: '로그아웃' })).toBeDefined();
+  expect(await menu.findByRole('button', { name: '로그아웃' })).toBeDefined(); // 열어 둔 메뉴도 바로 바뀐다
 });
 
 test('돌아갈 경로는 사이트 안 경로만 허용한다', () => {

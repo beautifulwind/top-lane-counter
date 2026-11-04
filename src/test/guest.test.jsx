@@ -6,6 +6,7 @@ import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
 import { TABLES, fakeGuestLogin, fakeLogin, fakePost, fakeState } from './fakeSupabase';
 import { ALREADY_MEMBER_TEXT } from '../lib/guest';
+import { openMenu } from './menu';
 
 beforeEach(() => {
   vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch());
@@ -157,14 +158,17 @@ test('Supabase에서 익명 로그인이 꺼져 있으면 이유를 알려 준�
 
 // ---------------- 표시 · 로그아웃 없음 ----------------
 
-test('비회원: 상단 바에 [마이페이지]만, 로그아웃은 어디에도 없고 닉네임 옆에 "비회원"', async () => {
+test('비회원: 메뉴에 [마이페이지]·[자유게시판]만, 로그아웃은 어디에도 없고 닉네임 옆에 "비회원"', async () => {
   guestWithName();
   start('/me');
-  expect(await screen.findByRole('link', { name: '마이페이지' })).toBeDefined();
+  const menu = await openMenu();
+  expect(menu.getByRole('link', { name: '마이페이지' })).toBeDefined();
+  expect(menu.queryByRole('button', { name: '로그아웃' })).toBeNull();
+  expect(document.querySelector('.menu-user .guest-badge')).not.toBeNull();
+  fireEvent.keyDown(menu.getByRole('button', { name: '메뉴 닫기' }), { key: 'Escape' });
   expect(screen.queryByRole('button', { name: '로그아웃' })).toBeNull();
   const title = await screen.findByRole('heading', { level: 1 });
   expect(within(title).getByText('비회원')).toBeDefined();
-  expect(document.querySelector('.me-name .guest-badge')).not.toBeNull();
   // 구글·카카오 연결 칸이 맨 위에, 회원용 "로그인 연결"은 없음
   expect(screen.getByRole('region', { name: '구글·카카오 연결하기' })).toBeDefined();
   expect(screen.queryByRole('region', { name: '로그인 연결' })).toBeNull();
@@ -266,7 +270,7 @@ test('비회원이 따봉을 누르면 투표 대신 연결 안내', async () =>
   expect(fakeState.rpcCalls.filter((c) => c.name === 'vote_build')).toEqual([]);
 });
 
-test('노가리방 글: 비회원은 [추천]·[신고] 없이 안내만, 댓글은 쓸 수 있다', async () => {
+test('자유게시판 글: 비회원은 [추천]·[신고] 없이 안내만, 댓글은 쓸 수 있다', async () => {
   TABLES.posts.push(fakePost(1));
   guestWithName();
   start('/board/1');

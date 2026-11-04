@@ -4,6 +4,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
 import { FAKE_PROPOSAL_BUILD, TABLES, fakeLogin, fakeProposal, fakeState } from './fakeSupabase';
+import { clickMenu } from './menu';
 
 const COUNTERS = TABLES.counters.map((c) => ({ ...c }));
 const BUILDS = TABLES.builds.map((b) => ({ ...b }));
@@ -132,24 +133,27 @@ function revisionRequested() {
 test('빨간 점: /me에서 알림을 확인하면 꺼지고, 재검토 요청 내용과 [고쳐서 다시 보내기]은 남는다', async () => {
   revisionRequested();
   start('/');
-  // 빨간 점은 [마이페이지] 버튼에 (읽은 것·남의 것은 세지 않음)
+  // 빨간 점은 ☰와 메뉴의 [마이페이지]에 (읽은 것·남의 것은 세지 않음)
+  const opener = await screen.findByRole('button', { name: '메뉴 열기, 새 알림 1개' });
+  expect(opener.querySelector('.alert-dot')).not.toBeNull();
+  fireEvent.click(opener);
   const mypage = await screen.findByRole('link', { name: '마이페이지, 새 알림 1개' });
   expect(mypage.querySelector('.alert-dot')).not.toBeNull();
   fireEvent.click(mypage);
   expect(where()).toBe('/me');
   const r = (await screen.findByText('운영자 메모: 9레벨을 고쳐 주세요')).closest('li');
   expect(within(r).getByText('새 알림')).toBeDefined();
-  await vi.waitFor(() => expect(screen.getByRole('link', { name: '마이페이지' }).querySelector('.alert-dot')).toBeNull()); // 확인 → 꺼짐
+  await vi.waitFor(() => expect(screen.getByRole('button', { name: '메뉴 열기' }).querySelector('.alert-dot')).toBeNull()); // 확인 → 꺼짐
   expect(fakeState.rpcCalls).toEqual([{ name: 'mark_notifications_read', args: { p_ids: [41] } }]);
 
   // 다른 페이지에 갔다가 다시 와도 점은 꺼져 있고, 요청 내용과 버튼은 그대로
   fireEvent.click(screen.getByRole('link', { name: '탑신병자' }));
-  fireEvent.click(await screen.findByRole('link', { name: '마이페이지' }));
+  await clickMenu('마이페이지');
   const again = (await screen.findByText('운영자 메모: 9레벨을 고쳐 주세요')).closest('li');
   expect(within(again).getByText('재검토 요청', { selector: '.status-badge' })).toBeDefined();
   expect(within(again).getByRole('link', { name: '고쳐서 다시 보내기' })).toBeDefined();
   expect(within(again).queryByText('새 알림')).toBeNull();
-  expect(screen.getByRole('link', { name: '마이페이지' }).querySelector('.alert-dot')).toBeNull();
+  expect(screen.getByRole('button', { name: '메뉴 열기' }).querySelector('.alert-dot')).toBeNull();
   expect(fakeState.rpcCalls).toHaveLength(1); // 읽을 게 없으면 부르지 않음
 });
 

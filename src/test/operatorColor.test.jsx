@@ -7,6 +7,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
 import { TABLES, fakeLogin, fakeProposal } from './fakeSupabase';
+import { openMenu } from './menu';
 
 beforeEach(() => {
   vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch());
@@ -30,15 +31,17 @@ test('일반 사용자: 매치업·챔피언 화면에 운영자 색이 없다',
   expect(opMarks()).toHaveLength(0);
 });
 
-test('운영자: 매치업의 [수정 기록] [카운터 숨기기] [빌드 숨기기]·상단 [관리]는 운영자 색, [문서 수정 제안]은 보통 색', async () => {
+test('운영자: 매치업의 [수정 기록] [카운터 숨기기] [빌드 숨기기]·메뉴 [관리]는 운영자 색, [문서 수정 제안]은 보통 색', async () => {
   asOperator();
   start('/champion/Darius/counter/Quinn');
   expect(isOp(await screen.findByRole('link', { name: '수정 기록' }))).toBe(true);
   expect(isOp(screen.getByRole('button', { name: '카운터 숨기기' }))).toBe(true);
   for (const b of screen.getAllByRole('button', { name: '빌드 숨기기' })) expect(isOp(b)).toBe(true);
-  expect(isOp(screen.getByRole('link', { name: '관리' }))).toBe(true);
   expect(isOp(screen.getByRole('link', { name: '문서 수정 제안' }))).toBe(false);
   expect(isOp(screen.getByRole('link', { name: '+ 빌드 등록' }))).toBe(false);
+  const menu = await openMenu();
+  expect(isOp(menu.getByRole('link', { name: '관리' }))).toBe(true);
+  expect(isOp(menu.getByRole('link', { name: '마이페이지' }))).toBe(false);
 });
 
 test('운영자: 챔피언 화면의 [숨기기] [순서 변경]은 운영자 색', async () => {

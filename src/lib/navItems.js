@@ -1,0 +1,25 @@
+// 사이트 메뉴 항목 (SPEC 3장 상단 바·메뉴): 여기 한 곳에서만 정한다.
+// 지금은 ☰ 메뉴 패널(menu)이 읽고, 나중에 앱으로 낼 때 아래 탭 바(tab)도 같은 목록을 읽는다.
+// 상단 바 밖으로 꺼내 보일 항목은 bar: true (지금은 없음 — 상단 바는 로고와 ☰만).
+// needs: 'any'(누구나) | 'signedIn'(로그인 — 비회원·닉네임 전 포함) | 'operator'(운영자만)
+// 로그인·로그아웃은 페이지 이동이 아니라 계정 동작이라 이 목록 밖(SiteMenu)에서 처리한다.
+export const NAV_ITEMS = [
+  { key: 'home', to: '/', label: '챔피언 선택', icon: 'shield', needs: 'any', menu: false, tab: true, bar: false },
+  { key: 'me', to: '/me', label: '마이페이지', icon: 'user', needs: 'signedIn', menu: true, tab: true, bar: false, dot: 'unread' },
+  { key: 'board', to: '/board', label: '자유게시판', icon: 'message', needs: 'any', menu: true, tab: true, bar: false },
+  { key: 'admin', to: '/admin', label: '관리', icon: 'shield', needs: 'operator', menu: true, tab: false, bar: false, tone: 'op' },
+];
+
+const ALLOWED = {
+  any: () => true,
+  signedIn: (kind) => ['guest', 'noNickname', 'member', 'operator'].includes(kind),
+  operator: (kind) => kind === 'operator',
+};
+
+/** where('menu' | 'tab' | 'bar')에 보일 항목 — kind는 accountKind(auth) */
+export const navItemsFor = (where, kind) =>
+  kind === 'loading' ? [] : NAV_ITEMS.filter((it) => it[where] && ALLOWED[it.needs](kind));
+
+/** 지금 보고 있는 항목인가: 홈은 정확히 '/', 나머지는 그 주소와 그 아래 */
+export const isCurrentNav = (item, pathname) =>
+  item.to === '/' ? pathname === '/' : pathname === item.to || pathname.startsWith(`${item.to}/`);

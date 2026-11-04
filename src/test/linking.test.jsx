@@ -4,6 +4,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
 import { fakeLogin, fakeState } from './fakeSupabase';
+import { clickMenu } from './menu';
 
 beforeEach(() => {
   vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch());
@@ -65,7 +66,7 @@ test('/me: 로그인 안 했으면 로그인 화면으로 보낸다', async () =
 test('/me: 연결된 방식은 "연결됨", 안 된 방식은 [연결하기] → linkIdentity를 /me로 돌아오게 부른다', async () => {
   fakeLogin('u-old', {}, { identities: [identity('google', ago(10), 'old@gmail.com')] });
   render_('/');
-  fireEvent.click(await screen.findByRole('link', { name: '마이페이지' })); // 상단 [마이페이지] → /me
+  await clickMenu('마이페이지'); // ☰ 메뉴 [마이페이지] → /me
   expect(where()).toBe('/me');
 
   const google = (await screen.findByText('구글')).closest('li');

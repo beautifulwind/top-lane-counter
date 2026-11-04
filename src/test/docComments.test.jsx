@@ -187,7 +187,7 @@ test('/me: 문서 댓글 알림 — 매치업 이름과 [문서 보기] (022: �
   });
   fakeLogin('u-old');
   start('/me');
-  const sec = (await screen.findByRole('heading', { name: '댓글·노가리방 알림' })).closest('section');
+  const sec = (await screen.findByRole('heading', { name: '댓글·자유게시판 알림' })).closest('section');
   const item = within(sec).getByRole('listitem');
   expect(item.textContent).toContain('새 댓글 2개');
   expect(item.textContent).toContain('퀸으로 다리우스 잡는 법');

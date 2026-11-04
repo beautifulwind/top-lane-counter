@@ -6,7 +6,7 @@ const MB = 1024 * 1024;
 const fmtMb = (bytes) => `${Number((bytes / MB).toFixed(1))}MB`;
 
 /**
- * 운영자 페이지의 "사진 저장 공간" 칸 (023): 노가리방 사진이 쓰는 공간 (무료 1GB 기준).
+ * 운영자 페이지의 "사진 저장 공간" 칸 (023): 자유게시판 사진이 쓰는 공간 (무료 1GB 기준).
  * 경고 선(800MB)을 넘으면 보라 경고, 막는 선(900MB)을 넘으면 새 첨부가 막혔다고 알려 준다.
  */
 export default function MediaUsage() {

@@ -47,7 +47,7 @@ export const TABLES = {
   xp_events: [],
   user_titles: [],
   offmeta_champions: [],
-  // 015 노가리방 (author = select가 돌려주는 관계 모양)
+  // 015 자유게시판 (author = select가 돌려주는 관계 모양)
   posts: [],
   post_comments: [],
   post_votes: [],

@@ -4,6 +4,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
 import { fakeLogin, fakeState } from './fakeSupabase';
+import { openMenu } from './menu';
 
 beforeEach(() => {
   vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch());
@@ -53,7 +54,7 @@ test('[닫기]를 누르면 안내가 사라지고, [다시 로그인]은 로그
 test('code 교환이 성공하면 안내 없이 로그인되고 주소창도 깨끗해진다', async () => {
   fakeLogin('u-old');
   returnFromGoogle('?code=abc&sb_flow_id=f1', '/');
-  expect(await screen.findByRole('button', { name: '로그아웃' })).toBeDefined();
+  expect((await openMenu()).getByRole('button', { name: '로그아웃' })).toBeDefined();
   expect(screen.queryByText(/로그인하지 못했어요/)).toBeNull();
   expect(window.location.search).toBe('');
 });
@@ -61,7 +62,7 @@ test('code 교환이 성공하면 안내 없이 로그인되고 주소창도 깨
 test('로그인 콜백이 아닌 평소 접속에서는 안내가 뜨지 않는다', async () => {
   fakeState.initError = { message: '아무 오류' };
   returnFromGoogle('', '/');
-  await screen.findByRole('link', { name: '로그인 · 가입' });
+  expect((await openMenu()).getByRole('link', { name: '로그인 · 가입' })).toBeDefined();
   expect(screen.queryByText(/로그인하지 못했어요/)).toBeNull();
 });
 

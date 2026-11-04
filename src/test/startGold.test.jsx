@@ -1,4 +1,4 @@
-// 묶음 C (018): 시작 아이템 500골드 상한, 선마 하나, 카운터 순위·문구, 노가리방, 부제, 운영자 아이템 가격표
+// 묶음 C (018): 시작 아이템 500골드 상한, 선마 하나, 카운터 순위·문구, 자유게시판, 부제, 운영자 아이템 가격표
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -7,6 +7,7 @@ import { fakeFetch } from './fakeDdragon';
 import { TABLES, fakeBuild, fakeLogin, fakeState } from './fakeSupabase';
 import { buildProblem, buildToForm, emptyBuild, startGold, startGoldProblem } from '../lib/buildContent';
 import { SKILL_GROUP, fillBuild, pick } from './buildHelpers';
+import { clickMenu } from './menu';
 
 beforeEach(() => {
   vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch());
@@ -162,11 +163,11 @@ test('챔피언 문서: "다리우스 카운터", 순위 숫자, 안내 문구 �
   expect(screen.getByText(/› 카운터 등록/)).toBeDefined();
 });
 
-test('상단 바: 사이트 이름 옆에 부제, 노가리방 링크와 화면 제목', async () => {
+test('상단 바: 사이트 이름 옆에 부제, 메뉴의 자유게시판 링크와 화면 제목', async () => {
   start('/board');
   expect(screen.getByRole('link', { name: '탑신병자' })).toBeDefined();
   expect(screen.getByText('탑은 라인전이 전부')).toBeDefined();
-  fireEvent.click(screen.getByRole('link', { name: '노가리방' }));
-  expect(await screen.findByRole('heading', { name: '노가리방' })).toBeDefined();
-  await vi.waitFor(() => expect(document.title).toBe('노가리방 - 탑신병자'));
+  await clickMenu('자유게시판');
+  expect(await screen.findByRole('heading', { name: '자유게시판' })).toBeDefined();
+  await vi.waitFor(() => expect(document.title).toBe('자유게시판 - 탑신병자'));
 });

@@ -3,9 +3,9 @@
 --
 -- 남김: 계정(auth.users)·프로필(닉네임·운영자)·닉네임 변경 기록, 설정값(xp_rules·xp_levels·item_prices·offmeta_champions),
 --       트린다미어 상대 말파이트 카운터 1개 — 지금 문서, 공개 빌드, 그 카운터를 만든 처음 제안 1개.
--- 지움: 그 밖의 카운터·문서·제안·빌드 전부, 따봉·따봉 기록, 노가리방 글·댓글·추천, 문서 댓글, 신고, 알림,
+-- 지움: 그 밖의 카운터·문서·제안·빌드 전부, 따봉·따봉 기록, 자유게시판 글·댓글·추천, 문서 댓글, 신고, 알림,
 --       경험치 기록, 숨김 기록, 빌드·카운터 상태 기록, 완전 삭제 기록, 도배 방지 시각, 018 백업 표의 내용,
---       노가리방 사진(023): 붙은 사진 줄은 지우고 파일 경로는 정리 대기열(storage_trash)로 — SQL은 Storage 파일을 못 지우므로
+--       자유게시판 사진(023): 붙은 사진 줄은 지우고 파일 경로는 정리 대기열(storage_trash)로 — SQL은 Storage 파일을 못 지우므로
 --       실제 파일은 다음 사진 정리(Edge Function media-cleanup, 매일)가 지운다. 바로 지우려면 Storage → board-media에서 직접.
 -- 말파 카운터의 기록 정리:
 --   - 수정 기록은 지우고 지금 문서를 "처음 버전" 1줄로 새로 남긴다 (되돌리기 기준점, 문서의 "최근 수정" 날짜는 그대로).
@@ -40,7 +40,7 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------
--- 1. 노가리방·문서 댓글·신고
+-- 1. 자유게시판·문서 댓글·신고
 -- ---------------------------------------------------------------------
 delete from public.reports;
 delete from public.post_votes;
@@ -132,7 +132,7 @@ union all select '문서 수정 기록', count(*) from public.doc_revisions
 union all select '제안', count(*) from public.edit_proposals
 union all select '빌드', count(*) from public.builds
 union all select '따봉', count(*) from public.build_votes
-union all select '노가리방 글', count(*) from public.posts
+union all select '자유게시판 글', count(*) from public.posts
 union all select '붙은 사진', count(*) from public.board_attachments
 union all select '사진 정리 대기열 (다음 정리 때 파일 삭제)', count(*) from public.storage_trash
 union all select '문서 댓글', count(*) from public.doc_comments

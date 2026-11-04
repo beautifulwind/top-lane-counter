@@ -10,14 +10,14 @@ import { MediaGallery, MediaPicker, mediaToItems, sameMedia } from './Media';
 import GuestHint from './GuestHint';
 
 /**
- * 댓글 칸 (노가리방 글, 매치업 문서 공통 — SPEC 6-5, 6-6, 고치기 시간 6-7).
+ * 댓글 칸 (자유게시판 글, 매치업 문서 공통 — SPEC 6-5, 6-6, 고치기 시간 6-7).
  * ops: POST_COMMENT_OPS | DOC_COMMENT_OPS (kind, create(parentId, body), edit, remove, report, hide, restore)
  * parentId: 글 id 또는 카운터 id
  * open: 새 댓글을 달 수 있나 (글·문서가 보이는 상태), closedHint: 못 달 때 안내 (없으면 안내 없이 폼만 숨김)
  * live: 글·문서가 보이는 상태인가 (아니면 고치기·신고 숨김 — 숨긴 글·카운터는 운영자만 봄)
  * rules: 고치기 시간 { post, comment, grace }
  * title: 칸 제목 앞부분 (예: "댓글", "4. 댓글")
- * mediaRules: 사진 숫자 (ops.media일 때만 — 노가리방 댓글. 문서 댓글은 사진 없음)
+ * mediaRules: 사진 숫자 (ops.media일 때만 — 자유게시판 댓글. 문서 댓글은 사진 없음)
  */
 export default function CommentThread({
   ops, parentId, comments, auth, open, closedHint, live, rules, mediaRules = DEFAULT_MEDIA_RULES, title = '댓글', onDone, onReload,

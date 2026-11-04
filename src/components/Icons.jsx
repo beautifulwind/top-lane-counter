@@ -42,7 +42,7 @@ export const SwordsIcon = (p) => (
 export const TrendingUpIcon = (p) => <Line {...p}><path d="M22 7l-8.5 8.5-5-5L2 17" /><path d="M16 7h6v6" /></Line>;
 /** 깃발 (요약·특이사항) */
 export const FlagIcon = (p) => <Line {...p}><path d="M4 22V4" /><path d="M4 4h13l-2 4 2 4H4" /></Line>;
-/** 말풍선 (댓글·노가리방) */
+/** 말풍선 (댓글·자유게시판) */
 export const MessageIcon = (p) => <Line {...p}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></Line>;
 /** 돋보기 (검색) */
 export const SearchIcon = (p) => <Line {...p}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></Line>;
@@ -50,3 +50,5 @@ export const SearchIcon = (p) => <Line {...p}><circle cx="11" cy="11" r="7" /><p
 export const PlusIcon = (p) => <Line {...p}><path d="M12 5v14M5 12h14" /></Line>;
 /** 사람 (마이페이지) */
 export const UserIcon = (p) => <Line {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></Line>;
+/** 세 줄 (☰ 메뉴) */
+export const MenuIcon = (p) => <Line {...p}><path d="M4 6h16M4 12h16M4 18h16" /></Line>;

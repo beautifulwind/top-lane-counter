@@ -1,4 +1,4 @@
-// 022: 이름·문구·화면 바꾸기 — 사이트 이름, 홈 제목, 상단 바 노가리방 위치, 문서·입력 순서, 입력 예시, 강타 빼기, [제안]
+// 022: 이름·문구·화면 바꾸기 — 사이트 이름, 홈 제목, 상단 바 자유게시판 위치, 문서·입력 순서, 입력 예시, 강타 빼기, [제안]
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -8,6 +8,7 @@ import { TABLES, fakeBuild, fakeLogin } from './fakeSupabase';
 import { buildProblem, buildToForm } from '../lib/buildContent';
 import { LEVEL_EXAMPLES, SUMMARY_EXAMPLE } from '../components/DocForm';
 import { fillBuild, SKILL_GROUP, pick } from './buildHelpers';
+import { openMenu } from './menu';
 
 beforeEach(() => {
   vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch());
@@ -26,18 +27,18 @@ test('홈: 제목 "챔피언 선택", 탭 제목 "탑신병자 - 롤 탑 카운�
   await vi.waitFor(() => expect(document.title).toBe('탑신병자 - 롤 탑 카운터'));
 });
 
-test('상단 바: [노가리방]은 사이트 이름 옆이 아니라 마이페이지·로그인 버튼 쪽', async () => {
+test('자유게시판(예전 이름 노가리방)은 상단 바가 아니라 ☰ 메뉴 안, 마이페이지 다음', async () => {
   start('/');
   await screen.findByRole('heading', { level: 1, name: '챔피언 선택' });
-  const bar = document.querySelector('.auth-bar');
-  expect(within(bar).getByRole('link', { name: '노가리방' })).toBeDefined();
-  expect(document.querySelector('.top-nav').textContent).not.toContain('노가리방');
+  expect(document.querySelector('.topbar').textContent).not.toContain('자유게시판');
   cleanup();
   fakeLogin('u-old');
   start('/');
-  const mypage = await within(document.querySelector('.topbar')).findByRole('link', { name: '마이페이지' });
-  const link = within(document.querySelector('.auth-bar')).getByRole('link', { name: '노가리방' });
-  expect(link.compareDocumentPosition(mypage) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  const menu = await openMenu();
+  const mypage = menu.getByRole('link', { name: '마이페이지' });
+  const link = menu.getByRole('link', { name: '자유게시판' });
+  expect(mypage.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  expect(document.body.textContent).not.toContain('노가리방');
 });
 
 test('매치업 문서 순서: 한 줄 요약 → 빌드 → 레벨별 딜교법 → 특이사항 → 댓글', async () => {

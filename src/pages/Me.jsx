@@ -11,7 +11,6 @@ import { GUEST_UPGRADE_TEXT } from '../lib/guest';
 import GuestLinkDialog from '../components/GuestLinkDialog';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
-import { AccountRow } from '../components/AuthBar';
 import UserName from '../components/UserName';
 import BuildCard from '../components/BuildCard';
 import DiffView from '../components/DiffView';
@@ -36,7 +35,6 @@ export default function Me() {
       <h1 className="doc-title" data-page-title="마이페이지">
         <UserName profile={auth.profile} />
       </h1>
-      <AccountRow />
       {isGuest(auth) && <GuestUpgrade />}
       {sent && (
         <p className="notice" role="status">
@@ -110,14 +108,14 @@ const BOARD_KINDS = [
   'doc_comment', 'doc_comment_hidden', 'doc_comment_restored',
 ];
 
-/** 댓글·노가리방 알림 (새 댓글·숨김·다시 공개): 이번에 처음 보는 것만, [글 보기]·[문서 보기]로 이동 */
+/** 댓글·자유게시판 알림 (새 댓글·숨김·다시 공개): 이번에 처음 보는 것만, [글 보기]·[문서 보기]로 이동 */
 function BoardNotices({ unread, champs }) {
   const list = unread.filter((n) => BOARD_KINDS.includes(n.kind));
   if (list.length === 0) return null;
   const name = (id) => champs[id]?.name ?? id;
   return (
     <section className="me-section" aria-labelledby="board-notices">
-      <h2 id="board-notices">댓글·노가리방 알림</h2>
+      <h2 id="board-notices">댓글·자유게시판 알림</h2>
       <ul className="proposal-list">
         {list.map((n) => (
           <li key={n.id} className="proposal-row">

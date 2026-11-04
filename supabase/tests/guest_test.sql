@@ -49,7 +49,7 @@ set request.jwt.claim.sub = :'B';
 select public.create_post('회원 글', '본문');
 insert into ids select 'bpost', max(id) from posts where author_id = auth.uid();
 set request.jwt.claim.sub = :'G';
-select t.fails('노가리방 추천 불가', format('select public.vote_post(%s)', (select v from ids where k = 'bpost')), '비회원은 추천할 수 없어요');
+select t.fails('자유게시판 추천 불가', format('select public.vote_post(%s)', (select v from ids where k = 'bpost')), '비회원은 추천할 수 없어요');
 select t.fails('신고 불가', format($$select public.report_post(%s, 'spam')$$, (select v from ids where k = 'bpost')), '비회원은 신고할 수 없어요');
 
 -- 회원은 비회원 글을 추천할 수 있다

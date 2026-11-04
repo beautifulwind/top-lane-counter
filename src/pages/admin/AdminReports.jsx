@@ -11,7 +11,7 @@ import NoteForm from '../../components/NoteForm';
 import { matchupTitle } from '../../lib/josa';
 
 /**
- * 운영자: 노가리방·문서 댓글 신고 (/admin/reports). 같은 글·댓글의 신고는 한 줄로 묶는다.
+ * 운영자: 자유게시판·문서 댓글 신고 (/admin/reports). 같은 글·댓글의 신고는 한 줄로 묶는다.
  * [숨기기] = 메모 필수, 작성자에게 알림, 그 대상의 신고는 "처리됨" / [신고 기각] = 메모 선택, 글·댓글은 그대로
  * 자동 숨김은 없다 (운영자가 보고 정한다)
  */

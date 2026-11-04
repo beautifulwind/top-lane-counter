@@ -87,7 +87,7 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="r
   font-family: var(--font-display); font-weight: 400; letter-spacing: -.01em;
   font-size: var(--fs-2xl); line-height: 1.3; margin: 0 0 6px;
 }
-/* 노가리방 글 제목은 사람이 쓴 긴 글이라 본문 글꼴로 (굵게) */
+/* 자유게시판 글 제목은 사람이 쓴 긴 글이라 본문 글꼴로 (굵게) */
 .doc-title.post-heading { font-family: var(--font-body); font-weight: 800; }
 .doc-sub { margin: 4px 0 12px; color: var(--muted); font-size: var(--fs-sm); }
 /* 매치업 한 줄 요약 (022): 제목 바로 아래, 본문보다 조금 크게 */
@@ -221,29 +221,6 @@ kbd {
 }
 .actions.center { justify-content: center; }
 
-/* 상단 로그인 영역 */
-.auth-bar { display: flex; align-items: center; gap: 8px; min-width: 0; }
-/* 닉네임은 글자만 (누르는 동작 없음). 길면 말줄임 */
-.me-name { color: var(--on-bar); font-size: var(--fs-sm); min-width: 0; max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-/* [마이페이지]: 새 알림 빨간 점은 버튼 오른쪽 위 */
-.top-btn.mypage { position: relative; }
-.top-btn.mypage.on { background: var(--on-bar-hover); border-color: var(--brand); }
-.top-btn.mypage .alert-dot { position: absolute; top: -3px; right: -3px; box-shadow: 0 0 0 2px var(--bar-bg); }
-/* 마이페이지 맨 위 계정 줄 ([관리]·[로그아웃], 휴대폰 폭에서만) */
-.account-row { display: flex; flex-wrap: wrap; gap: 8px; margin: -4px 0 12px; }
-/* 휴대폰 폭(768px 미만)은 상단 바를 한 줄로: 이름·노가리방·[마이페이지]만, 나머지는 마이페이지 안으로 */
-@media (max-width: 767px) {
-  .wide-only { display: none !important; }
-}
-@media (min-width: 768px) {
-  .narrow-only { display: none !important; }
-}
-.top-btn {
-  flex: none; min-height: 36px; padding: 0 12px; display: inline-flex; align-items: center;
-  border: 1px solid var(--on-bar-line); border-radius: var(--radius-sm);
-  background: transparent; color: var(--on-bar); font: inherit; font-size: var(--fs-sm); font-weight: 600; cursor: pointer;
-}
-.top-btn:hover { text-decoration: none; background: var(--on-bar-hover); }
 
 /* 로그인 · 닉네임 설정 */
 .login-buttons { display: flex; flex-direction: column; gap: 8px; max-width: 360px; }
@@ -406,8 +383,6 @@ button.champ-cell:disabled { opacity: .4; cursor: default; }
 .btn.btn-op:active:not(:disabled) { background: var(--op-soft); border-color: var(--op-dark); }
 .btn.btn-op.btn-danger { color: var(--warn); border-color: var(--warn-line); }
 a.op-link, .op-link { color: var(--op-dark); }
-.top-btn.op { background: var(--op); border-color: var(--op); color: var(--on-op); }
-.top-btn.op:hover { background: var(--op-dark); }
 .revision-note { margin: 8px 0; padding: 10px 12px; border-left: 3px solid var(--brand); background: var(--soft); border-radius: var(--radius-sm); font-size: var(--fs-sm); }
 .revision-note p { margin: 0 0 6px; white-space: pre-wrap; }
 .revision-note p:last-child { margin-bottom: 0; }
@@ -528,9 +503,52 @@ a.op-link, .op-link { color: var(--op-dark); }
 .offmeta-list { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .offmeta-list li { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--paper); }
 
-/* 7단계: 노가리방 (모바일 우선 — 한 줄 카드, 손가락 크기 버튼, 가로 스크롤 없음) */
+/* 7단계: 자유게시판 (모바일 우선 — 한 줄 카드, 손가락 크기 버튼, 가로 스크롤 없음) */
 .top-nav { display: flex; align-items: center; gap: 12px; min-width: 0; flex: 0 1 auto; }
-.top-link { color: var(--on-bar); font-size: var(--fs-sm); font-weight: 600; padding: 8px 2px; white-space: nowrap; }
+
+/* ---------- 상단 바 ☰ 메뉴 (오른쪽에서 나오는 패널) ---------- */
+.menu-btn {
+  position: relative; flex: none; width: 44px; height: 44px; margin-right: -6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--on-bar); cursor: pointer;
+}
+.menu-btn:hover { background: var(--on-bar-hover); border-color: var(--on-bar-line); }
+.menu-btn[aria-expanded="true"] { border-color: var(--brand); }
+.menu-btn .alert-dot { position: absolute; top: 8px; right: 8px; box-shadow: 0 0 0 2px var(--bar-bg); }
+.menu-layer { position: fixed; inset: 0; z-index: 50; }
+.menu-backdrop { position: absolute; inset: 0; background: var(--viewer-bg); -webkit-backdrop-filter: blur(2px); backdrop-filter: blur(2px); animation: menu-fade .2s ease; }
+.menu-panel {
+  position: absolute; top: 0; right: 0; bottom: 0; width: min(320px, 85vw); overflow-y: auto;
+  display: flex; flex-direction: column; gap: 8px;
+  padding: calc(8px + env(safe-area-inset-top)) 16px calc(16px + env(safe-area-inset-bottom));
+  background: var(--paper); border-left: 1px solid var(--line); box-shadow: var(--shadow-pop);
+  animation: menu-in .2s ease;
+}
+@keyframes menu-in { from { transform: translateX(100%); } }
+@keyframes menu-fade { from { opacity: 0; } }
+.menu-head { display: flex; justify-content: flex-end; }
+.menu-close { width: 44px; height: 44px; margin-right: -6px; }
+.menu-close:hover { color: var(--text); border-color: var(--line-strong); } /* 닫기는 빨강(빼기)이 아니라 보통 색 */
+.menu-account { padding: 4px 0 16px; border-bottom: 1px solid var(--line); }
+.menu-user { margin: 0; font-size: var(--fs-lg); font-weight: 800; line-height: 1.5; overflow-wrap: anywhere; }
+.menu-user .user-lv { color: var(--brand-dark); font-variant-numeric: tabular-nums; }
+.menu-account-note { margin: 0 0 10px; color: var(--muted); font-size: var(--fs-sm); }
+.menu-login { width: 100%; justify-content: center; }
+.menu-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.menu-item {
+  width: 100%; min-height: 52px; padding: 0 12px; display: flex; align-items: center; gap: 12px;
+  border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent;
+  color: var(--text); font: inherit; font-size: var(--fs-md); font-weight: 700; text-align: left; cursor: pointer;
+}
+a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--raised); }
+.menu-item.on { background: var(--soft); border-color: var(--soft-line); color: var(--brand-dark); }
+.menu-item .menu-icon { flex: none; color: var(--muted); }
+.menu-item.on .menu-icon { color: var(--brand-dark); }
+.menu-item.op-link, .menu-item.op-link .menu-icon { color: var(--op-dark); }
+.menu-item.op-link.on { background: var(--op-soft); border-color: var(--op); }
+.menu-label { flex: 1; min-width: 0; }
+.menu-foot { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); }
+.menu-logout { color: var(--muted); }
 .btn.btn-primary { background: var(--brand); border-color: var(--brand); color: var(--on-brand); font-weight: 900; box-shadow: var(--shadow-card); }
 @media (hover: hover) { .btn.btn-primary:hover:not(:disabled) { background: var(--brand-hover); border-color: var(--brand-hover); } }
 .btn.btn-primary:active:not(:disabled) { background: var(--brand-active); border-color: var(--brand-active); }
@@ -600,7 +618,7 @@ a.op-link, .op-link { color: var(--op-dark); }
 .hide-count { font-size: var(--fs-xs); color: var(--muted); }
 .op-badge.hide-count { color: var(--on-op); }
 
-/* ---------- 노가리방 사진·GIF (023, SPEC 6-13) ---------- */
+/* ---------- 자유게시판 사진·GIF (023, SPEC 6-13) ---------- */
 .doc-form .field-label { font-weight: 600; font-size: var(--fs-sm); margin-top: 6px; }
 .media-picker { display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .media-picker .hint { margin: 0; }
@@ -653,7 +671,7 @@ a.op-link, .op-link { color: var(--op-dark); }
 .alert-dot { animation: pulse-soft 2s ease-in-out infinite; }
 
 /* 움직임: 색은 0.15초에 바뀌고, 누르면 살짝 눌리고, 초상화는 마우스를 올리면 살짝 커진다 */
-.btn, .vote, .pick, .icon-btn, .top-btn, .link-btn, .counter-row, .post-link, .proposal-row, .identity-row,
+.btn, .vote, .pick, .icon-btn, .menu-btn, .menu-item, .link-btn, .counter-row, .post-link, .proposal-row, .identity-row,
 .champ-cell img, .counter-row img, .media-thumb img {
   transition: background-color var(--ease), border-color var(--ease), color var(--ease), box-shadow var(--ease), transform var(--ease);
 }

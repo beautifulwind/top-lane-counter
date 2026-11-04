@@ -1,4 +1,4 @@
-// 노가리방 사진 정리 (SPEC 6-13, 023): pg_cron이 매일 한 번 부른다.
+// 자유게시판 사진 정리 (SPEC 6-13, 023): pg_cron이 매일 한 번 부른다.
 //   1) DB media_cleanup_list() → 지울 경로 (글·댓글에서 빠진 파일 대기열 + 글에 안 붙은 채 24시간 지난 파일)
 //   2) Storage API로 그 파일들을 지운다 (Supabase는 SQL로 Storage 파일을 지우지 못하게 막아 둠)
 //   3) DB media_cleanup_done(경로) → 대기열에서 뺀다. 한 번에 100개씩, 최대 20번(2,000개)

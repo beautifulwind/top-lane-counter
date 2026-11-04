@@ -4,6 +4,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
 import { TABLES, fakeLogin, fakeProposal, fakeState } from './fakeSupabase';
+import { clickMenu, openMenu } from './menu';
 
 const COUNTERS = TABLES.counters.map((c) => ({ ...c }));
 beforeEach(() => {
@@ -21,7 +22,7 @@ test('일반 유저: /admin은 "운영자만 볼 수 있어요", 상단 [관리]
   fakeLogin('u-old');
   start('/admin');
   expect(await screen.findByText('운영자만 볼 수 있어요.')).toBeDefined();
-  expect(screen.queryByRole('link', { name: '관리' })).toBeNull();
+  expect((await openMenu()).queryByRole('link', { name: '관리' })).toBeNull();
   cleanup();
   start('/champion/Darius/counter/Quinn');
   await screen.findByRole('link', { name: '문서 수정 제안' });
@@ -37,7 +38,7 @@ test('운영자: [관리] → 대기 목록 → [자세히] → 바뀐 칸만 �
   asOperator();
   vi.spyOn(window, 'confirm');
   start('/');
-  fireEvent.click(await screen.findByRole('link', { name: '관리' }));
+  await clickMenu('관리');
   const row = await screen.findByRole('listitem', { name: '[문서 수정] 퀸으로 다리우스 잡는 법' });
   expect(within(row).getByText('기존유저')).toBeDefined();
   fireEvent.click(within(row).getByRole('link', { name: '자세히' }));

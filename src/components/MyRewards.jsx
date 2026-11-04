@@ -59,7 +59,7 @@ function MainTitlePicker({ owned, current, rules }) {
     .filter((t) => t.row);
 
   if (mine.length === 0) {
-    return <p className="empty">아직 가진 칭호가 없어요. 처음으로 기여가 승인되거나 노가리방에 글·댓글을 쓰면 칭호 '탑신병자'를 받아요.</p>;
+    return <p className="empty">아직 가진 칭호가 없어요. 처음으로 기여가 승인되거나 자유게시판에 글·댓글을 쓰면 칭호 '탑신병자'를 받아요.</p>;
   }
 
   const choose = async (key) => {

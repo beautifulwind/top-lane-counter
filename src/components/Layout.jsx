@@ -2,7 +2,7 @@ import { useRef } from 'react';
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import ErrorBoundary from './ErrorBoundary';
 import { ShieldIcon } from './Icons';
-import AuthBar from './AuthBar';
+import SiteMenu from './SiteMenu';
 import { needsNickname, needsNicknameFor, useAuth } from '../lib/auth';
 import { noticeText, startFresh } from '../api/auth';
 import { usePageTitle } from '../lib/pageTitle';
@@ -35,7 +35,7 @@ export default function Layout() {
             <span className="tagline">{SITE_TAGLINE}</span>
           </span>
         </nav>
-        <AuthBar />
+        <SiteMenu />
       </header>
       {auth.loginError && (
         <div className="login-error" role="alert">

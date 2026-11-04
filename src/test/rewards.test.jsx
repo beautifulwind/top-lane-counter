@@ -6,6 +6,7 @@ import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
 import { TABLES, fakeLogin, fakeState } from './fakeSupabase';
 import { levelProgress } from '../lib/levels';
+import { menuUserText, openMenu } from './menu';
 
 beforeEach(() => {
   vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch());
@@ -46,7 +47,7 @@ test('/me Level: 레벨·경험치 막대·다음 레벨까지 (022: 경험치 �
   expect(screen.queryByText('경험치 내역')).toBeNull();
 });
 
-test('/me 칭호: 가진 칭호만 배지로 보이고 대표로 고를 수 있다 → 상단 닉네임에 배지로 바로 반영', async () => {
+test('/me 칭호: 가진 칭호만 배지로 보이고 대표로 고를 수 있다 → 메뉴 맨 위 닉네임에 배지로 바로 반영', async () => {
   TABLES.user_titles.push(
     { user_id: ME, title_key: 'top_addict', earned_at: '2026-11-01T00:00:00Z' },
     { user_id: ME, title_key: 'tool_hater', earned_at: '2026-11-02T00:00:00Z' },
@@ -61,12 +62,14 @@ test('/me 칭호: 가진 칭호만 배지로 보이고 대표로 고를 수 있�
   expect(within(picker).getByText(/카운터 관련 승인 10개/)).toBeDefined();
 
   fireEvent.click(within(picker).getByRole('radio', { name: '탑신병자' }));
-  await vi.waitFor(() => expect(document.querySelector('.me-name .title-badge.top_addict')?.textContent).toBe('탑신병자'));
-  expect(document.querySelector('.me-name').textContent).toBe('Lv.3 탑신병자 기존유저');
-  expect(document.querySelector('.me-name .title-badge').getAttribute('title')).toBe("칭호 '탑신병자'");
-  expect(TABLES.profiles.find((p) => p.id === ME).main_title).toBe('top_addict');
+  await vi.waitFor(() => expect(TABLES.profiles.find((p) => p.id === ME).main_title).toBe('top_addict'));
+  // ☰ 메뉴 맨 위 닉네임에 바로 반영
+  await vi.waitFor(async () => expect(await menuUserText()).toBe('Lv.3 탑신병자 기존유저'));
+  const menu = await openMenu();
+  expect(document.querySelector('.menu-user .title-badge.top_addict').getAttribute('title')).toBe("칭호 '탑신병자'");
+  fireEvent.keyDown(menu.getByRole('button', { name: '메뉴 닫기' }), { key: 'Escape' });
   fireEvent.click(within(picker).getByText('없음'));
-  await vi.waitFor(() => expect(document.querySelector('.me-name').textContent).toContain('Lv.3 기존유저'));
+  await vi.waitFor(async () => expect(await menuUserText()).toBe('Lv.3 기존유저'));
 });
 
 test('/me 칭호: 하나도 없으면 고르기 칸 대신 안내만', async () => {
@@ -76,13 +79,13 @@ test('/me 칭호: 하나도 없으면 고르기 칸 대신 안내만', async () 
   expect(screen.queryByRole('group', { name: '대표 칭호 (닉네임 앞에 보여요)' })).toBeNull();
 });
 
-test('/me: 상단 닉네임도 새로 읽은 레벨·대표 칭호로 맞춘다 (로그인 뒤에 바뀐 값)', async () => {
+test('/me: 메뉴 맨 위 닉네임도 새로 읽은 레벨·대표 칭호로 맞춘다 (로그인 뒤에 바뀐 값)', async () => {
   fakeLogin(ME);
   const p = TABLES.profiles.find((x) => x.id === ME);
   Object.assign(p, { xp: 420, level: 3 }); // 로그인 뒤 DB에서 바뀜
   start('/me');
   await screen.findByText(/· 경험치 420/);
-  await vi.waitFor(() => expect(document.querySelector('.me-name').textContent).toBe('Lv.3 기존유저'));
+  await vi.waitFor(async () => expect(await menuUserText()).toBe('Lv.3 기존유저'));
 });
 
 test('/me: 레벨업·칭호 알림은 레벨 칸 위에 "새 알림"으로 한 번 보이고 읽음 처리', async () => {

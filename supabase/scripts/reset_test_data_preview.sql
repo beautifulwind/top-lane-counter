@@ -39,8 +39,8 @@ rows (ord, what, to_delete, to_keep, note) as (
   union all select 8, 'build_status_log (빌드 승인·숨김 기록)', (select count(*) from public.build_status_log), 0, null
   union all select 9, 'counter_status_log (카운터 숨김 기록)', (select count(*) from public.counter_status_log), 0, null
   union all select 10, 'counter_deletions (완전 삭제 기록)', (select count(*) from public.counter_deletions), 0, null
-  union all select 11, 'posts (노가리방 글)', (select count(*) from public.posts), 0, null
-  union all select 12, 'post_comments (노가리방 댓글)', (select count(*) from public.post_comments), 0, null
+  union all select 11, 'posts (자유게시판 글)', (select count(*) from public.posts), 0, null
+  union all select 12, 'post_comments (자유게시판 댓글)', (select count(*) from public.post_comments), 0, null
   union all select 13, 'post_votes (글 추천)', (select count(*) from public.post_votes), 0, null
   union all select 13.1, 'board_attachments (글·댓글에 붙은 사진, 023)', (select count(*) from public.board_attachments), 0,
          '사진 파일은 정리 대기열(storage_trash)로 → 매일 사진 정리(media-cleanup)가 Storage에서 지움'
