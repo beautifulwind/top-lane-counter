@@ -1,5 +1,7 @@
 import BuildCard from './BuildCard';
 import { REQUIRED_LEVELS } from '../lib/docContent';
+import SectionHead from './SectionHead';
+import { AlertIcon, FlagIcon, LayersIcon, TrendingUpIcon } from './Icons';
 
 /**
  * 매치업 문서 모양 (읽기 전용, 022 순서): 한 줄 요약 + 빌드 + 레벨별 딜교법 + 특이사항 (번호는 있는 섹션만 차례로).
@@ -11,10 +13,10 @@ export default function DocView({ doc, builds = null, game, emptyBuilds = '등�
   let n = 0;
   return (
     <>
-      {doc?.summary && <p className="doc-summary">{doc.summary}</p>}
+      {doc?.summary && <SummaryBox summary={doc.summary} />}
       {builds && (
         <section className="section">
-          <h2 className="section-title"><span className="num">{++n}.</span> 빌드</h2>
+          <SectionHead icon={LayersIcon} num={++n} count={builds.length}>빌드</SectionHead>
           {builds.length === 0 ? (
             <p className="empty">{emptyBuilds}</p>
           ) : (
@@ -25,16 +27,26 @@ export default function DocView({ doc, builds = null, game, emptyBuilds = '등�
       {doc && (
         <>
           <section className="section">
-            <h2 className="section-title"><span className="num">{++n}.</span> 레벨별 딜교법</h2>
+            <SectionHead icon={TrendingUpIcon} num={++n}>레벨별 딜교법</SectionHead>
             <LevelList doc={doc} />
           </section>
           <section className="section">
-            <h2 className="section-title"><span className="num">{++n}.</span> 특이사항</h2>
-            {doc.lane_cautions ? <div className="prose">{doc.lane_cautions}</div> : <p className="empty">아직 작성된 내용이 없습니다.</p>}
+            <SectionHead icon={AlertIcon} num={++n}>특이사항</SectionHead>
+            {doc.lane_cautions ? <div className="prose caution-box">{doc.lane_cautions}</div> : <p className="empty">아직 작성된 내용이 없습니다.</p>}
           </section>
         </>
       )}
     </>
+  );
+}
+
+/** 한 줄 결론 (예전 앱): 주황 왼쪽 굵은 선 + 깃발 */
+export function SummaryBox({ summary }) {
+  return (
+    <div className="summary-box">
+      <p className="summary-label"><FlagIcon size={16} /> 한 줄 결론</p>
+      <p className="doc-summary">{summary}</p>
+    </div>
   );
 }
 

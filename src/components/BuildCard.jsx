@@ -6,6 +6,7 @@ import GuestHint from './GuestHint';
 import { isOutdated, patchMinor } from '../lib/buildContent';
 import UserName from './UserName';
 import NoteForm from './NoteForm';
+import { ThumbIcon } from './Icons';
 
 export function Icon({ entry, size = 32, round = false, fallback = '?' }) {
   if (!entry) {
@@ -99,7 +100,7 @@ export default function BuildCard({ build, items, runes, spells, latest, interac
         <div className="skills">
           <span className="skill-group" aria-label={`선마: ${build.max_skill ?? '없음'}`}>
             <small className="muted">선마</small>
-            <kbd>{build.max_skill ?? '?'}</kbd>
+            <kbd className="skill-key">{build.max_skill ?? '?'}</kbd>
           </span>
         </div>
       </div>
@@ -109,8 +110,8 @@ export default function BuildCard({ build, items, runes, spells, latest, interac
       ) : (
         build.up !== undefined && (
           <div className="votes">
-            <span className="vote-count" aria-label={`추천 ${build.up}`}>👍 {build.up}</span>
-            <span className="vote-count" aria-label={`비추천 ${build.down}`}>👎 {build.down}</span>
+            <span className="vote-count" aria-label={`추천 ${build.up}`}><ThumbIcon /> {build.up}</span>
+            <span className="vote-count" aria-label={`비추천 ${build.down}`}><ThumbIcon down /> {build.down}</span>
           </div>
         )
       )}
@@ -171,7 +172,7 @@ function BuildActions({ build, onHidden, lastOne }) {
           disabled={own || busy}
           title={title}
         >
-          👍 {votes.up}
+          <ThumbIcon /> {votes.up}
         </button>
         <button
           type="button"
@@ -182,10 +183,10 @@ function BuildActions({ build, onHidden, lastOne }) {
           disabled={own || busy}
           title={title}
         >
-          👎 {votes.down}
+          <ThumbIcon down /> {votes.down}
         </button>
         {own && <span className="own-badge">내 빌드</span>}
-        <span className="score">점수 {score > 0 ? `+${score}` : score}</span>
+        <span className={score > 0 ? 'score plus' : score < 0 ? 'score minus' : 'score'}>점수 {score > 0 ? `+${score}` : score}</span>
       </div>
       {error && <p className="form-error" role="alert">{error}</p>}
       {guestHint && <GuestHint what="추천·비추천을 누를" />}

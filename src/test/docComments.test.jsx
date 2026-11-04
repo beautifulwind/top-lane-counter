@@ -43,7 +43,8 @@ test('비로그인: 매치업 문서 "4. 댓글" — 목차, 댓글 보임, 로�
   TABLES.doc_comments.push(fakeDocComment(1, { author_id: 'u-x', author: OTHER, body: '퀸 꿀팁' }));
   start(MATCHUP);
   const sec = await section();
-  expect(within(sec).getByRole('heading').textContent).toBe('4. 댓글 1');
+  expect(within(sec).getByRole('heading').textContent).toBe('4. 댓글');
+  expect(sec.querySelector('.count-badge').textContent).toBe('1개');
   expect(within(sec).getByText('퀸 꿀팁')).toBeDefined();
   expect(within(sec).getByText(/하면 댓글을 달 수 있습니다/)).toBeDefined();
   expect(screen.getByRole('link', { name: '댓글' }).getAttribute('href')).toBe('#comments');
@@ -56,7 +57,7 @@ test('문서 댓글 달기 → 바로 보임 / 남의 댓글은 신고 / 빌드 
   const sec = await section();
   fireEvent.change(within(sec).getByLabelText('댓글 쓰기'), { target: { value: '좋은 문서입니다' } });
   fireEvent.click(within(sec).getByRole('button', { name: '댓글 올리기' }));
-  await vi.waitFor(() => expect(within(sec).getByRole('heading').textContent).toBe('4. 댓글 2'));
+  await vi.waitFor(() => expect(sec.querySelector('.count-badge').textContent).toBe('2개'));
   expect(rpcs('create_doc_comment')).toEqual([{ p_counter: 1, p_body: '좋은 문서입니다' }]);
   expect(document.querySelectorAll('.build-card .comment-list')).toHaveLength(0);
 
@@ -151,7 +152,7 @@ test('숨긴 카운터: 일반 사용자에게 댓글 안 보임, 운영자 미�
   TABLES.doc_comments.push(fakeDocComment(1, { author_id: 'u-x', author: OTHER, body: '숨긴 문서의 댓글' }));
   asOp();
   start('/admin/preview/Darius/Quinn');
-  const sec = (await screen.findByRole('heading', { name: '댓글 1' })).closest('section');
+  const sec = (await screen.findByText('1개', { selector: '#comments .count-badge' })).closest('section');
   expect(within(sec).getByText('숨긴 문서의 댓글')).toBeDefined();
   expect(within(sec).getByText('숨긴 카운터라 새 댓글은 달 수 없습니다.')).toBeDefined();
   expect(within(sec).queryByLabelText('댓글 쓰기')).toBeNull();

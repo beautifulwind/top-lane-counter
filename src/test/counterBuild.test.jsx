@@ -118,7 +118,7 @@ test('제안 자세히: 다시 낸 제안의 빌드가 바뀌었으면 원래 �
   expect(await screen.findByRole('heading', { name: '바뀐 빌드 (원래 첫 빌드 → 고친 빌드)' })).toBeDefined();
   expect(screen.getByText(/원래 첫 빌드는 숨기고\("재검토로 교체"\)/)).toBeDefined();
   expect(screen.getAllByRole('article', { name: '빌드: 기존유저' })).toHaveLength(2);
-  expect(screen.getByText('👍 4')).toBeDefined(); // 원래 빌드의 추천
+  expect(screen.getByLabelText('추천 4')).toBeDefined(); // 원래 빌드의 추천
   cleanup();
   TABLES.edit_proposals[0].build = FAKE_PROPOSAL_BUILD; // 빌드는 그대로
   start('/admin/proposals/7');

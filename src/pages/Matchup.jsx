@@ -11,7 +11,9 @@ import { ErrorBox, Loading } from '../components/Status';
 import BuildCard from '../components/BuildCard';
 import NoteForm from '../components/NoteForm';
 import { hideCounter } from '../api/proposals';
-import { LevelList } from '../components/DocView';
+import { LevelList, SummaryBox } from '../components/DocView';
+import SectionHead from '../components/SectionHead';
+import { AlertIcon, LayersIcon, MessageIcon, TrendingUpIcon } from '../components/Icons';
 import NotFound from './NotFound';
 import { matchupTitle } from '../lib/josa';
 
@@ -71,18 +73,24 @@ export default function Matchup() {
   return (
     <article>
       {crumbs}
-      <header className="doc-head">
-        <span className="vs-icons">
-          <img src={counter.icon} alt="" width="52" height="52" />
-          <span className="vs">vs</span>
-          <img src={target.icon} alt="" width="52" height="52" className="loser" />
-        </span>
+      <header className="vs-card">
+        <div className="vs-side mine">
+          <img src={counter.icon} alt="" width="64" height="64" />
+          <span className="vs-role">카운터</span>
+          <strong>{counter.name}</strong>
+        </div>
+        <span className="vs" aria-hidden="true">VS</span>
+        <div className="vs-side enemy">
+          <img src={target.icon} alt="" width="64" height="64" />
+          <span className="vs-role">상대</span>
+          <strong>{target.name}</strong>
+        </div>
       </header>
       <h1 className="doc-title">
         {matchupTitle(counter.name, target.name)}
       </h1>
-      {doc?.summary && <p className="doc-summary">{doc.summary}</p>}
       {doc?.updated_at && <p className="doc-sub">최근 수정: {doc.updated_at}</p>}
+      {doc?.summary && <SummaryBox summary={doc.summary} />}
 
       <nav className="toc" aria-label="목차">
         <strong>목차</strong>
@@ -95,7 +103,7 @@ export default function Matchup() {
       </nav>
 
       <section className="section" id="builds">
-        <h2 className="section-title"><span className="num">1.</span> 빌드</h2>
+        <SectionHead icon={LayersIcon} num={1} count={data.builds.length}>빌드</SectionHead>
         <p className="hint">점수(추천 − 비추천)가 높은 순서입니다. 점수가 같으면 투표가 많은 빌드, 그다음 최근 빌드가 먼저입니다.</p>
         {buildNotice && <p className="notice" role="status">{buildNotice}</p>}
         {data.builds.length === 0 ? (
@@ -121,14 +129,14 @@ export default function Matchup() {
       </section>
 
       <section className="section" id="levels">
-        <h2 className="section-title"><span className="num">2.</span> 레벨별 딜교법</h2>
+        <SectionHead icon={TrendingUpIcon} num={2}>레벨별 딜교법</SectionHead>
         <LevelList doc={doc} />
       </section>
 
       <section className="section" id="cautions">
-        <h2 className="section-title"><span className="num">3.</span> 특이사항</h2>
+        <SectionHead icon={AlertIcon} num={3}>특이사항</SectionHead>
         {doc?.lane_cautions ? (
-          <div className="prose">{doc.lane_cautions}</div>
+          <div className="prose caution-box">{doc.lane_cautions}</div>
         ) : (
           <p className="empty">아직 작성된 내용이 없습니다.</p>
         )}
@@ -157,7 +165,7 @@ export default function Matchup() {
         )}
       </section>
 
-      <DocComments counterRowId={data.matchup.counter.id} auth={auth} live title={<><span className="num">4.</span> 댓글</>} />
+      <DocComments counterRowId={data.matchup.counter.id} auth={auth} live num={4} />
     </article>
   );
 }
@@ -166,7 +174,7 @@ export default function Matchup() {
  * 문서 댓글 (SPEC 6-5): 문서와 따로 불러온다 → 댓글을 달거나 처리해도 문서 전체가 다시 그려지지 않는다.
  * live = 카운터가 공개 중인가 (숨긴 카운터 미리보기에서는 false: 새 댓글·고치기·신고 없음, 운영자 숨기기·다시 공개만)
  */
-export function DocComments({ counterRowId, auth, live, title }) {
+export function DocComments({ counterRowId, auth, live, num }) {
   const [notice, setNotice] = useState(null);
   const { data, error, loading, retry } = useAsync(async () => {
     const [comments, rules] = await Promise.all([getDocComments(counterRowId), getEditRules()]);
@@ -183,7 +191,7 @@ export function DocComments({ counterRowId, auth, live, title }) {
       {notice && <p className="notice" role="status">{notice}</p>}
       <CommentThread
         ops={DOC_COMMENT_OPS} parentId={counterRowId} comments={shown.comments} auth={auth} rules={shown.rules}
-        open={live} live={live} title={title}
+        open={live} live={live} num={num}
         closedHint={live ? null : '숨긴 카운터라 새 댓글은 달 수 없습니다.'}
         onDone={(message) => {
           setNotice(message);

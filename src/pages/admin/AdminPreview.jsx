@@ -52,7 +52,7 @@ function Preview() {
       <p className="warn" role="note">숨긴 카운터 미리보기 — 다른 사람에게는 보이지 않습니다.</p>
       <h1 className="doc-title">{title}</h1>
       <DocView doc={doc ?? {}} builds={data.builds} game={data} />
-      <DocComments counterRowId={data.matchup.counter.id} auth={auth} live={false} title="댓글" />
+      <DocComments counterRowId={data.matchup.counter.id} auth={auth} live={false} />
       <div className="actions">
         <Link to="/admin" className="btn btn-op">운영자 페이지로</Link>
       </div>

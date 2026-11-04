@@ -69,6 +69,22 @@ export const EyeOffIcon = (p) => (
     <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" /><path d="M2 2l20 20" />
   </Line>
 );
+/** 세모 느낌표 (특이사항·주의) */
+export const AlertIcon = (p) => (
+  <Line {...p}><path d="M10.3 3.9L1.8 18a2 2 0 0 0 1.7 3h17a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z" /><path d="M12 9v4M12 17h.01" /></Line>
+);
+/** 겹친 판 (빌드) */
+export const LayersIcon = (p) => (
+  <Line {...p}><path d="M12 2l10 5-10 5L2 7z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" /></Line>
+);
+/** 꺾쇠 (목록 줄 끝 "들어가기") */
+export const ChevronIcon = (p) => <Line {...p}><path d="M9 18l6-6-6-6" /></Line>;
+/** 엄지 (빌드 추천·비추천). down이면 뒤집어서 */
+export const ThumbIcon = ({ down = false, size = 18 }) => (
+  <Line size={size} className={down ? 'thumb down' : 'thumb'}>
+    <path d="M7 10v11" /><path d="M15 5.9L14 10h5.8a2 2 0 0 1 1.9 2.6l-2.3 7A2 2 0 0 1 17.5 21H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h2.8a2 2 0 0 0 1.8-1.1L12 2a3.1 3.1 0 0 1 3 3.9z" />
+  </Line>
+);
 /** 세 줄 (☰ 메뉴) */
 export const MenuIcon = (p) => <Line {...p}><path d="M4 6h16M4 12h16M4 18h16" /></Line>;
 

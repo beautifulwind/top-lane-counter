@@ -152,7 +152,7 @@ test('댓글: 사진 하나만 붙여 올리기, 고칠 때 빼기, 서명 못 �
   await screen.findByRole('list', { name: '붙일 사진' });
   expect(add.disabled).toBe(true); // 1/1
   fireEvent.click(screen.getByRole('button', { name: '댓글 올리기' })); // 글 없이 사진만
-  await screen.findByRole('heading', { name: '댓글 2' });
+  await screen.findByText('2개', { selector: '#comments .count-badge' });
   expect(rpcs('create_comment')[0]).toEqual({ p_post: 1, p_body: '', p_media: [fakeState.uploads[0].path] });
 
   const mine = within(screen.getByRole('list', { name: '댓글' })).getAllByRole('listitem').find((li) => li.id === 'comment-801');

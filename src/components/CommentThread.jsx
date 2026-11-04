@@ -8,6 +8,8 @@ import { canVote, canWrite, isGuest } from '../lib/auth';
 import { DEFAULT_MEDIA_RULES, finishMedia } from '../api/media';
 import { MediaGallery, MediaPicker, mediaToItems, sameMedia } from './Media';
 import GuestHint from './GuestHint';
+import SectionHead from './SectionHead';
+import { MessageIcon } from './Icons';
 
 /**
  * 댓글 칸 (자유게시판 글, 매치업 문서 공통 — SPEC 6-5, 6-6, 고치기 시간 6-7).
@@ -16,18 +18,18 @@ import GuestHint from './GuestHint';
  * open: 새 댓글을 달 수 있나 (글·문서가 보이는 상태), closedHint: 못 달 때 안내 (없으면 안내 없이 폼만 숨김)
  * live: 글·문서가 보이는 상태인가 (아니면 고치기·신고 숨김 — 숨긴 글·카운터는 운영자만 봄)
  * rules: 고치기 시간 { post, comment, grace }
- * title: 칸 제목 앞부분 (예: "댓글", "4. 댓글")
+ * num: 칸 제목 번호 (매치업 문서 4), 개수는 제목 옆 "N개" 알약
  * mediaRules: 사진 숫자 (ops.media일 때만 — 자유게시판 댓글. 문서 댓글은 사진 없음)
  */
 export default function CommentThread({
-  ops, parentId, comments, auth, open, closedHint, live, rules, mediaRules = DEFAULT_MEDIA_RULES, title = '댓글', onDone, onReload,
+  ops, parentId, comments, auth, open, closedHint, live, rules, mediaRules = DEFAULT_MEDIA_RULES, num, onDone, onReload,
 }) {
   const { pathname } = useLocation();
   const now = useNow();
   const visibleCount = comments.filter((c) => c.status === 'visible').length;
   return (
     <section className="section comments" id="comments" aria-labelledby="comments-title">
-      <h2 className="section-title" id="comments-title">{title} {visibleCount}</h2>
+      <SectionHead icon={MessageIcon} num={num} count={visibleCount} id="comments-title">댓글</SectionHead>
       {comments.length === 0 && <p className="hint">아직 댓글이 없습니다.</p>}
       {comments.length > 0 && (
         <ul className="comment-list" aria-label="댓글">

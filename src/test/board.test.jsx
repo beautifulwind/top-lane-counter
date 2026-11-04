@@ -198,7 +198,7 @@ test('댓글: 달기(빈 칸이면 못 보냄) → 바로 보임, 내 댓글 고
   expect(send.disabled).toBe(true);
   fireEvent.change(screen.getByLabelText('댓글 쓰기'), { target: { value: '내 댓글입니다' } });
   fireEvent.click(send);
-  expect(await screen.findByRole('heading', { name: '댓글 2' })).toBeDefined();
+  expect(await screen.findByText('2개', { selector: '#comments .count-badge' })).toBeDefined();
   expect(within(screen.getByRole('list', { name: '댓글' })).getByText('내 댓글입니다')).toBeDefined();
   expect(screen.getByLabelText('댓글 쓰기').value).toBe('');
   expect(rpcs('create_comment')).toEqual([{ p_post: 1, p_body: '내 댓글입니다', p_media: [] }]);
@@ -219,7 +219,7 @@ test('댓글: 달기(빈 칸이면 못 보냄) → 바로 보임, 내 댓글 고
   fireEvent.click(within(mine2).getByRole('button', { name: '지우기' }));
   fireEvent.click(within(within(mine2).getByRole('group', { name: '댓글을 지우시겠습니까?' })).getByRole('button', { name: '지우기' }));
   await vi.waitFor(() => expect(screen.queryByText('고친 댓글')).toBeNull());
-  expect(screen.getByRole('heading', { name: '댓글 1' })).toBeDefined();
+  expect(screen.getByText('1개', { selector: '#comments .count-badge' })).toBeDefined();
 });
 
 test('그 자리에 열리는 칸은 Esc로 닫힌다: 댓글 고치기(쓴 내용은 되돌림)·지우기 확인([취소]에 초점)', async () => {

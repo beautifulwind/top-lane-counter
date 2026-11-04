@@ -7,6 +7,9 @@ import { ErrorBox, Loading } from '../components/Status';
 import { useAuth } from '../lib/auth';
 import { hideCounter } from '../api/proposals';
 import NoteForm from '../components/NoteForm';
+import EnemyCard from '../components/EnemyCard';
+import SectionHead from '../components/SectionHead';
+import { ChevronIcon, SparklesIcon } from '../components/Icons';
 import NotFound from './NotFound';
 import { matchupTitle } from '../lib/josa';
 
@@ -28,44 +31,40 @@ export default function Champion() {
   if (error) return <ErrorBox error={error} onRetry={retry} />;
   const target = data.champs[id];
   if (!target) return <NotFound />;
+  const shown = data.counters.filter((c) => data.champs[c.counter_champion]);
 
   return (
     <article>
       <nav className="crumbs">
         <Link to="/">홈</Link> › {target.name}
       </nav>
-      <header className="doc-head">
-        <img src={target.icon} alt="" width="64" height="64" className="doc-head-icon" />
-        <div>
-          <h1 className="doc-title">{target.name}</h1>
-          <p className="doc-sub">{target.title}</p>
-        </div>
-      </header>
+      <EnemyCard champ={target}>
+        <h1 className="doc-title">{target.name}</h1>
+        <p className="doc-sub">{target.title}</p>
+      </EnemyCard>
 
       {done && <p className="notice" role="status">{done}</p>}
       <section className="section">
-        <h2 className="section-title">
-          <span className="num">1.</span> {target.name} 카운터
-        </h2>
+        <SectionHead icon={SparklesIcon} num={1} count={shown.length}>{target.name} 카운터</SectionHead>
 
-        {data.counters.length === 0 ? (
+        {shown.length === 0 ? (
           <p className="empty">아직 등록된 카운터가 없습니다.</p>
         ) : (
-          <ol className="counter-list">
-            {data.counters.filter((c) => data.champs[c.counter_champion]).map((c, i) => {
+          <ol className="counter-list cards">
+            {shown.map((c, i) => {
               const champ = data.champs[c.counter_champion];
               const title = `${matchupTitle(champ.name, target.name)}`;
               return (
-                <li key={c.id}>
+                <li key={c.id} className={i === 0 ? 'counter-card first' : 'counter-card'}>
                   <div className="counter-item">
                     <Link to={`/champion/${id}/counter/${champ.id}`} className="counter-row">
                       <span className={i < 3 ? 'rank top' : 'rank'} aria-label={`${i + 1}위`}>{i + 1}</span>
-                      <img src={champ.icon} alt="" width="44" height="44" />
+                      <img src={champ.icon} alt="" width="48" height="48" />
                       <span className="counter-text">
                         <strong>{champ.name}</strong>
                         <span>{c.summary || '공략 문서가 아직 비어 있습니다.'}</span>
                       </span>
-                      <span className="chev" aria-hidden="true">›</span>
+                      <span className="chev" aria-hidden="true"><ChevronIcon size={20} /></span>
                     </Link>
                     {isOperator && (
                       <button

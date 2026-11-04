@@ -4,6 +4,8 @@ import { getChampions } from '../api/ddragon';
 import { matchesQuery } from '../lib/chosung';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
+import SectionHead from '../components/SectionHead';
+import { CrosshairIcon, SearchIcon } from '../components/Icons';
 
 export default function Home() {
   const { data: champions, error, loading, retry } = useAsync(getChampions, []);
@@ -20,6 +22,7 @@ export default function Home() {
       <p className="lead">라인에서 만난 상대를 고르면, 그 챔피언을 이기는 카운터와 공략을 볼 수 있습니다.</p>
 
       <div className="search">
+        <SearchIcon size={18} className="search-icon" />
         <input
           type="search"
           value={query}
@@ -33,7 +36,8 @@ export default function Home() {
       {loading && <Loading />}
       {error && <ErrorBox error={error} onRetry={retry} />}
       {champions && (
-        <>
+        <section className="section">
+          <SectionHead icon={CrosshairIcon} count={filtered.length}>상대 챔피언</SectionHead>
           {filtered.length === 0 ? (
             <p className="status">‘{query}’에 맞는 챔피언이 없습니다.</p>
           ) : (
@@ -48,7 +52,7 @@ export default function Home() {
               ))}
             </ul>
           )}
-        </>
+        </section>
       )}
     </>
   );

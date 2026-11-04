@@ -12,6 +12,9 @@ import { ErrorBox, Loading } from '../components/Status';
 import DocForm from '../components/DocForm';
 import BuildFields from '../components/BuildFields';
 import { RequireLogin } from '../components/RequireOperator';
+import EnemyCard from '../components/EnemyCard';
+import SectionHead from '../components/SectionHead';
+import { SearchIcon, SparklesIcon, SwordsIcon } from '../components/Icons';
 import NotFound from './NotFound';
 import { matchupTitle } from '../lib/josa';
 
@@ -71,18 +74,21 @@ function ProposeCounterForm() {
       <nav className="crumbs">
         <Link to="/">홈</Link> › <Link to={`/champion/${id}`}>{target.name}</Link> › 카운터 등록
       </nav>
-      <h1 className="doc-title">{target.name} 카운터 선택</h1>
+      <EnemyCard champ={target} label="이 챔피언의 카운터 등록">
+        <h1 className="doc-title">{target.name} 카운터 선택</h1>
+      </EnemyCard>
 
       <section className="section">
-        <h2 className="section-title"><span className="num">1.</span> 카운터 고르기</h2>
+        <SectionHead icon={SparklesIcon} num={1}>카운터 고르기</SectionHead>
         {counter ? (
-          <p className="picked">
-            <img src={counter.icon} alt="" width="44" height="44" /> <strong>{counter.name}</strong>
+          <p className="picked picked-card">
+            <img src={counter.icon} alt="" width="48" height="48" /> <span className="picked-text"><small>고른 카운터</small><strong>{counter.name}</strong></span>
             <button type="button" className="btn btn-small" onClick={() => setPicked(null)}>다시 고르기</button>
           </p>
         ) : (
           <>
             <div className="search">
+              <SearchIcon size={18} className="search-icon" />
               <input
                 type="search"
                 value={query}
@@ -117,7 +123,7 @@ function ProposeCounterForm() {
 
       {counter && (
         <section className="section">
-          <h2 className="section-title"><span className="num">2.</span> 상대법</h2>
+          <SectionHead icon={SwordsIcon} num={2}>상대법</SectionHead>
           {from && counter.id === from.counter_champion && (
             <p className="notice" role="status">거절된 내 제안의 글과 빌드를 채워 뒀습니다. 거절 사유를 보고 고쳐서 보내 주세요.</p>
           )}
