@@ -36,14 +36,18 @@ export async function signIn(provider, returnTo = '/') {
 
 /**
  * 로그인한 계정에 다른 로그인 방식을 붙인다 (Supabase 수동 연결 = linkIdentity).
- * 구글/카카오에 다녀와서 /me로 돌아온다. Supabase에서 "Allow manual linking"이 켜져 있어야 한다.
+ * 구글/카카오에 다녀와서 계정 설정(/me/settings)으로 돌아온다 — 비회원 연결(guest)은 마이페이지(/me)로.
+ * Supabase에서 "Allow manual linking"이 켜져 있어야 한다.
  */
+/** 계정 설정 화면 (로그인 연결·닉네임·탈퇴) */
+export const SETTINGS_PATH = '/me/settings';
+
 export async function linkProvider(provider, { guest = false } = {}) {
   if (!PROVIDERS[provider]) throw new Error(`지원하지 않는 로그인 방식입니다. (${provider})`);
   rememberPending(guest ? 'upgrade' : 'link', provider);
   const { error } = await db().auth.linkIdentity({
     provider,
-    options: { redirectTo: window.location.origin + '/me', queryParams: PROVIDER_PROMPT[provider] },
+    options: { redirectTo: window.location.origin + (guest ? '/me' : SETTINGS_PATH), queryParams: PROVIDER_PROMPT[provider] },
   });
   if (error) {
     forgetPending();
@@ -213,7 +217,7 @@ function loginError(error, providerError, providerCode, pending) {
   return Object.assign(new Error(message), {
     detail: raw || null,
     title: linking ? '계정을 연결하지 못했습니다.' : '로그인하지 못했습니다.',
-    retryTo: linking ? '/me' : '/login',
+    retryTo: upgrading ? '/me' : linking ? SETTINGS_PATH : '/login',
   });
 }
 

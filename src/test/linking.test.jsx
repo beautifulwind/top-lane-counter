@@ -63,11 +63,15 @@ test('/me: 로그인 안 했으면 로그인 화면으로 보낸다', async () =
   expect(where()).toBe('/login');
 });
 
-test('/me: 연결된 방식은 "연결됨", 안 된 방식은 [연결하기] → linkIdentity를 /me로 돌아오게 부른다', async () => {
+test('/me/settings: 연결된 방식은 "연결됨", 안 된 방식은 [연결하기] → linkIdentity를 /me/settings로 돌아오게 부른다', async () => {
   fakeLogin('u-old', {}, { identities: [identity('google', ago(10), 'old@gmail.com')] });
   render_('/');
   await clickMenu('마이페이지'); // ☰ 메뉴 [마이페이지] → /me
   expect(where()).toBe('/me');
+  expect(screen.queryByRole('region', { name: '로그인 연결' })).toBeNull(); // 계정 일은 마이페이지에 없다
+  fireEvent.click(await screen.findByRole('link', { name: '계정 설정' })); // 프로필 카드 [계정 설정]
+  expect(where()).toBe('/me/settings');
+  expect(await screen.findByRole('heading', { level: 1, name: '계정 설정' })).toBeDefined();
 
   const google = (await screen.findByText('구글')).closest('li');
   expect(within(google).getByText('연결됨')).toBeDefined();
@@ -76,35 +80,35 @@ test('/me: 연결된 방식은 "연결됨", 안 된 방식은 [연결하기] →
   fireEvent.click(screen.getByRole('button', { name: '카카오 연결하기' }));
   expect((await screen.findByRole('button', { name: '카카오로 이동 중…' })).disabled).toBe(true);
   expect(fakeState.linkCalls).toEqual([
-    { provider: 'kakao', options: { redirectTo: `${window.location.origin}/me`, queryParams: { prompt: 'login' } } },
+    { provider: 'kakao', options: { redirectTo: `${window.location.origin}/me/settings`, queryParams: { prompt: 'login' } } },
   ]);
   expect(JSON.parse(sessionStorage.getItem('auth:pending'))).toEqual({ kind: 'link', provider: 'kakao' });
 });
 
-test('/me: Supabase에서 수동 연결이 꺼져 있으면 어떻게 켜는지 알려 준다', async () => {
+test('/me/settings: Supabase에서 수동 연결이 꺼져 있으면 어떻게 켜는지 알려 준다', async () => {
   fakeState.linkError = 'Manual linking is disabled';
   fakeLogin('u-old', {}, { identities: [identity('google', ago(10))] });
-  render_('/me');
+  render_('/me/settings');
   fireEvent.click(await screen.findByRole('button', { name: '카카오 연결하기' }));
   expect(await screen.findByText(/Allow manual linking을 켜야 합니다/)).toBeDefined();
   expect(screen.getByRole('button', { name: '카카오 연결하기' }).disabled).toBe(false);
   expect(sessionStorage.getItem('auth:pending')).toBeNull();
 });
 
-test('/me에서 연결하고 돌아오면 연결했다고 알려 주고, 카카오도 "연결됨"이 된다', async () => {
+test('/me/settings에서 연결하고 돌아오면 연결했다고 알려 주고, 카카오도 "연결됨"이 된다', async () => {
   fakeLogin('u-old', {}, { identities: [identity('google', ago(60)), identity('kakao', ago(0))] });
-  returnFrom('link', 'kakao', '?code=abc', '/me');
+  returnFrom('link', 'kakao', '?code=abc', '/me/settings');
   expect(await screen.findByText(/카카오 로그인을 이 계정에 연결했습니다/)).toBeDefined();
   const kakao = (await screen.findByText('카카오')).closest('li');
   expect(within(kakao).getByText('연결됨')).toBeDefined();
 });
 
-test('이미 다른 회원 계정에 붙은 카카오를 연결하려 하면 쉬운 말로 알려 주고, [다시 연결하기]는 /me로 간다', async () => {
+test('이미 다른 회원 계정에 붙은 카카오를 연결하려 하면 쉬운 말로 알려 주고, [다시 연결하기]는 /me/settings로 간다', async () => {
   fakeLogin('u-old', {}, { identities: [identity('google', ago(60))] });
-  returnFrom('link', 'kakao', '?error=server_error&error_code=identity_already_exists&error_description=Identity+is+already+linked+to+another+user', '/me');
+  returnFrom('link', 'kakao', '?error=server_error&error_code=identity_already_exists&error_description=Identity+is+already+linked+to+another+user', '/me/settings');
   expect(await screen.findByText('계정을 연결하지 못했습니다.')).toBeDefined();
   expect(screen.getByText(/이 카카오 계정은 이미 다른 회원 계정에 연결돼 있습니다/)).toBeDefined();
   fireEvent.click(screen.getByRole('link', { name: '다시 연결하기' }));
-  expect(where()).toBe('/me');
+  expect(where()).toBe('/me/settings');
   expect(screen.queryByText(/이미 다른 회원 계정에/)).toBeNull();
 });

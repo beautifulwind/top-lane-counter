@@ -7,14 +7,14 @@ import { fmtDateTime } from '../lib/format';
 import { MedalIcon, SparklesIcon } from './Icons';
 
 /**
- * /me 레벨·칭호 (SPEC 6장): 큰 "Lv.N", 다음 레벨까지 막대와 작은 숫자 "현재 / 목표", 칭호판(훈장).
+ * /me 레벨·칭호 (SPEC 6장): LevelBar = 프로필 카드 안의 큰 "Lv.N" + 다음 레벨까지 막대와 작은 숫자 "현재 / 목표",
+ * MyTitles = 그 아래 칭호판(훈장) 카드.
  * 제목("Level")·"경험치" 글자는 없다 (2026-11-04).
  * rewards = getMyRewards() 결과. 레벨·칭호 알림은 알림 화면(/notifications)에서 본다 (027)
  * 지급·회수·레벨은 DB가 정한다. 여기서 바꾸는 건 대표 칭호뿐.
  */
-export default function MyRewards({ rewards }) {
+export function LevelBar({ rewards }) {
   const auth = useAuth();
-  const ownedCount = Object.keys(TITLES).filter((k) => rewards.titles.some((o) => o.title_key === k)).length;
   const p = levelProgress(rewards.xp ?? 0, rewards.levels, rewards.rules.level_step);
   // 상단 닉네임은 로그인할 때 불러온 값 → 여기서 새로 읽은 레벨·대표 칭호(회수되면 비워짐)로 맞춘다
   const { profile, setProfile } = auth;
@@ -26,19 +26,31 @@ export default function MyRewards({ rewards }) {
   }, [rewards]);
 
   return (
-    <section className="me-section me-level me-card" aria-label="레벨">
+    <section className="me-level" aria-label="레벨">
       <p className="lv-big">Lv.{rewards.level}</p>
-      <div
-        className="xp-bar" role="progressbar" aria-label={`Lv.${p.level + 1}까지`}
-        aria-valuemin={p.from} aria-valuemax={p.to} aria-valuenow={p.xp}
-      >
-        <span style={{ width: `${p.percent}%` }} />
+      <div className="me-level-bar">
+        <div
+          className="xp-bar" role="progressbar" aria-label={`Lv.${p.level + 1}까지`}
+          aria-valuemin={p.from} aria-valuemax={p.to} aria-valuenow={p.xp}
+        >
+          <span style={{ width: `${p.percent}%` }} />
+        </div>
+        <p className="xp-nums"><span className="sr-only">경험치 </span>{p.xp.toLocaleString()} / {p.to.toLocaleString()}</p>
       </div>
-      <p className="xp-nums"><span className="sr-only">경험치 </span>{p.xp.toLocaleString()} / {p.to.toLocaleString()}</p>
+    </section>
+  );
+}
 
+/** 칭호판 카드 (프로필 카드 아래): 제목 "칭호" + 얻은 수 알약 + 훈장 */
+export default function MyTitles({ rewards }) {
+  const auth = useAuth();
+  const total = Object.keys(TITLES).length;
+  const ownedCount = Object.keys(TITLES).filter((k) => rewards.titles.some((o) => o.title_key === k)).length;
+  return (
+    <section className="me-section me-card" aria-labelledby="my-titles">
       <div className="sub-head">
-        <h3><SparklesIcon size={18} className="title-icon" /> 칭호</h3>
-        <span className="count-badge" aria-label={`칭호 ${Object.keys(TITLES).length}개 중 ${ownedCount}개 얻음`}>{ownedCount} / {Object.keys(TITLES).length}</span>
+        <h2 id="my-titles"><SparklesIcon size={18} className="title-icon" /> 칭호</h2>
+        <span className="count-badge" aria-label={`칭호 ${total}개 중 ${ownedCount}개 얻음`}>{ownedCount} / {total}</span>
       </div>
       <TitleBoard owned={rewards.titles} current={auth.profile?.main_title ?? null} rules={rewards.rules} />
     </section>

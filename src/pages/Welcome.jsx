@@ -46,7 +46,7 @@ export default function Welcome() {
     <article className="welcome">
       <h1 className="doc-title">닉네임 정하기</h1>
       <p className="lead">
-        위키에서 다른 사람에게 보일 이름입니다. 다른 사람과 겹칠 수 없습니다. 정한 뒤에는 30일에 한 번 [마이페이지]에서 바꿀 수 있습니다.
+        위키에서 다른 사람에게 보일 이름입니다. 다른 사람과 겹칠 수 없습니다. 정한 뒤에는 30일에 한 번 [마이페이지] → [계정 설정]에서 바꿀 수 있습니다.
       </p>
       <form onSubmit={submit} className="nick-form">
         <label htmlFor="nickname">닉네임</label>

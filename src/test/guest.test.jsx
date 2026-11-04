@@ -282,9 +282,10 @@ test('자유게시판 글: 비회원은 [추천]·[신고] 없이 안내만, 댓
 
 // ---------------- 비회원 기록 지우기 ----------------
 
-test('/me "비회원 기록 지우기": 닉네임을 입력해야 확정, 지우면 홈에서 안내', async () => {
+test('/me/settings "비회원 기록 지우기": 닉네임을 입력해야 확정, 지우면 홈에서 안내', async () => {
   guestWithName();
-  start('/me');
+  start('/me/settings');
+  expect(screen.queryByRole('region', { name: '로그인 연결' })).toBeNull(); // 비회원 연결은 마이페이지 맨 위 칸
   const sec = await screen.findByRole('region', { name: '비회원 기록 지우기' });
   expect(screen.queryByRole('region', { name: '회원 탈퇴' })).toBeNull();
   fireEvent.click(within(sec).getByRole('button', { name: '비회원 기록 지우기' }));

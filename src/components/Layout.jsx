@@ -53,7 +53,7 @@ export default function Layout() {
               </button>
             ) : (
               <Link to={auth.loginError.retryTo ?? '/login'} className="btn" onClick={auth.clearLoginError}>
-                {auth.loginError.retryTo === '/me' ? '다시 연결하기' : '다시 로그인'}
+                {auth.loginError.retryTo === '/login' || !auth.loginError.retryTo ? '다시 로그인' : '다시 연결하기'}
               </Link>
             )}
             <button type="button" className="btn" onClick={auth.clearLoginError}>닫기</button>

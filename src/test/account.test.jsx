@@ -56,7 +56,7 @@ test('[나중에 정하기]: 읽던 화면으로, 쓰기 화면에서 왔으면 
 
 test('닉네임 바꾸기: 열고 저장하면 바뀌고, [취소]·Esc로 닫힌다', async () => {
   fakeLogin('u-old');
-  start('/me');
+  start('/me/settings');
   const nick = await screen.findByRole('region', { name: '닉네임 바꾸기' });
   const before = TABLES.profiles.find((p) => p.id === 'u-old').nickname;
   fireEvent.click(await within(nick).findByRole('button', { name: '닉네임 바꾸기' }));
@@ -77,7 +77,7 @@ test('닉네임 바꾸기: 열고 저장하면 바뀌고, [취소]·Esc로 닫�
 test('닉네임 바꾸기: 30일 안에 바꿨으면 버튼 대신 다음 날짜', async () => {
   fakeLogin('u-old');
   TABLES.nickname_changes.push({ id: 1, user_id: 'u-old', old_nickname: 'a', new_nickname: 'b', changed_at: new Date(Date.now() - 86400000).toISOString() });
-  start('/me');
+  start('/me/settings');
   const nick = await screen.findByRole('region', { name: '닉네임 바꾸기' });
   expect(await within(nick).findByText(/부터 바꿀 수 있습니다/)).toBeDefined();
   expect(within(nick).queryByRole('button', { name: '닉네임 바꾸기' })).toBeNull();
@@ -87,7 +87,7 @@ test('닉네임 바꾸기: 30일 안에 바꿨으면 버튼 대신 다음 날짜
 
 test('운영자는 탈퇴 버튼이 없다', async () => {
   fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
-  start('/me');
+  start('/me/settings');
   const del = await screen.findByRole('region', { name: '회원 탈퇴' });
   expect(within(del).getByText('운영자 계정은 탈퇴할 수 없습니다.')).toBeDefined();
   expect(within(del).queryByRole('button')).toBeNull();
@@ -96,7 +96,7 @@ test('운영자는 탈퇴 버튼이 없다', async () => {
 test('탈퇴: 닉네임을 그대로 적어야 [탈퇴 확정]이 켜지고, 끝나면 홈에서 인사', async () => {
   fakeLogin('u-old');
   const nickname = TABLES.profiles.find((p) => p.id === 'u-old').nickname;
-  start('/me');
+  start('/me/settings');
   const del = await screen.findByRole('region', { name: '회원 탈퇴' });
   fireEvent.click(within(del).getByRole('button', { name: '탈퇴' }));
   const confirm = within(del).getByRole('button', { name: '탈퇴 확정' });
@@ -116,13 +116,13 @@ test('탈퇴 실패: 서버 문구를 보여 주고 그대로 남는다', async 
   fakeLogin('u-old');
   const nickname = TABLES.profiles.find((p) => p.id === 'u-old').nickname;
   fakeState.functionError = '확인 칸에 내 닉네임을 그대로 적어 주세요.';
-  start('/me');
+  start('/me/settings');
   const del = await screen.findByRole('region', { name: '회원 탈퇴' });
   fireEvent.click(within(del).getByRole('button', { name: '탈퇴' }));
   fireEvent.change(within(del).getByRole('textbox'), { target: { value: nickname } });
   fireEvent.click(within(del).getByRole('button', { name: '탈퇴 확정' }));
   expect(await within(del).findByRole('alert')).toHaveProperty('textContent', '확인 칸에 내 닉네임을 그대로 적어 주세요.');
-  expect(where()).toBe('/me');
+  expect(where()).toBe('/me/settings');
   fireEvent.click(within(del).getByRole('button', { name: '취소' }));
   expect(within(del).queryByRole('textbox')).toBeNull();
 });

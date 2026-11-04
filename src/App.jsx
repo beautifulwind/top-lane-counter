@@ -9,6 +9,7 @@ import NotFound from './pages/NotFound';
 import Login from './pages/Login';
 import Welcome from './pages/Welcome';
 import Me from './pages/Me';
+import MySettings from './pages/MySettings';
 import Notifications from './pages/Notifications';
 import ProposeCounter from './pages/ProposeCounter';
 import ProposeEdit from './pages/ProposeEdit';
@@ -65,6 +66,7 @@ export function AppRoutes() {
           <Route path="privacy" element={<Privacy />} />
           <Route path="terms" element={<Terms />} />
           <Route path="me" element={<Me />} />
+          <Route path="me/settings" element={<MySettings />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="me/proposals/:id" element={<MyProposal />} />
           <Route path="me/proposals/:id/edit" element={<Resubmit />} />

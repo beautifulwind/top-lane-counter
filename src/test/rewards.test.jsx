@@ -49,6 +49,22 @@ test('/me 레벨: 제목·"경험치" 글자 없이 큰 Lv, 막대 + 작은 숫�
   expect(screen.queryByText('경험치 내역')).toBeNull();
 });
 
+test('/me 프로필 카드 하나에 닉네임·칭호 태그·Lv·경험치 막대 — Lv는 한 번만, 계정 일은 [계정 설정]으로', async () => {
+  TABLES.xp_events.push(ev(1, 'new_counter', 100), ev(3, 'build', 30));
+  asUser();
+  start('/me');
+  const card = (await screen.findByRole('region', { name: '레벨' })).closest('.me-hero');
+  const h1 = within(card).getByRole('heading', { level: 1 });
+  expect(h1.querySelector('.user-lv')).toBeNull();
+  expect(h1.querySelector('.user-nick')).not.toBeNull();
+  expect(within(card).getByRole('progressbar')).toBeDefined();
+  expect(document.querySelectorAll('main .lv-big')).toHaveLength(1);
+  expect(within(card).getByRole('link', { name: '계정 설정' }).getAttribute('href')).toBe('/me/settings');
+  expect(screen.getByRole('region', { name: '칭호' })).toBeDefined();
+  expect(screen.queryByRole('region', { name: '닉네임 바꾸기' })).toBeNull();
+  expect(screen.queryByRole('region', { name: '회원 탈퇴' })).toBeNull();
+});
+
 const medal = (board, name) => within(board).getByRole('button', { name: new RegExp(`^${name}`) });
 
 test('/me 칭호판: 6개 훈장 전부 — 얻은 것은 칭호색, 못 얻은 것은 회색, 설명 글은 화면에 없음', async () => {

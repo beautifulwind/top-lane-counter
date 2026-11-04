@@ -826,17 +826,25 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
 .board-search .search-field { position: relative; flex: 1; min-width: 0; display: flex; }
 .board-search .search-field input { width: 100%; }
 
-/* 마이페이지 머리: 사람 아이콘 + 닉네임 카드, 오른쪽 [알림 보기] */
+/* 마이페이지 프로필 카드: 사람 아이콘 + 칭호 태그·닉네임, 오른쪽 [알림 보기]·[계정 설정], 아래 Lv + 경험치 막대 */
 .me-hero {
-  display: flex; align-items: center; flex-wrap: wrap; gap: 12px 14px; padding: 16px;
+  display: flex; flex-direction: column; gap: 14px; padding: 16px;
   border: 1px solid var(--soft-line); border-radius: var(--radius); background: linear-gradient(to right, var(--soft), transparent 60%), var(--paper);
   box-shadow: var(--shadow-card);
 }
 .me-avatar { width: 56px; height: 56px; border-radius: 50%; border: 2px solid var(--brand); box-shadow: 0 0 12px var(--brand-ring); }
-.me-hero-text { flex: 1; min-width: 0; }
+.me-hero-text { flex: 1 1 180px; min-width: 0; } /* 좁으면 [알림 보기]·[계정 설정]이 다음 줄로 */
 .me-hero-label { margin: 0; color: var(--brand-dark); font-size: var(--fs-xs); font-weight: 900; letter-spacing: .08em; }
 .me-hero .doc-title { margin: 0; overflow-wrap: anywhere; }
-.me-noti-btn { gap: 6px; flex: none; }
+.me-hero-top { display: flex; align-items: center; flex-wrap: wrap; gap: 12px 14px; }
+.me-hero-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.me-noti-btn, .me-settings-btn { gap: 6px; flex: none; }
+.me-hero .me-level { display: flex; align-items: center; gap: 14px; padding-top: 14px; border-top: 1px solid var(--line-soft); }
+.me-hero .lv-big { margin: 0; flex: none; }
+.me-level-bar { flex: 1; min-width: 0; }
+.me-op-hint { margin: 0; padding-top: 12px; border-top: 1px solid var(--line-soft); }
+.me-card .sub-head { margin-top: 0; }
+.sub-head h2 { display: flex; align-items: center; gap: 6px; margin: 0; font-family: var(--font-display); font-weight: 400; font-size: var(--fs-lg); }
 .new-count { min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--alert); color: var(--on-alert); font-size: var(--fs-xs); font-weight: 800; line-height: 20px; text-align: center; font-variant-numeric: tabular-nums; }
 /* 레벨·칭호판 카드 */
 .me-card { padding: 16px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); box-shadow: var(--shadow-card); }

@@ -110,7 +110,7 @@ export default function Terms() {
       <section>
         <h2>제9조 (탈퇴)</h2>
         <p>
-          이용자는 언제든지 [마이페이지](<Link to="/me">/me</Link>)의 &ldquo;회원 탈퇴&rdquo;에서 직접 탈퇴할 수 있습니다 (운영자 계정 제외).
+          이용자는 언제든지 [마이페이지] → [계정 설정](<Link to="/me/settings">/me/settings</Link>)의 &ldquo;회원 탈퇴&rdquo;에서 직접 탈퇴할 수 있습니다 (운영자 계정 제외).
           직접 할 수 없으면 가입한 이메일로 운영자 이메일({email})에 요청할 수 있으며, 자세한 절차와 탈퇴 후 처리는
           <Link to="/privacy">개인정보처리방침</Link>을 따릅니다.
           비회원은 [마이페이지](닉네임 전이면 닉네임 정하기 화면)의 &ldquo;비회원 기록 지우기&rdquo;로 직접 지울 수 있습니다.

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
-import { PROVIDERS, getIdentities, linkProvider } from '../api/auth';
+import { PROVIDERS } from '../api/auth';
 import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../api/ddragon';
 import { approvedWithEdits, getMyProposals } from '../api/proposals';
 import { getUnreadCount } from '../api/notifications';
@@ -12,19 +12,20 @@ import { GUEST_UPGRADE_TEXT } from '../lib/guest';
 import GuestLinkDialog from '../components/GuestLinkDialog';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
-import UserName from '../components/UserName';
+import { TitleBadge } from '../components/UserName';
+import { titleName } from '../lib/titles';
 import BuildCard from '../components/BuildCard';
 import DiffView from '../components/DiffView';
-import MyRewards from '../components/MyRewards';
+import MyTitles, { LevelBar } from '../components/MyRewards';
 import { matchupTitle } from '../lib/josa';
-import AccountSettings from '../components/AccountSettings';
 import VoteTally from '../components/VoteTally';
 import SectionHead from '../components/SectionHead';
-import { BellIcon, CheckCircleIcon, LayersIcon, LinkIcon, SendIcon, UserIcon } from '../components/Icons';
+import { BellIcon, GearIcon, LayersIcon, LinkIcon, SendIcon, UserIcon } from '../components/Icons';
 
 /**
- * 마이페이지 (/me): 내 제안·내 빌드 목록과 상태, 로그인 연결, 닉네임 바꾸기·회원 탈퇴.
- * 레벨·칭호판은 MyRewards (SPEC 6장). 알림은 맨 위 [알림 보기] → /notifications (027).
+ * 마이페이지 (/me): 맨 위 프로필 카드(닉네임·칭호 태그·Lv·경험치 막대 + [알림 보기]·[계정 설정]), 칭호판,
+ * 내 제안·내 빌드 목록과 상태. 레벨·칭호는 MyRewards (SPEC 6장), 알림은 /notifications (027),
+ * 로그인 연결·닉네임 바꾸기·회원 탈퇴는 /me/settings (MySettings).
  */
 export default function Me() {
   const auth = useAuth();
@@ -36,26 +37,53 @@ export default function Me() {
 
   return (
     <article className="me-page">
-      <header className="me-hero">
-        <span className="me-avatar" aria-hidden="true"><UserIcon size={28} /></span>
-        <div className="me-hero-text">
-          <p className="me-hero-label">마이페이지</p>
-          <h1 className="doc-title" data-page-title="마이페이지">
-            <UserName profile={auth.profile} />
-          </h1>
-        </div>
-        <NotificationsLink userId={auth.user.id} />
-      </header>
       {isGuest(auth) && <GuestUpgrade />}
       {sent && (
         <p className="notice" role="status">
           {sent} 운영자가 승인하면 반영됩니다.
         </p>
       )}
-      <MyActivity userId={auth.user.id} operator={auth.isOperator} />
-      {!isGuest(auth) && <LinkedLogins userId={auth.user.id} />}
-      <AccountSettings auth={auth} />
+      <MyActivity auth={auth} />
     </article>
+  );
+}
+
+/** 이름 줄: [칭호 태그] 닉네임 (비회원 태그). Lv는 바로 아래 큰 숫자로 따로 보여서 여기서는 뺀다 */
+function ProfileName({ profile }) {
+  return (
+    <span className="user-name">
+      {titleName(profile.main_title) && <><TitleBadge titleKey={profile.main_title} />{' '}</>}
+      <span className="user-nick">{profile.nickname}</span>
+      {profile.is_guest && <>{' '}<span className="guest-badge">비회원</span></>}
+    </span>
+  );
+}
+
+/** 맨 위 프로필 카드: 닉네임·칭호 태그 / [알림 보기]·[계정 설정] / Lv + 경험치 막대 (운영자는 안내 한 줄) */
+function ProfileCard({ auth, rewards, loading }) {
+  return (
+    <header className="me-hero">
+      <div className="me-hero-top">
+        <span className="me-avatar" aria-hidden="true"><UserIcon size={28} /></span>
+        <div className="me-hero-text">
+          <p className="me-hero-label">마이페이지</p>
+          <h1 className="doc-title" data-page-title="마이페이지">
+            <ProfileName profile={auth.profile} />
+          </h1>
+        </div>
+        <div className="me-hero-actions">
+          <NotificationsLink userId={auth.user.id} />
+          <Link to="/me/settings" className="btn btn-small me-settings-btn"><GearIcon size={16} /> 계정 설정</Link>
+        </div>
+      </div>
+      {auth.isOperator ? (
+        <p className="hint me-op-hint">운영자는 경험치·레벨·칭호가 없습니다 (항상 Lv.0).</p>
+      ) : rewards ? (
+        <LevelBar rewards={rewards} />
+      ) : (
+        !loading && <p className="lv-big">Lv.{auth.profile.level}</p>
+      )}
+    </header>
   );
 }
 
@@ -78,7 +106,9 @@ function GuestUpgrade() {
   );
 }
 
-function MyActivity({ userId, operator }) {
+function MyActivity({ auth }) {
+  const userId = auth.user.id;
+  const operator = auth.isOperator;
   const { data, error, loading, retry } = useAsync(async () => {
     const [champs, proposals, builds, items, runes, spells, latest, rewards] = await Promise.all([
       getChampionMap(), getMyProposals(userId), getMyBuilds(userId),
@@ -88,24 +118,23 @@ function MyActivity({ userId, operator }) {
     return { champs, proposals, builds, rewards, game: { items, runes, spells, latest } };
   }, [userId, operator]);
 
-  if (loading) return <Loading />;
-  if (error) return <ErrorBox error={error} onRetry={retry} />;
   return (
     <>
-      {operator ? (
-        <section className="me-section me-level me-card" aria-label="레벨">
-          <p className="hint">운영자는 경험치·레벨·칭호가 없습니다 (항상 Lv.0).</p>
-        </section>
-      ) : (
-        <MyRewards rewards={data.rewards} />
+      <ProfileCard auth={auth} rewards={data?.rewards} loading={loading} />
+      {loading && <Loading />}
+      {error && <ErrorBox error={error} onRetry={retry} />}
+      {data && (
+        <>
+          {data.rewards && <MyTitles rewards={data.rewards} />}
+          <MyProposals data={data} />
+          <MyBuilds data={data} />
+        </>
       )}
-      <MyProposals data={data} />
-      <MyBuilds data={data} />
     </>
   );
 }
 
-/** 맨 위 [알림 보기] (알림은 /notifications에서 본다 — 마이페이지의 알림 칸은 027에서 없앰) */
+/** [알림 보기] (알림은 /notifications에서 본다 — 마이페이지의 알림 칸은 027에서 없앰) */
 function NotificationsLink({ userId }) {
   const { data: count } = useAsync(() => getUnreadCount(userId).catch(() => 0), [userId]);
   return (
@@ -273,60 +302,6 @@ function MyBuilds({ data }) {
           })}
         </ul>
       )}
-    </section>
-  );
-}
-
-function LinkedLogins({ userId }) {
-  const { data: identities, error, loading, retry } = useAsync(getIdentities, [userId]);
-  const [busy, setBusy] = useState(null);
-  const [linkError, setLinkError] = useState(null);
-
-  const link = async (provider) => {
-    setBusy(provider);
-    setLinkError(null);
-    try {
-      await linkProvider(provider); // 성공하면 구글/카카오 화면으로 이동한다
-    } catch (e) {
-      setLinkError(e.message);
-      setBusy(null);
-    }
-  };
-
-  return (
-    <section className="me-section" aria-labelledby="linked-logins">
-      <SectionHead icon={LinkIcon} id="linked-logins">로그인 연결</SectionHead>
-      <p className="lead">둘 다 연결하면 구글·카카오 어느 쪽으로 로그인해도 이 계정으로 들어옵니다.</p>
-      {loading && <Loading />}
-      {error && <ErrorBox error={error} onRetry={retry} />}
-      {identities && (
-        <ul className="identity-list">
-          {Object.entries(PROVIDERS).map(([provider, name]) => {
-            const linked = identities.find((i) => i.provider === provider);
-            return (
-              <li key={provider} className="identity-row">
-                <span>
-                  <span className="identity-name">{name}</span>
-                  {linked?.email && <small>{linked.email}</small>}
-                </span>
-                {linked ? (
-                  <span className="identity-linked"><CheckCircleIcon size={16} /> 연결됨</span>
-                ) : (
-                  <button
-                    type="button"
-                    className={`btn login-btn-sm ${provider}`}
-                    onClick={() => link(provider)}
-                    disabled={busy !== null}
-                  >
-                    {busy === provider ? `${name}로 이동 중…` : `${name} 연결하기`}
-                  </button>
-                )}
-              </li>
-            );
-          })}
-        </ul>
-      )}
-      {linkError && <p className="form-error" role="alert">{linkError}</p>}
     </section>
   );
 }
