@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 export default function GuestHint({ what }) {
   return (
     <p className="hint guest-hint" role="status">
-      비회원은 {what} 수 없어요. <Link to="/me#upgrade">구글·카카오 연결하기</Link>
+      비회원은 {what} 수 없습니다. <Link to="/me#upgrade">구글·카카오 연결하기</Link>
     </p>
   );
 }

@@ -29,7 +29,7 @@ test('문서 규칙: DB와 같은 기준으로 정리·검사', () => {
   expect(cleanDoc({ summary: ' s ', level_notes: { ...req, '07': ' 칠 ', 5: '  ' }, lane_cautions: ' x ' }))
     .toEqual({ summary: 's', level_notes: { ...req, 7: '칠' }, lane_cautions: 'x' });
   expect(docProblem({ summary: '', level_notes: req })).toBe('한 줄 요약을 적어 주세요.');
-  expect(docProblem({ summary: 's', level_notes: { ...req, 6: ' ' } })).toBe('6레벨 딜교법은 꼭 적어야 해요.');
+  expect(docProblem({ summary: 's', level_notes: { ...req, 6: ' ' } })).toBe('6레벨 딜교법은 꼭 적어야 합니다.');
   expect(docProblem({ summary: 's', level_notes: { ...req, 9: '9렙', 11: '11렙' } })).toBeNull(); // 9·11은 추가 레벨 (010)
   expect(docProblem({ summary: 's'.repeat(101), level_notes: req })).toMatch(/100자 이하/);
   expect(docProblem({ summary: 's', level_notes: req, lane_cautions: 'x'.repeat(3001) })).toBe('특이사항은 3000자 이하로 적어 주세요.');

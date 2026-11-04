@@ -38,10 +38,10 @@ function ReportList() {
       <nav className="crumbs"><Link to="/admin" className="op-link">← 운영자 페이지</Link></nav>
       <h1 className="doc-title">신고 {data ? `(${data.groups.length})` : ''}</h1>
       {done && <p className="notice" role="status">{done}</p>}
-      <p className="hint">같은 글·댓글의 신고는 한 줄로 묶었어요. 숨기면 작성자에게 메모와 함께 알림이 가요. 기각하면 그대로 두고 신고만 닫아요.</p>
+      <p className="hint">같은 글·댓글의 신고는 한 줄로 묶었습니다. 숨기면 작성자에게 메모와 함께 알림이 갑니다. 기각하면 그대로 두고 신고만 닫습니다.</p>
       {loading && <Loading />}
       {error && <ErrorBox error={error} onRetry={retry} />}
-      {data && data.groups.length === 0 && <p className="empty">처리할 신고가 없어요.</p>}
+      {data && data.groups.length === 0 && <p className="empty">처리할 신고가 없습니다.</p>}
       {data && data.groups.length > 0 && (
         <ul className="proposal-list" aria-label="신고 목록">
           {data.groups.map((g) => <ReportGroup key={g.key} group={g} champs={data.champs} onDone={finished} />)}
@@ -106,7 +106,7 @@ function ReportGroup({ group: g, champs, onDone }) {
       {mode === 'hide' && (
         <NoteForm
           id={`hide-${g.key}`}
-          label="숨기는 사유 (필수, 작성자에게 보여요)"
+          label="숨기는 사유 (필수, 작성자에게 보입니다)"
           confirmLabel="숨기기 확정"
           busyLabel="숨기는 중…"
           onCancel={() => setMode(null)}
@@ -114,7 +114,7 @@ function ReportGroup({ group: g, champs, onDone }) {
             if (isPost) await hidePost(g.postId, note);
             else if (isDoc) await hideDocComment(g.docCommentId, note);
             else await hideComment(g.commentId, note);
-            onDone(`${isPost ? '글' : '댓글'}을 숨겼어요. 신고 ${g.reports.length}건은 처리됨으로 닫았어요.`);
+            onDone(`${isPost ? '글' : '댓글'}을 숨겼습니다. 신고 ${g.reports.length}건은 처리됨으로 닫았습니다.`);
           }}
         />
       )}
@@ -124,7 +124,7 @@ function ReportGroup({ group: g, champs, onDone }) {
           onCancel={() => setMode(null)}
           onSubmit={async (note) => {
             const n = await dismissReports({ postId: g.postId, commentId: g.commentId, docCommentId: g.docCommentId }, note);
-            onDone(`신고 ${n ?? g.reports.length}건을 기각했어요.`);
+            onDone(`신고 ${n ?? g.reports.length}건을 기각했습니다.`);
           }}
         />
       )}
@@ -150,7 +150,7 @@ function DismissForm({ id, onSubmit, onCancel }) {
   };
   return (
     <form className="note-form" onSubmit={submit} onKeyDown={(e) => e.key === 'Escape' && !busy && onCancel()}>
-      <label htmlFor={id}>기각 메모 (선택, 기록용 — 아무에게도 알림이 가지 않아요)</label>
+      <label htmlFor={id}>기각 메모 (선택, 기록용 — 아무에게도 알림이 가지 않습니다)</label>
       <textarea id={id} rows={2} maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} />
       <div className="note-form-actions">
         <button type="submit" className="btn btn-small btn-op" disabled={busy}>{busy ? '처리하는 중…' : '기각 확정'}</button>

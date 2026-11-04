@@ -56,7 +56,7 @@ set role authenticated;
 -- ===== 5. 승인 대기 → 공개 때 다시 검사 (운영자가 고쳐서 승인하면 됨) =====
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select t.fails('합계를 넘는 대기 빌드는 그대로 승인 불가',
-  format($$select approve_build(%s, '좋아요', null, t.bv(%1$s))$$, (select v from ids where k = 'b')), '합계 500골드까지');
+  format($$select approve_build(%s, '좋습니다', null, t.bv(%1$s))$$, (select v from ids where k = 'b')), '합계 500골드까지');
 select approve_build((select v from ids where k = 'b'), '시작템을 줄였어요', t.build(), t.bv((select v from ids where k = 'b')));
 select t.ok('고쳐서 승인하면 공개 (원래 빌드는 original_build에 선마와 함께)',
   (select status = 'approved' and starting_items = array['1055','2003'] and original_build -> 'starting_items' = '["1055","1054"]'::jsonb
@@ -76,7 +76,7 @@ set role authenticated;
 
 -- ===== 7. 운영자 가격 갱신 =====
 select t.fails('패치 형식', $$select set_item_prices('latest', '{"1055": 450}')$$, '패치 버전 형식');
-select t.fails('너무 적은 아이템', $$select set_item_prices('16.22.1', '{"1055": 450}')$$, '아이템이 너무 적어요');
+select t.fails('너무 적은 아이템', $$select set_item_prices('16.22.1', '{"1055": 450}')$$, '아이템이 너무 적습니다');
 select t.fails('가격이 숫자가 아님',
   $$select set_item_prices('16.22.1', (select jsonb_object_agg(id, gold) from item_prices) || '{"1055": "450"}')$$, '가격표 형식');
 select t.fails('가격이 음수',

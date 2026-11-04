@@ -34,7 +34,7 @@ set request.jwt.claim.sub = :'D';
 update public.profiles set nickname = '디디' where id = auth.uid();
 select t.ok('첫 변경은 바로 됨 + 기록', (select nickname = '디디' from profiles where id = auth.uid())
   and (select old_nickname = '디' and new_nickname = '디디' from nickname_changes where user_id = auth.uid()));
-select t.fails('30일 안에 다시 바꾸기', $$update public.profiles set nickname = '디디디' where id = auth.uid()$$, '닉네임은 30일에 한 번 바꿀 수 있어요');
+select t.fails('30일 안에 다시 바꾸기', $$update public.profiles set nickname = '디디디' where id = auth.uid()$$, '닉네임은 30일에 한 번 바꿀 수 있습니다');
 select t.fails('대소문자만 바꿔도 변경', $$update public.profiles set nickname = 'DD' where id = auth.uid()$$, '30일에 한 번');
 update public.profiles set main_title = null where id = auth.uid();
 select t.ok('닉네임 그대로면 다른 칸은 고칠 수 있음', true);
@@ -79,7 +79,7 @@ select t.fails('비로그인은 탈퇴 함수를 못 부름', $$select public.de
 reset role;
 set role authenticated;
 set request.jwt.claim.sub = :'A';
-select t.fails('운영자는 탈퇴 불가', $$select public.delete_my_account('영자')$$, '운영자 계정은 탈퇴할 수 없어요');
+select t.fails('운영자는 탈퇴 불가', $$select public.delete_my_account('영자')$$, '운영자 계정은 탈퇴할 수 없습니다');
 set request.jwt.claim.sub = :'B';
 select t.fails('닉네임이 다르면 탈퇴 안 됨', $$select public.delete_my_account('비비')$$, '내 닉네임을 그대로');
 select t.ok('탈퇴: 카카오 ID를 돌려줌', public.delete_my_account(' 비 ') = '2002');
@@ -137,7 +137,7 @@ select t.fails('빌드 칸 문구', $$select public.text_array('{}'::jsonb, '시
 select t.ok('함수 오류 문구에 "다시 제출"·조사 자리표시가 없음',
   not exists (select 1 from pg_proc where pronamespace = 'public'::regnamespace
               and prosrc ~ 'raise exception ''[^'']*(다시 제출|을\(를\)|은\(는\))'));
-select t.ok('보내기 문구로 바뀜', exists (select 1 from pg_proc where proname = 'resubmit_proposal' and prosrc like '%다시 보낼 수 있어요%'));
+select t.ok('보내기 문구로 바뀜', exists (select 1 from pg_proc where proname = 'resubmit_proposal' and prosrc like '%다시 보낼 수 있습니다%'));
 
 -- ===================================================================
 -- 5. 019: 화면 이름 "내 활동" → "마이페이지"

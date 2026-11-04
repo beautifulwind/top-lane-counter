@@ -43,7 +43,7 @@ function Detail() {
       <article>
         {crumbs}
         <h1 className="doc-title">제안 자세히</h1>
-        <p className="empty">제안을 찾지 못했어요. 내가 보낸 제안만 볼 수 있어요.</p>
+        <p className="empty">제안을 찾지 못했습니다. 내가 보낸 제안만 볼 수 있습니다.</p>
       </article>
     );
   }
@@ -81,7 +81,7 @@ function ProposalView({ p, data, crumbs, sent }) {
 
       {p.status === 'pending' && (
         <div className="status-box">
-          <p>승인 대기 중이에요. 운영자가 처리하기 전까지는 직접 고칠 수 있어요. 고쳐도 대기 순서는 그대로예요.</p>
+          <p>승인 대기 중입니다. 운영자가 처리하기 전까지는 직접 고칠 수 있습니다. 고쳐도 대기 순서는 그대로입니다.</p>
           <div className="actions"><Link to={`/me/proposals/${p.id}/edit`} className="btn">수정</Link></div>
         </div>
       )}
@@ -98,14 +98,14 @@ function ProposalView({ p, data, crumbs, sent }) {
       {p.status === 'approved' && (
         <div className="status-box">
           {p.approve_note && <p className="approve-note">승인 메모: {p.approve_note}</p>}
-          <p className="hint">승인된 제안은 고칠 수 없어요. 내용을 바꾸려면 문서에서 [문서 수정 제안]을 보내 주세요.</p>
+          <p className="hint">승인된 제안은 고칠 수 없습니다. 내용을 바꾸려면 문서에서 [문서 수정 제안]을 보내 주세요.</p>
           <div className="actions"><Link to={docPath} className="btn">문서 보기</Link></div>
         </div>
       )}
       {p.status === 'rejected' && (
         <div className="status-box">
           <p className="reject-reason">거절 사유: {p.reject_reason}</p>
-          <p className="hint">보낸 내용을 채운 채로 새로 쓸 수 있어요.</p>
+          <p className="hint">보낸 내용을 채운 채로 새로 쓸 수 있습니다.</p>
           <div className="actions"><Link to={rewriteTo} className="btn">다시 쓰기</Link></div>
         </div>
       )}
@@ -135,7 +135,7 @@ function ProposalView({ p, data, crumbs, sent }) {
         doc={content}
         builds={isNew ? (build ? [{ ...build, author: p.proposer }] : []) : null}
         game={data.game}
-        emptyBuilds="이 제안에는 빌드가 없어요."
+        emptyBuilds="이 제안에는 빌드가 없습니다."
       />
     </article>
   );

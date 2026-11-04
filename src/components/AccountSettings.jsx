@@ -34,7 +34,7 @@ function NicknameChange({ auth }) {
   };
   const save = async (e) => {
     e.preventDefault();
-    const problem = nicknameProblem(value) ?? (value.trim() === current ? '지금 닉네임과 같아요.' : null);
+    const problem = nicknameProblem(value) ?? (value.trim() === current ? '지금 닉네임과 같습니다.' : null);
     if (problem) return setFormError(problem);
     setBusy(true);
     setFormError(null);
@@ -42,7 +42,7 @@ function NicknameChange({ auth }) {
       const profile = await saveNickname(auth.user.id, value);
       auth.setProfile(profile);
       setOpen(false);
-      setDone(`닉네임을 "${profile.nickname}"${josaOf(profile.nickname, '으로/로')} 바꿨어요.`);
+      setDone(`닉네임을 "${profile.nickname}"${josaOf(profile.nickname, '으로/로')} 바꿨습니다.`);
       retry();
     } catch (err) {
       setFormError(err.message); // 쓴 닉네임은 칸에 그대로
@@ -59,8 +59,8 @@ function NicknameChange({ auth }) {
       {rule && (
         <>
           <p className="lead">
-            지금 닉네임: <strong>{current}</strong>. 닉네임은 {rule.days}일에 한 번 바꿀 수 있어요.
-            {locked && <> 다음에는 <strong>{fmtDateTime(rule.next)}</strong>부터 바꿀 수 있어요.</>}
+            지금 닉네임: <strong>{current}</strong>. 닉네임은 {rule.days}일에 한 번 바꿀 수 있습니다.
+            {locked && <> 다음에는 <strong>{fmtDateTime(rule.next)}</strong>부터 바꿀 수 있습니다.</>}
           </p>
           {!open && !locked && (
             <button type="button" className="btn btn-small" onClick={() => { setValue(current); setOpen(true); setDone(null); }}>
@@ -73,7 +73,7 @@ function NicknameChange({ auth }) {
               {/* eslint-disable-next-line jsx-a11y/no-autofocus -- [닉네임 바꾸기]를 눌러 연 칸이라 바로 쓰게 한다 */}
               <input id="new-nickname" value={value} onChange={(e) => setValue(e.target.value)} autoComplete="off" autoFocus />
               <CharCount value={value.trim()} max={NICKNAME_MAX} />
-              <small className="hint">저장하면 {rule.days}일 동안 다시 바꿀 수 없어요.</small>
+              <small className="hint">저장하면 {rule.days}일 동안 다시 바꿀 수 없습니다.</small>
               {formError && <p className="form-error" role="alert">{formError}</p>}
               <div className="note-form-actions">
                 <button type="submit" className="btn btn-small" disabled={busy}>{busy ? '저장하는 중…' : '고친 내용 저장'}</button>
@@ -114,7 +114,7 @@ export function DeleteAccount({ auth }) {
     setError(null);
     try {
       await deleteMyAccount(confirm.trim());
-      const siteNotice = guest ? '비회원 기록을 지웠어요. 이 기기에서 로그인 정보도 지웠어요.' : '탈퇴했어요. 계정과 내 기록을 지웠어요. 그동안 고마웠어요.';
+      const siteNotice = guest ? '비회원 기록을 지웠습니다. 이 기기에서 로그인 정보도 지웠습니다.' : '탈퇴했습니다. 계정과 내 기록을 지웠습니다. 그동안 고마웠습니다.';
       navigate('/', { replace: true, state: { siteNotice } });
     } catch (err) {
       setError(err.message);
@@ -126,14 +126,14 @@ export function DeleteAccount({ auth }) {
     <section className="me-section" aria-labelledby="delete-account">
       <h2 id="delete-account">{guest ? '비회원 기록 지우기' : '회원 탈퇴'}</h2>
       {auth.isOperator ? (
-        <p className="hint">운영자 계정은 탈퇴할 수 없어요.</p>
+        <p className="hint">운영자 계정은 탈퇴할 수 없습니다.</p>
       ) : (
         <>
-          {guest && <p className="hint">같이 쓰는 기기라면 다 쓴 뒤 지워 주세요. 비회원은 로그아웃이 없어요.</p>}
+          {guest && <p className="hint">같이 쓰는 기기라면 다 쓴 뒤 지워 주세요. 비회원은 로그아웃이 없습니다.</p>}
           <ul className="hint delete-account-list">
-            <li><strong>지워져요:</strong> 계정·닉네임, 보낸 제안, 공개되지 않은 빌드, 빌드에 누른 추천·비추천, 알림, 경험치·칭호, 자유게시판 댓글·추천·신고, 문서 댓글, 다른 사람 댓글이 없는 내 글</li>
-            <li><strong>작성자만 지우고 남아요:</strong> 문서에 반영된 내용과 수정 기록, 공개된 빌드, 다른 사람 댓글이 달린 내 글(&ldquo;삭제된 글&rdquo;로)</li>
-            {guest ? <li>되돌릴 수 없어요.</li> : <li>카카오로 연결돼 있었으면 카카오 쪽 연결도 끊어요. 되돌릴 수 없어요.</li>}
+            <li><strong>지워집니다:</strong> 계정·닉네임, 보낸 제안, 공개되지 않은 빌드, 빌드에 누른 추천·비추천, 알림, 경험치·칭호, 자유게시판 댓글·추천·신고, 문서 댓글, 다른 사람 댓글이 없는 내 글</li>
+            <li><strong>작성자만 지우고 남습니다:</strong> 문서에 반영된 내용과 수정 기록, 공개된 빌드, 다른 사람 댓글이 달린 내 글(&ldquo;삭제된 글&rdquo;로)</li>
+            {guest ? <li>되돌릴 수 없습니다.</li> : <li>카카오로 연결돼 있었으면 카카오 쪽 연결도 끊습니다. 되돌릴 수 없습니다.</li>}
           </ul>
           {!open ? (
             <button type="button" className="btn btn-small btn-danger" onClick={() => setOpen(true)}>{guest ? '비회원 기록 지우기' : '탈퇴'}</button>

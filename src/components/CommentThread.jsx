@@ -28,7 +28,7 @@ export default function CommentThread({
   return (
     <section className="section comments" id="comments" aria-labelledby="comments-title">
       <h2 className="section-title" id="comments-title">{title} {visibleCount}</h2>
-      {comments.length === 0 && <p className="hint">아직 댓글이 없어요.</p>}
+      {comments.length === 0 && <p className="hint">아직 댓글이 없습니다.</p>}
       {comments.length > 0 && (
         <ul className="comment-list" aria-label="댓글">
           {comments.map((c) => (
@@ -44,11 +44,11 @@ export default function CommentThread({
         <CommentForm ops={ops} parentId={parentId} auth={auth} mediaRules={mediaRules} onDone={onReload} />
       ) : auth.status === 'signedIn' ? (
         <p className="hint">
-          <Link to="/welcome" state={{ from: pathname }}>닉네임을 정하면</Link> 댓글을 달 수 있어요.
+          <Link to="/welcome" state={{ from: pathname }}>닉네임을 정하면</Link> 댓글을 달 수 있습니다.
         </p>
       ) : (
         <p className="hint">
-          <Link to="/login" state={{ from: pathname }}>로그인</Link>하면 댓글을 달 수 있어요.
+          <Link to="/login" state={{ from: pathname }}>로그인</Link>하면 댓글을 달 수 있습니다.
         </p>
       ))}
     </section>
@@ -127,7 +127,7 @@ function Comment({ comment: c, ops, live, rules, mediaRules, now, auth, onDone, 
               dropRef={editRef}
             />
           )}
-          {deadline && <small className="hint edit-deadline">{fmtTime(deadline)}까지 저장할 수 있어요.</small>}
+          {deadline && <small className="hint edit-deadline">{fmtTime(deadline)}까지 저장할 수 있습니다.</small>}
           <div className="comment-form-foot">
             <CharCount value={body} max={COMMENT_MAX} />
             <button type="submit" className="btn btn-small" disabled={busy || (!body.trim() && media.length === 0) || body.trim().length > COMMENT_MAX}>
@@ -158,7 +158,7 @@ function Comment({ comment: c, ops, live, rules, mediaRules, now, auth, onDone, 
       {mode === null && error && <p className="form-error" role="alert">{error}</p>}
       {mode === 'delete' && (
         <ConfirmInline
-          question="댓글을 지울까요?" confirmLabel="지우기" onCancel={() => setMode(null)}
+          question="댓글을 지우시겠습니까?" confirmLabel="지우기" onCancel={() => setMode(null)}
           onConfirm={async () => {
             await ops.remove(c.id);
             onReload();
@@ -171,21 +171,21 @@ function Comment({ comment: c, ops, live, rules, mediaRules, now, auth, onDone, 
           onSubmit={async (reason, detail) => {
             await ops.report(c.id, reason, detail);
             setMode(null);
-            onDone('신고했어요. 운영자가 확인할게요.');
+            onDone('신고했습니다. 운영자가 확인하겠습니다.');
           }}
         />
       )}
       {mode === 'hide' && (
         <NoteForm
           id={`hide-${ops.kind}-${c.id}`}
-          label="숨기는 사유 (필수, 작성자에게 보여요)"
+          label="숨기는 사유 (필수, 작성자에게 보입니다)"
           confirmLabel="숨기기 확정"
           busyLabel="숨기는 중…"
           onCancel={() => setMode(null)}
           onSubmit={async (note) => {
             await ops.hide(c.id, note);
             setMode(null);
-            onDone('댓글을 숨겼어요. 작성자에게 알림이 갔어요.');
+            onDone('댓글을 숨겼습니다. 작성자에게 알림이 갔습니다.');
           }}
         />
       )}

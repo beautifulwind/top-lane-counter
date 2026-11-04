@@ -57,7 +57,7 @@ function History() {
   // 메모 입력이 확인 단계: 실패하면 NoteForm이 이유를 보여 준다
   const revert = async (r, note) => {
     await revertDoc(r.id, note);
-    setMessage(`${number[r.id]}번 버전으로 되돌렸어요.`);
+    setMessage(`${number[r.id]}번 버전으로 되돌렸습니다.`);
     setOpen(null);
     setReverting(null);
     retry();
@@ -71,7 +71,7 @@ function History() {
       </nav>
       <h1 className="doc-title">수정 기록</h1>
       {message && <p className="notice" role="status">{message}</p>}
-      {total === 0 && <p className="empty">기록이 없어요.</p>}
+      {total === 0 && <p className="empty">기록이 없습니다.</p>}
 
       <ol className="revision-list">
         {data.revisions.map((r) => {
@@ -106,8 +106,8 @@ function History() {
               {!isCurrent && reverting === r.id && (
                 <NoteForm
                   id={`revert-note-${r.id}`}
-                  label="되돌리기 메모 (필수, 수정 기록에 남아요)"
-                  hint="지금 문서는 기록에 남아요."
+                  label="되돌리기 메모 (필수, 수정 기록에 남습니다)"
+                  hint="지금 문서는 기록에 남습니다."
                   confirmLabel="되돌리기 확정"
                   busyLabel="되돌리는 중…"
                   onCancel={() => setReverting(null)}
@@ -116,7 +116,7 @@ function History() {
               )}
               {open === r.id && (
                 <>
-                  <p className="hint">이 버전으로 되돌리면 이렇게 바뀌어요 (지금 문서 → {number[r.id]}번 버전)</p>
+                  <p className="hint">이 버전으로 되돌리면 이렇게 바뀝니다 (지금 문서 → {number[r.id]}번 버전)</p>
                   <DiffView before={doc} after={r.content} />
                 </>
               )}

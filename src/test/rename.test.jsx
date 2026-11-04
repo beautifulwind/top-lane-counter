@@ -97,17 +97,17 @@ test('강타: 소환사 주문 목록에 없고, 예전 빌드를 다시 쓰면 
   fakeLogin('u-old');
   start(`${MATCHUP}/build/new?from=150`);
   await screen.findByRole('heading', { name: /빌드 등록/ });
-  expect(screen.getByText('아직 고를 것: 강타는 고를 수 없어요. 다른 소환사 주문을 골라 주세요.')).toBeDefined();
+  expect(screen.getByText('아직 고를 것: 강타는 고를 수 없습니다. 다른 소환사 주문을 골라 주세요.')).toBeDefined();
   expect(screen.getByRole('button', { name: '빌드 보내기' })).toBeDisabled();
   pick('소환사 주문', '강타'); // 골라져 있던 강타를 빼면 목록에서도 사라진다
   expect(within(screen.getByRole('group', { name: '소환사 주문' })).queryByRole('button', { name: '강타' })).toBeNull();
   pick('소환사 주문', '점화');
-  expect(screen.queryByText(/강타는 고를 수 없어요/)).toBeNull();
+  expect(screen.queryByText(/강타는 고를 수 없습니다/)).toBeNull();
 });
 
 test('규칙: 강타가 든 빌드는 buildProblem이 막는다', () => {
   const b = buildToForm(fakeBuild(1, null, { summoner_spells: ['SummonerSmite', 'SummonerFlash'] }));
-  expect(buildProblem(b)).toBe('강타는 고를 수 없어요. 다른 소환사 주문을 골라 주세요.');
+  expect(buildProblem(b)).toBe('강타는 고를 수 없습니다. 다른 소환사 주문을 골라 주세요.');
 });
 
 test('빌드 입력: 핵심 템트리는 끌어서 순서 바꾸기 안내, [빼기]는 X 아이콘 버튼', async () => {

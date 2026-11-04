@@ -20,7 +20,7 @@ export default class ErrorBoundary extends Component {
     if (!error) return this.props.children;
     return (
       <div className="status status-error" role="alert">
-        <p>화면을 표시하는 중에 문제가 생겼어요.</p>
+        <p>화면을 표시하는 중에 문제가 생겼습니다.</p>
         <small>{String(error.message ?? error)}</small>
         <div className="actions center">
           <button type="button" className="btn" onClick={() => this.setState({ error: null })}>

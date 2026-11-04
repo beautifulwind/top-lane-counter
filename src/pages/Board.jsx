@@ -66,7 +66,7 @@ export default function Board() {
       {loading && <Loading />}
       {error && <ErrorBox error={error} onRetry={retry} />}
       {data && data.rows.length === 0 && (
-        <p className="empty">{q ? '검색에 맞는 글이 없어요.' : '아직 글이 없어요. 첫 글을 써 보세요!'}</p>
+        <p className="empty">{q ? '검색에 맞는 글이 없습니다.' : '아직 글이 없습니다. 첫 글을 써 보세요!'}</p>
       )}
       {data && data.rows.length > 0 && (
         <ul className="post-list" aria-label="글 목록">

@@ -38,7 +38,7 @@ export default function BoardAdmin() {
       </p>
       <h3>숨긴 글·댓글 ({rows.length})</h3>
       {rows.length === 0 ? (
-        <p className="empty">숨긴 글·댓글이 없어요.</p>
+        <p className="empty">숨긴 글·댓글이 없습니다.</p>
       ) : (
         <ul className="proposal-list" aria-label="숨긴 글·댓글">
           {rows.map(({ kind, row }) => (
@@ -81,7 +81,7 @@ function HiddenBoardRow({ kind, row, champs, onDone }) {
       {open && (
         <NoteForm
           id={`restore-${kind}-${row.id}`}
-          label="다시 공개 메모 (필수, 작성자에게 보여요)"
+          label="다시 공개 메모 (필수, 작성자에게 보입니다)"
           confirmLabel="다시 공개 확정"
           busyLabel="공개하는 중…"
           onCancel={() => setOpen(false)}
@@ -89,7 +89,7 @@ function HiddenBoardRow({ kind, row, champs, onDone }) {
             if (isPost) await restorePost(row.id, note);
             else if (kind === 'doc_comment') await restoreDocComment(row.id, note);
             else await restoreComment(row.id, note);
-            onDone(`${isPost ? '글' : '댓글'}을 다시 공개했어요.`);
+            onDone(`${isPost ? '글' : '댓글'}을 다시 공개했습니다.`);
           }}
         />
       )}

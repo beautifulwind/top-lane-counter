@@ -46,7 +46,7 @@ test('새 카운터 제안: 이미 있는 카운터는 못 고르고, 필수 칸
   expect(screen.queryByLabelText(/^11레벨/)).toBeNull();
   for (const lv of [1, 2, 3]) type(`${lv}레벨 (필수)`, `${lv}렙 공략`);
   send();
-  expect(screen.getByRole('alert').textContent).toBe('6레벨 딜교법은 꼭 적어야 해요.');
+  expect(screen.getByRole('alert').textContent).toBe('6레벨 딜교법은 꼭 적어야 합니다.');
   type('6레벨 (필수)', '6렙 공략');
   fireEvent.change(screen.getByLabelText('레벨 추가'), { target: { value: '4' } });
   fireEvent.click(screen.getByRole('button', { name: '칸 추가' }));
@@ -80,7 +80,7 @@ test('새 카운터 제안: 이미 있는 카운터는 못 고르고, 필수 칸
       },
     },
   }]);
-  expect(screen.getByText(/새 카운터 제안을 보냈어요. 운영자가 승인하면 반영돼요/)).toBeDefined();
+  expect(screen.getByText(/새 카운터 제안을 보냈습니다. 운영자가 승인하면 반영됩니다/)).toBeDefined();
   const row = (await screen.findByText('가렌으로 다리우스 잡는 법')).closest('li');
   expect(within(row).getByText('새 카운터')).toBeDefined();
   expect(within(row).getByText('대기 중')).toBeDefined();
@@ -97,14 +97,14 @@ test('등록 안 된 매치업 화면의 [새 카운터 제안]은 그 챔피언
 
 test('DB가 막으면(예: 그 사이 누가 등록) 그 이유를 보여 주고 화면에 머문다', async () => {
   fakeLogin('u-old');
-  fakeState.insertError = '이미 등록된 카운터예요. 문서 수정 제안을 이용해 주세요.';
+  fakeState.insertError = '이미 등록된 카운터입니다. 문서 수정 제안을 이용해 주세요.';
   start('/champion/Darius/propose?counter=Garen');
   await screen.findByLabelText('한 줄 요약 (필수)');
   type('한 줄 요약 (필수)', '요약');
   for (const lv of [1, 2, 3, 6]) type(`${lv}레벨 (필수)`, 'x');
   fillBuild({ withSkill: true });
   send();
-  expect(await screen.findByText('이미 등록된 카운터예요. 문서 수정 제안을 이용해 주세요.')).toBeDefined();
+  expect(await screen.findByText('이미 등록된 카운터입니다. 문서 수정 제안을 이용해 주세요.')).toBeDefined();
   expect(where()).toBe('/champion/Darius/propose');
 });
 
@@ -117,7 +117,7 @@ test('문서 수정 제안: 지금 문서가 채워져 있고, 바뀐 게 없으
   expect(screen.getByLabelText('4레벨').value).toBe('4렙 추가');
 
   send();
-  expect(screen.getByRole('alert').textContent).toBe('지금 문서와 달라진 내용이 없어요.');
+  expect(screen.getByRole('alert').textContent).toBe('지금 문서와 달라진 내용이 없습니다.');
   type('특이사항', 'E 사거리 주의\n궁 조심');
   fireEvent.click(screen.getByRole('button', { name: '4레벨 칸 빼기' }));
   send();
@@ -163,13 +163,13 @@ test('010: 예전 문서의 9·11레벨은 추가 레벨로 보이고, 수정 �
 
 test('/me: 거절된 제안은 거절 사유를, 승인된 제안은 문서 링크를 보여 준다', async () => {
   TABLES.edit_proposals.push(
-    fakeProposal({ id: 1, status: 'rejected', reject_reason: '근거가 부족해요', reviewed_at: '2026-11-02T00:00:00Z' }),
+    fakeProposal({ id: 1, status: 'rejected', reject_reason: '근거가 부족합니다', reviewed_at: '2026-11-02T00:00:00Z' }),
     fakeProposal({ id: 2, type: 'new_counter', counter_champion: 'Garen', counter_id: null, status: 'pending' }),
   );
   fakeLogin('u-old');
   start('/me');
   const rejected = (await screen.findByText('거절')).closest('li');
-  expect(within(rejected).getByText('거절 사유: 근거가 부족해요')).toBeDefined();
+  expect(within(rejected).getByText('거절 사유: 근거가 부족합니다')).toBeDefined();
   expect(within(rejected).getByRole('link', { name: '퀸으로 다리우스 잡는 법' }).getAttribute('href')).toBe('/me/proposals/1');
   expect(within(rejected).getByRole('link', { name: '문서 보기' }).getAttribute('href')).toBe('/champion/Darius/counter/Quinn');
   const pending = screen.getByText('가렌으로 다리우스 잡는 법').closest('li');

@@ -44,7 +44,7 @@ set request.jwt.claim.sub = '';
 select t.fails('비로그인은 못 올림', $$select pg_temp.up('x/a.webp')$$, 'row-level security');
 set role authenticated;
 set request.jwt.claim.sub = :'G';
-select t.ok('비회원: 올릴 수 없는 이유', media_upload_problem() like '비회원은 사진을 올릴 수 없어요%');
+select t.ok('비회원: 올릴 수 없는 이유', media_upload_problem() like '비회원은 사진을 올릴 수 없습니다%');
 select t.fails('비회원은 못 올림', format($$select pg_temp.up('%s/a.webp')$$, :'G'), 'row-level security');
 set request.jwt.claim.sub = :'B';
 select t.ok('회원: 올릴 수 있음', media_upload_problem() is null);
@@ -77,9 +77,9 @@ set role authenticated;
 -- ===== 2. 글에 붙이기 =====
 select t.fails('사진 5개는 안 됨', format($$select create_post('제목', '본문', array['%1$s/p1.webp','%1$s/p2.webp','%1$s/p3.jpg','%1$s/p4.webp','%1$s/p5.webp'])$$, :'B'), '글에는 사진을 4개까지');
 select t.fails('GIF 2개는 안 됨', format($$select create_post('제목', '본문', array['%1$s/g1.gif','%1$s/g2.gif'])$$, :'B'), 'GIF는 글 하나에 1개까지');
-select t.fails('큰 사진은 안 됨', format($$select create_post('제목', '본문', array['%1$s/big.webp'])$$, :'B'), '사진이 너무 커요');
+select t.fails('큰 사진은 안 됨', format($$select create_post('제목', '본문', array['%1$s/big.webp'])$$, :'B'), '사진이 너무 큽니다');
 select t.fails('3MB 넘는 GIF는 안 됨', format($$select create_post('제목', '본문', array['%1$s/biggif.gif'])$$, :'B'), 'GIF는 3MB까지');
-select t.fails('없는 파일은 안 됨', format($$select create_post('제목', '본문', array['%1$s/none.webp'])$$, :'B'), '올린 사진을 찾지 못했어요');
+select t.fails('없는 파일은 안 됨', format($$select create_post('제목', '본문', array['%1$s/none.webp'])$$, :'B'), '올린 사진을 찾지 못했습니다');
 select t.fails('같은 사진 두 번은 안 됨', format($$select create_post('제목', '본문', array['%1$s/p1.webp','%1$s/p1.webp'])$$, :'B'), '같은 사진이 두 번');
 select t.fails('사진도 본문도 없으면 안 됨', $$select create_post('제목', '  ')$$, '본문을 적어 주세요');
 select t.ok('막히면 글이 안 생김', (select count(*) = 0 from posts));
@@ -98,14 +98,14 @@ select t.ok('목록에 사진 수', (select (r ->> 'media_count')::int = 3 from 
 set request.jwt.claim.sub = :'C';
 select pg_temp.up(:'C' || '/c1.webp');
 select pg_temp.up(:'C' || '/c2.gif', 'image/gif', 300);
-select t.fails('남이 올린 파일은 못 붙임', format($$select create_post('제목', '본문', array['%s/p3.jpg'])$$, :'B'), '올린 사진을 찾지 못했어요');
+select t.fails('남이 올린 파일은 못 붙임', format($$select create_post('제목', '본문', array['%s/p3.jpg'])$$, :'B'), '올린 사진을 찾지 못했습니다');
 
 -- 비회원은 붙일 수 없음 (파일이 있어도)
 reset role;
 insert into storage.objects (bucket_id, name, owner_id, metadata) values ('board-media', :'G' || '/g.webp', :'G', '{"mimetype":"image/webp","size":1000}');
 set role authenticated;
 set request.jwt.claim.sub = :'G';
-select t.fails('비회원은 사진을 붙일 수 없음', format($$select create_post('제목', '본문', array['%s/g.webp'])$$, :'G'), '비회원은 사진을 올릴 수 없어요');
+select t.fails('비회원은 사진을 붙일 수 없음', format($$select create_post('제목', '본문', array['%s/g.webp'])$$, :'G'), '비회원은 사진을 올릴 수 없습니다');
 select t.ok('비회원도 사진 없는 글은 씀', create_post('손님 글', '본문') > 0);
 
 -- ===== 3. 보기 권한 =====
@@ -150,7 +150,7 @@ select t.ok('빼 둔 내 사진을 다시 붙이면 대기열에서 빠짐', pg_
 reset role;
 update posts set created_at = now() - interval '2 hours', edit_grace_until = null where id = pg_temp.id('p');
 set role authenticated;
-select t.fails('시간이 지나면 사진도 못 바꿈', format($$select edit_post(%s, '사진 글', '', array['%s/p1.webp'])$$, pg_temp.id('p'), :'B'), '고칠 수 있는 시간이 지났어요');
+select t.fails('시간이 지나면 사진도 못 바꿈', format($$select edit_post(%s, '사진 글', '', array['%s/p1.webp'])$$, pg_temp.id('p'), :'B'), '고칠 수 있는 시간이 지났습니다');
 select t.ok('막히면 그대로', cardinality(pg_temp.media(pg_temp.id('p'))) = 3);
 
 -- ===== 5. 댓글 =====

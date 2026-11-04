@@ -14,7 +14,7 @@ vi.mock('../lib/imageCompress', async (orig) => {
     ...real,
     prepareImage: vi.fn(async (file) => {
       if (file.type === 'image/gif') {
-        if (file.size > 3 * 1024 * 1024) throw new Error('GIF는 3MB까지 올릴 수 있어요.');
+        if (file.size > 3 * 1024 * 1024) throw new Error('GIF는 3MB까지 올릴 수 있습니다.');
         return { blob: file, mime: 'image/gif', ext: 'gif' };
       }
       return { blob: new Blob(['x'], { type: 'image/webp' }), mime: 'image/webp', ext: 'webp' };
@@ -49,7 +49,7 @@ test('글쓰기: 사진·GIF를 붙이고 빼고, 사진만 있어도 올릴 수
   pick('post-media', [photo('1.jpg'), gif(), gif()]);
   const thumbs = await screen.findByRole('list', { name: '붙일 사진' });
   await vi.waitFor(() => expect(within(thumbs).getAllByRole('listitem')).toHaveLength(2));
-  expect(screen.getByRole('alert')).toHaveTextContent('GIF는 1개까지 붙일 수 있어요.');
+  expect(screen.getByRole('alert')).toHaveTextContent('GIF는 1개까지 붙일 수 있습니다.');
   expect(screen.getByRole('button', { name: /\(2\/4\)/ })).toBeDefined();
 
   pick('post-media', [photo('2.jpg')]);
@@ -79,10 +79,10 @@ test('올리기가 막히면(하루 개수·용량) 그 이유를 보여 주고,
   start('/board/new');
   await screen.findByRole('button', { name: /사진·GIF 추가/ });
   pick('post-media', [gif(4 * 1024 * 1024)]);
-  expect(await screen.findByRole('alert')).toHaveTextContent('GIF는 3MB까지 올릴 수 있어요.');
+  expect(await screen.findByRole('alert')).toHaveTextContent('GIF는 3MB까지 올릴 수 있습니다.');
   expect(screen.queryByRole('list', { name: '붙일 사진' })).toBeNull();
 
-  fakeState.mediaProblem = '사진은 하루 20개까지 올릴 수 있어요. 내일 다시 올려 주세요.';
+  fakeState.mediaProblem = '사진은 하루 20개까지 올릴 수 있습니다. 내일 다시 올려 주세요.';
   pick('post-media', [photo()]);
   await vi.waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('하루 20개까지'));
   expect(screen.queryByRole('list', { name: '붙일 사진' })).toBeNull();
@@ -95,7 +95,7 @@ test('글을 올리다 실패하면 다시 눌러도 같은 사진을 또 올리
   fireEvent.change(screen.getByLabelText('제목'), { target: { value: '제목' } });
   pick('post-media', [photo()]);
   await screen.findByRole('list', { name: '붙일 사진' });
-  fakeState.boardError = '글은 30초에 한 번만 쓸 수 있어요.';
+  fakeState.boardError = '글은 30초에 한 번만 쓸 수 있습니다.';
   fireEvent.click(screen.getByRole('button', { name: '글 올리기' }));
   expect(await screen.findByRole('alert')).toHaveTextContent('30초에 한 번');
   fakeState.boardError = null;
@@ -109,13 +109,13 @@ test('비회원은 사진을 붙일 수 없다 (안내만)', async () => {
   fakeGuestLogin('g-1', { nickname: '손님' });
   TABLES.posts.push(fakePost(1, { author_id: 'u-x', author: OTHER }));
   start('/board/new');
-  expect(await screen.findByText(/비회원은 사진을 붙일 수 없어요/)).toBeDefined();
+  expect(await screen.findByText(/비회원은 사진을 붙일 수 없습니다/)).toBeDefined();
   expect(screen.queryByRole('button', { name: /사진·GIF 추가/ })).toBeNull();
   cleanup();
   start('/board/1');
   await screen.findByRole('button', { name: '댓글 올리기' });
   expect(screen.queryByRole('button', { name: /사진·GIF 추가/ })).toBeNull();
-  expect(screen.getByText(/비회원은 사진을 붙일 수 없어요/)).toBeDefined();
+  expect(screen.getByText(/비회원은 사진을 붙일 수 없습니다/)).toBeDefined();
 });
 
 test('글 고치기: 사진을 안 건드리면 p_media null(그대로), 빼면 남은 목록', async () => {
@@ -127,7 +127,7 @@ test('글 고치기: 사진을 안 건드리면 p_media null(그대로), 빼면 
   const thumbs = await screen.findByRole('list', { name: '붙일 사진' });
   expect(within(thumbs).getAllByRole('listitem')).toHaveLength(2);
   fireEvent.click(screen.getByRole('button', { name: '고친 내용 저장' }));
-  await screen.findByText('글을 고쳤어요.');
+  await screen.findByText('글을 고쳤습니다.');
   expect(rpcs('edit_post')[0].p_media).toBeNull();
 
   cleanup();
@@ -135,12 +135,12 @@ test('글 고치기: 사진을 안 건드리면 p_media null(그대로), 빼면 
   await screen.findByRole('list', { name: '붙일 사진' });
   fireEvent.click(screen.getByRole('button', { name: '사진 1 빼기' }));
   fireEvent.click(screen.getByRole('button', { name: '고친 내용 저장' }));
-  await screen.findByText('글을 고쳤어요.');
+  await screen.findByText('글을 고쳤습니다.');
   expect(rpcs('edit_post')[1].p_media).toEqual(['u-old/b.gif']);
   expect(within(screen.getByRole('list', { name: '첨부 사진' })).getAllByRole('img')).toHaveLength(1);
 });
 
-test('댓글: 사진 하나만 붙여 올리기, 고칠 때 빼기, 서명 못 받은 사진은 "불러오지 못했어요"', async () => {
+test('댓글: 사진 하나만 붙여 올리기, 고칠 때 빼기, 서명 못 받은 사진은 "불러오지 못했습니다"', async () => {
   TABLES.posts.push(fakePost(1, { author_id: 'u-x', author: OTHER, comment_count: 1 }));
   TABLES.post_comments.push(fakeComment(11, 1, { author_id: 'u-x', author: OTHER, media: [shot('u-x/c.webp')] }));
   fakeLogin('u-old');
@@ -165,7 +165,7 @@ test('댓글: 사진 하나만 붙여 올리기, 고칠 때 빼기, 서명 못 �
   await vi.waitFor(() => expect(rpcs('edit_comment')).toEqual([{ p_id: 801, p_body: '글로 바꿈', p_media: [] }]));
 });
 
-test('사진 주소를 못 받으면 칸에 "사진을 불러오지 못했어요"', async () => {
+test('사진 주소를 못 받으면 칸에 "사진을 불러오지 못했습니다"', async () => {
   TABLES.posts.push(fakePost(1, { media: [shot('u-old/a.webp')] }));
   const { db } = await import('./fakeSupabase');
   const real = db().storage.from;
@@ -173,7 +173,7 @@ test('사진 주소를 못 받으면 칸에 "사진을 불러오지 못했어요
     ...real(b), createSignedUrls: async () => ({ data: null, error: { message: 'boom' } }),
   }));
   start('/board/1');
-  expect(await screen.findByText('사진을 불러오지 못했어요')).toBeDefined();
+  expect(await screen.findByText('사진을 불러오지 못했습니다')).toBeDefined();
 });
 
 test('목록: 사진 있는 글에 📷', async () => {
@@ -202,7 +202,7 @@ test('운영자 /admin: 사진 저장 공간 — 사용량 막대, 800MB 넘으�
   const sec = (await screen.findByRole('heading', { name: '사진 저장 공간' })).closest('section');
   expect(await within(sec).findByText(/820MB/)).toBeDefined();
   expect(within(sec).getByRole('meter', { name: '사진 저장 공간' }).className).toContain('warned');
-  expect(within(sec).getByRole('status')).toHaveTextContent('800MB를 넘었어요');
+  expect(within(sec).getByRole('status')).toHaveTextContent('800MB를 넘었습니다');
   expect(within(sec).getByText(/사진왕 — 300개, 150MB/)).toBeDefined();
   expect(within(sec).getByText(/지울 차례 \(매일 정리\): 3개 · 글에 안 붙은 사진: 2개/)).toBeDefined();
 
@@ -210,7 +210,7 @@ test('운영자 /admin: 사진 저장 공간 — 사용량 막대, 800MB 넘으�
   fakeState.mediaUsage = { ...fakeState.mediaUsage, bytes: 950 * MB };
   start('/admin');
   const sec2 = (await screen.findByRole('heading', { name: '사진 저장 공간' })).closest('section');
-  expect(await within(sec2).findByRole('alert')).toHaveTextContent('새 사진 첨부가 막혔어요');
+  expect(await within(sec2).findByRole('alert')).toHaveTextContent('새 사진 첨부가 막혔습니다');
 });
 
 // 끌어다 놓기·Ctrl+V 붙여넣기 — 버튼과 같은 길(개수·GIF 수·크기·압축·올리기 가능 여부)
@@ -219,7 +219,7 @@ const dragIn = (zone, list) => fireEvent.dragEnter(zone, { dataTransfer: files(l
 const dropOn = (zone, list) => fireEvent.drop(zone, { dataTransfer: files(list) });
 const pasteOn = (el, list, extra) => fireEvent.paste(el, { clipboardData: files(list, extra) });
 
-test('글쓰기: 끌어다 놓으면 "여기에 놓으면 첨부돼요" → 놓으면 첨부, 사진이 아니면 안내, 붙여넣기도 첨부', async () => {
+test('글쓰기: 끌어다 놓으면 "여기에 놓으면 첨부됩니다" → 놓으면 첨부, 사진이 아니면 안내, 붙여넣기도 첨부', async () => {
   fakeLogin('u-old');
   start('/board/new');
   await screen.findByRole('button', { name: /사진·GIF 추가 \(0\/4\)/ });
@@ -227,23 +227,23 @@ test('글쓰기: 끌어다 놓으면 "여기에 놓으면 첨부돼요" → 놓�
   const body = screen.getByLabelText('본문');
 
   dragIn(body, [photo()]); // 칸 안 어디든 (본문 위에서도)
-  expect(screen.getByText('여기에 놓으면 첨부돼요')).toBeDefined();
+  expect(screen.getByText('여기에 놓으면 첨부됩니다')).toBeDefined();
   fireEvent.dragLeave(body, { dataTransfer: files([]) });
-  expect(screen.queryByText('여기에 놓으면 첨부돼요')).toBeNull();
+  expect(screen.queryByText('여기에 놓으면 첨부됩니다')).toBeNull();
 
   dragIn(form, [photo()]);
   expect(dropOn(form, [photo('1.jpg'), gif()])).toBe(false); // 브라우저 기본 동작(새 탭으로 열기) 막음
-  expect(screen.queryByText('여기에 놓으면 첨부돼요')).toBeNull();
+  expect(screen.queryByText('여기에 놓으면 첨부됩니다')).toBeNull();
   const thumbs = await screen.findByRole('list', { name: '붙일 사진' });
   await vi.waitFor(() => expect(within(thumbs).getAllByRole('listitem')).toHaveLength(2));
 
   dropOn(form, [new File(['%PDF'], 'a.pdf', { type: 'application/pdf' })]);
-  expect(await screen.findByRole('alert')).toHaveTextContent('사진·GIF만 올릴 수 있어요.');
+  expect(await screen.findByRole('alert')).toHaveTextContent('사진·GIF만 올릴 수 있습니다.');
   expect(within(thumbs).getAllByRole('listitem')).toHaveLength(2);
 
   // 섞여 있으면 사진은 붙이고 안내도 보여 준다. GIF 수 제한도 버튼과 같다
   dropOn(form, [new File(['x'], 'memo.txt', { type: 'text/plain' }), gif()]);
-  await vi.waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('사진·GIF만 올릴 수 있어요. GIF는 1개까지 붙일 수 있어요.'));
+  await vi.waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('사진·GIF만 올릴 수 있습니다. GIF는 1개까지 붙일 수 있습니다.'));
   expect(within(thumbs).getAllByRole('listitem')).toHaveLength(2);
 
   // Ctrl+V: 캡처·이미지 복사는 첨부, 글자가 같이 있는 복사(엑셀·워드)는 글자 붙여넣기로 둔다
@@ -254,9 +254,9 @@ test('글쓰기: 끌어다 놓으면 "여기에 놓으면 첨부돼요" → 놓�
   await vi.waitFor(() => expect(within(thumbs).getAllByRole('listitem')).toHaveLength(4));
 
   dragIn(form, [photo()]); // 다 찼으면 놓기 전에 알려 주고, 놓으면 개수 안내
-  expect(screen.getByText('사진은 4개까지 붙일 수 있어요')).toBeDefined();
+  expect(screen.getByText('사진은 4개까지 붙일 수 있습니다')).toBeDefined();
   dropOn(form, [photo()]);
-  expect(await screen.findByRole('alert')).toHaveTextContent('사진은 4개까지 붙일 수 있어요.');
+  expect(await screen.findByRole('alert')).toHaveTextContent('사진은 4개까지 붙일 수 있습니다.');
   expect(within(thumbs).getAllByRole('listitem')).toHaveLength(4);
   expect(fakeState.uploads).toHaveLength(0); // 보낼 때 올린다
 });
@@ -265,7 +265,7 @@ test('끌어다 놓기도 올리기가 막히면(하루 개수) 그 이유를 �
   fakeLogin('u-old');
   start('/board/new');
   await screen.findByRole('button', { name: /사진·GIF 추가/ });
-  fakeState.mediaProblem = '사진은 하루 20개까지 올릴 수 있어요. 내일 다시 올려 주세요.';
+  fakeState.mediaProblem = '사진은 하루 20개까지 올릴 수 있습니다. 내일 다시 올려 주세요.';
   dropOn(screen.getByLabelText('제목').closest('form'), [photo()]);
   await vi.waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('하루 20개까지'));
   expect(screen.queryByRole('list', { name: '붙일 사진' })).toBeNull();
@@ -282,7 +282,7 @@ test('댓글: 댓글 칸에 붙여넣기·끌어다 놓기로 첨부 (1개까지
   const newForm = box.closest('form');
   await vi.waitFor(() => expect(within(newForm).getAllByRole('img', { name: /붙일 사진/ })).toHaveLength(1));
   dropOn(newForm, [photo()]);
-  expect(await within(newForm).findByRole('alert')).toHaveTextContent('사진은 1개까지 붙일 수 있어요.');
+  expect(await within(newForm).findByRole('alert')).toHaveTextContent('사진은 1개까지 붙일 수 있습니다.');
 
   const mine = document.getElementById('comment-11');
   fireEvent.click(within(mine).getByRole('button', { name: '고치기' }));

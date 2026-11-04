@@ -70,7 +70,7 @@ function OrderEditor() {
     try {
       await reorderCounters(championId, order);
       setSaved(order);
-      setMessage('순서를 저장했어요.');
+      setMessage('순서를 저장했습니다.');
     } catch (e) {
       setSaveError(e.message);
     } finally {
@@ -84,10 +84,10 @@ function OrderEditor() {
         <Link to="/admin">운영자 페이지</Link> › <Link to={`/champion/${championId}`}>{target.name}</Link> › 순서 변경
       </nav>
       <h1 className="doc-title">{target.name} 카운터 순서</h1>
-      <p className="hint">위에 있을수록 더 확실한 카운터예요. ⠿를 끌거나 ▲▼로 옮긴 뒤 [순서 저장]을 눌러 주세요.</p>
+      <p className="hint">위에 있을수록 더 확실한 카운터입니다. ⠿를 끌거나 ▲▼로 옮긴 뒤 [순서 저장]을 눌러 주세요.</p>
 
       {order.length === 0 ? (
-        <p className="empty">아직 등록된 카운터가 없어요.</p>
+        <p className="empty">아직 등록된 카운터가 없습니다.</p>
       ) : (
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
           <SortableContext items={order} strategy={verticalListSortingStrategy}>

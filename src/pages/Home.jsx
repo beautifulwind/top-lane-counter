@@ -17,7 +17,7 @@ export default function Home() {
   return (
     <>
       <h1 className="doc-title">챔피언 선택</h1>
-      <p className="lead">라인에서 만난 상대를 고르면, 그 챔피언을 이기는 카운터와 공략을 볼 수 있어요.</p>
+      <p className="lead">라인에서 만난 상대를 고르면, 그 챔피언을 이기는 카운터와 공략을 볼 수 있습니다.</p>
 
       <div className="search">
         <input
@@ -35,7 +35,7 @@ export default function Home() {
       {champions && (
         <>
           {filtered.length === 0 ? (
-            <p className="status">‘{query}’에 맞는 챔피언이 없어요.</p>
+            <p className="status">‘{query}’에 맞는 챔피언이 없습니다.</p>
           ) : (
             <ul className="champ-grid">
               {filtered.map((c) => (

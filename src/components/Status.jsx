@@ -9,7 +9,7 @@ export function Loading() {
 export function ErrorBox({ error, onRetry }) {
   return (
     <div className="status status-error" role="alert">
-      <p>데이터를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.</p>
+      <p>데이터를 불러오지 못했습니다. 잠시 후 다시 시도해 주세요.</p>
       {error && <small>{String(error.message ?? error)}</small>}
       <div className="actions center">
         <button type="button" className="btn" onClick={onRetry ?? (() => window.location.reload())}>
@@ -26,7 +26,7 @@ export function PendingButton({ children }) {
     <button
       type="button"
       className="btn"
-      onClick={() => alert('준비 중인 기능이에요. (로그인·제안 기능은 다음 단계에서 연결됩니다)')}
+      onClick={() => alert('준비 중인 기능입니다. (로그인·제안 기능은 다음 단계에서 연결됩니다)')}
     >
       {children}
     </button>

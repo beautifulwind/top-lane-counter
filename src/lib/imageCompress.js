@@ -15,11 +15,11 @@ export const fmtMb = (kb) => `${Number((kb / 1024).toFixed(1))}MB`;
 /** 고른 파일 → 올릴 것 { blob, mime, ext }. 못 쓰면 Error (화면에 그대로 보여 줄 문구) */
 export async function prepareImage(file, { photoMaxKb = 600, gifMaxKb = 3072 } = {}) {
   if (file.type === GIF) {
-    if (file.size > gifMaxKb * 1024) throw new Error(`GIF는 ${fmtMb(gifMaxKb)}까지 올릴 수 있어요.`);
+    if (file.size > gifMaxKb * 1024) throw new Error(`GIF는 ${fmtMb(gifMaxKb)}까지 올릴 수 있습니다.`);
     return { blob: file, mime: GIF, ext: 'gif' };
   }
-  if (!PHOTO_TYPES.includes(file.type)) throw new Error('사진은 JPG·PNG·WebP·GIF만 올릴 수 있어요.');
-  if (file.size > RAW_MAX_BYTES) throw new Error('20MB보다 큰 사진은 올릴 수 없어요.');
+  if (!PHOTO_TYPES.includes(file.type)) throw new Error('사진은 JPG·PNG·WebP·GIF만 올릴 수 있습니다.');
+  if (file.size > RAW_MAX_BYTES) throw new Error('20MB보다 큰 사진은 올릴 수 없습니다.');
 
   const image = await loadImage(file);
   let side = MAX_SIDE;
@@ -33,7 +33,7 @@ export async function prepareImage(file, { photoMaxKb = 600, gifMaxKb = 3072 } =
     side = Math.round(side * 0.75);
   }
   if (best.size <= photoMaxKb * 1024) return result(best);
-  throw new Error('사진을 충분히 줄이지 못했어요. 다른 사진을 골라 주세요.');
+  throw new Error('사진을 충분히 줄이지 못했습니다. 다른 사진을 골라 주세요.');
 }
 
 const result = (blob) => ({ blob, mime: blob.type, ext: blob.type === 'image/webp' ? 'webp' : 'jpg' });
@@ -52,7 +52,7 @@ async function loadImage(file) {
     await img.decode();
     return img;
   } catch {
-    throw new Error('사진을 읽지 못했어요. 다른 사진을 골라 주세요.');
+    throw new Error('사진을 읽지 못했습니다. 다른 사진을 골라 주세요.');
   } finally {
     URL.revokeObjectURL(url);
   }
@@ -78,6 +78,6 @@ async function encode(canvas, q) {
   const webp = await toBlob(canvas, 'image/webp', q);
   if (webp && webp.type === 'image/webp') return webp;
   const jpeg = await toBlob(canvas, 'image/jpeg', q); // WebP로 저장하지 못하는 브라우저
-  if (!jpeg) throw new Error('사진을 줄이지 못했어요. 다른 사진을 골라 주세요.');
+  if (!jpeg) throw new Error('사진을 줄이지 못했습니다. 다른 사진을 골라 주세요.');
   return jpeg;
 }

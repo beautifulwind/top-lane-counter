@@ -42,7 +42,7 @@ function Detail() {
       <article>
         {crumbs}
         <h1 className="doc-title">빌드 자세히</h1>
-        <p className="empty">빌드를 찾지 못했어요. 내가 보낸 빌드만 볼 수 있어요.</p>
+        <p className="empty">빌드를 찾지 못했습니다. 내가 보낸 빌드만 볼 수 있습니다.</p>
       </article>
     );
   }
@@ -80,7 +80,7 @@ function BuildView({ b, data, crumbs, sent }) {
 
       {b.status === 'pending' && (
         <div className="status-box">
-          <p>승인 대기 중이에요. 운영자가 처리하기 전까지는 직접 고칠 수 있어요. 고쳐도 대기 순서는 그대로예요.</p>
+          <p>승인 대기 중입니다. 운영자가 처리하기 전까지는 직접 고칠 수 있습니다. 고쳐도 대기 순서는 그대로입니다.</p>
           {open && <div className="actions"><Link to={`/me/builds/${b.id}/edit`} className="btn">수정</Link></div>}
         </div>
       )}
@@ -97,7 +97,7 @@ function BuildView({ b, data, crumbs, sent }) {
       {b.status === 'approved' && (
         <div className="status-box">
           {b.approve_note && <p className="approve-note">승인 메모: {b.approve_note}</p>}
-          <p className="hint">공개된 빌드는 고칠 수 없어요. 바꾸고 싶으면 [이 빌드로 다시 쓰기]로 새 빌드를 보내 주세요.</p>
+          <p className="hint">공개된 빌드는 고칠 수 없습니다. 바꾸고 싶으면 [이 빌드로 다시 쓰기]로 새 빌드를 보내 주세요.</p>
           {open && (
             <div className="actions">
               <Link to={`${path}#builds`} className="btn">문서 보기</Link>
@@ -111,7 +111,7 @@ function BuildView({ b, data, crumbs, sent }) {
           <p className="reject-reason">거절 사유: {b.reject_reason}</p>
           {open && (
             <>
-              <p className="hint">보낸 빌드를 채운 채로 새로 쓸 수 있어요.</p>
+              <p className="hint">보낸 빌드를 채운 채로 새로 쓸 수 있습니다.</p>
               <div className="actions"><Link to={`${path}/build/new?from=${b.id}`} className="btn">다시 쓰기</Link></div>
             </>
           )}

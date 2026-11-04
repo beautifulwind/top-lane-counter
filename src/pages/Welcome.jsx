@@ -46,7 +46,7 @@ export default function Welcome() {
     <article className="welcome">
       <h1 className="doc-title">닉네임 정하기</h1>
       <p className="lead">
-        위키에서 다른 사람에게 보일 이름이에요. 다른 사람과 겹칠 수 없어요. 정한 뒤에는 30일에 한 번 [마이페이지]에서 바꿀 수 있어요.
+        위키에서 다른 사람에게 보일 이름입니다. 다른 사람과 겹칠 수 없습니다. 정한 뒤에는 30일에 한 번 [마이페이지]에서 바꿀 수 있습니다.
       </p>
       <form onSubmit={submit} className="nick-form">
         <label htmlFor="nickname">닉네임</label>
@@ -67,12 +67,12 @@ export default function Welcome() {
         </button>
       </form>
       <p className="hint">
-        닉네임 없이도 둘러볼 수 있어요.{' '}
-        <Link to={needsNicknameFor(from.split(/[?#]/)[0]) ? '/' : from}>나중에 정할게요</Link>
+        닉네임 없이도 둘러볼 수 있습니다.{' '}
+        <Link to={needsNicknameFor(from.split(/[?#]/)[0]) ? '/' : from}>나중에 정하기</Link>
       </p>
       {isGuest(auth) && (
         <>
-          <p className="hint">비회원이에요. 다른 사람에게는 닉네임 옆에 &ldquo;비회원&rdquo;이 붙어 보여요.</p>
+          <p className="hint">비회원입니다. 다른 사람에게는 닉네임 옆에 &ldquo;비회원&rdquo;이 붙어 보입니다.</p>
           {/* 닉네임 없는 비회원은 /me에 못 가므로 여기서 지운다 (로그아웃 대신) */}
           <DeleteAccount auth={auth} />
         </>

@@ -48,8 +48,8 @@ export default function BoardPost() {
   if (!post) {
     return (
       <article>
-        <h1 className="doc-title">글을 찾지 못했어요</h1>
-        <p className="empty">지워졌거나 운영자가 숨긴 글이에요.</p>
+        <h1 className="doc-title">글을 찾지 못했습니다</h1>
+        <p className="empty">지워졌거나 운영자가 숨긴 글입니다.</p>
         <p><Link to="/board">← 자유게시판</Link></p>
       </article>
     );
@@ -66,7 +66,7 @@ export default function BoardPost() {
       {deleted ? (
         <>
           <h1 className="doc-title post-heading deleted">(삭제된 글)</h1>
-          <p className="empty">작성자가 삭제한 글이에요. 댓글은 그대로 남아 있어요.</p>
+          <p className="empty">작성자가 삭제한 글입니다. 댓글은 그대로 남아 있습니다.</p>
         </>
       ) : (
         <>
@@ -81,7 +81,7 @@ export default function BoardPost() {
       <CommentThread
         ops={POST_COMMENT_OPS} parentId={post.id} comments={post.comments} auth={auth} rules={post.rules} mediaRules={mediaRules}
         open={!deleted && post.status === 'visible'} live={post.status === 'visible'}
-        closedHint={deleted ? '삭제된 글에는 댓글을 달 수 없어요.' : null}
+        closedHint={deleted ? '삭제된 글에는 댓글을 달 수 없습니다.' : null}
         onDone={finished} onReload={retry}
       />
     </article>
@@ -134,16 +134,16 @@ function PostActions({ post, mine, auth, onDone }) {
       {isGuest(auth) && !mine && visible && <GuestHint what="추천·신고를 할" />}
       {mode === 'delete' && (
         <ConfirmInline
-          question={post.comment_count > 0 ? '글을 지울까요? 다른 사람 댓글은 남아요.' : '글을 지울까요?'}
+          question={post.comment_count > 0 ? '글을 지우시겠습니까? 다른 사람 댓글은 남습니다.' : '글을 지우시겠습니까?'}
           confirmLabel="지우기"
           onCancel={() => setMode(null)}
           onConfirm={async () => {
             const how = await deleteMyPost(post.id);
             if (how === 'soft') {
-              onDone('글을 지웠어요. 다른 사람 댓글이 있어서 "삭제된 글"로 남아요.');
+              onDone('글을 지웠습니다. 다른 사람 댓글이 있어서 "삭제된 글"로 남습니다.');
               setMode(null);
             } else {
-              navigate('/board', { replace: true, state: { done: '글을 지웠어요.' } });
+              navigate('/board', { replace: true, state: { done: '글을 지웠습니다.' } });
             }
           }}
         />
@@ -154,21 +154,21 @@ function PostActions({ post, mine, auth, onDone }) {
           onSubmit={async (reason, detail) => {
             await reportPost(post.id, reason, detail);
             setMode(null);
-            onDone('신고했어요. 운영자가 확인할게요.');
+            onDone('신고했습니다. 운영자가 확인하겠습니다.');
           }}
         />
       )}
       {mode === 'hide' && (
         <NoteForm
           id={`hide-post-${post.id}`}
-          label="숨기는 사유 (필수, 작성자에게 보여요)"
+          label="숨기는 사유 (필수, 작성자에게 보입니다)"
           confirmLabel="숨기기 확정"
           busyLabel="숨기는 중…"
           onCancel={() => setMode(null)}
           onSubmit={async (note) => {
             await hidePost(post.id, note);
             setMode(null);
-            onDone('글을 숨겼어요. 작성자에게 알림이 갔어요.');
+            onDone('글을 숨겼습니다. 작성자에게 알림이 갔습니다.');
           }}
         />
       )}

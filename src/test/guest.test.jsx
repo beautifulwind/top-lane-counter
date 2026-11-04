@@ -37,7 +37,7 @@ test('로그인 화면: 구글·카카오·비회원 버튼, 비회원은 안내
   expect(screen.getByRole('button', { name: /카카오로 시작하기/ })).toBeDefined();
   fireEvent.click(screen.getByRole('button', { name: '비회원으로 시작하기' }));
   const panel = screen.getByRole('region', { name: '비회원으로 시작' });
-  expect(within(panel).getByText(/이 기기·브라우저에만 저장돼요/)).toBeDefined();
+  expect(within(panel).getByText(/이 기기·브라우저에만 저장됩니다/)).toBeDefined();
   expect(within(panel).getByText(/아이폰 사파리는 7일/)).toBeDefined();
   fireEvent.click(within(panel).getByRole('button', { name: '비회원으로 시작' })); // 사이트 키 없음 = 캡차 없이
   expect(await screen.findByRole('heading', { name: '닉네임 정하기' })).toBeDefined();
@@ -152,7 +152,7 @@ test('Supabase에서 익명 로그인이 꺼져 있으면 이유를 알려 준�
   start('/login');
   fireEvent.click(await screen.findByRole('button', { name: '비회원으로 시작하기' }));
   fireEvent.click(screen.getByRole('button', { name: '비회원으로 시작' }));
-  expect(await screen.findByText(/Allow anonymous sign-ins를 켜야 해요/)).toBeDefined();
+  expect(await screen.findByText(/Allow anonymous sign-ins를 켜야 합니다/)).toBeDefined();
   expect(where()).toBe('/login');
 });
 
@@ -205,7 +205,7 @@ test('[새 계정으로 시작하기] → 경고 → 이 기기에서만 비회�
   fireEvent.click(within(box).getByRole('button', { name: '카카오 연결하기' }));
   const dialog = screen.getByRole('dialog', { name: '카카오로 계속하기' });
   fireEvent.click(within(dialog).getByRole('button', { name: '새 계정으로 시작하기' }));
-  expect(within(dialog).getByText(/다시 들어올 수 없어요/)).toBeDefined();
+  expect(within(dialog).getByText(/다시 들어올 수 없습니다/)).toBeDefined();
   fireEvent.click(within(dialog).getByRole('button', { name: '카카오 새 계정으로 시작' }));
   await vi.waitFor(() => expect(fakeState.oauthCalls).toHaveLength(1));
   expect(fakeState.signOutCalls).toEqual([{ scope: 'local' }]);
@@ -228,7 +228,7 @@ test('선택 창은 Esc·[취소]로 닫힌다', async () => {
 test('로그인 화면에 온 비회원: 돌려보내지 않고, 구글을 누르면 같은 선택 창', async () => {
   guestWithName();
   start('/login');
-  expect(await screen.findByText(/지금은 비회원이에요/)).toBeDefined();
+  expect(await screen.findByText(/지금은 비회원입니다/)).toBeDefined();
   expect(screen.queryByRole('button', { name: '비회원으로 시작하기' })).toBeNull();
   fireEvent.click(screen.getByRole('button', { name: '구글로 시작하기' }));
   expect(screen.getByRole('dialog', { name: '구글로 계속하기' })).toBeDefined();
@@ -244,7 +244,7 @@ function returnFrom(query, path) {
 test('연결하고 돌아오면 정식 계정이 됐다고 알려 준다', async () => {
   fakeLogin('g-1', { nickname: '손님' });
   returnFrom('?code=abc', '/me');
-  expect(await screen.findByText(/정식 계정이 됐어요/)).toBeDefined();
+  expect(await screen.findByText(/정식 계정이 됐습니다/)).toBeDefined();
 });
 
 test('이미 다른 회원의 카카오면: 합치지 않고 [기존 계정으로 로그인] → 비회원 세션을 지우고 카카오 로그인', async () => {
@@ -265,7 +265,7 @@ test('비회원이 추천을 누르면 투표 대신 연결 안내', async () =>
   start(MATCHUP);
   const card = await screen.findByRole('article', { name: '빌드: 탑고수' });
   fireEvent.click(within(card).getByRole('button', { name: '추천 5' }));
-  expect(within(card).getByText(/비회원은 추천·비추천을 누를 수 없어요/)).toBeDefined();
+  expect(within(card).getByText(/비회원은 추천·비추천을 누를 수 없습니다/)).toBeDefined();
   expect(within(card).getByRole('link', { name: '구글·카카오 연결하기' }).getAttribute('href')).toBe('/me#upgrade');
   expect(fakeState.rpcCalls.filter((c) => c.name === 'vote_build')).toEqual([]);
 });
@@ -274,7 +274,7 @@ test('자유게시판 글: 비회원은 [추천]·[신고] 없이 안내만, 댓
   TABLES.posts.push(fakePost(1));
   guestWithName();
   start('/board/1');
-  expect(await screen.findByText(/비회원은 추천·신고를 할 수 없어요/)).toBeDefined();
+  expect(await screen.findByText(/비회원은 추천·신고를 할 수 없습니다/)).toBeDefined();
   expect(screen.queryByRole('button', { name: /추천/ })).toBeNull();
   expect(screen.queryByRole('button', { name: '신고' })).toBeNull();
   expect(screen.getByLabelText(/댓글/, { selector: 'textarea' })).toBeDefined();
@@ -292,7 +292,7 @@ test('/me "비회원 기록 지우기": 닉네임을 입력해야 확정, 지우
   expect(go.disabled).toBe(true);
   fireEvent.change(within(sec).getByRole('textbox'), { target: { value: '손님' } });
   fireEvent.click(go);
-  expect(await screen.findByText(/비회원 기록을 지웠어요/)).toBeDefined();
+  expect(await screen.findByText(/비회원 기록을 지웠습니다/)).toBeDefined();
   expect(where()).toBe('/');
   expect(fakeState.functionCalls).toEqual([{ name: 'delete-account', body: { confirm: '손님' } }]);
 });
@@ -304,6 +304,6 @@ test('닉네임 없는 비회원: /welcome에서 "지우기"를 입력해 지운
   fireEvent.click(within(sec).getByRole('button', { name: '비회원 기록 지우기' }));
   fireEvent.change(within(sec).getByRole('textbox'), { target: { value: '지우기' } });
   fireEvent.click(within(sec).getByRole('button', { name: '지우기 확정' }));
-  expect(await screen.findByText(/비회원 기록을 지웠어요/)).toBeDefined();
+  expect(await screen.findByText(/비회원 기록을 지웠습니다/)).toBeDefined();
   expect(fakeState.functionCalls).toEqual([{ name: 'delete-account', body: { confirm: '지우기' } }]);
 });

@@ -94,8 +94,8 @@ test('로그인 화면: 버튼 아래 동의 문구와 두 링크, 만 14세 이
   start('/login');
   await screen.findByRole('heading', { name: '로그인 · 가입' });
   const consent = document.querySelector('.login-consent');
-  expect(consent.textContent).toMatch(/이용약관과 개인정보처리방침에 동의하는 것으로 봐요/);
-  expect(consent.textContent).toMatch(/만 14세 이상만 가입할 수 있어요/);
+  expect(consent.textContent).toMatch(/이용약관과 개인정보처리방침에 동의하는 것으로 봅니다/);
+  expect(consent.textContent).toMatch(/만 14세 이상만 가입할 수 있습니다/);
   expect(within(consent).getByRole('link', { name: '이용약관' }).getAttribute('href')).toBe('/terms');
   expect(within(consent).getByRole('link', { name: '개인정보처리방침' }).getAttribute('href')).toBe('/privacy');
 });

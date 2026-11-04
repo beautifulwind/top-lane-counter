@@ -63,7 +63,7 @@ function ProposeCounterForm() {
 
   const submit = async (content) => {
     await proposeNewCounter(auth.user.id, id, counter.id, content, build, data.game.latest);
-    navigate('/me', { state: { sent: `${matchupTitle(counter.name, target.name)} — 새 카운터 제안을 보냈어요.` } });
+    navigate('/me', { state: { sent: `${matchupTitle(counter.name, target.name)} — 새 카운터 제안을 보냈습니다.` } });
   };
 
   return (
@@ -102,7 +102,7 @@ function ProposeCounterForm() {
                       className="champ-cell"
                       onClick={() => setPicked(c.id)}
                       disabled={taken}
-                      title={taken ? '이미 등록된 카운터예요' : undefined}
+                      title={taken ? '이미 등록된 카운터입니다' : undefined}
                     >
                       <img src={c.icon} alt="" loading="lazy" width="56" height="56" />
                       <span>{c.name}{taken ? ' (등록됨)' : ''}</span>
@@ -119,7 +119,7 @@ function ProposeCounterForm() {
         <section className="section">
           <h2 className="section-title"><span className="num">2.</span> 상대법</h2>
           {from && counter.id === from.counter_champion && (
-            <p className="notice" role="status">거절된 내 제안의 글과 빌드를 채워 뒀어요. 거절 사유를 보고 고쳐서 보내 주세요.</p>
+            <p className="notice" role="status">거절된 내 제안의 글과 빌드를 채워 뒀습니다. 거절 사유를 보고 고쳐서 보내 주세요.</p>
           )}
           <DocForm
             key={from && counter.id === from.counter_champion ? `from-${from.id}` : 'new'}
@@ -131,7 +131,7 @@ function ProposeCounterForm() {
             <fieldset className="pick-group build-in-doc">
               <legend>빌드 (필수)</legend>
               <p className="hint">
-                새 카운터에는 빌드가 꼭 하나 있어야 해요. 승인되면 이 빌드가 카운터의 첫 빌드로 함께 공개돼요.
+                새 카운터에는 빌드가 꼭 하나 있어야 합니다. 승인되면 이 빌드가 카운터의 첫 빌드로 함께 공개됩니다.
               </p>
               <div className="build-form">
                 <BuildFields game={data.game} value={build} onChange={setBuild} author={auth.profile} />

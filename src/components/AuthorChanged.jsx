@@ -19,8 +19,8 @@ export function useAuthorChanged(reload, who = '제안자') {
   };
   const notice = changed && (
     <div className="warn author-changed" role="alert">
-      <p>{who}가 방금 내용을 고쳤어요. 지금 보이는 건 고치기 전 내용이라 처리하지 않았어요. 새 내용을 불러와 다시 확인해 주세요.</p>
-      <p className="hint">불러오면 승인 화면에서 고치던 내용과 쓰던 메모는 사라져요.</p>
+      <p>{who}가 방금 내용을 고쳤습니다. 지금 보이는 건 고치기 전 내용이라 처리하지 않았습니다. 새 내용을 불러와 다시 확인해 주세요.</p>
+      <p className="hint">불러오면 승인 화면에서 고치던 내용과 쓰던 메모는 사라집니다.</p>
       <button type="button" className="btn btn-small btn-op" onClick={() => { setChanged(false); reload(); }}>
         새 내용 불러오기
       </button>

@@ -38,7 +38,7 @@ select t.fails('018: 빌드 시작템 가격 모름', $$select pg_temp.propose('
 select t.fails('빌드 패치 없음', $$select pg_temp.propose('Garen', t.build() - 'patch')$$, '패치 버전 형식');
 select t.fails('문서 수정 제안에는 빌드 불가',
   format($$insert into edit_proposals (type, counter_id, proposer_id, content, build) values ('doc_edit', %s, auth.uid(), %L, t.build())$$, :quinn, :'doc'),
-  '문서 수정 제안에는 빌드를 넣지 않아요');
+  '문서 수정 제안에는 빌드를 넣지 않습니다');
 select pg_temp.propose('Garen', t.build() || '{"runes":{"primaryPath":8000,"keystone":8010,"primary":["9111",9104,8299],"secondaryPath":8400,"secondary":[8444,8242],"shards":[5005,5008,5011]}}');
 insert into ids select 'garen_p', id from edit_proposals where counter_champion = 'Garen';
 select t.ok('제안의 빌드는 정리돼 저장됨 (룬 숫자)',
@@ -85,7 +85,7 @@ select :garen, auth.uid(), b -> 'runes', array['SummonerFlash','SummonerDot'], a
 from (select t.build() b) x;
 insert into ids select 'g2', id from builds where author_id = auth.uid();
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select approve_build((select v from ids where k = 'g2'), '좋아요', null, t.bv((select v from ids where k = 'g2')));
+select approve_build((select v from ids where k = 'g2'), '좋습니다', null, t.bv((select v from ids where k = 'g2')));
 select hide_build((select v from ids where k = 'g1'), '다른 빌드가 더 좋음');
 select t.ok('공개 빌드가 2개면 하나는 숨길 수 있음', (select status = 'hidden' from builds where id = (select v from ids where k = 'g1')));
 select t.fails('남은 하나는 숨기기 불가', format($$select hide_build(%s, '별로')$$, (select v from ids where k = 'g2')), '마지막 공개 빌드라');
@@ -95,7 +95,7 @@ select restore_build((select v from ids where k = 'g1'), '다시');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 select vote_build((select v from ids where k = 'g1'), 1::smallint);
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select hide_counter(:garen, '빌드가 이상해요');
+select hide_counter(:garen, '빌드가 이상합니다');
 select request_revision(:garen, '빌드를 고쳐 주세요');
 reset role;
 select t.ok('재검토 시작값: 제안의 빌드 = 지금 첫 빌드 내용',
@@ -105,32 +105,32 @@ set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.fails('빌드 없이 다시 제출 불가', format($$select resubmit_proposal(%s, %L, null)$$, (select v from ids where k = 'garen_p'), :'doc2'), '빌드도 함께');
 select t.fails('글·빌드 둘 다 그대로면 불가 (패치만 달라도)',
-  format($$select resubmit_proposal(%s, (select content from edit_proposals where id = %1$s), t.build(patch => '16.22.1'))$$, (select v from ids where k = 'garen_p')), '고친 내용이 없어요');
+  format($$select resubmit_proposal(%s, (select content from edit_proposals where id = %1$s), t.build(patch => '16.22.1'))$$, (select v from ids where k = 'garen_p')), '고친 내용이 없습니다');
 select t.fails('다시 제출 빌드도 검사', format($$select resubmit_proposal(%s, %L, t.build(array['1']))$$, (select v from ids where k = 'garen_p'), :'doc'), '3~6개');
 -- 빌드만 고침
 select resubmit_proposal((select v from ids where k = 'garen_p'), (select content from edit_proposals where id = (select v from ids where k = 'garen_p')), t.build(array['6631','3047','3075']));
 select t.ok('다시 제출: 대기 + 고친 빌드 저장',
   (select status = 'pending' and build -> 'core_items' = '["6631","3047","3075"]'::jsonb from edit_proposals where id = (select v from ids where k = 'garen_p')));
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select approve_proposal((select v from ids where k = 'garen_p'), '고친 빌드 좋아요', null, null, t.pv((select v from ids where k = 'garen_p')));
+select approve_proposal((select v from ids where k = 'garen_p'), '고친 빌드 좋습니다', null, null, t.pv((select v from ids where k = 'garen_p')));
 select t.ok('다시 승인: 카운터 공개', (select status = 'approved' from counters where id = :garen));
 select t.ok('원래 첫 빌드는 숨김 (재검토로 교체), 추천 수는 그대로',
-  (select status = 'hidden' and hide_reason = '재검토로 교체: 고친 빌드 좋아요' and up_count = 1 from builds where id = (select v from ids where k = 'g1')));
+  (select status = 'hidden' and hide_reason = '재검토로 교체: 고친 빌드 좋습니다' and up_count = 1 from builds where id = (select v from ids where k = 'g1')));
 select t.ok('고친 빌드가 새 첫 빌드로 공개',
   (select count(*) = 1 from builds where proposal_id = (select v from ids where k = 'garen_p') and status = 'approved'
-     and core_items = array['6631','3047','3075'] and approve_note = '고친 빌드 좋아요'));
+     and core_items = array['6631','3047','3075'] and approve_note = '고친 빌드 좋습니다'));
 select t.ok('다른 사람 빌드는 그대로 공개', (select status = 'approved' from builds where id = (select v from ids where k = 'g2')));
-select t.ok('교체 기록 (숨김)', (select count(*) = 1 from build_status_log where build_id = (select v from ids where k = 'g1') and reason = '재검토로 교체: 고친 빌드 좋아요'));
+select t.ok('교체 기록 (숨김)', (select count(*) = 1 from build_status_log where build_id = (select v from ids where k = 'g1') and reason = '재검토로 교체: 고친 빌드 좋습니다'));
 insert into ids select 'g3', id from builds where proposal_id = (select v from ids where k = 'garen_p') and status = 'approved';
 
 -- 글만 고치면 첫 빌드는 그대로
-select hide_counter(:garen, '글이 이상해요');
+select hide_counter(:garen, '글이 이상합니다');
 select request_revision(:garen, '글을 고쳐 주세요');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select resubmit_proposal((select v from ids where k = 'garen_p'), :'doc2',
   (select build from edit_proposals where id = (select v from ids where k = 'garen_p')));
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select approve_proposal((select v from ids where k = 'garen_p'), '글 좋아요', null, null, t.pv((select v from ids where k = 'garen_p')));
+select approve_proposal((select v from ids where k = 'garen_p'), '글 좋습니다', null, null, t.pv((select v from ids where k = 'garen_p')));
 select t.ok('글만 고침: 첫 빌드 그대로 (새로 안 만듦)',
   (select status = 'approved' from builds where id = (select v from ids where k = 'g3'))
   and (select count(*) = 1 from builds where proposal_id = (select v from ids where k = 'garen_p') and status = 'approved')

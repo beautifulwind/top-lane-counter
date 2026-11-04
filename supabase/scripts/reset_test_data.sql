@@ -34,7 +34,7 @@ where c.target_champion = 'Tryndamere' and c.counter_champion = 'Malphite';
 do $$
 begin
   if (select count(*) from reset_keep) <> 1 then
-    raise exception '트린다미어 상대 말파이트 카운터를 찾지 못했어요. 아무것도 지우지 않았어요.';
+    raise exception '트린다미어 상대 말파이트 카운터를 찾지 못했습니다. 아무것도 지우지 않았습니다.';
   end if;
 end;
 $$;

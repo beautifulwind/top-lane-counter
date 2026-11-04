@@ -11,7 +11,7 @@ function loadTurnstile() {
       s.src = SCRIPT;
       s.async = true;
       s.onload = () => resolve(window.turnstile);
-      s.onerror = () => { loading = null; reject(new Error('자동 가입 방지 확인을 불러오지 못했어요. 인터넷 연결을 확인해 주세요.')); };
+      s.onerror = () => { loading = null; reject(new Error('자동 가입 방지 확인을 불러오지 못했습니다. 인터넷 연결을 확인해 주세요.')); };
       document.head.appendChild(s);
     });
   }

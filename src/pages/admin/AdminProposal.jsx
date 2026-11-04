@@ -44,7 +44,7 @@ function Review() {
 
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
-  if (!data.review) return <p className="empty">제안을 찾지 못했어요.</p>;
+  if (!data.review) return <p className="empty">제안을 찾지 못했습니다.</p>;
   const { proposal: p, current, exists, hidden, stale, resubmitted, firstBuild } = data.review;
   const isNew = p.type === 'new_counter';
   const noBuild = isNew && !p.build;
@@ -62,7 +62,7 @@ function Review() {
   const approve = guard(async ({ note, content, build }) => {
     await approveProposal(p, note, { content, build, patch: data.game.latest });
     const how = content || build ? '고쳐서 ' : '';
-    done(resubmitted ? `${how}승인하고 다시 공개했어요` : `${how}승인했어요`);
+    done(resubmitted ? `${how}승인하고 다시 공개했습니다` : `${how}승인했습니다`);
   });
   const toggle = (kind) => setOpen(open === kind ? null : kind);
 
@@ -80,26 +80,26 @@ function Review() {
       {hidden && p.status === 'pending' && (
         <p className="warn" role="alert">
           {p.type === 'new_counter'
-            ? '운영자가 숨긴 카운터예요. 살리려면 운영자 페이지의 [다시 공개]를 쓰고, 이 제안은 거절해 주세요.'
-            : '숨긴 카운터의 제안이에요. 승인할 수 없으니 거절해 주세요.'}
+            ? '운영자가 숨긴 카운터입니다. 살리려면 운영자 페이지의 [다시 공개]를 쓰고, 이 제안은 거절해 주세요.'
+            : '숨긴 카운터의 제안입니다. 승인할 수 없으니 거절해 주세요.'}
         </p>
       )}
       {resubmitted && p.status === 'pending' && (
         <div className="revision-note" role="note">
-          <p>숨긴 카운터의 제안자가 재검토 요청을 받고 고쳐서 다시 낸 제안이에요. <strong>승인하면 고친 내용으로 다시 공개</strong>되고(목록 맨 뒤), 거절하면 계속 숨김이에요.</p>
+          <p>숨긴 카운터의 제안자가 재검토 요청을 받고 고쳐서 다시 낸 제안입니다. <strong>승인하면 고친 내용으로 다시 공개</strong>되고(목록 맨 뒤), 거절하면 계속 숨김입니다.</p>
           <p>보낸 재검토 메모: {p.revision_note}</p>
         </div>
       )}
       {p.type === 'new_counter' && exists && p.status === 'pending' && (
-        <p className="warn" role="alert">이미 같은 카운터가 공개돼 있어요. 승인할 수 없으니 거절해 주세요.</p>
+        <p className="warn" role="alert">이미 같은 카운터가 공개돼 있습니다. 승인할 수 없으니 거절해 주세요.</p>
       )}
       {noBuild && p.status === 'pending' && (
-        <p className="warn" role="alert">빌드가 없는 새 카운터 제안이에요. 새 카운터에는 빌드가 꼭 있어야 해서 승인할 수 없어요. 거절해 주세요.</p>
+        <p className="warn" role="alert">빌드가 없는 새 카운터 제안입니다. 새 카운터에는 빌드가 꼭 있어야 해서 승인할 수 없습니다. 거절해 주세요.</p>
       )}
       {buildWarn && p.status === 'pending' && <p className="warn" role="alert">{buildWarn} 아래 빌드를 확인하고 승인해 주세요.</p>}
       {stale && (
         <p className="warn" role="alert">
-          이 제안을 쓴 뒤에 문서가 다른 승인으로 바뀌었어요. 아래 비교는 <strong>지금 문서</strong> 기준이라, 승인하면 그 사이 바뀐 내용이 덮어써질 수 있어요.
+          이 제안을 쓴 뒤에 문서가 다른 승인으로 바뀌었습니다. 아래 비교는 <strong>지금 문서</strong> 기준이라, 승인하면 그 사이 바뀐 내용이 덮어써질 수 있습니다.
         </p>
       )}
 
@@ -115,25 +115,25 @@ function Review() {
           {!resubmitted && (
             <>
               <h2 className="section-title">함께 공개될 첫 빌드</h2>
-              <p className="hint">승인하면 카운터와 함께 이 빌드가 공개되고, 거절하면 같이 거절돼요.</p>
+              <p className="hint">승인하면 카운터와 함께 이 빌드가 공개되고, 거절하면 같이 거절됩니다.</p>
               {card(p.build)}
             </>
           )}
           {resubmitted && !buildChanged && (
             <>
               <h2 className="section-title">첫 빌드 (그대로)</h2>
-              <p className="hint">빌드는 고치지 않았어요. 승인하면 원래 첫 빌드가 그대로 공개돼요.</p>
+              <p className="hint">빌드는 고치지 않았습니다. 승인하면 원래 첫 빌드가 그대로 공개됩니다.</p>
               {card(p.build)}
             </>
           )}
           {resubmitted && buildChanged && (
             <>
               <h2 className="section-title">바뀐 빌드 (원래 첫 빌드 → 고친 빌드)</h2>
-              <p className="hint">승인하면 원래 첫 빌드는 숨기고("재검토로 교체"), 고친 빌드를 공개해요. 원래 빌드의 추천 수는 숨긴 빌드에 남아요.</p>
+              <p className="hint">승인하면 원래 첫 빌드는 숨기고("재검토로 교체"), 고친 빌드를 공개합니다. 원래 빌드의 추천 수는 숨긴 빌드에 남습니다.</p>
               <div className="build-compare">
                 <div>
                   <h3>원래 첫 빌드</h3>
-                  {firstBuild ? card(firstBuild, { up: firstBuild.up_count, down: firstBuild.down_count }) : <p className="empty">원래 첫 빌드가 없어요.</p>}
+                  {firstBuild ? card(firstBuild, { up: firstBuild.up_count, down: firstBuild.down_count }) : <p className="empty">원래 첫 빌드가 없습니다.</p>}
                 </div>
                 <div>
                   <h3>고친 빌드</h3>
@@ -167,8 +167,8 @@ function Review() {
               build={isNew ? p.build : null}
               game={data.game}
               author={p.proposer}
-              noteLabel="승인 메모 (필수, 제안자에게 보여요)"
-              hint={resubmitted ? '승인하면 고친 내용으로 다시 공개돼요 (목록 맨 뒤).' : undefined}
+              noteLabel="승인 메모 (필수, 제안자에게 보입니다)"
+              hint={resubmitted ? '승인하면 고친 내용으로 다시 공개됩니다 (목록 맨 뒤).' : undefined}
               onCancel={() => setOpen(null)}
               onSubmit={approve}
             />
@@ -176,27 +176,27 @@ function Review() {
           {open === 'revision' && (
             <NoteForm
               id="revision-note"
-              label="재검토 요청 메모 (필수, 제안자에게 보여요)"
-              hint="제안자가 [마이페이지]에서 고쳐서 다시 내면 승인 대기로 돌아와요."
+              label="재검토 요청 메모 (필수, 제안자에게 보입니다)"
+              hint="제안자가 [마이페이지]에서 고쳐서 다시 내면 승인 대기로 돌아옵니다."
               confirmLabel="재검토 요청 확정"
               busyLabel="보내는 중…"
               onCancel={() => setOpen(null)}
               onSubmit={guard(async (note) => {
                 await requestProposalRevision(p, note);
-                done('재검토를 요청했어요');
+                done('재검토를 요청했습니다');
               })}
             />
           )}
           {open === 'reject' && (
             <NoteForm
               id="reject-note"
-              label="거절 사유 (필수, 제안자에게 보여요)"
+              label="거절 사유 (필수, 제안자에게 보입니다)"
               confirmLabel="거절 확정"
               busyLabel="거절 중…"
               onCancel={() => setOpen(null)}
               onSubmit={guard(async (note) => {
                 await rejectProposal(p, note);
-                done('거절했어요');
+                done('거절했습니다');
               })}
             />
           )}
@@ -206,11 +206,11 @@ function Review() {
       {p.status === 'revision_requested' && (
         <section className="section">
           <div className="revision-note" role="note">
-            <p><strong>재검토 요청 중</strong> — 제안자가 고쳐서 다시 내기를 기다리고 있어요.{p.revision_requested_at && <small> ({fmtDateTime(p.revision_requested_at)})</small>}</p>
+            <p><strong>재검토 요청 중</strong> — 제안자가 고쳐서 다시 내기를 기다리고 있습니다.{p.revision_requested_at && <small> ({fmtDateTime(p.revision_requested_at)})</small>}</p>
             <p>보낸 메모: {p.revision_note}</p>
           </div>
           {hiddenFlow ? (
-            <p className="hint">숨긴 카운터의 재검토 요청이에요. 취소하려면 운영자 페이지 "숨긴 카운터"의 [다시 공개]를 써 주세요.</p>
+            <p className="hint">숨긴 카운터의 재검토 요청입니다. 취소하려면 운영자 페이지 "숨긴 카운터"의 [다시 공개]를 써 주세요.</p>
           ) : (
             <>
               <div className="row-actions">
@@ -220,27 +220,27 @@ function Review() {
               {open === 'cancel' && (
                 <NoteForm
                   id="cancel-note"
-                  label="요청 취소 메모 (필수, 제안자에게 보여요)"
-                  hint="원래 제안 그대로 승인 대기로 돌아가요."
+                  label="요청 취소 메모 (필수, 제안자에게 보입니다)"
+                  hint="원래 제안 그대로 승인 대기로 돌아갑니다."
                   confirmLabel="요청 취소 확정"
                   busyLabel="취소하는 중…"
                   onCancel={() => setOpen(null)}
                   onSubmit={async (note) => {
                     await cancelProposalRevision(p.id, note);
-                    done('재검토 요청을 취소했어요');
+                    done('재검토 요청을 취소했습니다');
                   }}
                 />
               )}
               {open === 'reject' && (
                 <NoteForm
                   id="reject-note"
-                  label="거절 사유 (필수, 제안자에게 보여요)"
+                  label="거절 사유 (필수, 제안자에게 보입니다)"
                   confirmLabel="거절 확정"
                   busyLabel="거절 중…"
                   onCancel={() => setOpen(null)}
                   onSubmit={async (note) => {
                     await rejectProposal(p, note);
-                    done('거절했어요');
+                    done('거절했습니다');
                   }}
                 />
               )}
@@ -264,7 +264,7 @@ function Review() {
 export function EditedByOperator({ p, card }) {
   return (
     <section className="section edited-by-operator">
-      <h2 className="section-title">운영자가 고쳐서 승인했어요 (원래 제안 → 고친 내용)</h2>
+      <h2 className="section-title">운영자가 고쳐서 승인했습니다 (원래 제안 → 고친 내용)</h2>
       {p.approved_content && <DiffView before={p.content} after={p.approved_content} />}
       {p.approved_build && (
         <div className="build-compare">

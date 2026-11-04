@@ -17,7 +17,7 @@ test('게임 데이터를 못 불러오면 오류 문구가 보이고, 다시 �
   const fetchMock = vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch({ fail: true }));
   const AppRoutes = await freshApp();
   render(<MemoryRouter initialEntries={['/champion/Darius']}><AppRoutes /></MemoryRouter>);
-  expect(await screen.findByText(/데이터를 불러오지 못했어요/)).toBeDefined();
+  expect(await screen.findByText(/데이터를 불러오지 못했습니다/)).toBeDefined();
   expect(screen.getByText(/인터넷 연결을 확인/)).toBeDefined();
   expect(screen.getByText(RIOT_NOTICE)).toBeDefined();
 
@@ -35,7 +35,7 @@ test('응답이 없으면 로딩 문구를 보여주다가 시간 초과 오류�
   render(<MemoryRouter initialEntries={['/']}><AppRoutes /></MemoryRouter>);
   expect(screen.getByText('불러오는 중…')).toBeDefined();
   await vi.advanceTimersByTimeAsync(16000);
-  expect(await screen.findByText(/응답이 너무 늦어요/)).toBeDefined();
+  expect(await screen.findByText(/응답이 너무 늦습니다/)).toBeDefined();
 });
 
 test('화면 그리기 중 오류가 나도 빈 화면 대신 안내가 보이고 고지 문구는 남는다', () => {
@@ -48,7 +48,7 @@ test('화면 그리기 중 오류가 나도 빈 화면 대신 안내가 보이�
       <Routes><Route element={<Layout />}><Route index element={<Broken />} /></Route></Routes>
     </MemoryRouter>,
   );
-  expect(screen.getByText('화면을 표시하는 중에 문제가 생겼어요.')).toBeDefined();
+  expect(screen.getByText('화면을 표시하는 중에 문제가 생겼습니다.')).toBeDefined();
   expect(screen.getByText('테스트 오류')).toBeDefined();
   expect(screen.getByText(RIOT_NOTICE)).toBeDefined();
   window.removeEventListener('error', swallow);

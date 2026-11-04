@@ -38,7 +38,7 @@ export default function Me() {
       {isGuest(auth) && <GuestUpgrade />}
       {sent && (
         <p className="notice" role="status">
-          {sent} 운영자가 승인하면 반영돼요.
+          {sent} 운영자가 승인하면 반영됩니다.
         </p>
       )}
       <MyActivity userId={auth.user.id} operator={auth.isOperator} />
@@ -90,7 +90,7 @@ function MyActivity({ userId, operator }) {
     <>
       {operator ? (
         <section className="me-section me-level" aria-label="레벨">
-          <p className="hint">운영자는 경험치·레벨·칭호가 없어요 (항상 Lv.0).</p>
+          <p className="hint">운영자는 경험치·레벨·칭호가 없습니다 (항상 Lv.0).</p>
         </section>
       ) : (
         <MyRewards rewards={data.rewards} unread={data.unread} />
@@ -137,14 +137,14 @@ function BoardNotices({ unread, champs }) {
 /** 이번에 처음 보는 "재검토 요청 취소" 알림 (메모) — 해야 할 일이 없어지므로 알림으로만 알려 준다 */
 function CancelledNotice({ unread, match }) {
   const n = unread.find((x) => x.kind === 'revision_cancelled' && match(x));
-  return n ? <p className="notice">운영자가 재검토 요청을 취소했어요. 보낸 내용 그대로 승인 대기 중이에요. 메모: {n.message}</p> : null;
+  return n ? <p className="notice">운영자가 재검토 요청을 취소했습니다. 보낸 내용 그대로 승인 대기 중입니다. 메모: {n.message}</p> : null;
 }
 
 /** 운영자가 고쳐서 승인했을 때: 원래 제안 → 고친 내용 비교 */
 function EditedCompare({ before, after, beforeBuild, afterBuild, author, game }) {
   return (
     <details className="edited-by-operator">
-      <summary>운영자가 고쳐서 승인했어요 — 원래 제안 → 고친 내용 보기</summary>
+      <summary>운영자가 고쳐서 승인했습니다 — 원래 제안 → 고친 내용 보기</summary>
       {after && <DiffView before={before} after={after} />}
       {afterBuild && (
         <div className="build-compare">
@@ -169,7 +169,7 @@ function MyProposals({ data }) {
   return (
     <section className="me-section" aria-labelledby="my-proposals">
       <h2 id="my-proposals">내 제안</h2>
-      {data && data.proposals.length === 0 && <p className="empty">아직 보낸 제안이 없어요.</p>}
+      {data && data.proposals.length === 0 && <p className="empty">아직 보낸 제안이 없습니다.</p>}
       {data && data.proposals.length > 0 && (
         <ul className="proposal-list">
           {data.proposals.map((p) => {
@@ -241,7 +241,7 @@ function MyBuilds({ data }) {
   return (
     <section className="me-section" aria-labelledby="my-builds">
       <h2 id="my-builds">내 빌드</h2>
-      {data.builds.length === 0 && <p className="empty">아직 보낸 빌드가 없어요. 매치업 문서의 [+ 빌드 등록]에서 보낼 수 있어요.</p>}
+      {data.builds.length === 0 && <p className="empty">아직 보낸 빌드가 없습니다. 매치업 문서의 [+ 빌드 등록]에서 보낼 수 있습니다.</p>}
       {data.builds.length > 0 && (
         <ul className="proposal-list">
           {data.builds.map((b) => {
@@ -323,7 +323,7 @@ function LinkedLogins({ userId }) {
   return (
     <section className="me-section" aria-labelledby="linked-logins">
       <h2 id="linked-logins">로그인 연결</h2>
-      <p className="lead">둘 다 연결하면 구글·카카오 어느 쪽으로 로그인해도 이 계정으로 들어와요.</p>
+      <p className="lead">둘 다 연결하면 구글·카카오 어느 쪽으로 로그인해도 이 계정으로 들어옵니다.</p>
       {loading && <Loading />}
       {error && <ErrorBox error={error} onRetry={retry} />}
       {identities && (

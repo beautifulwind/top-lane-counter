@@ -184,7 +184,7 @@ function MenuAccount({ auth, kind, from, onGo }) {
   if (kind === 'noNickname') {
     return (
       <div className="menu-account">
-        <p className="menu-account-note">닉네임을 아직 정하지 않았어요.</p>
+        <p className="menu-account-note">닉네임을 아직 정하지 않았습니다.</p>
         <Link to="/welcome" state={{ from }} className="btn btn-primary menu-login" onClick={onGo}>닉네임 정하기</Link>
       </div>
     );

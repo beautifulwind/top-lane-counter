@@ -28,7 +28,7 @@ test('규칙: 시작템 합계는 개수만큼 더하고, 상한은 game.startGo
   const items = { 1055: { gold: 450 }, 2003: { gold: 50 } };
   expect(startGold(['1055', '2003', '2003'], items)).toBe(550);
   expect(startGoldProblem({ starting_items: ['1055', '2003'] }, { items })).toBeNull();
-  expect(startGoldProblem({ starting_items: ['1055', '2003', '2003'] }, { items })).toBe('시작 아이템은 합계 500골드까지 고를 수 있어요. (지금 550골드)');
+  expect(startGoldProblem({ starting_items: ['1055', '2003', '2003'] }, { items })).toBe('시작 아이템은 합계 500골드까지 고를 수 있습니다. (지금 550골드)');
   expect(startGoldProblem({ starting_items: ['1055', '2003', '2003'] }, { items, startGoldMax: 600 })).toBeNull();
 });
 
@@ -42,7 +42,7 @@ test('규칙: 선마는 Q·W·E 하나, 예전 모양(선마 순서)으로 채�
 
 // ---------------- 빌드 입력 ----------------
 
-test('빌드 등록: 시작 아이템 목록에는 500골드 이하만, 안내 문장 없이 넘기려 할 때만 "500골드를 넘어요" (022)', async () => {
+test('빌드 등록: 시작 아이템 목록에는 500골드 이하만, 안내 문장 없이 넘기려 할 때만 "500골드를 넘습니다" (022)', async () => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   asUser();
   start(`${MATCHUP}/build/new`);
@@ -57,13 +57,13 @@ test('빌드 등록: 시작 아이템 목록에는 500골드 이하만, 안내 �
   expect(screen.getByLabelText('시작 아이템 검색').getAttribute('placeholder')).toBe('판금장화 ex) ㅍㄱㅈㅎ');
 
   pick('시작 아이템 고르기', '도란의 검');
-  expect(screen.queryByText('500골드를 넘어요')).toBeNull();
+  expect(screen.queryByText('500골드를 넘습니다')).toBeNull();
   pick('시작 아이템 고르기', '도란의 방패'); // 450 + 450 > 500 → 안 들어가고 잠깐 안내
-  expect(screen.getByText('500골드를 넘어요')).toBeDefined();
+  expect(screen.getByText('500골드를 넘습니다')).toBeDefined();
   const picked = () => within(screen.getByRole('list', { name: '고른 시작 아이템' })).getAllByRole('listitem').map((li) => li.textContent);
   expect(picked()).toEqual(['도란의 검']);
   await vi.advanceTimersByTimeAsync(2100);
-  expect(screen.queryByText('500골드를 넘어요')).toBeNull();
+  expect(screen.queryByText('500골드를 넘습니다')).toBeNull();
   pick('시작 아이템 고르기', '체력 물약');
   expect(picked()).toEqual(['도란의 검', '체력 물약']);
 
@@ -99,7 +99,7 @@ test('[이 빌드로 다시 쓰기]: 합계를 넘는 예전 빌드는 이유를
   }));
   start(`${MATCHUP}/build/new?from=140`);
   await screen.findByRole('heading', { name: /빌드 등록/ });
-  expect(screen.getByText('아직 고를 것: 시작 아이템은 합계 500골드까지 고를 수 있어요. (지금 550골드)')).toBeDefined();
+  expect(screen.getByText('아직 고를 것: 시작 아이템은 합계 500골드까지 고를 수 있습니다. (지금 550골드)')).toBeDefined();
   expect(screen.getByRole('button', { name: '빌드 보내기' })).toBeDisabled();
 });
 
@@ -120,7 +120,7 @@ test('운영자 빌드 자세히: 시작템 합계를 넘는 대기 빌드는 �
     author_id: 'u-old', status: 'pending', starting_items: ['1055', '1054'],
   }));
   start('/admin/builds/141');
-  expect(await screen.findByText(/시작 아이템은 합계 500골드까지 고를 수 있어요. \(지금 900골드\) 그대로는 승인할 수 없어요/)).toBeDefined();
+  expect(await screen.findByText(/시작 아이템은 합계 500골드까지 고를 수 있습니다. \(지금 900골드\) 그대로는 승인할 수 없습니다/)).toBeDefined();
   cleanup();
   start('/admin');
   const rows = await screen.findAllByRole('listitem', { name: '[빌드] 퀸으로 다리우스 잡는 법' });
@@ -135,9 +135,9 @@ test('운영자: 아이템 가격표 — 기준 패치와 상한을 보여 주�
   start('/admin');
   const sec = (await screen.findByRole('heading', { name: '아이템 가격표' })).closest('section');
   expect(await within(sec).findByText(/DB 가격표: 패치 98.1.1 기준 · 지금 패치: 99.1.1 · 시작 아이템 합계 상한: 500골드/)).toBeDefined();
-  expect(within(sec).getByRole('alert')).toHaveTextContent('가격표가 지금 패치와 달라요');
+  expect(within(sec).getByRole('alert')).toHaveTextContent('가격표가 지금 패치와 다릅니다');
   fireEvent.click(within(sec).getByRole('button', { name: '아이템 가격 갱신' }));
-  expect(await within(sec).findByText(/패치 99.1.1 기준으로 바꿨어요/)).toBeDefined();
+  expect(await within(sec).findByText(/패치 99.1.1 기준으로 바꿨습니다/)).toBeDefined();
   const [args] = rpcCalls('set_item_prices');
   expect(args.p_patch).toBe('99.1.1');
   expect(args.p_prices).toMatchObject({ 1055: 450, 2003: 50, 3044: 1100 });

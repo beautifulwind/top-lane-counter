@@ -33,7 +33,7 @@ export default function GuestLinkDialog({ provider, returnTo = '/', onClose }) {
     >
       {step === 'choose' ? (
         <>
-          <p><strong>{name}로 어떻게 할까요?</strong></p>
+          <p><strong>{name}로 어떻게 하시겠습니까?</strong></p>
           <div className="guest-choice">
             <button type="button" className="btn btn-primary" onClick={() => run(() => linkProvider(provider, { guest: true }))} disabled={busy}>
               {LINK_CHOICES.link.label} (추천)

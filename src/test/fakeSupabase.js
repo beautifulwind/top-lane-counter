@@ -219,7 +219,7 @@ function query(table) {
   function run() {
     if (fakeState.error) return { data: null, error: { message: fakeState.error } };
     if (inserted) {
-      // DB 트리거·RLS가 낸 오류 흉내 (예: '이미 등록된 카운터예요.')
+      // DB 트리거·RLS가 낸 오류 흉내 (예: '이미 등록된 카운터입니다.')
       if (fakeState.insertError) return { data: null, error: { message: fakeState.insertError } };
       fakeState.inserts.push({ table, values: inserted });
       if (table === 'builds') {
@@ -301,16 +301,16 @@ const auth = {
   },
 };
 
-// 운영자 전용 DB 함수 호출 기록. 오류는 fakeState.rpcError로 흉내 낸다 (예: '운영자만 할 수 있어요.')
+// 운영자 전용 DB 함수 호출 기록. 오류는 fakeState.rpcError로 흉내 낸다 (예: '운영자만 할 수 있습니다.')
 async function rpc(name, args) {
   if (name === 'hide_counts') {
     // 운영자 신고 목록이 알아서 부르는 것이라 rpcCalls에는 넣지 않는다. fakeState.hideCounts = { 작성자id: 횟수 }
-    if (!isAdminNow()) return { data: null, error: { message: '운영자만 할 수 있어요.', code: '42501' } };
+    if (!isAdminNow()) return { data: null, error: { message: '운영자만 할 수 있습니다.', code: '42501' } };
     return { data: { days: 90, counts: Object.fromEntries(args.p_users.map((u) => [u, fakeState.hideCounts[u] ?? 0])) }, error: null };
   }
   if (name === 'media_upload_problem') return { data: fakeState.mediaProblem, error: null }; // 화면이 알아서 묻는 것
   if (name === 'media_usage') {
-    if (!isAdminNow()) return { data: null, error: { message: '운영자만 할 수 있어요.', code: '42501' } };
+    if (!isAdminNow()) return { data: null, error: { message: '운영자만 할 수 있습니다.', code: '42501' } };
     return { data: fakeState.mediaUsage, error: null };
   }
   if (name === 'touch_last_seen') {
@@ -510,7 +510,7 @@ function boardRpc(name, args) {
     case 'report_comment': {
       const key = name === 'report_post' ? 'post_id' : 'comment_id';
       if (TABLES.reports.some((r) => r.reporter_id === me() && r[key] === args.p_id)) {
-        return fail(name === 'report_post' ? '이미 신고한 글이에요.' : '이미 신고한 댓글이에요.');
+        return fail(name === 'report_post' ? '이미 신고한 글입니다.' : '이미 신고한 댓글입니다.');
       }
       TABLES.reports.push({
         id: 600 + TABLES.reports.length, reporter_id: me(), post_id: null, comment_id: null, [key]: args.p_id,

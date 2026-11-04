@@ -15,7 +15,7 @@ kept_builds as (
 rows (ord, what, to_delete, to_keep, note) as (
   select 0, '남길 카운터: 트린다미어 상대 말파이트',
          0::bigint, (select count(*) from keep),
-         coalesce((select format('카운터 id %s · 상태 %s · 처음 제안 id %s', counter_id, status, coalesce(proposal_id::text, '없음')) from keep), '못 찾음 — 이대로는 실행되지 않아요')
+         coalesce((select format('카운터 id %s · 상태 %s · 처음 제안 id %s', counter_id, status, coalesce(proposal_id::text, '없음')) from keep), '못 찾음 — 이대로는 실행되지 않습니다')
   union all select 1, 'counters (카운터)',
          (select count(*) from public.counters where id not in (select counter_id from keep)),
          (select count(*) from public.counters where id in (select counter_id from keep)), null

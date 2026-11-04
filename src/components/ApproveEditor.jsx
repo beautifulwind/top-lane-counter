@@ -30,8 +30,8 @@ export default function ApproveEditor({ doc = null, build = null, game, author, 
   return (
     <div className="approve-editor">
       <p className="hint">
-        제안 내용을 고쳐서 승인할 수 있어요. 안 고치면 그대로 공개돼요. 고치면 원래 제안과 고친 내용이 모두 기록에 남고,
-        제안자도 [마이페이지]에서 비교해 볼 수 있어요.
+        제안 내용을 고쳐서 승인할 수 있습니다. 안 고치면 그대로 공개됩니다. 고치면 원래 제안과 고친 내용이 모두 기록에 남고,
+        제안자도 [마이페이지]에서 비교해 볼 수 있습니다.
       </p>
       {doc && (
         <fieldset className="doc-form approve-doc">
@@ -50,11 +50,11 @@ export default function ApproveEditor({ doc = null, build = null, game, author, 
 
       <section className="approve-changes" aria-label="고친 부분">
         <h3>고친 부분 (제안 → 운영자 수정)</h3>
-        {!docChanged && !buildChanged && <p className="hint">고친 곳이 없어요. 승인하면 제안 그대로 공개돼요.</p>}
+        {!docChanged && !buildChanged && <p className="hint">고친 곳이 없습니다. 승인하면 제안 그대로 공개됩니다.</p>}
         {docChanged && <DiffView before={cleanDoc(doc)} after={cleanDoc(content)} />}
         {buildChanged && (
           <>
-            <p className="hint">고친 빌드는 지금 패치({patchMinor(game.latest)})로 기록돼요.</p>
+            <p className="hint">고친 빌드는 지금 패치({patchMinor(game.latest)})로 기록됩니다.</p>
             <div className="build-compare">
               <div>
                 <h3>제안한 빌드</h3>

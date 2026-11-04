@@ -91,9 +91,9 @@ test('투표 실패하면 이유를 보여 주고 숫자는 그대로', async ()
   asUser();
   start(MATCHUP);
   await screen.findByText(/퀸으로 다리우스 잡는 법/);
-  fakeState.rpcError = '공개된 빌드에만 투표할 수 있어요.';
+  fakeState.rpcError = '공개된 빌드에만 투표할 수 있습니다.';
   click('추천 5', card('탑고수'));
-  expect(await screen.findByRole('alert')).toHaveTextContent('공개된 빌드에만 투표할 수 있어요.');
+  expect(await screen.findByRole('alert')).toHaveTextContent('공개된 빌드에만 투표할 수 있습니다.');
   expect(within(card('탑고수')).getByRole('button', { name: '추천 5' })).toBeDefined();
 });
 
@@ -115,11 +115,11 @@ test('운영자: 매치업 문서에서 빌드를 바로 숨긴다 (사유 = 확
   click('빌드 숨기기', c);
   const confirm = within(c).getByRole('button', { name: '숨기기 확정' });
   expect(confirm).toBeDisabled();
-  fireEvent.change(within(c).getByLabelText(/숨기는 사유/), { target: { value: ' 아이템이 바뀌었어요 ' } });
+  fireEvent.change(within(c).getByLabelText(/숨기는 사유/), { target: { value: ' 아이템이 바뀌었습니다 ' } });
   TABLES.builds.find((b) => b.id === 103).status = 'hidden'; // DB 함수가 한 일
   fireEvent.click(confirm);
-  expect(await screen.findByText('빌드를 숨겼어요. (칭호없음)')).toBeDefined();
-  expect(rpcCalls('hide_build')).toEqual([{ p_id: 103, p_reason: '아이템이 바뀌었어요' }]);
+  expect(await screen.findByText('빌드를 숨겼습니다. (칭호없음)')).toBeDefined();
+  expect(rpcCalls('hide_build')).toEqual([{ p_id: 103, p_reason: '아이템이 바뀌었습니다' }]);
   expect(screen.queryByRole('article', { name: '빌드: 칭호없음' })).toBeNull();
 });
 
@@ -153,7 +153,7 @@ test('빌드 등록: 다 고르면 미리보기가 보이고, 보내면 승인 �
   expect(send).toBeEnabled();
   fireEvent.click(send);
   await vi.waitFor(() => expect(where()).toBe('/me'));
-  expect(await screen.findByText(/퀸으로 다리우스 잡는 법 — 빌드를 보냈어요\./)).toBeDefined();
+  expect(await screen.findByText(/퀸으로 다리우스 잡는 법 — 빌드를 보냈습니다\./)).toBeDefined();
   expect(fakeState.inserts).toEqual([{
     table: 'builds',
     values: {
@@ -210,25 +210,25 @@ test('빌드 등록: DB가 거절하면 이유를 보여 주고 그대로 남는
   await screen.findByRole('heading', { name: /빌드 등록/ });
   fillBuild();
   pick('선마 (첫 번째로 마스터할 스킬)', '선마 Q');
-  fakeState.insertError = '이 매치업에 이미 승인 대기 중인 내 빌드가 있어요. 처리된 뒤에 다시 등록해 주세요.';
+  fakeState.insertError = '이 매치업에 이미 승인 대기 중인 내 빌드가 있습니다. 처리된 뒤에 다시 등록해 주세요.';
   fireEvent.click(screen.getByRole('button', { name: '빌드 보내기' }));
-  expect(await screen.findByRole('alert')).toHaveTextContent('이미 승인 대기 중인 내 빌드가 있어요');
+  expect(await screen.findByRole('alert')).toHaveTextContent('이미 승인 대기 중인 내 빌드가 있습니다');
   expect(where()).toBe(`${MATCHUP}/build/new`);
   expect(screen.getByRole('button', { name: '빌드 보내기' })).toBeEnabled();
 });
 
 test('[이 빌드로 다시 쓰기]: 내 빌드 내용이 채워진 채로 새 빌드를 보낸다 (원래 빌드는 그대로)', async () => {
   TABLES.builds.push(fakeBuild(110, { nickname: '기존유저', level: 1, main_title: null }, {
-    author_id: 'u-old', status: 'hidden', hide_reason: '아이템이 바뀌었어요', hidden_at: '2026-11-05T00:00:00Z', up_count: 3,
+    author_id: 'u-old', status: 'hidden', hide_reason: '아이템이 바뀌었습니다', hidden_at: '2026-11-05T00:00:00Z', up_count: 3,
   }));
   asUser();
   start('/me');
   const row = await screen.findByRole('listitem', { name: '내 빌드: 퀸으로 다리우스 잡는 법' });
   expect(within(row).getByText('숨김')).toBeDefined();
-  expect(within(row).getByText(/숨긴 사유: 아이템이 바뀌었어요/)).toBeDefined();
+  expect(within(row).getByText(/숨긴 사유: 아이템이 바뀌었습니다/)).toBeDefined();
   expect(within(row).getByText('👍 3 · 👎 0')).toBeDefined();
   fireEvent.click(within(row).getByRole('link', { name: '이 빌드로 다시 쓰기' }));
-  expect(await screen.findByText(/내 빌드 내용을 채워 뒀어요/)).toBeDefined();
+  expect(await screen.findByText(/내 빌드 내용을 채워 뒀습니다/)).toBeDefined();
   expect(where()).toBe(`${MATCHUP}/build/new?from=110`);
   fireEvent.click(screen.getByRole('button', { name: '광전사의 군화 빼기' }));
   pick('핵심 템트리 고르기', '칠흑의 양날 도끼');
@@ -242,7 +242,7 @@ test('[이 빌드로 다시 쓰기]: 내 빌드 내용이 채워진 채로 새 �
 test('남의 빌드 id로는 채워지지 않는다', async () => {
   asUser();
   start(`${MATCHUP}/build/new?from=102`);
-  expect(await screen.findByText(/불러올 내 빌드를 찾지 못했어요/)).toBeDefined();
+  expect(await screen.findByText(/불러올 내 빌드를 찾지 못했습니다/)).toBeDefined();
   expect(screen.getByRole('button', { name: '빌드 보내기' })).toBeDisabled();
 });
 
@@ -251,11 +251,11 @@ test('남의 빌드 id로는 채워지지 않는다', async () => {
 test('/me 내 빌드: 상태별 메모, 새 알림 표시 후 읽음 처리', async () => {
   const me = { nickname: '기존유저', level: 1, main_title: null };
   TABLES.builds.push(
-    fakeBuild(111, me, { author_id: 'u-old', approve_note: '깔끔해요', reviewed_at: '2026-11-04T00:00:00Z', up_count: 4, down_count: 1 }),
+    fakeBuild(111, me, { author_id: 'u-old', approve_note: '깔끔합니다', reviewed_at: '2026-11-04T00:00:00Z', up_count: 4, down_count: 1 }),
     fakeBuild(112, me, { author_id: 'u-old', status: 'rejected', reject_reason: '이미 있는 빌드', created_at: '2026-11-06T00:00:00Z' }),
   );
   TABLES.notifications.push(
-    { id: 1, user_id: 'u-old', kind: 'build_approved', build_id: 111, proposal_id: null, message: '깔끔해요', created_at: '2026-11-04T00:00:00Z', read_at: null },
+    { id: 1, user_id: 'u-old', kind: 'build_approved', build_id: 111, proposal_id: null, message: '깔끔합니다', created_at: '2026-11-04T00:00:00Z', read_at: null },
   );
   asUser();
   start('/me');
@@ -265,7 +265,7 @@ test('/me 내 빌드: 상태별 메모, 새 알림 표시 후 읽음 처리', as
   expect(within(rejected).getByText('거절 사유: 이미 있는 빌드')).toBeDefined();
   expect(within(rejected).queryByText('새 알림')).toBeNull();
   expect(within(approved).getByText('공개')).toBeDefined();
-  expect(within(approved).getByText('승인 메모: 깔끔해요')).toBeDefined();
+  expect(within(approved).getByText('승인 메모: 깔끔합니다')).toBeDefined();
   expect(within(approved).getByText('새 알림')).toBeDefined();
   expect(within(approved).getByRole('link', { name: '퀸으로 다리우스 잡는 법' }).getAttribute('href')).toBe('/me/builds/111');
   expect(within(approved).getByRole('link', { name: '문서 보기' }).getAttribute('href')).toBe(`${MATCHUP}#builds`);
@@ -276,14 +276,14 @@ test('/me 내 빌드: 상태별 메모, 새 알림 표시 후 읽음 처리', as
 test('/me 내 제안: 승인·거절 알림도 "새 알림"으로 보이고 확인하면 꺼진다', async () => {
   TABLES.edit_proposals.push({
     id: 501, type: 'doc_edit', target_champion: 'Darius', counter_champion: 'Quinn', counter_id: 1, status: 'approved',
-    approve_note: '반영했어요', created_at: '2026-11-01T10:00:00Z', proposer_id: 'u-old', content: {},
+    approve_note: '반영했습니다', created_at: '2026-11-01T10:00:00Z', proposer_id: 'u-old', content: {},
   });
   TABLES.notifications.push(
-    { id: 2, user_id: 'u-old', kind: 'proposal_approved', proposal_id: 501, build_id: null, message: '반영했어요', created_at: '2026-11-02T00:00:00Z', read_at: null },
+    { id: 2, user_id: 'u-old', kind: 'proposal_approved', proposal_id: 501, build_id: null, message: '반영했습니다', created_at: '2026-11-02T00:00:00Z', read_at: null },
   );
   asUser();
   start('/me');
-  expect(await screen.findByText('승인 메모: 반영했어요')).toBeDefined();
+  expect(await screen.findByText('승인 메모: 반영했습니다')).toBeDefined();
   expect(screen.getByText('새 알림')).toBeDefined();
   await vi.waitFor(() => expect(TABLES.notifications[0].read_at).not.toBeNull());
 });
@@ -297,13 +297,13 @@ test('/admin 빌드 승인 대기: 똑같은 빌드가 공개돼 있으면 줄�
   start('/admin');
   await screen.findByRole('heading', { name: '빌드 승인 대기 (1)' });
   const row = pendingRow();
-  expect(within(row).getByText(/똑같은 빌드가 이미 공개돼 있어요/)).toBeDefined();
+  expect(within(row).getByText(/똑같은 빌드가 이미 공개돼 있습니다/)).toBeDefined();
   expect(within(row).getByRole('button', { name: '승인' })).toBeDisabled();
   click('거절', row);
   fireEvent.change(within(row).getByLabelText(/거절 사유/), { target: { value: '이미 있는 빌드' } });
   TABLES.builds.find((b) => b.id === 104).status = 'rejected';
   click('거절 확정', row);
-  expect(await screen.findByText('빌드를 거절했어요: 퀸으로 다리우스 잡는 법 (대기중)')).toBeDefined();
+  expect(await screen.findByText('빌드를 거절했습니다: 퀸으로 다리우스 잡는 법 (대기중)')).toBeDefined();
   expect(rpcCalls('reject_build')).toEqual([{ p_id: 104, p_reason: '이미 있는 빌드', p_version: 1 }]);
   expect(await screen.findByRole('heading', { name: '빌드 승인 대기 (0)' })).toBeDefined();
 });
@@ -318,11 +318,11 @@ test('/admin 빌드 승인 대기: 걸리는 점이 없으면 줄에서 메모 �
   click('승인', row);
   const confirm = within(row).getByRole('button', { name: '승인 확정' });
   expect(confirm).toBeDisabled();
-  fireEvent.change(within(row).getByLabelText(/승인 메모/), { target: { value: '좋아요' } });
+  fireEvent.change(within(row).getByLabelText(/승인 메모/), { target: { value: '좋습니다' } });
   TABLES.builds.find((b) => b.id === 104).status = 'approved';
   fireEvent.click(confirm);
-  expect(await screen.findByText('빌드를 승인했어요: 퀸으로 다리우스 잡는 법 (대기중)')).toBeDefined();
-  expect(rpcCalls('approve_build')).toEqual([{ p_id: 104, p_note: '좋아요', p_build: null, p_version: 1 }]);
+  expect(await screen.findByText('빌드를 승인했습니다: 퀸으로 다리우스 잡는 법 (대기중)')).toBeDefined();
+  expect(rpcCalls('approve_build')).toEqual([{ p_id: 104, p_note: '좋습니다', p_build: null, p_version: 1 }]);
 });
 
 test('/admin 빌드 승인 대기: 구버전 패치·게임 데이터에 없는 값·숨긴 카운터는 [자세히]에서만 승인', async () => {
@@ -331,18 +331,18 @@ test('/admin 빌드 승인 대기: 구버전 패치·게임 데이터에 없는 
   asOperator();
   start('/admin');
   await screen.findByRole('heading', { name: '빌드 승인 대기 (1)' });
-  expect(within(pendingRow()).getByText(/지금 패치\(99\.1\)와 다른 패치\(98\.3\)로 등록됐어요/)).toBeDefined();
+  expect(within(pendingRow()).getByText(/지금 패치\(99\.1\)와 다른 패치\(98\.3\)로 등록됐습니다/)).toBeDefined();
   expect(within(pendingRow()).getByRole('button', { name: '승인' })).toBeDisabled();
   cleanup();
   Object.assign(b, { patch: '99.1.1', core_items: ['6631', '3047', '9999'] });
   start('/admin');
   await screen.findByRole('heading', { name: '빌드 승인 대기 (1)' });
-  expect(within(pendingRow()).getByText(/게임 데이터에 없는 아이템이 있어요/)).toBeDefined();
+  expect(within(pendingRow()).getByText(/게임 데이터에 없는 아이템이 있습니다/)).toBeDefined();
   cleanup();
   Object.assign(b, { core_items: ['6631', '3047', '3053'], counter: { ...b.counter, status: 'hidden' } });
   start('/admin');
   await screen.findByRole('heading', { name: '빌드 승인 대기 (1)' });
-  expect(within(pendingRow()).getByText(/숨긴 카운터의 빌드예요/)).toBeDefined();
+  expect(within(pendingRow()).getByText(/숨긴 카운터의 빌드입니다/)).toBeDefined();
 });
 
 test('/admin/builds/:id: 구버전이면 경고를 보고 승인할 수 있다', async () => {
@@ -354,12 +354,12 @@ test('/admin/builds/:id: 구버전이면 경고를 보고 승인할 수 있다',
   start('/admin');
   await screen.findByRole('heading', { name: '빌드 승인 대기 (1)' });
   fireEvent.click(within(pendingRow()).getByRole('link', { name: '자세히' }));
-  expect(await screen.findByText(/지금 패치\(99\.1\)와 다른 패치\(98\.3\)로 등록됐어요/)).toBeDefined();
+  expect(await screen.findByText(/지금 패치\(99\.1\)와 다른 패치\(98\.3\)로 등록됐습니다/)).toBeDefined();
   click('승인');
   fireEvent.change(screen.getByLabelText(/승인 메모/), { target: { value: '패치 확인함' } });
   click('승인 확정');
   await vi.waitFor(() => expect(where()).toBe('/admin'));
-  expect(await screen.findByText('빌드를 승인했어요: 퀸으로 다리우스 잡는 법 (대기중)')).toBeDefined();
+  expect(await screen.findByText('빌드를 승인했습니다: 퀸으로 다리우스 잡는 법 (대기중)')).toBeDefined();
   expect(rpcCalls('approve_build')).toEqual([{ p_id: 104, p_note: '패치 확인함', p_build: null, p_version: 1 }]);
 });
 
@@ -370,7 +370,7 @@ test('/admin/builds/:id: 똑같은 빌드가 공개돼 있으면 그대로는 �
   });
   asOperator();
   start('/admin/builds/104');
-  expect(await screen.findByText(/똑같은 빌드가 이미 공개돼 있어요. 그대로는 승인할 수 없어요 \(고쳐서 승인하거나 거절해 주세요\)/)).toBeDefined();
+  expect(await screen.findByText(/똑같은 빌드가 이미 공개돼 있습니다. 그대로는 승인할 수 없습니다 \(고쳐서 승인하거나 거절해 주세요\)/)).toBeDefined();
   expect(screen.getByRole('button', { name: '승인' })).not.toBeDisabled();
   expect(document.querySelector('.log-list li').textContent).toMatch(/거절 · Lv\.0 영자\(운\) · 예전 거절$/);
 });
@@ -385,16 +385,16 @@ test('/admin 숨긴 빌드: 줄에서 다시 공개 (메모 필수)', async () =
   const row = screen.getByRole('listitem', { name: '[숨긴 빌드] 퀸으로 다리우스 잡는 법' });
   expect(within(row).getByText('사유: 패치로 안 맞음')).toBeDefined();
   click('다시 공개', row);
-  fireEvent.change(within(row).getByLabelText(/다시 공개 메모/), { target: { value: '다시 맞아요' } });
+  fireEvent.change(within(row).getByLabelText(/다시 공개 메모/), { target: { value: '다시 맞습니다' } });
   TABLES.builds.find((b) => b.id === 120).status = 'approved';
   click('다시 공개 확정', row);
-  expect(await screen.findByText('빌드를 다시 공개했어요: 퀸으로 다리우스 잡는 법 (숨김당함)')).toBeDefined();
-  expect(rpcCalls('restore_build')).toEqual([{ p_id: 120, p_note: '다시 맞아요' }]);
+  expect(await screen.findByText('빌드를 다시 공개했습니다: 퀸으로 다리우스 잡는 법 (숨김당함)')).toBeDefined();
+  expect(rpcCalls('restore_build')).toEqual([{ p_id: 120, p_note: '다시 맞습니다' }]);
   expect(await screen.findByRole('heading', { name: '숨긴 빌드 (0)' })).toBeDefined();
 });
 
 test('일반 유저는 /admin/builds/:id를 볼 수 없다', async () => {
   asUser();
   start('/admin/builds/104');
-  expect(await screen.findByText('운영자만 볼 수 있어요.')).toBeDefined();
+  expect(await screen.findByText('운영자만 볼 수 있습니다.')).toBeDefined();
 });

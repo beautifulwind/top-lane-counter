@@ -36,16 +36,16 @@ export async function uploadMedia(userId, { blob, mime, ext }) {
   const { error } = await db().storage.from(MEDIA_BUCKET).upload(path, blob, { contentType: mime, upsert: false, cacheControl: '86400' });
   if (error) {
     if (/row-level security|unauthorized|403/i.test(error.message ?? '')) {
-      throw new Error((await mediaUploadProblem()) ?? '사진을 올릴 수 없어요. 로그인 상태를 확인해 주세요.');
+      throw new Error((await mediaUploadProblem()) ?? '사진을 올릴 수 없습니다. 로그인 상태를 확인해 주세요.');
     }
-    throw new Error(`사진을 올리지 못했어요. (${error.message})`);
+    throw new Error(`사진을 올리지 못했습니다. (${error.message})`);
   }
   return path;
 }
 
 /**
  * 사진 목록들에 보기 주소(url)를 붙인다 (한 번에 서명). lists = [[{ path, mime, ... }], ...] → 같은 모양 + url
- * 서명에 실패한 사진은 url 없이 둔다 (화면은 "사진을 불러오지 못했어요")
+ * 서명에 실패한 사진은 url 없이 둔다 (화면은 "사진을 불러오지 못했습니다")
  */
 export async function signMedia(lists) {
   const paths = [...new Set(lists.flat().map((m) => m.path))];
@@ -58,7 +58,7 @@ export async function signMedia(lists) {
 /** 운영자: 사진 저장 공간 (023 media_usage) */
 export async function getMediaUsage() {
   const { data, error } = await db().rpc('media_usage');
-  if (error) throw new Error(/[가-힣]/.test(error.message) ? error.message : `사진 저장 공간을 불러오지 못했어요. (${error.message})`);
+  if (error) throw new Error(/[가-힣]/.test(error.message) ? error.message : `사진 저장 공간을 불러오지 못했습니다. (${error.message})`);
   return data;
 }
 

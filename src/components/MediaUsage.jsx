@@ -29,8 +29,8 @@ export default function MediaUsage() {
       >
         <span style={{ width: `${pct}%` }} />
       </div>
-      {blocked && <p className="notice warn" role="alert">{u.block_mb}MB를 넘어 새 사진 첨부가 막혔어요. 숨긴 글을 지우거나 숫자(media_block_mb)를 조정해 주세요.</p>}
-      {warned && <p className="notice op-notice" role="status">{u.warn_mb}MB를 넘었어요. {u.block_mb}MB가 되면 새 사진 첨부가 막혀요.</p>}
+      {blocked && <p className="notice warn" role="alert">{u.block_mb}MB를 넘어 새 사진 첨부가 막혔습니다. 숨긴 글을 지우거나 숫자(media_block_mb)를 조정해 주세요.</p>}
+      {warned && <p className="notice op-notice" role="status">{u.warn_mb}MB를 넘었습니다. {u.block_mb}MB가 되면 새 사진 첨부가 막힙니다.</p>}
       <ul className="usage-facts">
         <li>숨긴 글·댓글의 사진: {fmtMb(u.hidden_bytes)}</li>
         <li>최근 7일 올림: {u.recent_files}개, {fmtMb(u.recent_bytes)}</li>

@@ -4,8 +4,8 @@ import { db } from './supabase';
 
 function friendly(error, fallback) {
   const msg = error?.message ?? '';
-  if (/profiles_main_title_owned/.test(msg)) return new Error('가지고 있는 칭호만 대표 칭호로 고를 수 있어요.');
-  if (/permission denied/i.test(msg)) return new Error('권한이 없어요.');
+  if (/profiles_main_title_owned/.test(msg)) return new Error('가지고 있는 칭호만 대표 칭호로 고를 수 있습니다.');
+  if (/permission denied/i.test(msg)) return new Error('권한이 없습니다.');
   if (/[가-힣]/.test(msg)) return new Error(msg);
   return new Error(`${fallback} (${msg})`);
 }
@@ -22,10 +22,10 @@ async function run(query, fallback) {
  */
 export async function getMyRewards(userId) {
   const [me, titles, levels, rules] = await Promise.all([
-    run(db().from('profiles').select('xp, level, main_title').eq('id', userId).maybeSingle(), '경험치를 불러오지 못했어요.'),
-    run(db().from('user_titles').select('title_key, earned_at').eq('user_id', userId), '칭호를 불러오지 못했어요.'),
-    run(db().from('xp_levels').select('level, min_xp').order('level', { ascending: true }), '레벨표를 불러오지 못했어요.'),
-    run(db().from('xp_rules').select('key, value'), '경험치 설정을 불러오지 못했어요.'),
+    run(db().from('profiles').select('xp, level, main_title').eq('id', userId).maybeSingle(), '경험치를 불러오지 못했습니다.'),
+    run(db().from('user_titles').select('title_key, earned_at').eq('user_id', userId), '칭호를 불러오지 못했습니다.'),
+    run(db().from('xp_levels').select('level, min_xp').order('level', { ascending: true }), '레벨표를 불러오지 못했습니다.'),
+    run(db().from('xp_rules').select('key, value'), '경험치 설정을 불러오지 못했습니다.'),
   ]);
   return { ...me, titles, levels, rules: Object.fromEntries(rules.map((r) => [r.key, r.value])) };
 }
@@ -34,7 +34,7 @@ export async function getMyRewards(userId) {
 export function setMainTitle(userId, titleKey) {
   return run(
     db().from('profiles').update({ main_title: titleKey }).eq('id', userId).select('*').maybeSingle(),
-    '대표 칭호를 바꾸지 못했어요.',
+    '대표 칭호를 바꾸지 못했습니다.',
   );
 }
 
@@ -44,7 +44,7 @@ export function setMainTitle(userId, titleKey) {
 export function getOffmetaChampions() {
   return run(
     db().from('offmeta_champions').select('champion_id, created_at').order('created_at', { ascending: true }),
-    '비주류 픽 목록을 불러오지 못했어요.',
+    '비주류 픽 목록을 불러오지 못했습니다.',
   );
 }
 
@@ -54,5 +54,5 @@ async function rpc(name, args, fallback) {
   return data;
 }
 /** 추가·빼기: 운영자만. 이미 승인된 기여의 비주류 여부는 바뀌지 않는다 (승인할 때 기록) */
-export const addOffmeta = (championId) => rpc('add_offmeta', { p_champion: championId }, '추가하지 못했어요.');
-export const removeOffmeta = (championId) => rpc('remove_offmeta', { p_champion: championId }, '빼지 못했어요.');
+export const addOffmeta = (championId) => rpc('add_offmeta', { p_champion: championId }, '추가하지 못했습니다.');
+export const removeOffmeta = (championId) => rpc('remove_offmeta', { p_champion: championId }, '빼지 못했습니다.');

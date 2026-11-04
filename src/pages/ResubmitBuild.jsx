@@ -48,7 +48,7 @@ function ResubmitBuildForm() {
         {crumbs}
         <h1 className="doc-title">빌드 고치기</h1>
         <p className="empty">
-          지금은 고칠 수 없는 빌드예요. 승인 대기 중이거나 재검토 요청을 받은 빌드만 고칠 수 있어요.
+          지금은 고칠 수 없는 빌드입니다. 승인 대기 중이거나 재검토 요청을 받은 빌드만 고칠 수 있습니다.
           {b?.status === 'approved' && ' 공개된 빌드는 [이 빌드로 다시 쓰기]로 새 빌드를 보내 주세요.'}
         </p>
         {b && <div className="actions"><Link to={`/me/builds/${b.id}`} className="btn">빌드 자세히</Link></div>}
@@ -73,16 +73,16 @@ function Editor({ b, data, crumbs }) {
   const submit = async (e) => {
     e.preventDefault();
     if (problem || busy) return;
-    if (sameBuild(b, build)) return setError(resubmit ? '고친 내용이 없어요. 운영자 메모를 보고 빌드를 고쳐 주세요.' : '고친 내용이 없어요.');
+    if (sameBuild(b, build)) return setError(resubmit ? '고친 내용이 없습니다. 운영자 메모를 보고 빌드를 고쳐 주세요.' : '고친 내용이 없습니다.');
     setBusy(true);
     setError(null);
     try {
       if (resubmit) {
         await resubmitBuild(b.id, build, data.game.latest);
-        navigate('/me', { state: { sent: `${title} — 고친 빌드를 다시 보냈어요.` } });
+        navigate('/me', { state: { sent: `${title} — 고친 빌드를 다시 보냈습니다.` } });
       } else {
         await editMyBuild(b.id, build, data.game.latest);
-        navigate(`/me/builds/${b.id}`, { state: { sent: '고친 빌드를 저장했어요. 승인 대기 순서는 그대로예요.' } });
+        navigate(`/me/builds/${b.id}`, { state: { sent: '고친 빌드를 저장했습니다. 승인 대기 순서는 그대로입니다.' } });
       }
     } catch (err) {
       setError(err.message);
@@ -103,9 +103,9 @@ function Editor({ b, data, crumbs }) {
       )}
       <p className="lead">
         {resubmit
-          ? '보낸 빌드가 채워져 있어요. 메모를 보고 고친 뒤 다시 보내면 다시 승인 대기로 들어가요.'
-          : '승인 대기 중인 빌드예요. 고쳐서 저장하면 운영자는 고친 빌드를 보게 되고, 대기 순서는 그대로예요.'}
-        {' '}패치 {patchMinor(data.game.latest)} 기준으로 다시 기록돼요.
+          ? '보낸 빌드가 채워져 있습니다. 메모를 보고 고친 뒤 다시 보내면 다시 승인 대기로 들어갑니다.'
+          : '승인 대기 중인 빌드입니다. 고쳐서 저장하면 운영자는 고친 빌드를 보게 되고, 대기 순서는 그대로입니다.'}
+        {' '}패치 {patchMinor(data.game.latest)} 기준으로 다시 기록됩니다.
       </p>
       <form className="build-form" onSubmit={submit}>
         <BuildFields game={data.game} value={build} onChange={setBuild} author={auth.profile} />

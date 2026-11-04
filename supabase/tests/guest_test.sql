@@ -43,14 +43,14 @@ select t.ok('비회원도 글·댓글·문서 댓글·제안',
 select t.ok('비회원도 경험치가 쌓임', (select xp > 0 from profiles where id = auth.uid()));
 
 -- ===== 3. 못 하는 것: 추천/비추천, 추천, 신고 =====
-select t.fails('추천 불가', format('select public.vote_build(%s, 1::smallint)', (select v from ids where k = 'build')), '비회원은 추천·비추천을 누를 수 없어요');
+select t.fails('추천 불가', format('select public.vote_build(%s, 1::smallint)', (select v from ids where k = 'build')), '비회원은 추천·비추천을 누를 수 없습니다');
 select t.fails('비추천 불가', format('select public.vote_build(%s, (-1)::smallint)', (select v from ids where k = 'build')), '비회원은 추천·비추천을');
 set request.jwt.claim.sub = :'B';
 select public.create_post('회원 글', '본문');
 insert into ids select 'bpost', max(id) from posts where author_id = auth.uid();
 set request.jwt.claim.sub = :'G';
-select t.fails('자유게시판 추천 불가', format('select public.vote_post(%s)', (select v from ids where k = 'bpost')), '비회원은 추천할 수 없어요');
-select t.fails('신고 불가', format($$select public.report_post(%s, 'spam')$$, (select v from ids where k = 'bpost')), '비회원은 신고할 수 없어요');
+select t.fails('자유게시판 추천 불가', format('select public.vote_post(%s)', (select v from ids where k = 'bpost')), '비회원은 추천할 수 없습니다');
+select t.fails('신고 불가', format($$select public.report_post(%s, 'spam')$$, (select v from ids where k = 'bpost')), '비회원은 신고할 수 없습니다');
 
 -- 회원은 비회원 글을 추천할 수 있다
 set request.jwt.claim.sub = :'B';

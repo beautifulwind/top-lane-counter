@@ -41,7 +41,7 @@ insert into edit_proposals (type, target_champion, counter_champion, proposer_id
 values ('new_counter', 'Darius', 'Garen', auth.uid(), :'doc', t.build());
 insert into ids select 'garen_p', id from edit_proposals where counter_champion = 'Garen';
 set request.jwt.claim.sub = :'A';
-select approve_proposal((select v from ids where k = 'garen_p'), '좋아요', null, null, 1) as garen \gset
+select approve_proposal((select v from ids where k = 'garen_p'), '좋습니다', null, null, 1) as garen \gset
 insert into ids values ('garen', :garen);
 reset role;
 
@@ -54,8 +54,8 @@ select t.ok('내역: 지급 줄 (키·이유 없음·매치업 이름)',
 select t.ok('탑신병자', pg_temp.titles(:'B') = array['top_addict']);
 select t.ok('알림: 레벨업 1 + 칭호 1',
   pg_temp.notes(:'B', 'level_up') = 1 and pg_temp.notes(:'B', 'title_earned') = 1
-  and (select message = '레벨이 올랐어요: Lv.2' from notifications where user_id = :'B' and kind = 'level_up')
-  and (select message = '칭호 ''탑신병자''를 얻었어요. [마이페이지]에서 대표 칭호로 고를 수 있어요.' from notifications where user_id = :'B' and kind = 'title_earned'));
+  and (select message = '레벨이 올랐습니다: Lv.2' from notifications where user_id = :'B' and kind = 'level_up')
+  and (select message = '칭호 ''탑신병자''를 얻었습니다. [마이페이지]에서 대표 칭호로 고를 수 있습니다.' from notifications where user_id = :'B' and kind = 'title_earned'));
 select t.ok('운영자는 처리해도 경험치·칭호 없음', pg_temp.xp(:'A') = 0 and pg_temp.lv(:'A') = 0 and pg_temp.titles(:'A') = '{}'
   and (select count(*) = 0 from xp_events where user_id = :'A'));
 
@@ -84,7 +84,7 @@ select t.ok('숨기면 −100 (이유: 카운터 숨김) → Lv.1, 0 아래로 �
   and (select count(*) = 1 from xp_events where user_id = :'B' and change = 'revoke' and amount = -100 and reason = '카운터 숨김 (승인 취소)'));
 select t.ok('탑신병자 회수 → 대표 칭호도 비워짐', pg_temp.titles(:'B') = '{}' and (select main_title is null from profiles where id = :'B'));
 select t.ok('알림: 레벨 내려감 + 칭호 회수', pg_temp.notes(:'B', 'level_down') = 1 and pg_temp.notes(:'B', 'title_revoked') = 1
-  and (select message = '칭호 ''탑신병자''가 회수됐어요. (승인 취소·삭제 등으로 조건이 깨졌어요)' from notifications where user_id = :'B' and kind = 'title_revoked'));
+  and (select message = '칭호 ''탑신병자''가 회수됐습니다. (승인 취소·삭제 등으로 조건이 깨졌습니다)' from notifications where user_id = :'B' and kind = 'title_revoked'));
 
 set role authenticated;
 set request.jwt.claim.sub = :'A';
@@ -111,8 +111,8 @@ select :garen, auth.uid(), b -> 'runes', array['SummonerFlash','SummonerTeleport
        b ->> 'max_skill', '16.21.1' from (select t.build() as b) x;
 insert into ids select 'dbuild', max(id) from builds where author_id = auth.uid();
 set request.jwt.claim.sub = :'A';
-select approve_proposal((select v from ids where k = 'edit'), '좋아요', null, null, 1);
-select approve_build((select v from ids where k = 'dbuild'), '좋아요', null, 1);
+select approve_proposal((select v from ids where k = 'edit'), '좋습니다', null, null, 1);
+select approve_build((select v from ids where k = 'dbuild'), '좋습니다', null, 1);
 reset role;
 select t.ok('문서 수정 +50 → 150', pg_temp.xp(:'B') = 150);
 select t.ok('빌드 +30, 탑신병자', pg_temp.xp(:'D') = 30 and pg_temp.titles(:'D') = array['top_addict']);
@@ -227,10 +227,10 @@ values ('new_counter', 'Darius', 'Teemo', auth.uid(), :'doc', t.build()),
 insert into ids select 'teemo_p', id from edit_proposals where counter_champion = 'Teemo';
 insert into ids select 'akali_p', id from edit_proposals where counter_champion = 'Akali';
 set request.jwt.claim.sub = :'A';
-select approve_proposal((select v from ids where k = 'teemo_p'), '좋아요', null, null, 1);
+select approve_proposal((select v from ids where k = 'teemo_p'), '좋습니다', null, null, 1);
 select remove_offmeta('Teemo');
 select add_offmeta('Akali');
-select approve_proposal((select v from ids where k = 'akali_p'), '좋아요', null, null, 1);
+select approve_proposal((select v from ids where k = 'akali_p'), '좋습니다', null, null, 1);
 reset role;
 select t.ok('승인할 때 기록: 티모(그때 목록에 있음) = 비주류, 아칼리(승인 때 추가됨) = 비주류',
   (select offmeta from edit_proposals where id = (select v from ids where k = 'teemo_p'))

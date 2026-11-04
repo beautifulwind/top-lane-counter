@@ -23,7 +23,7 @@ export default function ItemPrices({ game }) {
     setDone(null);
     try {
       const n = await updateItemPrices(game.items, game.latest);
-      setDone(`아이템 ${n}개 가격을 패치 ${game.latest} 기준으로 바꿨어요.`);
+      setDone(`아이템 ${n}개 가격을 패치 ${game.latest} 기준으로 바꿨습니다.`);
       retry();
     } catch (e) {
       setFail(e.message);
@@ -36,14 +36,14 @@ export default function ItemPrices({ game }) {
     <>
       {done && <p className="notice" role="status">{done}</p>}
       <p>
-        DB 가격표: {data.patch ? `패치 ${data.patch} 기준` : '비어 있어요'} · 지금 패치: {game.latest} · 시작 아이템 합계 상한: {game.startGoldMax}골드
+        DB 가격표: {data.patch ? `패치 ${data.patch} 기준` : '비어 있습니다'} · 지금 패치: {game.latest} · 시작 아이템 합계 상한: {game.startGoldMax}골드
       </p>
       {stale && (
         <p className="warn" role="alert">
-          가격표가 지금 패치와 달라요. 가격이 바뀐 아이템이나 새 아이템은 빌드 등록 때 DB가 막을 수 있어요. [아이템 가격 갱신]을 눌러 주세요.
+          가격표가 지금 패치와 다릅니다. 가격이 바뀐 아이템이나 새 아이템은 빌드 등록 때 DB가 막을 수 있습니다. [아이템 가격 갱신]을 눌러 주세요.
         </p>
       )}
-      <p className="hint">상한 금액은 Supabase의 xp_rules 표 starting_gold_max에서 바꿔요.</p>
+      <p className="hint">상한 금액은 Supabase의 xp_rules 표 starting_gold_max에서 바꿉니다.</p>
       <button type="button" className="btn btn-small btn-op" onClick={update} disabled={busy}>
         {busy ? '갱신하는 중…' : '아이템 가격 갱신'}
       </button>

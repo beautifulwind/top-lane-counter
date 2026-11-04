@@ -26,8 +26,8 @@ test('닉네임 없음: 매치업 문서는 읽히고, 댓글 칸 대신 안내,
   fakeLogin('u-new');
   start(MATCHUP);
   await screen.findByText(/퀸으로 다리우스 잡는 법/);
-  expect(screen.getByText(/닉네임을 정하면 제안·빌드·투표·글·댓글을 쓸 수 있어요/)).toBeDefined();
-  expect(await screen.findByText((_, el) => el?.tagName === 'P' && el.textContent === '닉네임을 정하면 댓글을 달 수 있어요.')).toBeDefined();
+  expect(screen.getByText(/닉네임을 정하면 제안·빌드·투표·글·댓글을 쓸 수 있습니다/)).toBeDefined();
+  expect(await screen.findByText((_, el) => el?.tagName === 'P' && el.textContent === '닉네임을 정하면 댓글을 달 수 있습니다.')).toBeDefined();
   fireEvent.click(within(card('탑고수')).getByRole('button', { name: '추천 5' }));
   expect(await screen.findByRole('heading', { name: '닉네임 정하기' })).toBeDefined();
   expect(fakeState.rpcCalls.filter((c) => c.name === 'vote_build')).toEqual([]);
@@ -40,15 +40,15 @@ test.each(['/board/new', '/me'])('닉네임 없음: 쓰기·내 정보 화면(%s
   expect(where()).toBe('/welcome');
 });
 
-test('[나중에 정할게요]: 읽던 화면으로, 쓰기 화면에서 왔으면 홈으로', async () => {
+test('[나중에 정하기]: 읽던 화면으로, 쓰기 화면에서 왔으면 홈으로', async () => {
   fakeLogin('u-new');
   start('/champion/Darius');
   fireEvent.click(await screen.findByRole('link', { name: '닉네임 정하기' }));
-  fireEvent.click(await screen.findByRole('link', { name: '나중에 정할게요' }));
+  fireEvent.click(await screen.findByRole('link', { name: '나중에 정하기' }));
   await vi.waitFor(() => expect(where()).toBe('/champion/Darius'));
   cleanup();
   start('/board/new');
-  fireEvent.click(await screen.findByRole('link', { name: '나중에 정할게요' }));
+  fireEvent.click(await screen.findByRole('link', { name: '나중에 정하기' }));
   await vi.waitFor(() => expect(where()).toBe('/'));
 });
 
@@ -61,16 +61,16 @@ test('닉네임 바꾸기: 열고 저장하면 바뀌고, [취소]·Esc로 닫�
   const before = TABLES.profiles.find((p) => p.id === 'u-old').nickname;
   fireEvent.click(await within(nick).findByRole('button', { name: '닉네임 바꾸기' }));
   expect(within(nick).getByLabelText('새 닉네임').value).toBe(before);
-  expect(within(nick).getByText('저장하면 30일 동안 다시 바꿀 수 없어요.')).toBeDefined();
+  expect(within(nick).getByText('저장하면 30일 동안 다시 바꿀 수 없습니다.')).toBeDefined();
   fireEvent.click(within(nick).getByRole('button', { name: '고친 내용 저장' }));
-  expect(await within(nick).findByRole('alert')).toHaveProperty('textContent', '지금 닉네임과 같아요.');
+  expect(await within(nick).findByRole('alert')).toHaveProperty('textContent', '지금 닉네임과 같습니다.');
   fireEvent.keyDown(within(nick).getByLabelText('새 닉네임'), { key: 'Escape' });
   expect(within(nick).queryByLabelText('새 닉네임')).toBeNull();
 
   fireEvent.click(within(nick).getByRole('button', { name: '닉네임 바꾸기' }));
   fireEvent.change(within(nick).getByLabelText('새 닉네임'), { target: { value: '새탑' } });
   fireEvent.click(within(nick).getByRole('button', { name: '고친 내용 저장' }));
-  expect(await within(nick).findByRole('status')).toHaveProperty('textContent', '닉네임을 "새탑"으로 바꿨어요.');
+  expect(await within(nick).findByRole('status')).toHaveProperty('textContent', '닉네임을 "새탑"으로 바꿨습니다.');
   expect(TABLES.profiles.find((p) => p.id === 'u-old').nickname).toBe('새탑');
 });
 
@@ -79,7 +79,7 @@ test('닉네임 바꾸기: 30일 안에 바꿨으면 버튼 대신 다음 날짜
   TABLES.nickname_changes.push({ id: 1, user_id: 'u-old', old_nickname: 'a', new_nickname: 'b', changed_at: new Date(Date.now() - 86400000).toISOString() });
   start('/me');
   const nick = await screen.findByRole('region', { name: '닉네임 바꾸기' });
-  expect(await within(nick).findByText(/부터 바꿀 수 있어요/)).toBeDefined();
+  expect(await within(nick).findByText(/부터 바꿀 수 있습니다/)).toBeDefined();
   expect(within(nick).queryByRole('button', { name: '닉네임 바꾸기' })).toBeNull();
 });
 
@@ -89,7 +89,7 @@ test('운영자는 탈퇴 버튼이 없다', async () => {
   fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
   start('/me');
   const del = await screen.findByRole('region', { name: '회원 탈퇴' });
-  expect(within(del).getByText('운영자 계정은 탈퇴할 수 없어요.')).toBeDefined();
+  expect(within(del).getByText('운영자 계정은 탈퇴할 수 없습니다.')).toBeDefined();
   expect(within(del).queryByRole('button')).toBeNull();
 });
 
@@ -106,7 +106,7 @@ test('탈퇴: 닉네임을 그대로 적어야 [탈퇴 확정]이 켜지고, 끝
   fireEvent.change(within(del).getByRole('textbox'), { target: { value: ` ${nickname} ` } });
   expect(confirm.disabled).toBe(false);
   fireEvent.click(confirm);
-  expect(await screen.findByText(/탈퇴했어요/)).toBeDefined();
+  expect(await screen.findByText(/탈퇴했습니다/)).toBeDefined();
   expect(where()).toBe('/');
   expect(fakeState.functionCalls).toEqual([{ name: 'delete-account', body: { confirm: nickname } }]);
   expect((await openMenu()).getByRole('link', { name: '로그인 · 가입' })).toBeDefined();

@@ -7,7 +7,7 @@ import { REQUIRED_LEVELS } from '../lib/docContent';
  * doc: { summary, level_notes, lane_cautions } | null (글 섹션을 뺀다)
  * builds: BuildCard에 넘길 빌드들 (author 포함) | null (빌드 섹션을 뺀다), game: Data Dragon { items, runes, spells, latest }
  */
-export default function DocView({ doc, builds = null, game, emptyBuilds = '등록된 빌드가 없어요.' }) {
+export default function DocView({ doc, builds = null, game, emptyBuilds = '등록된 빌드가 없습니다.' }) {
   let n = 0;
   return (
     <>
@@ -30,7 +30,7 @@ export default function DocView({ doc, builds = null, game, emptyBuilds = '등�
           </section>
           <section className="section">
             <h2 className="section-title"><span className="num">{++n}.</span> 특이사항</h2>
-            {doc.lane_cautions ? <div className="prose">{doc.lane_cautions}</div> : <p className="empty">아직 작성된 내용이 없어요.</p>}
+            {doc.lane_cautions ? <div className="prose">{doc.lane_cautions}</div> : <p className="empty">아직 작성된 내용이 없습니다.</p>}
           </section>
         </>
       )}
@@ -45,7 +45,7 @@ export function LevelList({ doc }) {
         .map(([lv, text]) => [Number(lv), text])
         .sort((a, b) => a[0] - b[0])
     : [];
-  if (levels.length === 0) return <p className="empty">아직 작성된 내용이 없어요.</p>;
+  if (levels.length === 0) return <p className="empty">아직 작성된 내용이 없습니다.</p>;
   return (
     <dl className="level-list">
       {levels.map(([lv, text]) => (

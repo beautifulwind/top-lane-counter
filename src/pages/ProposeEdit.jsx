@@ -46,7 +46,7 @@ function ProposeEditForm() {
 
   const submit = async (content) => {
     await proposeDocEdit(auth.user.id, data.matchup.counter, content, doc?.revision_id);
-    navigate('/me', { state: { sent: `${title} — 문서 수정 제안을 보냈어요.` } });
+    navigate('/me', { state: { sent: `${title} — 문서 수정 제안을 보냈습니다.` } });
   };
 
   return (
@@ -58,10 +58,10 @@ function ProposeEditForm() {
       <h1 className="doc-title">{title} — 수정 제안</h1>
       {data.from ? (
         <p className="notice" role="status">
-          거절된 내 제안의 글을 채워 뒀어요. 거절 사유를 보고 고쳐서 보내 주세요. (그 사이 문서가 바뀌었을 수 있어요)
+          거절된 내 제안의 글을 채워 뒀습니다. 거절 사유를 보고 고쳐서 보내 주세요. (그 사이 문서가 바뀌었을 수 있습니다)
         </p>
       ) : (
-        <p className="lead">지금 문서 내용이 채워져 있어요. 고칠 부분만 바꿔서 보내 주세요.</p>
+        <p className="lead">지금 문서 내용이 채워져 있습니다. 고칠 부분만 바꿔서 보내 주세요.</p>
       )}
       <DocForm
         initial={data.from?.content ?? doc} onSubmit={submit} requireChange={!data.from}

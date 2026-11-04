@@ -39,7 +39,7 @@ grant all on before_edit to authenticated;
 select t.ok('처음 버전 1, 고친 때 없음',
   (select version = 1 and edited_at is null from edit_proposals where id = (select v from ids where k = 'p')));
 select t.fails('그대로는 고칠 수 없음',
-  format($$select edit_my_proposal(%s, %L, %L)$$, (select v from ids where k = 'p'), :'doc', t.build(array['6631','3047','3053'], '99.1.1')), '고친 내용이 없어요');
+  format($$select edit_my_proposal(%s, %L, %L)$$, (select v from ids where k = 'p'), :'doc', t.build(array['6631','3047','3053'], '99.1.1')), '고친 내용이 없습니다');
 select t.fails('고친 글도 같은 규칙으로 검사',
   format($$select edit_my_proposal(%s, '{"summary":"x","level_notes":{"1":"a","2":"b","3":"c"}}', %L)$$, (select v from ids where k = 'p'), t.build()), '6레벨 딜교법은 꼭');
 select t.fails('새 카운터 제안은 빌드 필수',
@@ -49,7 +49,7 @@ select t.fails('고친 빌드도 같은 규칙으로 검사',
 
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 select t.fails('남의 제안은 고칠 수 없음',
-  format($$select edit_my_proposal(%s, %L, %L)$$, (select v from ids where k = 'p'), :'doc2', t.build()), '제안을 찾지 못했어요');
+  format($$select edit_my_proposal(%s, %L, %L)$$, (select v from ids where k = 'p'), :'doc2', t.build()), '제안을 찾지 못했습니다');
 select v as pid from ids where k = 'p' \gset
 reset role;
 set role anon;
@@ -69,13 +69,13 @@ select t.ok('고친 내용 저장 + 버전 2 + 고친 때 기록, 제출 때(순
 
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select t.fails('옛 버전을 보고 승인 불가',
-  format($$select approve_proposal(%s, '메모', null, null, 1)$$, (select v from ids where k = 'p')), '제안자가 방금 고쳤어요');
+  format($$select approve_proposal(%s, '메모', null, null, 1)$$, (select v from ids where k = 'p')), '제안자가 방금 고쳤습니다');
 select t.fails('옛 버전을 보고 거절 불가',
-  format($$select reject_proposal(%s, '이유', 1)$$, (select v from ids where k = 'p')), '제안자가 방금 고쳤어요');
+  format($$select reject_proposal(%s, '이유', 1)$$, (select v from ids where k = 'p')), '제안자가 방금 고쳤습니다');
 select t.fails('옛 버전을 보고 재검토 요청 불가',
-  format($$select request_proposal_revision(%s, '고쳐', 1)$$, (select v from ids where k = 'p')), '제안자가 방금 고쳤어요');
+  format($$select request_proposal_revision(%s, '고쳐', 1)$$, (select v from ids where k = 'p')), '제안자가 방금 고쳤습니다');
 select t.fails('버전 없이 처리 불가',
-  format($$select approve_proposal(%s, '메모', null, null, null)$$, (select v from ids where k = 'p')), '제안자가 방금 고쳤어요');
+  format($$select approve_proposal(%s, '메모', null, null, null)$$, (select v from ids where k = 'p')), '제안자가 방금 고쳤습니다');
 select t.fails('옛 4인자 승인 함수는 못 부름',
   format($$select approve_proposal(%s::bigint, '메모'::text, null::jsonb, null::jsonb)$$, (select v from ids where k = 'p')), 'does not exist');
 select t.fails('안쪽 함수는 직접 못 부름',
@@ -93,8 +93,8 @@ select t.ok('다시 제출도 버전 +1 (3)', (select version = 3 and status = '
 
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select t.fails('다시 제출 전 버전을 보고 승인 불가',
-  format($$select approve_proposal(%s, '메모', null, null, 2)$$, (select v from ids where k = 'p')), '제안자가 방금 고쳤어요');
-select approve_proposal((select v from ids where k = 'p'), '좋아요', null, null, 3) as garen \gset
+  format($$select approve_proposal(%s, '메모', null, null, 2)$$, (select v from ids where k = 'p')), '제안자가 방금 고쳤습니다');
+select approve_proposal((select v from ids where k = 'p'), '좋습니다', null, null, 3) as garen \gset
 insert into ids values ('garen', :garen);
 select t.ok('최신 버전으로 승인 → 고친 내용이 공개',
   (select summary = '가렌 요약' from matchup_docs where counter_id = :garen));
@@ -110,15 +110,15 @@ insert into edit_proposals (type, counter_id, proposer_id, content)
 values ('doc_edit', :garen, auth.uid(), :'doc2');
 insert into ids select 'e', max(id) from edit_proposals where type = 'doc_edit';
 select t.fails('문서 수정 제안에 빌드 못 넣음',
-  format($$select edit_my_proposal(%s, %L, %L)$$, (select v from ids where k = 'e'), :'doc', t.build()), '빌드를 넣지 않아요');
+  format($$select edit_my_proposal(%s, %L, %L)$$, (select v from ids where k = 'e'), :'doc', t.build()), '빌드를 넣지 않습니다');
 select t.fails('지금 문서와 같게 고칠 수 없음',
-  format($$select edit_my_proposal(%s, %L, null)$$, (select v from ids where k = 'e'), :'doc'), '지금 문서와 달라진 내용이 없어요');
+  format($$select edit_my_proposal(%s, %L, null)$$, (select v from ids where k = 'e'), :'doc'), '지금 문서와 달라진 내용이 없습니다');
 select edit_my_proposal((select v from ids where k = 'e'),
   '{"summary":"가렌 요약 v3","level_notes":{"1":"a","2":"b","3":"c","6":"d"},"lane_cautions":""}', null);
 select t.ok('문서 수정 제안도 고쳐짐 (버전 2)',
   (select version = 2 and content ->> 'summary' = '가렌 요약 v3' and build is null from edit_proposals where id = (select v from ids where k = 'e')));
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select reject_proposal((select v from ids where k = 'e'), '이미 있는 내용이에요', 2);
+select reject_proposal((select v from ids where k = 'e'), '이미 있는 내용입니다', 2);
 select t.ok('최신 버전으로 거절', (select status = 'rejected' from edit_proposals where id = (select v from ids where k = 'e')));
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.fails('거절된 제안은 고칠 수 없음',
@@ -131,7 +131,7 @@ select pg_temp.add_build(array['3071','3047','3053']);
 insert into ids select 'b', max(id) from builds where author_id = auth.uid() and status = 'pending';
 select t.ok('빌드도 처음 버전 1', (select version = 1 and edited_at is null from builds where id = (select v from ids where k = 'b')));
 select t.fails('그대로는 고칠 수 없음',
-  format($$select edit_my_build(%s, %L)$$, (select v from ids where k = 'b'), t.build(array['3071','3047','3053'], '99.1.1')), '고친 내용이 없어요');
+  format($$select edit_my_build(%s, %L)$$, (select v from ids where k = 'b'), t.build(array['3071','3047','3053'], '99.1.1')), '고친 내용이 없습니다');
 select t.fails('같은 규칙으로 검사',
   format($$select edit_my_build(%s, %L)$$, (select v from ids where k = 'b'), t.build(array['3071'])), '3~6개');
 -- 유저2의 빌드가 먼저 공개됨
@@ -139,13 +139,13 @@ set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 select pg_temp.add_build(array['6632','3047','3053']);
 insert into ids select 'b2', max(id) from builds where author_id = auth.uid();
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select approve_build((select v from ids where k = 'b2'), '좋아요', null, 1);
+select approve_build((select v from ids where k = 'b2'), '좋습니다', null, 1);
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.fails('공개된 빌드와 똑같이 고칠 수 없음',
   format($$select edit_my_build(%s, %L)$$, (select v from ids where k = 'b'), t.build(array['6632','3047','3053'])), '똑같은 빌드가 이미 공개');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 select t.fails('남의 빌드는 고칠 수 없음',
-  format($$select edit_my_build(%s, %L)$$, (select v from ids where k = 'b'), t.build(array['3071','3111','3053'])), '빌드를 찾지 못했어요');
+  format($$select edit_my_build(%s, %L)$$, (select v from ids where k = 'b'), t.build(array['3071','3111','3053'])), '빌드를 찾지 못했습니다');
 
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select edit_my_build((select v from ids where k = 'b'), t.build(array['3071','3111','3053'], '99.1.1'));
@@ -155,11 +155,11 @@ select t.ok('빌드 고침: 내용 + 지금 패치 + 버전 2 + 고친 때',
 
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select t.fails('옛 버전을 보고 빌드 승인 불가',
-  format($$select approve_build(%s, '메모', null, 1)$$, (select v from ids where k = 'b')), '작성자가 방금 고쳤어요');
+  format($$select approve_build(%s, '메모', null, 1)$$, (select v from ids where k = 'b')), '작성자가 방금 고쳤습니다');
 select t.fails('옛 버전을 보고 빌드 거절 불가',
-  format($$select reject_build(%s, '이유', 1)$$, (select v from ids where k = 'b')), '작성자가 방금 고쳤어요');
+  format($$select reject_build(%s, '이유', 1)$$, (select v from ids where k = 'b')), '작성자가 방금 고쳤습니다');
 select t.fails('옛 버전을 보고 빌드 재검토 요청 불가',
-  format($$select request_build_revision(%s, '고쳐', 1)$$, (select v from ids where k = 'b')), '작성자가 방금 고쳤어요');
+  format($$select request_build_revision(%s, '고쳐', 1)$$, (select v from ids where k = 'b')), '작성자가 방금 고쳤습니다');
 select t.fails('안쪽 빌드 함수는 직접 못 부름',
   format($$select approve_build_unchecked(%s, '메모', null)$$, (select v from ids where k = 'b')), 'permission denied');
 
@@ -171,7 +171,7 @@ select resubmit_build((select v from ids where k = 'b'), t.build(array['3071','3
 select t.ok('빌드 다시 제출도 버전 +1 (3)', (select version = 3 and status = 'pending' from builds where id = (select v from ids where k = 'b')));
 
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select approve_build((select v from ids where k = 'b'), '좋아요', null, 3);
+select approve_build((select v from ids where k = 'b'), '좋습니다', null, 3);
 select t.ok('최신 버전으로 빌드 승인', (select status = 'approved' from builds where id = (select v from ids where k = 'b')));
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.fails('공개된 빌드는 고칠 수 없음',

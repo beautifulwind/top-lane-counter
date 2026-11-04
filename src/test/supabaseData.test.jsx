@@ -40,13 +40,13 @@ test('매치업 빌드: 승인된 것만, 추천 점수 높은 순, 작성자는
 
 test('승인 안 된 카운터는 매치업 문서가 열리지 않는다', async () => {
   start('/champion/Darius/counter/Vayne');
-  expect(await screen.findByText(/아직 등록되지 않은 카운터예요/)).toBeDefined();
+  expect(await screen.findByText(/아직 등록되지 않은 카운터입니다/)).toBeDefined();
 });
 
 test('Supabase 오류가 나면 빈 화면 대신 오류 문구가 보인다', async () => {
   fakeState.error = 'connection refused';
   start('/champion/Darius');
   const alert = await screen.findByRole('alert');
-  expect(alert.textContent).toContain('데이터를 불러오지 못했어요');
+  expect(alert.textContent).toContain('데이터를 불러오지 못했습니다');
   expect(alert.textContent).toContain('connection refused');
 });

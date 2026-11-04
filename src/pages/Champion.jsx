@@ -49,7 +49,7 @@ export default function Champion() {
         </h2>
 
         {data.counters.length === 0 ? (
-          <p className="empty">아직 등록된 카운터가 없어요.</p>
+          <p className="empty">아직 등록된 카운터가 없습니다.</p>
         ) : (
           <ol className="counter-list">
             {data.counters.filter((c) => data.champs[c.counter_champion]).map((c, i) => {
@@ -63,7 +63,7 @@ export default function Champion() {
                       <img src={champ.icon} alt="" width="44" height="44" />
                       <span className="counter-text">
                         <strong>{champ.name}</strong>
-                        <span>{c.summary || '공략 문서가 아직 비어 있어요.'}</span>
+                        <span>{c.summary || '공략 문서가 아직 비어 있습니다.'}</span>
                       </span>
                       <span className="chev" aria-hidden="true">›</span>
                     </Link>
@@ -82,15 +82,15 @@ export default function Champion() {
                   {hiding === c.id && (
                     <NoteForm
                       id={`hide-reason-${c.id}`}
-                      label={`${champ.name} 숨기는 사유 (필수, 제안자에게 보여요)`}
-                      hint="숨기면 다른 사람에게 이 카운터·문서·빌드가 안 보여요. 운영자 페이지에서 다시 공개할 수 있어요."
+                      label={`${champ.name} 숨기는 사유 (필수, 제안자에게 보입니다)`}
+                      hint="숨기면 다른 사람에게 이 카운터·문서·빌드가 안 보입니다. 운영자 페이지에서 다시 공개할 수 있습니다."
                       confirmLabel="숨기기 확정"
                       busyLabel="숨기는 중…"
                       onCancel={() => setHiding(null)}
                       onSubmit={async (reason) => {
                         await hideCounter(c.id, reason);
                         setHiding(null);
-                        setDone(`숨겼어요: ${title}`);
+                        setDone(`숨겼습니다: ${title}`);
                         retry();
                       }}
                     />

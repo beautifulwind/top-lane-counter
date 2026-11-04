@@ -4,7 +4,7 @@ import { ACCEPT, GIF, prepareImage } from '../lib/imageCompress';
 import { XIcon } from './Icons';
 
 let seq = 0;
-const NOT_IMAGE = '사진·GIF만 올릴 수 있어요.';
+const NOT_IMAGE = '사진·GIF만 올릴 수 있습니다.';
 const isImageFile = (file) => (file.type ?? '').startsWith('image/');
 const hasFiles = (data) => Boolean(data) && [...(data.types ?? [])].includes('Files');
 
@@ -79,7 +79,7 @@ export function MediaPicker({ id, items, onChange, max, gifMax = max, rules, dis
       return;
     }
     if (left <= 0) {
-      setError(`사진은 ${max}개까지 붙일 수 있어요.`);
+      setError(`사진은 ${max}개까지 붙일 수 있습니다.`);
       return;
     }
     setError(null);
@@ -91,11 +91,11 @@ export function MediaPicker({ id, items, onChange, max, gifMax = max, rules, dis
       let gifCount = gifs;
       for (const file of images) {
         if (next.length >= max) {
-          notes.push(`사진은 ${max}개까지 붙일 수 있어요.`);
+          notes.push(`사진은 ${max}개까지 붙일 수 있습니다.`);
           break;
         }
         if (file.type === GIF && gifCount >= gifMax) {
-          notes.push(`GIF는 ${gifMax}개까지 붙일 수 있어요.`);
+          notes.push(`GIF는 ${gifMax}개까지 붙일 수 있습니다.`);
           continue;
         }
         try {
@@ -215,12 +215,12 @@ export function MediaPicker({ id, items, onChange, max, gifMax = max, rules, dis
         {busy ? '사진 줄이는 중…' : `📷 사진·GIF 추가 (${items.length}/${max})`}
       </button>
       <small className="hint" id={`${id}-hint`}>
-        사진은 자동으로 줄여 올려요{dropRef ? ' · 끌어다 놓거나 Ctrl+V로 붙여 넣어도 돼요' : ''}{gifMax > 0 ? ` · GIF는 ${gifMax}개, ${Math.round(rules.gifMaxKb / 1024)}MB까지` : ''}
+        사진은 자동으로 줄여 올립니다{dropRef ? ' · 끌어다 놓거나 Ctrl+V로 붙여 넣어도 됩니다' : ''}{gifMax > 0 ? ` · GIF는 ${gifMax}개, ${Math.round(rules.gifMaxKb / 1024)}MB까지` : ''}
       </small>
       {error && <p className="form-error" role="alert">{error}</p>}
       {over && (
         <div className="media-drop-overlay" role="status">
-          {disabled || busy ? '잠시 뒤에 다시 놓아 주세요' : left > 0 ? '여기에 놓으면 첨부돼요' : `사진은 ${max}개까지 붙일 수 있어요`}
+          {disabled || busy ? '잠시 뒤에 다시 놓아 주세요' : left > 0 ? '여기에 놓으면 첨부됩니다' : `사진은 ${max}개까지 붙일 수 있습니다`}
         </div>
       )}
     </div>
@@ -243,7 +243,7 @@ export function MediaGallery({ media, label = '첨부 사진' }) {
                 {m.mime === GIF && <span className="media-gif" aria-hidden="true">GIF</span>}
               </button>
             ) : (
-              <span className="media-missing">사진을 불러오지 못했어요</span>
+              <span className="media-missing">사진을 불러오지 못했습니다</span>
             )}
           </li>
         ))}

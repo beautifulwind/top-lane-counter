@@ -22,7 +22,7 @@ export const PROVIDER_PROMPT = { google: { prompt: 'select_account' }, kakao: { 
  *   Supabase가 한 계정으로 자동 연결하는 데 쓰이고, 화면에는 /me의 "로그인 연결"에만 보인다.
  */
 export async function signIn(provider, returnTo = '/') {
-  if (!PROVIDERS[provider]) throw new Error(`지원하지 않는 로그인 방식이에요. (${provider})`);
+  if (!PROVIDERS[provider]) throw new Error(`지원하지 않는 로그인 방식입니다. (${provider})`);
   rememberPending('signIn', provider);
   const { error } = await db().auth.signInWithOAuth({
     provider,
@@ -30,7 +30,7 @@ export async function signIn(provider, returnTo = '/') {
   });
   if (error) {
     forgetPending();
-    throw new Error(`로그인을 시작하지 못했어요. (${error.message})`);
+    throw new Error(`로그인을 시작하지 못했습니다. (${error.message})`);
   }
 }
 
@@ -39,7 +39,7 @@ export async function signIn(provider, returnTo = '/') {
  * 구글/카카오에 다녀와서 /me로 돌아온다. Supabase에서 "Allow manual linking"이 켜져 있어야 한다.
  */
 export async function linkProvider(provider, { guest = false } = {}) {
-  if (!PROVIDERS[provider]) throw new Error(`지원하지 않는 로그인 방식이에요. (${provider})`);
+  if (!PROVIDERS[provider]) throw new Error(`지원하지 않는 로그인 방식입니다. (${provider})`);
   rememberPending(guest ? 'upgrade' : 'link', provider);
   const { error } = await db().auth.linkIdentity({
     provider,
@@ -48,9 +48,9 @@ export async function linkProvider(provider, { guest = false } = {}) {
   if (error) {
     forgetPending();
     if (/manual linking/i.test(error.message)) {
-      throw new Error('계정 연결 기능이 아직 꺼져 있어요. (Supabase에서 Allow manual linking을 켜야 해요)');
+      throw new Error('계정 연결 기능이 아직 꺼져 있습니다. (Supabase에서 Allow manual linking을 켜야 합니다)');
     }
-    throw new Error(`${PROVIDERS[provider]} 연결을 시작하지 못했어요. (${error.message})`);
+    throw new Error(`${PROVIDERS[provider]} 연결을 시작하지 못했습니다. (${error.message})`);
   }
 }
 
@@ -62,11 +62,11 @@ export async function signInAsGuest(captchaToken) {
   const { error } = await db().auth.signInAnonymously(captchaToken ? { options: { captchaToken } } : undefined);
   if (!error) return;
   if (/anonymous sign-ins are disabled/i.test(error.message)) {
-    throw new Error('비회원 시작이 아직 꺼져 있어요. (Supabase에서 Allow anonymous sign-ins를 켜야 해요)');
+    throw new Error('비회원 시작이 아직 꺼져 있습니다. (Supabase에서 Allow anonymous sign-ins를 켜야 합니다)');
   }
   if (/captcha/i.test(error.message)) throw new Error('자동 가입 방지 확인을 다시 해 주세요.');
-  if (/rate limit|too many/i.test(error.message)) throw new Error('잠시 뒤에 다시 시도해 주세요. (짧은 시간에 너무 많이 시작했어요)');
-  throw new Error(`비회원으로 시작하지 못했어요. (${error.message})`);
+  if (/rate limit|too many/i.test(error.message)) throw new Error('잠시 뒤에 다시 시도해 주세요. (짧은 시간에 너무 많이 시작했습니다)');
+  throw new Error(`비회원으로 시작하지 못했습니다. (${error.message})`);
 }
 
 /**
@@ -92,7 +92,7 @@ export async function touchLastSeen(userId) {
 /** 내 계정에 붙어 있는 로그인 방식들 [{ provider, email, createdAt }] */
 export async function getIdentities() {
   const { data, error } = await db().auth.getUserIdentities();
-  if (error) throw new Error(`연결된 로그인 방식을 불러오지 못했어요. (${error.message})`);
+  if (error) throw new Error(`연결된 로그인 방식을 불러오지 못했습니다. (${error.message})`);
   return (data?.identities ?? []).map((i) => ({
     provider: i.provider,
     email: i.identity_data?.email ?? null,
@@ -167,10 +167,10 @@ function loginNotice(pending, user) {
 /** 안내(notice)를 사람이 읽을 문장으로 */
 export function noticeText(notice) {
   const name = PROVIDERS[notice.provider];
-  if (notice.type === 'upgraded') return `${name} 로그인을 연결해서 정식 계정이 됐어요. 글·제안·경험치·닉네임은 그대로예요.`;
-  if (notice.type === 'linked') return `${name} 로그인을 이 계정에 연결했어요. 이제 ${name}로 로그인해도 같은 계정이에요.`;
+  if (notice.type === 'upgraded') return `${name} 로그인을 연결해서 정식 계정이 됐습니다. 글·제안·경험치·닉네임은 그대로입니다.`;
+  if (notice.type === 'linked') return `${name} 로그인을 이 계정에 연결했습니다. 이제 ${name}로 로그인해도 같은 계정입니다.`;
   const others = notice.others.map((p) => PROVIDERS[p]).join('·');
-  return `같은 이메일로 이미 가입된 계정(${others})이 있어서, ${name} 로그인을 그 계정에 연결했어요. 앞으로 어느 쪽으로 로그인해도 같은 계정이에요.`;
+  return `같은 이메일로 이미 가입된 계정(${others})이 있어서, ${name} 로그인을 그 계정에 연결했습니다. 앞으로 어느 쪽으로 로그인해도 같은 계정입니다.`;
 }
 
 function clearCallbackParams() {
@@ -191,40 +191,40 @@ function loginError(error, providerError, providerCode, pending) {
   if (taken && upgrading) {
     // 비회원이 연결하려던 구글·카카오가 이미 다른 회원 계정 → 기존 계정으로 로그인할지 묻는다 (합치지 않음)
     return Object.assign(new Error(ALREADY_MEMBER_TEXT), {
-      detail: raw || null, title: '연결하지 못했어요.', retryTo: '/me', existing: pending.provider,
+      detail: raw || null, title: '연결하지 못했습니다.', retryTo: '/me', existing: pending.provider,
     });
   }
   if (taken) {
-    message = `이 ${name || '로그인'} 계정은 이미 다른 회원 계정에 연결돼 있어요. 그 계정으로 로그인하거나, 다른 ${name || '로그인'} 계정으로 연결해 주세요.`;
+    message = `이 ${name || '로그인'} 계정은 이미 다른 회원 계정에 연결돼 있습니다. 그 계정으로 로그인하거나, 다른 ${name || '로그인'} 계정으로 연결해 주세요.`;
   } else if (/manual linking/i.test(raw)) {
-    message = '계정 연결 기능이 아직 꺼져 있어요. (Supabase에서 Allow manual linking을 켜야 해요)';
+    message = '계정 연결 기능이 아직 꺼져 있습니다. (Supabase에서 Allow manual linking을 켜야 합니다)';
   } else if (providerError && !error?.message?.match(/verifier|flow state|ByteString|fetch/i)) {
-    message = linking ? `${name} 연결이 취소됐거나 거절됐어요. 다시 시도해 주세요.` : '로그인이 취소됐거나 거절됐어요. 다시 시도해 주세요.';
+    message = linking ? `${name} 연결이 취소됐거나 거절됐습니다. 다시 시도해 주세요.` : '로그인이 취소됐거나 거절됐습니다. 다시 시도해 주세요.';
   } else if (/ByteString|ISO-8859-1|Failed to fetch|NetworkError|Load failed/i.test(raw)) {
-    message = 'Supabase 서버에 로그인 요청을 보내지 못했어요. 인터넷 연결과 Supabase 키 설정(.env / Cloudflare 환경변수)을 확인해 주세요.';
+    message = 'Supabase 서버에 로그인 요청을 보내지 못했습니다. 인터넷 연결과 Supabase 키 설정(.env / Cloudflare 환경변수)을 확인해 주세요.';
   } else if (/verifier/i.test(raw) || !error) {
     // code는 왔는데 이 브라우저에 로그인 시작 기록(code verifier)이 없음
-    message = '로그인을 시작한 곳과 돌아온 곳이 달라요. 같은 주소, 같은 브라우저 창에서 다시 로그인해 주세요.';
+    message = '로그인을 시작한 곳과 돌아온 곳이 다릅니다. 같은 주소, 같은 브라우저 창에서 다시 로그인해 주세요.';
   } else if (/flow state|expired|already|invalid grant/i.test(raw)) {
-    message = '로그인 코드가 만료됐거나 이미 사용됐어요. 다시 로그인해 주세요.';
+    message = '로그인 코드가 만료됐거나 이미 사용됐습니다. 다시 로그인해 주세요.';
   } else {
-    message = '로그인을 마치지 못했어요. 다시 시도해 주세요.';
+    message = '로그인을 마치지 못했습니다. 다시 시도해 주세요.';
   }
   return Object.assign(new Error(message), {
     detail: raw || null,
-    title: linking ? '계정을 연결하지 못했어요.' : '로그인하지 못했어요.',
+    title: linking ? '계정을 연결하지 못했습니다.' : '로그인하지 못했습니다.',
     retryTo: linking ? '/me' : '/login',
   });
 }
 
 export async function signOut() {
   const { error } = await db().auth.signOut();
-  if (error) throw new Error(`로그아웃하지 못했어요. (${error.message})`);
+  if (error) throw new Error(`로그아웃하지 못했습니다. (${error.message})`);
 }
 
 export async function getSession() {
   const { data, error } = await db().auth.getSession();
-  if (error) throw new Error(`로그인 정보를 불러오지 못했어요. (${error.message})`);
+  if (error) throw new Error(`로그인 정보를 불러오지 못했습니다. (${error.message})`);
   return data.session;
 }
 
@@ -240,7 +240,7 @@ const PROFILE_COLUMNS = 'id, nickname, role, xp, level, main_title, is_guest';
 /** 내 프로필 (첫 로그인 시 DB 트리거가 만든다. nickname이 null이면 닉네임 설정 전) */
 export async function getProfile(userId) {
   const { data, error } = await db().from('profiles').select(PROFILE_COLUMNS).eq('id', userId).maybeSingle();
-  if (error) throw new Error(`프로필을 불러오지 못했어요. (${error.message})`);
+  if (error) throw new Error(`프로필을 불러오지 못했습니다. (${error.message})`);
   return data;
 }
 
@@ -262,12 +262,12 @@ export async function saveNickname(userId, raw) {
     .select(PROFILE_COLUMNS)
     .maybeSingle();
   if (error) {
-    if (error.code === '23505') throw new Error('이미 사용 중인 닉네임이에요. 다른 닉네임을 정해 주세요.');
+    if (error.code === '23505') throw new Error('이미 사용 중인 닉네임입니다. 다른 닉네임을 정해 주세요.');
     if (error.code === 'P0001') throw new Error(error.message); // 30일에 한 번 (DB 문구에 다음 날짜가 들어 있다)
     if (error.code === '23514') throw new Error(`닉네임은 앞뒤 공백 없이 1~${NICKNAME_MAX}자로 정해 주세요.`);
-    throw new Error(`닉네임을 저장하지 못했어요. (${error.message})`);
+    throw new Error(`닉네임을 저장하지 못했습니다. (${error.message})`);
   }
-  if (!data) throw new Error('프로필을 찾지 못했어요. 로그아웃 후 다시 로그인해 주세요.');
+  if (!data) throw new Error('프로필을 찾지 못했습니다. 로그아웃 후 다시 로그인해 주세요.');
   return data;
 }
 
@@ -279,7 +279,7 @@ export async function getNicknameRule(userId) {
     db().from('nickname_changes').select('changed_at').eq('user_id', userId).order('changed_at', { ascending: false }).limit(1),
     db().from('xp_rules').select('value').eq('key', 'nickname_change_days').maybeSingle(),
   ]);
-  if (changes.error || rule.error) throw new Error('닉네임 변경 정보를 불러오지 못했어요.');
+  if (changes.error || rule.error) throw new Error('닉네임 변경 정보를 불러오지 못했습니다.');
   const days = rule.data?.value ?? 30;
   const last = changes.data?.[0]?.changed_at ?? null;
   const next = last ? new Date(Date.parse(last) + days * 86400000).toISOString() : null;
@@ -297,7 +297,7 @@ export async function deleteMyAccount(confirm) {
     try {
       message = (await error.context?.json?.())?.error ?? null;
     } catch { /* 문구 없음 */ }
-    throw new Error(message ?? `탈퇴하지 못했어요. (${error.message})`);
+    throw new Error(message ?? `탈퇴하지 못했습니다. (${error.message})`);
   }
   await db().auth.signOut({ scope: 'local' }).catch(() => {});
 }

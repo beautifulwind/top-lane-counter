@@ -84,7 +84,7 @@ test('닉네임 정하기 전: 맨 위 [닉네임 정하기](→ /welcome), 로�
   fakeLogin('u-fresh', {}, { email: 'fresh@x.com' });
   start('/champion/Darius');
   const menu = await openMenu();
-  expect(await menu.findByText('닉네임을 아직 정하지 않았어요.')).toBeDefined();
+  expect(await menu.findByText('닉네임을 아직 정하지 않았습니다.')).toBeDefined();
   expect(menuNames()).toEqual(['', '닉네임 정하기', '마이페이지', '자유게시판', '로그아웃']);
   fireEvent.click(menu.getByRole('link', { name: '닉네임 정하기' }));
   await vi.waitFor(() => expect(where()).toBe('/welcome'));
@@ -93,8 +93,8 @@ test('닉네임 정하기 전: 맨 위 [닉네임 정하기](→ /welcome), 로�
 test('새 알림 빨간 점: ☰와 메뉴의 마이페이지 둘 다, 개수는 이름으로 읽힌다', async () => {
   fakeLogin('u-user', { nickname: '탑고수' });
   TABLES.notifications.push(
-    { id: 71, user_id: 'u-user', kind: 'title_earned', message: '칭호를 얻었어요', created_at: '2026-11-03T00:00:00Z', read_at: null },
-    { id: 72, user_id: 'u-user', kind: 'title_earned', message: '칭호를 또 얻었어요', created_at: '2026-11-03T00:00:00Z', read_at: null },
+    { id: 71, user_id: 'u-user', kind: 'title_earned', message: '칭호를 얻었습니다', created_at: '2026-11-03T00:00:00Z', read_at: null },
+    { id: 72, user_id: 'u-user', kind: 'title_earned', message: '칭호를 또 얻었습니다', created_at: '2026-11-03T00:00:00Z', read_at: null },
   );
   start('/');
   const btn = await screen.findByRole('button', { name: '메뉴 열기, 새 알림 2개' });

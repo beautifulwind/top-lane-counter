@@ -196,7 +196,7 @@ const OVER_MS = 2000;
 
 /**
  * goldMax: 시작 아이템처럼 골드 합계 상한이 있으면 그 값 (그보다 비싼 아이템은 목록에 없다).
- * 합계를 넘기는 아이템을 누르면 넣지 않고 "N골드를 넘어요"를 잠깐 보여 준다 (022: 합계·남은 골드 안내는 숨김).
+ * 합계를 넘기는 아이템을 누르면 넣지 않고 "N골드를 넘습니다"를 잠깐 보여 준다 (022: 합계·남은 골드 안내는 숨김).
  * movable: 끌어서 순서 바꾸기 (PC는 마우스로 끌기, 폰은 꾹 눌러 끌기, 키보드는 Space 후 화살표)
  */
 function ItemPicker({ id, title, hint, items, value, max, goldMax = null, distinct = false, movable = false, order = 'expensive', onChange }) {
@@ -245,14 +245,14 @@ function ItemPicker({ id, title, hint, items, value, max, goldMax = null, distin
       <legend>{title}</legend>
       {hint && <small className="hint">{hint}</small>}
       <ol className="picked" aria-label={`고른 ${title}`}>
-        {value.length === 0 && <li className="empty">아직 고르지 않았어요.</li>}
+        {value.length === 0 && <li className="empty">아직 고르지 않았습니다.</li>}
         {movable ? (
           <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={onDragEnd}>
             <SortableContext items={keys} strategy={verticalListSortingStrategy}>{rows}</SortableContext>
           </DndContext>
         ) : rows}
       </ol>
-      {over && <p className="gold-over" role="status">{goldMax}골드를 넘어요</p>}
+      {over && <p className="gold-over" role="status">{goldMax}골드를 넘습니다</p>}
       <label htmlFor={`${id}-search`} className="sr-only">{title} 검색</label>
       <input
         id={`${id}-search`}
@@ -273,10 +273,10 @@ function ItemPicker({ id, title, hint, items, value, max, goldMax = null, distin
             onClick={() => add(it)}
           />
         ))}
-        {shop.length === 0 && <p className="empty">찾는 아이템이 없어요.</p>}
+        {shop.length === 0 && <p className="empty">찾는 아이템이 없습니다.</p>}
       </div>
-      {shop.length > SHOW && <small className="hint">{shop.length - SHOW}개 더 있어요. 이름으로 검색해 주세요.</small>}
-      {full && <small className="hint">{max}개까지 고를 수 있어요.</small>}
+      {shop.length > SHOW && <small className="hint">{shop.length - SHOW}개 더 있습니다. 이름으로 검색해 주세요.</small>}
+      {full && <small className="hint">{max}개까지 고를 수 있습니다.</small>}
     </fieldset>
   );
 }

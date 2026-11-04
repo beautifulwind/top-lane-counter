@@ -28,7 +28,7 @@ export function docToForm(initial) {
  */
 export default function DocForm({
   initial, onSubmit, submitLabel = '제안', requireChange = false, changedElsewhere = false,
-  unchangedMessage = '지금 문서와 달라진 내용이 없어요.', children, blocked = null, cancelTo, busyLabel = '보내는 중…',
+  unchangedMessage = '지금 문서와 달라진 내용이 없습니다.', children, blocked = null, cancelTo, busyLabel = '보내는 중…',
 }) {
   const [content, setContent] = useState(() => docToForm(initial));
   const [busy, setBusy] = useState(false);
@@ -58,7 +58,7 @@ export default function DocForm({
         <button type="submit" className="btn" disabled={busy}>{busy ? busyLabel : submitLabel}</button>
         {cancelTo && <Link to={cancelTo} className="btn">취소</Link>}
       </div>
-      <p className="hint">보낸 제안은 운영자가 승인하면 반영돼요. 진행 상황은 [마이페이지]에서 볼 수 있어요.</p>
+      <p className="hint">보낸 제안은 운영자가 승인하면 반영됩니다. 진행 상황은 [마이페이지]에서 볼 수 있습니다.</p>
     </form>
   );
 }

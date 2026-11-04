@@ -62,7 +62,7 @@ function BuildEditor({ data, target, counter, fromId }) {
     setError(null);
     try {
       await submitBuild(auth.user.id, data.matchup.counter.id, build, game.latest);
-      navigate('/me', { state: { sent: `${title} — 빌드를 보냈어요.` } });
+      navigate('/me', { state: { sent: `${title} — 빌드를 보냈습니다.` } });
     } catch (err) {
       setError(err.message);
       setBusy(false);
@@ -76,10 +76,10 @@ function BuildEditor({ data, target, counter, fromId }) {
         <Link to={`/champion/${target.id}/counter/${counter.id}`}>{counter.name}</Link> › 빌드 등록
       </nav>
       <h1 className="doc-title">{title} — 빌드 등록</h1>
-      {fromId && data.from && <p className="notice" role="status">내 빌드 내용을 채워 뒀어요. 고쳐서 새 빌드로 보내요. (원래 빌드는 그대로 남아요)</p>}
-      {fromId && !data.from && <p className="notice" role="status">불러올 내 빌드를 찾지 못했어요. 빈 칸에서 시작해요.</p>}
+      {fromId && data.from && <p className="notice" role="status">내 빌드 내용을 채워 뒀습니다. 고쳐서 새 빌드로 보냅니다. (원래 빌드는 그대로 남습니다)</p>}
+      {fromId && !data.from && <p className="notice" role="status">불러올 내 빌드를 찾지 못했습니다. 빈 칸에서 시작합니다.</p>}
       <p className="lead">
-        운영자가 승인하면 매치업 문서에 공개돼요. 패치 {patchMinor(game.latest)} 기준으로 등록돼요.
+        운영자가 승인하면 매치업 문서에 공개됩니다. 패치 {patchMinor(game.latest)} 기준으로 등록됩니다.
       </p>
 
       <form className="build-form" onSubmit={submit}>

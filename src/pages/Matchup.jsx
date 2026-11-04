@@ -58,7 +58,7 @@ export default function Matchup() {
         <h1 className="doc-title">
           {matchupTitle(counter.name, target.name)}
         </h1>
-        <p className="empty">아직 등록되지 않은 카운터예요. 새 카운터로 제안할 수 있어요.</p>
+        <p className="empty">아직 등록되지 않은 카운터입니다. 새 카운터로 제안할 수 있습니다.</p>
         <div className="actions">
           <Link to={`/champion/${targetId}/propose?counter=${counterId}`} className="btn">+ 카운터 등록</Link>
         </div>
@@ -96,10 +96,10 @@ export default function Matchup() {
 
       <section className="section" id="builds">
         <h2 className="section-title"><span className="num">1.</span> 빌드</h2>
-        <p className="hint">점수(추천 − 비추천)가 높은 순서예요. 점수가 같으면 투표가 많은 빌드, 그다음 최근 빌드가 먼저예요.</p>
+        <p className="hint">점수(추천 − 비추천)가 높은 순서입니다. 점수가 같으면 투표가 많은 빌드, 그다음 최근 빌드가 먼저입니다.</p>
         {buildNotice && <p className="notice" role="status">{buildNotice}</p>}
         {data.builds.length === 0 ? (
-          <p className="empty">아직 등록된 빌드가 없어요.</p>
+          <p className="empty">아직 등록된 빌드가 없습니다.</p>
         ) : (
           data.builds.map((b) => (
             <BuildCard
@@ -130,7 +130,7 @@ export default function Matchup() {
         {doc?.lane_cautions ? (
           <div className="prose">{doc.lane_cautions}</div>
         ) : (
-          <p className="empty">아직 작성된 내용이 없어요.</p>
+          <p className="empty">아직 작성된 내용이 없습니다.</p>
         )}
         <div className="actions">
           <Link to={`/champion/${targetId}/counter/${counterId}/edit`} className="btn">문서 수정 제안</Link>
@@ -144,14 +144,14 @@ export default function Matchup() {
         {hiding && (
           <NoteForm
             id="hide-reason"
-            label="숨기는 사유 (필수, 제안자에게 보여요)"
-            hint="숨기면 다른 사람에게 이 카운터·문서·빌드가 안 보여요. 이 카운터를 만든 제안은 승인 취소가 돼요. 운영자 페이지에서 다시 공개할 수 있어요."
+            label="숨기는 사유 (필수, 제안자에게 보입니다)"
+            hint="숨기면 다른 사람에게 이 카운터·문서·빌드가 안 보입니다. 이 카운터를 만든 제안은 승인 취소가 됩니다. 운영자 페이지에서 다시 공개할 수 있습니다."
             confirmLabel="숨기기 확정"
             busyLabel="숨기는 중…"
             onCancel={() => setHiding(false)}
             onSubmit={async (reason) => {
               await hideCounter(data.matchup.counter.id, reason);
-              navigate(`/champion/${targetId}`, { state: { done: `숨겼어요: ${matchupTitle(counter.name, target.name)}` } });
+              navigate(`/champion/${targetId}`, { state: { done: `숨겼습니다: ${matchupTitle(counter.name, target.name)}` } });
             }}
           />
         )}
@@ -184,7 +184,7 @@ export function DocComments({ counterRowId, auth, live, title }) {
       <CommentThread
         ops={DOC_COMMENT_OPS} parentId={counterRowId} comments={shown.comments} auth={auth} rules={shown.rules}
         open={live} live={live} title={title}
-        closedHint={live ? null : '숨긴 카운터라 새 댓글은 달 수 없어요.'}
+        closedHint={live ? null : '숨긴 카운터라 새 댓글은 달 수 없습니다.'}
         onDone={(message) => {
           setNotice(message);
           retry();

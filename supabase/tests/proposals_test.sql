@@ -71,7 +71,7 @@ select t.fails('문서 수정: 바뀐 게 없음',
   format($$insert into edit_proposals (type, target_champion, counter_champion, counter_id, proposer_id, content)
     select 'doc_edit','x','y',%s,auth.uid(), jsonb_build_object('summary',summary,'level_notes',level_notes,'lane_cautions',lane_cautions)
     from matchup_docs where counter_id = %s$$, (select v from ids where k='quinn'), (select v from ids where k='quinn')),
-  '달라진 내용이 없어요');
+  '달라진 내용이 없습니다');
 
 insert into edit_proposals (type, target_champion, counter_champion, counter_id, proposer_id, content, base_revision_id)
 select 'doc_edit', 'Fake', 'Wrong', counter_id, auth.uid(),
@@ -82,7 +82,7 @@ select t.ok('문서 수정 제안: 대상 챔피언은 카운터에서 가져옴
   (select target_champion = 'Darius' and counter_champion = 'Quinn' and status = 'pending'
    from edit_proposals where id = (select v from ids where k = 'edit_p')));
 
-select t.fails('일반 유저 승인', format($$select approve_proposal(%s, '좋아요', null, null, t.pv(%1$s))$$, (select v from ids where k='garen_p')), '운영자만');
+select t.fails('일반 유저 승인', format($$select approve_proposal(%s, '좋습니다', null, null, t.pv(%1$s))$$, (select v from ids where k='garen_p')), '운영자만');
 select t.fails('일반 유저 거절', format($$select reject_proposal(%s, '싫음', t.pv(%1$s))$$, (select v from ids where k='garen_p')), '운영자만');
 select t.fails('일반 유저 순서 변경', format($$select reorder_counters('Darius', array[%s]::bigint[])$$, (select v from ids where k='quinn')), '운영자만');
 select t.fails('일반 유저 되돌리기', $$select revert_doc(1, '되돌림')$$, '운영자만');
@@ -107,7 +107,7 @@ select t.fails('닉네임 없으면 제안 불가',
 reset role;
 set role anon;
 set request.jwt.claim.sub = '';  -- 비로그인: 로그인 정보 없음
-select t.fails('비로그인 승인 함수 호출', $$select approve_proposal(1, '좋아요', null, null, t.pv(1))$$, 'permission denied');
+select t.fails('비로그인 승인 함수 호출', $$select approve_proposal(1, '좋습니다', null, null, t.pv(1))$$, 'permission denied');
 select t.ok('비로그인도 공개 문서는 읽음', (select count(*) = 1 from matchup_docs));
 
 -- ===== 운영자 =====
@@ -119,7 +119,7 @@ select t.fails('운영자도 문서 직접 변경 불가', 'update matchup_docs 
 select t.fails('운영자도 제안 상태 직접 변경 불가', 'update edit_proposals set status = ''approved''', 'permission denied');
 select t.ok('운영자는 모든 제안을 봄', (select count(*) = 2 from edit_proposals));
 
-select approve_proposal((select v from ids where k = 'garen_p'), '좋아요', null, null, t.pv((select v from ids where k = 'garen_p'))) as garen \gset
+select approve_proposal((select v from ids where k = 'garen_p'), '좋습니다', null, null, t.pv((select v from ids where k = 'garen_p'))) as garen \gset
 insert into ids values ('garen', :garen);
 select t.ok('새 카운터 승인: 카운터 공개 + 맨 뒤 순서',
   (select status = 'approved' and sort_order = 2 and proposed_by = '00000000-0000-0000-0000-00000000000b' from counters where id = :garen));
@@ -128,7 +128,7 @@ select t.ok('새 카운터 승인: 문서 + 첫 기록(create) + 제안에 카�
           and r.approved_by = auth.uid() and p.status = 'approved' and p.counter_id = :garen and p.reviewed_at is not null
    from matchup_docs d join doc_revisions r on r.id = d.revision_id join edit_proposals p on p.id = r.proposal_id
    where d.counter_id = :garen));
-select t.fails('같은 제안 두 번 승인', format($$select approve_proposal(%s, '좋아요', null, null, t.pv(%1$s))$$, (select v from ids where k='garen_p')), '이미 처리된');
+select t.fails('같은 제안 두 번 승인', format($$select approve_proposal(%s, '좋습니다', null, null, t.pv(%1$s))$$, (select v from ids where k='garen_p')), '이미 처리된');
 select t.fails('처리된 제안 거절', format($$select reject_proposal(%s, '사유', t.pv(%1$s))$$, (select v from ids where k='garen_p')), '이미 처리된');
 
 -- 거절
@@ -141,36 +141,36 @@ insert into ids select 'teemo_p', id from edit_proposals where counter_champion 
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select t.fails('거절 사유 없음', format($$select reject_proposal(%s, '   ', t.pv(%1$s))$$, (select v from ids where k='teemo_p')), '거절 사유를');
 select t.fails('거절 사유 null', format($$select reject_proposal(%s, null, t.pv(%1$s))$$, (select v from ids where k='teemo_p')), '거절 사유를');
-select reject_proposal((select v from ids where k = 'teemo_p'), '  근거가 부족해요 ', t.pv((select v from ids where k = 'teemo_p')));
-select t.ok('거절: 상태·사유(공백 정리)·처리자', (select status = 'rejected' and reject_reason = '근거가 부족해요' and reviewed_by = auth.uid()
+select reject_proposal((select v from ids where k = 'teemo_p'), '  근거가 부족합니다 ', t.pv((select v from ids where k = 'teemo_p')));
+select t.ok('거절: 상태·사유(공백 정리)·처리자', (select status = 'rejected' and reject_reason = '근거가 부족합니다' and reviewed_by = auth.uid()
   from edit_proposals where id = (select v from ids where k = 'teemo_p')));
 select t.ok('거절된 카운터는 생기지 않음', (select count(*) = 0 from counters where counter_champion = 'Teemo'));
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
-select t.ok('제안자는 거절 사유를 봄', (select reject_reason = '근거가 부족해요' from edit_proposals where id = (select v from ids where k = 'teemo_p')));
+select t.ok('제안자는 거절 사유를 봄', (select reject_reason = '근거가 부족합니다' from edit_proposals where id = (select v from ids where k = 'teemo_p')));
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 
 -- 문서 수정 승인
-select approve_proposal((select v from ids where k = 'edit_p'), '좋아요', null, null, t.pv((select v from ids where k = 'edit_p')));
+select approve_proposal((select v from ids where k = 'edit_p'), '좋습니다', null, null, t.pv((select v from ids where k = 'edit_p')));
 select t.ok('문서 수정 승인: 문서 교체 + edit 기록 + 버전 갱신',
   (select d.summary = '고친 요약' and r.kind = 'edit' and r.proposal_id = (select v from ids where k = 'edit_p')
    from matchup_docs d join doc_revisions r on r.id = d.revision_id where d.counter_id = (select v from ids where k = 'quinn')));
 select t.ok('퀸 문서 기록 2개', (select count(*) = 2 from doc_revisions where counter_id = (select v from ids where k = 'quinn')));
 
 -- 순서 변경
-select t.fails('순서: 하나 빠짐', format($$select reorder_counters('Darius', array[%s]::bigint[])$$, :garen), '목록이 바뀌었어요');
-select t.fails('순서: 중복', format($$select reorder_counters('Darius', array[%s,%s,%s]::bigint[])$$, :garen, :garen, (select v from ids where k='quinn')), '목록이 바뀌었어요');
-select t.fails('순서: 다른 챔피언 것 섞음', format($$select reorder_counters('Garen', array[%s]::bigint[])$$, :garen), '목록이 바뀌었어요');
+select t.fails('순서: 하나 빠짐', format($$select reorder_counters('Darius', array[%s]::bigint[])$$, :garen), '목록이 바뀌었습니다');
+select t.fails('순서: 중복', format($$select reorder_counters('Darius', array[%s,%s,%s]::bigint[])$$, :garen, :garen, (select v from ids where k='quinn')), '목록이 바뀌었습니다');
+select t.fails('순서: 다른 챔피언 것 섞음', format($$select reorder_counters('Garen', array[%s]::bigint[])$$, :garen), '목록이 바뀌었습니다');
 select reorder_counters('Darius', array[:garen, (select v from ids where k = 'quinn')]::bigint[]);
 select t.ok('순서 변경 저장', (select array_agg(counter_champion order by sort_order) = array['Garen','Quinn'] from counters where target_champion = 'Darius'));
 
 -- 되돌리기
 select t.fails('지금 버전으로 되돌리기', format($$select revert_doc(%s, '되돌림')$$, (select revision_id from matchup_docs where counter_id = (select v from ids where k='quinn'))), '이미 지금');
-select revert_doc((select id from doc_revisions where counter_id = (select v from ids where k = 'quinn') and kind = 'create'), '처음 버전이 더 정확해요');
+select revert_doc((select id from doc_revisions where counter_id = (select v from ids where k = 'quinn') and kind = 'create'), '처음 버전이 더 정확합니다');
 select t.ok('되돌리기: 처음 요약으로 돌아오고 revert 기록이 새로 생김',
   (select d.summary like '사거리로 일방적인 견제%' and r.kind = 'revert' and r.reverted_from is not null and r.edited_by = auth.uid()
    from matchup_docs d join doc_revisions r on r.id = d.revision_id where d.counter_id = (select v from ids where k = 'quinn')));
 select t.ok('기록은 지워지지 않음 (3개)', (select count(*) = 3 from doc_revisions where counter_id = (select v from ids where k = 'quinn')));
-select t.fails('없는 버전', $$select revert_doc(999999, '되돌림')$$, '찾지 못했어요');
+select t.fails('없는 버전', $$select revert_doc(999999, '되돌림')$$, '찾지 못했습니다');
 
 reset role;
 \echo ALL DONE

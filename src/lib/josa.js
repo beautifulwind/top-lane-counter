@@ -21,7 +21,7 @@ function finalConsonant(word) {
 /** 조사만 (예: josaOf('퀸', '으로/로') → '으로') */
 export function josaOf(word, pair) {
   const [withBatchim, without] = PAIRS[pair] ?? [];
-  if (!withBatchim) throw new Error(`모르는 조사예요: ${pair}`);
+  if (!withBatchim) throw new Error(`모르는 조사입니다: ${pair}`);
   const jong = finalConsonant(word);
   if (jong === null) return `${withBatchim === '으로' ? '(으)로' : `${withBatchim}(${without})`}`;
   if (pair === '으로/로') return jong === 0 || jong === 8 ? '로' : '으로'; // ㄹ 받침은 "로" (케일로)

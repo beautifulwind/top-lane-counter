@@ -18,7 +18,7 @@ export default function Layout() {
   const mainRef = useRef(null);
   usePageTitle(mainRef, pathname); // 탭 제목 = 본문 첫 h1 (SPEC 3장)
   // 로그인했는데 닉네임이 없으면: 읽기는 어디서나, 쓰기 화면·/me에 오면 닉네임 정하기로 (정하면 돌아온다).
-  // 막 가입하고 돌아온 때도 한 번 보여 준다 ([나중에 정할게요]로 건너뜀)
+  // 막 가입하고 돌아온 때도 한 번 보여 준다 ([나중에 정하기]로 건너뜀)
   const noNickname = needsNickname(auth);
   if (noNickname && pathname !== '/welcome' && (needsNicknameFor(pathname) || auth.cameBack)) {
     return <Navigate to="/welcome" replace state={{ from: pathname + search }} />;
@@ -39,7 +39,7 @@ export default function Layout() {
       </header>
       {auth.loginError && (
         <div className="login-error" role="alert">
-          <p><strong>{auth.loginError.title ?? '로그인하지 못했어요.'}</strong> {auth.loginError.message}</p>
+          <p><strong>{auth.loginError.title ?? '로그인하지 못했습니다.'}</strong> {auth.loginError.message}</p>
           {auth.loginError.detail && <small>상세: {auth.loginError.detail}</small>}
           <div className="login-error-actions">
             {auth.loginError.existing ? (
@@ -78,7 +78,7 @@ export default function Layout() {
       )}
       {noNickname && pathname !== '/welcome' && (
         <div className="login-notice nickname-band" role="status">
-          <p>닉네임을 정하면 제안·빌드·투표·글·댓글을 쓸 수 있어요. 둘러보기는 지금도 돼요.</p>
+          <p>닉네임을 정하면 제안·빌드·투표·글·댓글을 쓸 수 있습니다. 둘러보기는 지금도 됩니다.</p>
           <div className="login-error-actions">
             <Link to="/welcome" state={{ from: pathname + search }} className="btn">닉네임 정하기</Link>
           </div>

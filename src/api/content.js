@@ -4,7 +4,7 @@ import { db } from './supabase';
 
 async function run(query) {
   const { data, error } = await query;
-  if (error) throw new Error(`위키 데이터를 불러오지 못했어요. (${error.message})`);
+  if (error) throw new Error(`위키 데이터를 불러오지 못했습니다. (${error.message})`);
   return data;
 }
 

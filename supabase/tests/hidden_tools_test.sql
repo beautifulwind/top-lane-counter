@@ -24,7 +24,7 @@ insert into edit_proposals (type, target_champion, counter_champion, proposer_id
 values ('new_counter', 'Darius', 'Garen', auth.uid(), :'doc', t.build());
 insert into ids select 'garen_p', id from edit_proposals where counter_champion = 'Garen';
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select approve_proposal((select v from ids where k = 'garen_p'), '좋아요', null, null, t.pv((select v from ids where k = 'garen_p'))) as garen \gset
+select approve_proposal((select v from ids where k = 'garen_p'), '좋습니다', null, null, t.pv((select v from ids where k = 'garen_p'))) as garen \gset
 insert into ids values ('garen', :garen);
 reset role;
 -- 009: 가렌 제안의 빌드가 승인과 함께 첫 빌드로 공개돼 있다
@@ -35,7 +35,7 @@ set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 insert into edit_proposals (type, target_champion, counter_champion, counter_id, proposer_id, content)
 values ('doc_edit', 'x', 'y', :garen, auth.uid(), :'v1');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select hide_counter(:garen, '잘못 승인했어요');
+select hide_counter(:garen, '잘못 승인했습니다');
 
 -- ===== 1. 미리보기: 숨긴 문서·빌드는 운영자만 읽는다 =====
 select t.ok('운영자: 숨긴 카운터·문서·빌드·수정 기록을 읽음',
@@ -84,7 +84,7 @@ set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select t.fails('재검토 요청: 메모 공백', format($$select request_revision(%s, '  ')$$, :garen), '메모를 적어');
 select t.fails('재검토 요청: 메모 501자', format($$select request_revision(%s, %L)$$, :garen, repeat('a', 501)), '500자');
 select t.fails('재검토 요청: 공개 중인 카운터', format($$select request_revision(%s, '고쳐 주세요')$$, (select v from ids where k = 'quinn')), '숨긴 카운터만');
-select t.fails('재검토 요청: 없는 카운터', $$select request_revision(999999, '고쳐 주세요')$$, '찾지 못했어요');
+select t.fails('재검토 요청: 없는 카운터', $$select request_revision(999999, '고쳐 주세요')$$, '찾지 못했습니다');
 select request_revision(:garen, '  9레벨 내용을 고쳐 주세요 ');
 select t.ok('재검토 요청: 제안 상태·메모(공백 정리)·요청한 운영자',
   (select status = 'revision_requested' and revision_note = '9레벨 내용을 고쳐 주세요'
@@ -105,17 +105,17 @@ select t.ok('제안자는 재검토 요청과 메모를 봄 (빨간 점 조건)'
   (select count(*) = 1 from edit_proposals where proposer_id = auth.uid() and status = 'revision_requested' and revision_note = '9레벨 내용을 고쳐 주세요'));
 select t.fails('바뀐 게 없으면 거부',
   format($$select resubmit_proposal(%s, (select content from edit_proposals where id = %s), t.build())$$, (select v from ids where k = 'garen_p'), (select v from ids where k = 'garen_p')),
-  '고친 내용이 없어요');
+  '고친 내용이 없습니다');
 select t.fails('공백만 다르면 바뀐 게 없는 것',
   format($$select resubmit_proposal(%s, '{"summary":" 가렌 요약 ","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f","5":" "},"lane_cautions":""}', t.build())$$, (select v from ids where k = 'garen_p')),
-  '고친 내용이 없어요');
+  '고친 내용이 없습니다');
 select t.fails('내용 검사는 기존 규칙과 같음 (필수 레벨)',
   format($$select resubmit_proposal(%s, '{"summary":"x","level_notes":{"1":"a","2":"b","3":"c","9":"e","11":"f"}}', t.build())$$, (select v from ids where k = 'garen_p')),
   '6레벨 딜교법은 꼭');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
-select t.fails('남의 제안은 다시 제출 불가', format($$select resubmit_proposal(%s, %L, t.build())$$, (select v from ids where k = 'garen_p'), :'v1'), '찾지 못했어요');
+select t.fails('남의 제안은 다시 제출 불가', format($$select resubmit_proposal(%s, %L, t.build())$$, (select v from ids where k = 'garen_p'), :'v1'), '찾지 못했습니다');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select t.fails('운영자도 남의 제안은 다시 제출 불가', format($$select resubmit_proposal(%s, %L, t.build())$$, (select v from ids where k = 'garen_p'), :'v1'), '찾지 못했어요');
+select t.fails('운영자도 남의 제안은 다시 제출 불가', format($$select resubmit_proposal(%s, %L, t.build())$$, (select v from ids where k = 'garen_p'), :'v1'), '찾지 못했습니다');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select resubmit_proposal((select v from ids where k = 'garen_p'), :'v1', t.build());
 select t.ok('다시 제출: 승인 대기 + 고친 내용 + 다시 낸 때',
@@ -132,14 +132,14 @@ select t.ok('기록(resubmit, 제안자)',
 select t.ok('승인 대기 목록에 들어옴', (select count(*) = 1 from edit_proposals where status = 'pending' and id = (select v from ids where k = 'garen_p')));
 select t.fails('승인 대기 중 다시 공개', format($$select restore_counter(%s, '공개')$$, :garen), '승인 대기 중');
 select t.fails('승인 대기 중 삭제', format($$select delete_counter(%s, 'Garen', '중복')$$, :garen), '승인 대기 중');
-select t.fails('승인 대기 중 재검토 요청', format($$select request_revision(%s, '또')$$, :garen), '이미 다시 보냈어요');
+select t.fails('승인 대기 중 재검토 요청', format($$select request_revision(%s, '또')$$, :garen), '이미 다시 보냈습니다');
 
 -- ===== 6. 거절 → 계속 숨김, 다시 요청 가능 =====
-select reject_proposal((select v from ids where k = 'garen_p'), '아직 부족해요', t.pv((select v from ids where k = 'garen_p')));
+select reject_proposal((select v from ids where k = 'garen_p'), '아직 부족합니다', t.pv((select v from ids where k = 'garen_p')));
 select t.ok('거절: 카운터는 계속 숨김, 문서는 그대로',
   (select c.status = 'hidden' and d.summary = '가렌 요약' from counters c join matchup_docs d on d.counter_id = c.id where c.id = :garen));
 select t.ok('거절: 기록(reject, 사유)',
-  (select count(*) = 1 from counter_status_log where counter_id = :garen and action = 'reject' and reason = '아직 부족해요'));
+  (select count(*) = 1 from counter_status_log where counter_id = :garen and action = 'reject' and reason = '아직 부족합니다'));
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.fails('거절된 뒤엔 다시 제출 불가', format($$select resubmit_proposal(%s, %L, t.build())$$, (select v from ids where k = 'garen_p'), :'v2'), '재검토 요청을 받은 제안만');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
@@ -200,7 +200,7 @@ select hide_counter(:garen, '중복 카운터');
 select t.fails('삭제: 사유 공백', format($$select delete_counter(%s, 'Garen', '  ')$$, :garen), '삭제 사유를');
 select t.fails('삭제: 확인 챔피언이 다름', format($$select delete_counter(%s, 'Quinn', '중복')$$, :garen), '확인한 챔피언이');
 select t.fails('삭제: 확인값 없음', format($$select delete_counter(%s, null, '중복')$$, :garen), '확인한 챔피언이');
-select t.fails('삭제: 없는 카운터', $$select delete_counter(999999, 'Garen', '중복')$$, '찾지 못했어요');
+select t.fails('삭제: 없는 카운터', $$select delete_counter(999999, 'Garen', '중복')$$, '찾지 못했습니다');
 select t.fails('운영자도 카운터 직접 삭제 불가', format('delete from counters where id = %s', :garen), 'permission denied');
 select delete_counter(:garen, 'Garen', '  같은 매치업이 두 번 등록됨 ') as del \gset
 select t.ok('삭제: 카운터·문서·수정 기록·빌드·제안·숨김 기록이 없음',
@@ -220,7 +220,7 @@ select t.ok('삭제 기록: 누가·언제·왜·어떤 매치업·원래 제안
       and proposer_id = '00000000-0000-0000-0000-00000000000b'
       and proposals_count = 2 and revisions_count = 2 and builds_count = 1 and votes_count = 1
    from counter_deletions where id = :del));
-select t.fails('삭제한 카운터 다시 삭제', format($$select delete_counter(%s, 'Garen', '또')$$, :garen), '찾지 못했어요');
+select t.fails('삭제한 카운터 다시 삭제', format($$select delete_counter(%s, 'Garen', '또')$$, :garen), '찾지 못했습니다');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.ok('제안자 /me에서도 그 제안이 사라짐', (select count(*) = 0 from edit_proposals where counter_champion = 'Garen'));
 select t.ok('일반 유저는 삭제 기록을 못 봄', (select count(*) = 0 from counter_deletions));

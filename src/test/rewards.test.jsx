@@ -45,7 +45,7 @@ test('/me 레벨: 제목·"경험치" 글자 없이 큰 Lv, 막대 + 작은 숫�
   expect([bar.getAttribute('aria-valuemin'), bar.getAttribute('aria-valuenow'), bar.getAttribute('aria-valuemax')]).toEqual(['300', '420', '600']);
   expect(section.querySelector('.xp-nums').textContent).toBe('경험치 420 / 600'); // "경험치"는 화면 읽기용(sr-only)
   expect(section.querySelector('.xp-nums .sr-only').textContent).toBe('경험치 ');
-  expect(screen.queryByText(/남았어요/)).toBeNull();
+  expect(screen.queryByText(/남았습니다/)).toBeNull();
   expect(screen.queryByText('경험치 내역')).toBeNull();
 });
 
@@ -150,20 +150,20 @@ test('/me: 메뉴 맨 위 닉네임도 새로 읽은 레벨·대표 칭호로 �
 
 test('/me: 레벨업·칭호 알림은 레벨 칸 위에 "새 알림"으로 한 번 보이고 읽음 처리', async () => {
   TABLES.notifications.push(
-    { id: 1, user_id: ME, kind: 'level_up', message: '레벨이 올랐어요: Lv.3', created_at: '2026-11-02T00:00:00Z', read_at: null },
-    { id: 2, user_id: ME, kind: 'title_earned', message: "칭호 '탑신병자'를 얻었어요. [마이페이지]에서 대표 칭호로 고를 수 있어요.", created_at: '2026-11-02T00:00:00Z', read_at: null },
+    { id: 1, user_id: ME, kind: 'level_up', message: '레벨이 올랐습니다: Lv.3', created_at: '2026-11-02T00:00:00Z', read_at: null },
+    { id: 2, user_id: ME, kind: 'title_earned', message: "칭호 '탑신병자'를 얻었습니다. [마이페이지]에서 대표 칭호로 고를 수 있습니다.", created_at: '2026-11-02T00:00:00Z', read_at: null },
   );
   asUser();
   start('/me');
-  expect(await screen.findByText('레벨이 올랐어요: Lv.3')).toBeDefined();
-  expect(screen.getByText(/칭호 '탑신병자'를 얻었어요/)).toBeDefined();
+  expect(await screen.findByText('레벨이 올랐습니다: Lv.3')).toBeDefined();
+  expect(screen.getByText(/칭호 '탑신병자'를 얻었습니다/)).toBeDefined();
   await vi.waitFor(() => expect(TABLES.notifications.every((n) => n.read_at)).toBe(true));
 });
 
 test('운영자 /me: 경험치·레벨·칭호 없음 안내', async () => {
   fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
   start('/me');
-  expect(await screen.findByText('운영자는 경험치·레벨·칭호가 없어요 (항상 Lv.0).')).toBeDefined();
+  expect(await screen.findByText('운영자는 경험치·레벨·칭호가 없습니다 (항상 Lv.0).')).toBeDefined();
   expect(screen.queryByRole('progressbar')).toBeNull();
   expect(screen.queryByRole('heading', { name: 'Level' })).toBeNull();
   expect(screen.queryByRole('list', { name: '칭호판' })).toBeNull();
@@ -172,15 +172,15 @@ test('운영자 /me: 경험치·레벨·칭호 없음 안내', async () => {
 test('운영자: 비주류 픽 추가·빼기 (보라 버튼, 이미 승인된 기여는 그대로라는 안내)', async () => {
   fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
   start('/admin');
-  expect(await screen.findByText('비주류 픽이 아직 없어요.')).toBeDefined();
-  expect(screen.getByText(/목록을 바꿔도 이미 승인된 기여는 그대로예요/)).toBeDefined();
+  expect(await screen.findByText('비주류 픽이 아직 없습니다.')).toBeDefined();
+  expect(screen.getByText(/목록을 바꿔도 이미 승인된 기여는 그대로입니다/)).toBeDefined();
   fireEvent.change(screen.getByLabelText('비주류 픽에 추가할 챔피언 검색'), { target: { value: '퀸' } });
   const add = within(screen.getByRole('list', { name: '검색 결과' })).getByRole('button', { name: '퀸 추가' });
   expect(add.classList.contains('btn-op')).toBe(true);
   fireEvent.click(add);
-  expect(await screen.findByText('비주류 픽에 넣었어요: 퀸')).toBeDefined();
+  expect(await screen.findByText('비주류 픽에 넣었습니다: 퀸')).toBeDefined();
   expect(fakeState.rpcCalls).toContainEqual({ name: 'add_offmeta', args: { p_champion: 'Quinn' } });
   fireEvent.click(await within(await screen.findByRole('list', { name: '비주류 픽 목록' })).findByRole('button', { name: '퀸 빼기' }));
-  expect(await screen.findByText('비주류 픽에서 뺐어요: 퀸')).toBeDefined();
+  expect(await screen.findByText('비주류 픽에서 뺐습니다: 퀸')).toBeDefined();
   expect(fakeState.rpcCalls).toContainEqual({ name: 'remove_offmeta', args: { p_champion: 'Quinn' } });
 });

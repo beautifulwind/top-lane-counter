@@ -15,8 +15,8 @@ const REVIEW_FIELDS =
 
 function friendly(error, fallback) {
   const msg = error?.message ?? '';
-  if (/row-level security/i.test(msg)) return new Error('빌드를 등록할 권한이 없어요. 로그인하고 닉네임을 정했는지 확인해 주세요.');
-  if (/permission denied/i.test(msg)) return new Error('권한이 없어요. (로그인이 필요하거나 운영자만 할 수 있는 작업이에요)');
+  if (/row-level security/i.test(msg)) return new Error('빌드를 등록할 권한이 없습니다. 로그인하고 닉네임을 정했는지 확인해 주세요.');
+  if (/permission denied/i.test(msg)) return new Error('권한이 없습니다. (로그인이 필요하거나 운영자만 할 수 있는 작업입니다)');
   if (/[가-힣]/.test(msg)) return new Error(msg);
   return new Error(`${fallback} (${msg})`);
 }
@@ -41,13 +41,13 @@ const shape = ({ up_count, down_count, ...b }) => ({ ...b, up: up_count, down: d
 export async function getBuilds(counterRowId, userId = null) {
   const rows = await run(
     db().from('builds').select(`${BUILD_FIELDS}, ${AUTHOR}`).eq('counter_id', counterRowId).eq('status', 'approved'),
-    '빌드를 불러오지 못했어요.',
+    '빌드를 불러오지 못했습니다.',
   );
   let votes = [];
   if (userId && rows.length > 0) {
     votes = await run(
       db().from('build_votes').select('build_id, value').eq('user_id', userId).in('build_id', rows.map((b) => b.id)),
-      '내 투표를 불러오지 못했어요.',
+      '내 투표를 불러오지 못했습니다.',
     );
   }
   return rows
@@ -59,20 +59,20 @@ export async function getBuilds(counterRowId, userId = null) {
 export async function submitBuild(userId, counterRowId, build, patch) {
   await run(
     db().from('builds').insert({ counter_id: counterRowId, author_id: userId, patch, ...toRow(build) }),
-    '빌드를 보내지 못했어요.',
+    '빌드를 보내지 못했습니다.',
   );
 }
 
 /** 추천(1)·비추천(-1)·취소(null). 돌려주는 값: { up, down, mine } */
 export const voteBuild = (buildId, value) =>
-  rpc('vote_build', { p_build_id: buildId, p_value: value }, '투표하지 못했어요.');
+  rpc('vote_build', { p_build_id: buildId, p_value: value }, '투표하지 못했습니다.');
 
 /** 내 빌드 (최근 순, 모든 상태). RLS가 내 것만 돌려준다. counter: 숨긴 카운터면 null */
 export async function getMyBuilds(userId) {
   const rows = await run(
     db().from('builds').select(`${BUILD_FIELDS}, ${REVIEW_FIELDS}, ${COUNTER}`)
       .eq('author_id', userId).order('created_at', { ascending: false }),
-    '내 빌드를 불러오지 못했어요.',
+    '내 빌드를 불러오지 못했습니다.',
   );
   return rows.map(shape);
 }
@@ -81,7 +81,7 @@ export async function getMyBuilds(userId) {
 export async function getMyBuild(userId, id) {
   const row = await run(
     db().from('builds').select(`${BUILD_FIELDS}, ${REVIEW_FIELDS}, ${COUNTER}`).eq('author_id', userId).eq('id', id).maybeSingle(),
-    '빌드를 불러오지 못했어요.',
+    '빌드를 불러오지 못했습니다.',
   );
   return row && shape(row);
 }
@@ -95,7 +95,7 @@ async function approvedByCounter(counterIds) {
   if (counterIds.length === 0) return [];
   return run(
     db().from('builds').select(BUILD_FIELDS).eq('status', 'approved').in('counter_id', counterIds),
-    '공개된 빌드를 확인하지 못했어요.',
+    '공개된 빌드를 확인하지 못했습니다.',
   );
 }
 
@@ -105,7 +105,7 @@ const newestFirst = (logs) => [...(logs ?? [])].sort((a, b) => String(b.created_
 export async function getPendingBuilds() {
   const pending = await run(
     db().from('builds').select(`${BUILD_FIELDS}, ${AUTHOR}, ${COUNTER}`).eq('status', 'pending').order('created_at', { ascending: true }),
-    '빌드 승인 대기 목록을 불러오지 못했어요.',
+    '빌드 승인 대기 목록을 불러오지 못했습니다.',
   );
   const approved = await approvedByCounter([...new Set(pending.map((b) => b.counter_id))]);
   return { pending: pending.map(shape), approved: approved.map(shape) };
@@ -116,7 +116,7 @@ export async function getHiddenBuilds() {
   const rows = await run(
     db().from('builds').select(`${BUILD_FIELDS}, ${REVIEW_FIELDS}, ${AUTHOR}, ${COUNTER}`).eq('status', 'hidden')
       .order('hidden_at', { ascending: false }),
-    '숨긴 빌드를 불러오지 못했어요.',
+    '숨긴 빌드를 불러오지 못했습니다.',
   );
   return rows.map(shape);
 }
@@ -125,7 +125,7 @@ export async function getHiddenBuilds() {
 export async function getBuildForReview(id) {
   const row = await run(
     db().from('builds').select(`${BUILD_FIELDS}, ${REVIEW_FIELDS}, ${AUTHOR}, ${COUNTER}, ${LOGS}`).eq('id', id).maybeSingle(),
-    '빌드를 불러오지 못했어요.',
+    '빌드를 불러오지 못했습니다.',
   );
   if (!row) return null;
   const approved = await approvedByCounter([row.counter_id]);
@@ -137,7 +137,7 @@ export async function getRevisionBuilds() {
   const rows = await run(
     db().from('builds').select(`${BUILD_FIELDS}, ${REVIEW_FIELDS}, ${AUTHOR}, ${COUNTER}`).eq('status', 'revision_requested')
       .order('revision_requested_at', { ascending: true }),
-    '재검토 기다리는 빌드를 불러오지 못했어요.',
+    '재검토 기다리는 빌드를 불러오지 못했습니다.',
   );
   return rows.map(shape);
 }
@@ -148,21 +148,21 @@ export async function getRevisionBuilds() {
 export const approveBuild = (b, note, edited = null, patch = null) =>
   rpc('approve_build', {
     p_id: b.id, p_note: note, p_build: edited ? toProposalBuild(edited, patch) : null, p_version: b.version,
-  }, '승인하지 못했어요.');
+  }, '승인하지 못했습니다.');
 /** 거절: 승인 대기·재검토 기다리는 중인 빌드 */
 export const rejectBuild = (b, reason) =>
-  rpc('reject_build', { p_id: b.id, p_reason: reason, p_version: b.version }, '거절하지 못했어요.');
+  rpc('reject_build', { p_id: b.id, p_reason: reason, p_version: b.version }, '거절하지 못했습니다.');
 export const requestBuildRevision = (b, note) =>
-  rpc('request_build_revision', { p_id: b.id, p_note: note, p_version: b.version }, '재검토를 요청하지 못했어요.');
-export const cancelBuildRevision = (id, note) => rpc('cancel_build_revision', { p_id: id, p_note: note }, '요청을 취소하지 못했어요.');
+  rpc('request_build_revision', { p_id: b.id, p_note: note, p_version: b.version }, '재검토를 요청하지 못했습니다.');
+export const cancelBuildRevision = (id, note) => rpc('cancel_build_revision', { p_id: id, p_note: note }, '요청을 취소하지 못했습니다.');
 /** 승인 대기 중인 내 빌드 고치기 (지금 패치로, 순서는 그대로). 본인만 */
 export const editMyBuild = (id, build, patch) =>
-  rpc('edit_my_build', { p_id: id, p_build: toProposalBuild(build, patch) }, '고치지 못했어요.');
+  rpc('edit_my_build', { p_id: id, p_build: toProposalBuild(build, patch) }, '고치지 못했습니다.');
 /** 재검토 요청 받은 내 빌드를 고쳐서 다시 제출 (지금 패치로) → 승인 대기. 본인만 */
 export const resubmitBuild = (id, build, patch) =>
-  rpc('resubmit_build', { p_id: id, p_build: toProposalBuild(build, patch) }, '다시 보내지 못했어요.');
-export const hideBuild = (id, reason) => rpc('hide_build', { p_id: id, p_reason: reason }, '숨기지 못했어요.');
-export const restoreBuild = (id, note) => rpc('restore_build', { p_id: id, p_note: note }, '다시 공개하지 못했어요.');
+  rpc('resubmit_build', { p_id: id, p_build: toProposalBuild(build, patch) }, '다시 보내지 못했습니다.');
+export const hideBuild = (id, reason) => rpc('hide_build', { p_id: id, p_reason: reason }, '숨기지 못했습니다.');
+export const restoreBuild = (id, note) => rpc('restore_build', { p_id: id, p_note: note }, '다시 공개하지 못했습니다.');
 
 // ---------------- 시작 아이템 합계 상한·아이템 가격표 (018) ----------------
 
@@ -170,7 +170,7 @@ export const restoreBuild = (id, note) => rpc('restore_build', { p_id: id, p_not
 export async function getStartGoldMax() {
   const row = await run(
     db().from('xp_rules').select('value').eq('key', 'starting_gold_max').maybeSingle(),
-    '빌드 규칙을 불러오지 못했어요.',
+    '빌드 규칙을 불러오지 못했습니다.',
   );
   return row?.value ?? START_GOLD_MAX;
 }
@@ -185,12 +185,12 @@ export async function getBuildGame() {
 
 /** DB 아이템 가격표 상태: 기준 패치와 아이템 수 (비어 있으면 patch = null) */
 export async function getItemPriceInfo() {
-  const rows = await run(db().from('item_prices').select('patch').limit(1), '아이템 가격표를 불러오지 못했어요.');
+  const rows = await run(db().from('item_prices').select('patch').limit(1), '아이템 가격표를 불러오지 못했습니다.');
   return { patch: rows?.[0]?.patch ?? null };
 }
 
 /** 운영자: DB 가격표를 지금 패치의 상점 아이템 가격으로 통째로 바꾼다. 바뀐 아이템 수를 돌려준다 */
 export async function updateItemPrices(items, patch) {
   const prices = Object.fromEntries(Object.values(items).filter((it) => it.shop).map((it) => [it.id, it.gold]));
-  return rpc('set_item_prices', { p_patch: patch, p_prices: prices }, '아이템 가격표를 갱신하지 못했어요.');
+  return rpc('set_item_prices', { p_patch: patch, p_prices: prices }, '아이템 가격표를 갱신하지 못했습니다.');
 }

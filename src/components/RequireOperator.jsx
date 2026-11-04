@@ -13,7 +13,7 @@ export default function RequireOperator({ children }) {
     return (
       <article>
         <h1 className="doc-title">운영자 페이지</h1>
-        <p className="empty">운영자만 볼 수 있어요.</p>
+        <p className="empty">운영자만 볼 수 있습니다.</p>
       </article>
     );
   }

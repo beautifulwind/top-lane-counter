@@ -10,7 +10,7 @@ export default function DiffView({ before, after }) {
   const same = fields.filter((f) => !f.changed);
   return (
     <div className="diff">
-      {changed.length === 0 && <p className="empty">바뀐 칸이 없어요.</p>}
+      {changed.length === 0 && <p className="empty">바뀐 칸이 없습니다.</p>}
       {changed.map((f) => (
         <section key={f.key} className="diff-field" aria-label={`${f.label} 변경`}>
           <h3>

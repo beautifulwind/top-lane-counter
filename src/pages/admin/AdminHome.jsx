@@ -64,13 +64,13 @@ function PendingList() {
     <article>
       <h1 className="doc-title">운영자 페이지</h1>
       {done && <p className="notice" role="status">{done}</p>}
-      <p className="hint">카운터 순서 변경은 각 챔피언 문서의 [순서 변경], 문서 되돌리기는 매치업 문서의 [수정 기록]에서 해요.</p>
+      <p className="hint">카운터 순서 변경은 각 챔피언 문서의 [순서 변경], 문서 되돌리기는 매치업 문서의 [수정 기록]에서 합니다.</p>
 
       <section className="section">
         <h2 className="section-title">승인 대기 {data ? `(${data.pending.length})` : ''}</h2>
         {loading && <Loading />}
         {error && <ErrorBox error={error} onRetry={retry} />}
-        {data && data.pending.length === 0 && <p className="empty">대기 중인 제안이 없어요.</p>}
+        {data && data.pending.length === 0 && <p className="empty">대기 중인 제안이 없습니다.</p>}
         {data && data.pending.length > 0 && (
           <ul className="proposal-list">
             {data.pending.map((p) => (
@@ -84,10 +84,10 @@ function PendingList() {
         <section className="section">
           <h2 className="section-title">재검토 기다리는 중 ({data.waiting.length})</h2>
           {data.waiting.length === 0 ? (
-            <p className="empty">재검토를 기다리는 제안·빌드가 없어요.</p>
+            <p className="empty">재검토를 기다리는 제안·빌드가 없습니다.</p>
           ) : (
             <>
-              <p className="hint">제안자가 고쳐서 다시 내면 승인 대기로 돌아와요. [요청 취소]는 원래 내용 그대로 승인 대기로 되돌려요.</p>
+              <p className="hint">제안자가 고쳐서 다시 내면 승인 대기로 돌아옵니다. [요청 취소]는 원래 내용 그대로 승인 대기로 되돌립니다.</p>
               <ul className="proposal-list">
                 {data.waiting.map((w) => (
                   <WaitingRow key={`${w.kind}-${w.item.id}`} kind={w.kind} item={w.item} name={name} game={data.game} onDone={finished} />
@@ -102,7 +102,7 @@ function PendingList() {
         <section className="section">
           <h2 className="section-title">숨긴 카운터 ({data.hidden.length})</h2>
           {data.hidden.length === 0 ? (
-            <p className="empty">숨긴 카운터가 없어요.</p>
+            <p className="empty">숨긴 카운터가 없습니다.</p>
           ) : (
             <ul className="proposal-list">
               {data.hidden.map((c) => (
@@ -117,7 +117,7 @@ function PendingList() {
         <section className="section">
           <h2 className="section-title">빌드 승인 대기 ({data.pendingBuilds.length})</h2>
           {data.pendingBuilds.length === 0 ? (
-            <p className="empty">대기 중인 빌드가 없어요.</p>
+            <p className="empty">대기 중인 빌드가 없습니다.</p>
           ) : (
             <ul className="proposal-list">
               {data.pendingBuilds.map((b) => (
@@ -132,7 +132,7 @@ function PendingList() {
         <section className="section">
           <h2 className="section-title">숨긴 빌드 ({data.hiddenBuilds.length})</h2>
           {data.hiddenBuilds.length === 0 ? (
-            <p className="empty">숨긴 빌드가 없어요.</p>
+            <p className="empty">숨긴 빌드가 없습니다.</p>
           ) : (
             <ul className="proposal-list">
               {data.hiddenBuilds.map((b) => (
@@ -169,7 +169,7 @@ function PendingList() {
         <section className="section">
           <h2 className="section-title">삭제 기록 ({data.deletions.length})</h2>
           {data.deletions.length === 0 ? (
-            <p className="empty">삭제한 카운터가 없어요.</p>
+            <p className="empty">삭제한 카운터가 없습니다.</p>
           ) : (
             <ul className="proposal-list">
               {data.deletions.map((d) => (
@@ -251,14 +251,14 @@ function PendingRow({ proposal: p, name, game, onDone, onReload }) {
       {open === 'approve' && (
         <NoteForm
           id={`approve-note-${p.id}`}
-          label="승인 메모 (필수, 제안자에게 보여요)"
-          hint={p.resubmitted ? '승인하면 고친 내용으로 다시 공개돼요 (목록 맨 뒤).' : '제안 그대로 승인해요.'}
+          label="승인 메모 (필수, 제안자에게 보입니다)"
+          hint={p.resubmitted ? '승인하면 고친 내용으로 다시 공개됩니다 (목록 맨 뒤).' : '제안 그대로 승인합니다.'}
           confirmLabel="승인 확정"
           busyLabel="승인 중…"
           onCancel={() => setOpen(null)}
           onSubmit={guard(async (note) => {
             await approveProposal(p, note);
-            onDone(`${p.resubmitted ? '승인하고 다시 공개' : '승인'}했어요: [${label}] ${title}`);
+            onDone(`${p.resubmitted ? '승인하고 다시 공개' : '승인'}했습니다: [${label}] ${title}`);
           })}
         >
           <Link to={`/admin/proposals/${p.id}?approve=1`} className="edit-link op-link">내용 고치기 (고쳐서 승인)</Link>
@@ -267,27 +267,27 @@ function PendingRow({ proposal: p, name, game, onDone, onReload }) {
       {open === 'revision' && (
         <NoteForm
           id={`revision-p-${p.id}`}
-          label="재검토 요청 메모 (필수, 제안자에게 보여요)"
-          hint="제안자가 [마이페이지]에서 고쳐서 다시 내면 승인 대기로 돌아와요."
+          label="재검토 요청 메모 (필수, 제안자에게 보입니다)"
+          hint="제안자가 [마이페이지]에서 고쳐서 다시 내면 승인 대기로 돌아옵니다."
           confirmLabel="재검토 요청 확정"
           busyLabel="보내는 중…"
           onCancel={() => setOpen(null)}
           onSubmit={guard(async (note) => {
             await requestProposalRevision(p, note);
-            onDone(`재검토를 요청했어요: [${label}] ${title}`);
+            onDone(`재검토를 요청했습니다: [${label}] ${title}`);
           })}
         />
       )}
       {open === 'reject' && (
         <NoteForm
           id={`reject-note-${p.id}`}
-          label="거절 사유 (필수, 제안자에게 보여요)"
+          label="거절 사유 (필수, 제안자에게 보입니다)"
           confirmLabel="거절 확정"
           busyLabel="거절 중…"
           onCancel={() => setOpen(null)}
           onSubmit={guard(async (reason) => {
             await rejectProposal(p, reason);
-            onDone(`거절했어요: [${label}] ${title}`);
+            onDone(`거절했습니다: [${label}] ${title}`);
           })}
         />
       )}
@@ -344,18 +344,18 @@ function HiddenRow({ counter: c, name, onDone }) {
           <Link to={`/admin/delete/${path}`} className="btn btn-small btn-danger">완전 삭제</Link>
         )}
       </div>
-      {state.waiting && <p className="hint">다시 낸 제안이 승인 대기 중이라 다시 공개·삭제는 잠겨 있어요. 그 제안부터 처리해 주세요.</p>}
+      {state.waiting && <p className="hint">다시 낸 제안이 승인 대기 중이라 다시 공개·삭제는 잠겨 있습니다. 그 제안부터 처리해 주세요.</p>}
 
       {open === 'revision' && (
         <NoteForm
           id={`revision-note-${c.id}`}
-          label="재검토 요청 메모 (필수, 제안자에게 보여요)"
+          label="재검토 요청 메모 (필수, 제안자에게 보입니다)"
           confirmLabel="재검토 요청 확정"
           busyLabel="보내는 중…"
           onCancel={() => setOpen(null)}
           onSubmit={async (note) => {
             await requestRevision(c.id, note);
-            onDone(`재검토를 요청했어요: ${title}`);
+            onDone(`재검토를 요청했습니다: ${title}`);
           }}
         />
       )}
@@ -363,13 +363,13 @@ function HiddenRow({ counter: c, name, onDone }) {
         <NoteForm
           id={`restore-note-${c.id}`}
           label="다시 공개 메모 (필수)"
-          hint={`카운터 목록 맨 뒤로 들어가요.${c.origin?.status === 'revision_requested' ? ' 보낸 재검토 요청은 취소돼요.' : ''}`}
+          hint={`카운터 목록 맨 뒤로 들어갑니다.${c.origin?.status === 'revision_requested' ? ' 보낸 재검토 요청은 취소됩니다.' : ''}`}
           confirmLabel="다시 공개 확정"
           busyLabel="공개하는 중…"
           onCancel={() => setOpen(null)}
           onSubmit={async (note) => {
             await restoreCounter(c.id, note);
-            onDone(`다시 공개했어요: ${title}`);
+            onDone(`다시 공개했습니다: ${title}`);
           }}
         />
       )}
@@ -434,14 +434,14 @@ function PendingBuildRow({ build: b, game, name, onDone, onReload }) {
       {open === 'approve' && (
         <NoteForm
           id={`approve-build-${b.id}`}
-          label="승인 메모 (필수, 작성자에게 보여요)"
-          hint="빌드 그대로 승인해요."
+          label="승인 메모 (필수, 작성자에게 보입니다)"
+          hint="빌드 그대로 승인합니다."
           confirmLabel="승인 확정"
           busyLabel="승인 중…"
           onCancel={() => setOpen(null)}
           onSubmit={guard(async (note) => {
             await approveBuild(b, note);
-            onDone(`빌드를 승인했어요: ${title} (${who})`);
+            onDone(`빌드를 승인했습니다: ${title} (${who})`);
           })}
         >
           <Link to={`/admin/builds/${b.id}?approve=1`} className="edit-link op-link">내용 고치기 (고쳐서 승인)</Link>
@@ -450,27 +450,27 @@ function PendingBuildRow({ build: b, game, name, onDone, onReload }) {
       {open === 'revision' && (
         <NoteForm
           id={`revision-build-${b.id}`}
-          label="재검토 요청 메모 (필수, 작성자에게 보여요)"
-          hint="작성자가 [마이페이지]에서 고쳐서 다시 내면 승인 대기로 돌아와요."
+          label="재검토 요청 메모 (필수, 작성자에게 보입니다)"
+          hint="작성자가 [마이페이지]에서 고쳐서 다시 내면 승인 대기로 돌아옵니다."
           confirmLabel="재검토 요청 확정"
           busyLabel="보내는 중…"
           onCancel={() => setOpen(null)}
           onSubmit={guard(async (note) => {
             await requestBuildRevision(b, note);
-            onDone(`빌드 재검토를 요청했어요: ${title} (${who})`);
+            onDone(`빌드 재검토를 요청했습니다: ${title} (${who})`);
           })}
         />
       )}
       {open === 'reject' && (
         <NoteForm
           id={`reject-build-${b.id}`}
-          label="거절 사유 (필수, 작성자에게 보여요)"
+          label="거절 사유 (필수, 작성자에게 보입니다)"
           confirmLabel="거절 확정"
           busyLabel="거절 중…"
           onCancel={() => setOpen(null)}
           onSubmit={guard(async (reason) => {
             await rejectBuild(b, reason);
-            onDone(`빌드를 거절했어요: ${title} (${who})`);
+            onDone(`빌드를 거절했습니다: ${title} (${who})`);
           })}
         />
       )}
@@ -496,7 +496,7 @@ function HiddenBuildRow({ build: b, game, name, onDone }) {
         <span aria-label={`추천 ${b.up} · 비추천 ${b.down}`}>👍 {b.up} · 👎 {b.down}</span>
       </div>
       <p className="reject-reason">사유: {b.hide_reason}</p>
-      {counterHidden && <p className="hint">카운터가 숨겨져 있어서, 다시 공개해도 카운터를 공개하기 전까지는 안 보여요.</p>}
+      {counterHidden && <p className="hint">카운터가 숨겨져 있어서, 다시 공개해도 카운터를 공개하기 전까지는 안 보입니다.</p>}
       <details className="build-summary">
         <summary>빌드 보기</summary>
         <BuildCard build={b} {...game} />
@@ -510,13 +510,13 @@ function HiddenBuildRow({ build: b, game, name, onDone }) {
       {open && (
         <NoteForm
           id={`restore-build-${b.id}`}
-          label="다시 공개 메모 (필수, 작성자에게 보여요)"
+          label="다시 공개 메모 (필수, 작성자에게 보입니다)"
           confirmLabel="다시 공개 확정"
           busyLabel="공개하는 중…"
           onCancel={() => setOpen(false)}
           onSubmit={async (note) => {
             await restoreBuild(b.id, note);
-            onDone(`빌드를 다시 공개했어요: ${title} (${who})`);
+            onDone(`빌드를 다시 공개했습니다: ${title} (${who})`);
           }}
         />
       )}
@@ -560,27 +560,27 @@ function WaitingRow({ kind, item, name, game, onDone }) {
       {open === 'cancel' && (
         <NoteForm
           id={`cancel-${kind}-${item.id}`}
-          label={`요청 취소 메모 (필수, ${isBuild ? '작성자' : '제안자'}에게 보여요)`}
-          hint="원래 내용 그대로 승인 대기로 돌아가요."
+          label={`요청 취소 메모 (필수, ${isBuild ? '작성자' : '제안자'}에게 보입니다)`}
+          hint="원래 내용 그대로 승인 대기로 돌아갑니다."
           confirmLabel="요청 취소 확정"
           busyLabel="취소하는 중…"
           onCancel={() => setOpen(null)}
           onSubmit={async (note) => {
             await (isBuild ? cancelBuildRevision(item.id, note) : cancelProposalRevision(item.id, note));
-            onDone(`재검토 요청을 취소했어요: ${what}`);
+            onDone(`재검토 요청을 취소했습니다: ${what}`);
           }}
         />
       )}
       {open === 'reject' && (
         <NoteForm
           id={`reject-${kind}-${item.id}`}
-          label={`거절 사유 (필수, ${isBuild ? '작성자' : '제안자'}에게 보여요)`}
+          label={`거절 사유 (필수, ${isBuild ? '작성자' : '제안자'}에게 보입니다)`}
           confirmLabel="거절 확정"
           busyLabel="거절 중…"
           onCancel={() => setOpen(null)}
           onSubmit={async (reason) => {
             await (isBuild ? rejectBuild(item, reason) : rejectProposal(item, reason));
-            onDone(`거절했어요: ${what}`);
+            onDone(`거절했습니다: ${what}`);
           }}
         />
       )}

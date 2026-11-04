@@ -44,7 +44,7 @@ test('다시 제출: 첫 빌드가 채워져 있고, 빌드만 고쳐도 보낼 
   const core = screen.getByRole('list', { name: '고른 핵심 템트리' });
   expect(within(core).getAllByRole('listitem').map((li) => li.textContent)).toEqual(['스테락의 도전', '강철판 장화', '선혈포식자']);
   send();
-  expect(screen.getByRole('alert').textContent).toBe('고친 내용이 없어요. 운영자 메모를 보고 글이나 빌드를 고쳐 주세요.');
+  expect(screen.getByRole('alert').textContent).toBe('고친 내용이 없습니다. 운영자 메모를 보고 글이나 빌드를 고쳐 주세요.');
   fireEvent.click(screen.getByRole('button', { name: '선혈포식자 빼기' }));
   pick('핵심 템트리 고르기', '칠흑의 양날 도끼');
   send();
@@ -58,7 +58,7 @@ test('다시 제출: 예전 제안이라 빌드가 없으면 빌드를 채워야
   hiddenGaren({ status: 'revision_requested', revision_note: '빌드도 넣어 주세요', build: null });
   fakeLogin('u-old', { nickname: '기존유저' });
   start('/me/resubmit/7');
-  expect(await screen.findByText(/이 제안에는 빌드가 없어요/)).toBeDefined();
+  expect(await screen.findByText(/이 제안에는 빌드가 없습니다/)).toBeDefined();
   fireEvent.change(screen.getByLabelText('9레벨'), { target: { value: '9렙 고침' } });
   send();
   expect(screen.getByRole('alert').textContent).toBe('빌드를 마저 채워 주세요: 주 경로를 골라 주세요.');
@@ -84,13 +84,13 @@ test('/admin: 빌드 없는 새 카운터 제안·구버전 빌드는 줄에서 
   asOperator();
   start('/admin');
   let row = await pendingRow();
-  expect(within(row).getByText(/빌드가 없는 새 카운터 제안이에요/)).toBeDefined();
+  expect(within(row).getByText(/빌드가 없는 새 카운터 제안입니다/)).toBeDefined();
   expect(within(row).getByRole('button', { name: '승인' })).toBeDisabled();
   cleanup();
   TABLES.edit_proposals[0].build = { ...FAKE_PROPOSAL_BUILD, patch: '98.2.1' };
   start('/admin');
   row = await pendingRow();
-  expect(within(row).getByText(/빌드가 지금 패치\(99\.1\)와 다른 패치\(98\.2\)로 등록됐어요/)).toBeDefined();
+  expect(within(row).getByText(/빌드가 지금 패치\(99\.1\)와 다른 패치\(98\.2\)로 등록됐습니다/)).toBeDefined();
   expect(within(row).getByRole('button', { name: '승인' })).toBeDisabled();
 });
 
@@ -98,7 +98,7 @@ test('제안 자세히: 빌드 없는 새 카운터 제안은 승인 불가, 빌
   TABLES.edit_proposals.push(fakeProposal({ id: 8, type: 'new_counter', counter_champion: 'Garen', counter_id: null, build: null }));
   asOperator();
   start('/admin/proposals/8');
-  expect(await screen.findByText(/빌드가 없는 새 카운터 제안이에요. 새 카운터에는 빌드가 꼭 있어야/)).toBeDefined();
+  expect(await screen.findByText(/빌드가 없는 새 카운터 제안입니다. 새 카운터에는 빌드가 꼭 있어야/)).toBeDefined();
   expect(screen.getByRole('button', { name: '승인' })).toBeDisabled();
   cleanup();
   TABLES.edit_proposals[0].build = FAKE_PROPOSAL_BUILD;
@@ -133,14 +133,14 @@ test('매치업 문서: 공개 빌드가 하나뿐이면 [빌드 숨기기]가 �
   start('/champion/Darius/counter/Quinn');
   const card = await screen.findByRole('article', { name: '빌드: 탑고수' });
   expect(within(card).getByRole('button', { name: '빌드 숨기기' })).toBeDisabled();
-  expect(within(card).getByText(/마지막 공개 빌드라 숨길 수 없어요/)).toBeDefined();
+  expect(within(card).getByText(/마지막 공개 빌드라 숨길 수 없습니다/)).toBeDefined();
 });
 
 test('빌드 자세히: 마지막 공개 빌드면 숨기기 잠금', async () => {
   TABLES.builds = TABLES.builds.filter((b) => b.id === 102);
   asOperator();
   start('/admin/builds/102');
-  expect(await screen.findByText(/마지막 공개 빌드라 숨길 수 없어요/)).toBeDefined();
+  expect(await screen.findByText(/마지막 공개 빌드라 숨길 수 없습니다/)).toBeDefined();
   expect(screen.getByRole('button', { name: '빌드 숨기기' })).toBeDisabled();
 });
 

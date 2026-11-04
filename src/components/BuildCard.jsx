@@ -49,7 +49,7 @@ export default function BuildCard({ build, items, runes, spells, latest, interac
           <BuildAuthor build={build} />
         </span>
         {build.patch && (
-          <span className={outdated ? 'badge old' : 'badge'} title={outdated ? '지금 패치와 앞 두 자리가 달라요' : undefined}>
+          <span className={outdated ? 'badge old' : 'badge'} title={outdated ? '지금 패치와 앞 두 자리가 다릅니다' : undefined}>
             {outdated ? `구버전 · ${patchMinor(build.patch)}` : `패치 ${patchMinor(build.patch)}`}
           </span>
         )}
@@ -158,7 +158,7 @@ function BuildActions({ build, onHidden, lastOne }) {
     }
   };
 
-  const title = own ? '내 빌드에는 투표할 수 없어요' : !signedIn ? '로그인하면 투표할 수 있어요' : undefined;
+  const title = own ? '내 빌드에는 투표할 수 없습니다' : !signedIn ? '로그인하면 투표할 수 있습니다' : undefined;
   return (
     <>
       <div className="votes">
@@ -194,20 +194,20 @@ function BuildActions({ build, onHidden, lastOne }) {
           <button type="button" className="btn btn-small btn-op" onClick={() => setHiding((v) => !v)} aria-expanded={hiding} disabled={lastOne}>
             빌드 숨기기
           </button>
-          {lastOne && <small className="hint">마지막 공개 빌드라 숨길 수 없어요. 다른 빌드를 먼저 승인하거나, 카운터를 숨겨 주세요.</small>}
+          {lastOne && <small className="hint">마지막 공개 빌드라 숨길 수 없습니다. 다른 빌드를 먼저 승인하거나, 카운터를 숨겨 주세요.</small>}
         </div>
       )}
       {hiding && (
         <NoteForm
           id={`hide-build-${build.id}`}
-          label="숨기는 사유 (필수, 작성자에게 보여요)"
-          hint="숨기면 다른 사람에게 이 빌드가 안 보여요. 추천 수는 그대로 남고, 운영자 페이지에서 다시 공개할 수 있어요."
+          label="숨기는 사유 (필수, 작성자에게 보입니다)"
+          hint="숨기면 다른 사람에게 이 빌드가 안 보입니다. 추천 수는 그대로 남고, 운영자 페이지에서 다시 공개할 수 있습니다."
           confirmLabel="숨기기 확정"
           busyLabel="숨기는 중…"
           onCancel={() => setHiding(false)}
           onSubmit={async (reason) => {
             await hideBuild(build.id, reason);
-            onHidden?.(`빌드를 숨겼어요. (${build.author?.nickname ?? '탈퇴한 유저'})`);
+            onHidden?.(`빌드를 숨겼습니다. (${build.author?.nickname ?? '탈퇴한 유저'})`);
           }}
         />
       )}

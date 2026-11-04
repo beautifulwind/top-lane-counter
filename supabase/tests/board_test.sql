@@ -66,8 +66,8 @@ select t.ok('바뀐 게 없으면 수정됨 안 붙음', (select edited_at is nu
 select public.edit_post(:p1, '첫 글 (고침)', '본문 고침');
 select t.ok('고치면 수정됨', (select edited_at is not null and title = '첫 글 (고침)' from posts where id = :p1));
 set request.jwt.claim.sub = :'D';
-select t.fails('남의 글 고치기', format('select public.edit_post(%s, %L, %L)', :p1, 'x', 'y'), '내 글만 고칠 수 있어요');
-select t.fails('남의 글 지우기', format('select public.delete_my_post(%s)', :p1), '내 글만 지울 수 있어요');
+select t.fails('남의 글 고치기', format('select public.edit_post(%s, %L, %L)', :p1, 'x', 'y'), '내 글만 고칠 수 있습니다');
+select t.fails('남의 글 지우기', format('select public.delete_my_post(%s)', :p1), '내 글만 지울 수 있습니다');
 reset role;
 select t.ok('고쳐도 경험치 그대로', pg_temp.xp(:'B') = 5);
 
@@ -85,7 +85,7 @@ insert into ids values ('c1', :c1);
 reset role;
 select t.ok('내 댓글은 알림 없음, 남의 댓글은 알림 1개',
   pg_temp.notes(:'B', 'post_comment') = 1
-  and (select message = '내 글 「첫 글 (고침)」에 새 댓글이 달렸어요.' and post_id = :p1 from notifications where user_id = :'B' and kind = 'post_comment'));
+  and (select message = '내 글 「첫 글 (고침)」에 새 댓글이 달렸습니다.' and post_id = :p1 from notifications where user_id = :'B' and kind = 'post_comment'));
 set role authenticated;
 set request.jwt.claim.sub = :'F';
 select public.create_comment(:p1, '에프의 댓글') as c2 \gset
@@ -93,7 +93,7 @@ insert into ids values ('c2', :c2);
 reset role;
 select t.ok('안 읽은 알림은 합친다: 새 댓글 2개',
   pg_temp.notes(:'B', 'post_comment') = 1
-  and (select message = '내 글 「첫 글 (고침)」에 새 댓글 2개가 달렸어요.' from notifications where user_id = :'B' and kind = 'post_comment'));
+  and (select message = '내 글 「첫 글 (고침)」에 새 댓글 2개가 달렸습니다.' from notifications where user_id = :'B' and kind = 'post_comment'));
 update notifications set read_at = now() where user_id = :'B';
 set role authenticated;
 set request.jwt.claim.sub = :'D';
@@ -109,8 +109,8 @@ set request.jwt.claim.sub = :'D';
 select public.edit_comment(:c3, '디의 두 번째 (고침)');
 select t.ok('댓글 고치면 수정됨', (select edited_at is not null from post_comments where id = :c3));
 set request.jwt.claim.sub = :'F';
-select t.fails('남의 댓글 고치기', format('select public.edit_comment(%s, %L)', :c3, 'x'), '내 댓글만 고칠 수 있어요');
-select t.fails('남의 댓글 지우기', format('select public.delete_my_comment(%s)', :c3), '내 댓글만 지울 수 있어요');
+select t.fails('남의 댓글 고치기', format('select public.edit_comment(%s, %L)', :c3, 'x'), '내 댓글만 고칠 수 있습니다');
+select t.fails('남의 댓글 지우기', format('select public.delete_my_comment(%s)', :c3), '내 댓글만 지울 수 있습니다');
 set request.jwt.claim.sub = :'D';
 select public.delete_my_comment(:c3);
 reset role;
@@ -123,7 +123,7 @@ select t.ok('댓글 지우면 경험치 회수 (이유: 댓글 삭제), 댓글 �
 -- ===================================================================
 set role authenticated;
 set request.jwt.claim.sub = :'B';
-select t.fails('내 글 추천', format('select public.vote_post(%s)', :p1), '내 글은 추천할 수 없어요');
+select t.fails('내 글 추천', format('select public.vote_post(%s)', :p1), '내 글은 추천할 수 없습니다');
 set request.jwt.claim.sub = :'D';
 select t.ok('추천', public.vote_post(:p1) = '{"up": 1, "mine": true}'::jsonb);
 select t.ok('내 추천만 보인다', (select count(*) = 1 from post_votes));
@@ -139,17 +139,17 @@ select t.ok('추천은 경험치 없음 (글 5 + 댓글 1)', pg_temp.xp(:'B') = 
 -- ===================================================================
 set role authenticated;
 set request.jwt.claim.sub = :'B';
-select t.fails('내 글 신고', format('select public.report_post(%s, %L)', :p1, 'spam'), '내 글은 신고할 수 없어요');
+select t.fails('내 글 신고', format('select public.report_post(%s, %L)', :p1, 'spam'), '내 글은 신고할 수 없습니다');
 set request.jwt.claim.sub = :'D';
 select t.fails('이유 없음', format('select public.report_post(%s, %L)', :p1, 'x'), '신고 이유를 골라');
 select t.fails('기타는 내용 필수', format('select public.report_post(%s, %L, %L)', :p1, 'other', ' '), '기타 이유를 적어');
 select public.report_post(:p1, 'spam');
-select t.fails('같은 사람 같은 글 두 번', format('select public.report_post(%s, %L)', :p1, 'abuse'), '이미 신고한 글이에요');
+select t.fails('같은 사람 같은 글 두 번', format('select public.report_post(%s, %L)', :p1, 'abuse'), '이미 신고한 글입니다');
 select t.ok('신고는 일반 유저에게 안 보임', (select count(*) = 0 from reports));
 set request.jwt.claim.sub = :'F';
 select public.report_post(:p1, 'other', '홍보 링크');
 select public.report_comment(:c1, 'abuse');
-select t.fails('같은 댓글 두 번', format('select public.report_comment(%s, %L)', :c1, 'spam'), '이미 신고한 댓글이에요');
+select t.fails('같은 댓글 두 번', format('select public.report_comment(%s, %L)', :c1, 'spam'), '이미 신고한 댓글입니다');
 select t.fails('일반 유저는 숨기기 못 함', format('select public.hide_post(%s, %L)', :p1, '메모'), '운영자만');
 set request.jwt.claim.sub = :'A';
 select t.ok('운영자는 신고를 본다', (select count(*) = 3 from reports where status = 'open'));
@@ -160,7 +160,7 @@ select t.ok('숨기면 글 신고는 처리됨, 댓글 신고는 그대로',
   (select count(*) = 2 from reports where post_id = :p1 and status = 'resolved' and handled_note = '광고 글')
   and (select count(*) = 1 from reports where comment_id = :c1 and status = 'open'));
 select t.ok('글쓴이에게 알림 (메모 포함)',
-  (select message = '내 글 「첫 글 (고침)」을 운영자가 숨겼어요. 메모: 광고 글' and post_id = :p1 from notifications where user_id = :'B' and kind = 'post_hidden'));
+  (select message = '내 글 「첫 글 (고침)」을 운영자가 숨겼습니다. 메모: 광고 글' and post_id = :p1 from notifications where user_id = :'B' and kind = 'post_hidden'));
 select t.ok('글 숨김 → 글 경험치 회수, 댓글 쓴 사람은 그대로',
   pg_temp.xp(:'B') = 1 and pg_temp.xp(:'D') = 1 and pg_temp.xp(:'F') = 1
   and (select reason = '글 숨김' from xp_events where user_id = :'B' and source_key = 'post:' || :p1 and change = 'revoke'));
@@ -174,9 +174,9 @@ reset role;
 set role authenticated;
 set request.jwt.claim.sub = :'B';
 select t.ok('글쓴이도 숨긴 글은 안 보임', (select count(*) = 0 from posts));
-select t.fails('숨긴 글 고치기', format('select public.edit_post(%s, %L, %L)', :p1, 'x', 'y'), '운영자가 숨긴 글은 고칠 수 없어요');
+select t.fails('숨긴 글 고치기', format('select public.edit_post(%s, %L, %L)', :p1, 'x', 'y'), '운영자가 숨긴 글은 고칠 수 없습니다');
 set request.jwt.claim.sub = :'D';
-select t.fails('숨긴 글에 댓글', format('select public.create_comment(%s, %L)', :p1, 'x'), '글을 찾지 못했어요');
+select t.fails('숨긴 글에 댓글', format('select public.create_comment(%s, %L)', :p1, 'x'), '글을 찾지 못했습니다');
 select t.fails('숨긴 글 추천', format('select public.vote_post(%s)', :p1), '추천할 수 없는 글');
 set request.jwt.claim.sub = :'A';
 select t.ok('운영자는 숨긴 글·댓글을 본다', (select count(*) = 1 from posts) and (select count(*) = 3 from post_comments)
@@ -199,7 +199,7 @@ reset role;
 select t.ok('댓글 숨김: 경험치 회수, 댓글 수 2, 신고 처리됨, 알림',
   pg_temp.xp(:'D') = 0 and (select comment_count = 2 from posts where id = :p1)
   and (select status = 'resolved' from reports where comment_id = :c1)
-  and (select message = '「첫 글 (고침)」에 쓴 내 댓글을 운영자가 숨겼어요. 메모: 욕설' from notifications where user_id = :'D' and kind = 'comment_hidden'));
+  and (select message = '「첫 글 (고침)」에 쓴 내 댓글을 운영자가 숨겼습니다. 메모: 욕설' from notifications where user_id = :'D' and kind = 'comment_hidden'));
 select t.ok('탑신병자 회수 (보이는 글·댓글·기여 없음)', pg_temp.titles(:'D') = '{}' and pg_temp.notes(:'D', 'title_revoked') = 1);
 set request.jwt.claim.sub = '';
 set role anon;
@@ -209,7 +209,7 @@ set role authenticated;
 set request.jwt.claim.sub = :'D';
 select t.fails('숨긴 댓글 고치기', format('select public.edit_comment(%s, %L)', :c1, 'x'), '운영자가 숨긴 댓글');
 set request.jwt.claim.sub = :'A';
-select public.restore_comment(:c1, '다시 봤어요');
+select public.restore_comment(:c1, '다시 봤습니다');
 reset role;
 select t.ok('댓글 다시 공개: 경험치·칭호 돌아옴', pg_temp.xp(:'D') = 1 and pg_temp.titles(:'D') = array['top_addict']
   and pg_temp.notes(:'D', 'comment_restored') = 1);
@@ -222,7 +222,7 @@ select public.report_comment(:c2, 'spam');
 set request.jwt.claim.sub = :'A';
 select t.fails('기각: 대상 하나', $$ select public.dismiss_reports(null, null) $$, '하나를 골라');
 select t.ok('신고 기각 (2건)', public.dismiss_reports(null, :c2, '문제없음') = 2);
-select t.fails('처리할 신고 없음', format('select public.dismiss_reports(null, %s)', :c2), '처리할 신고가 없어요');
+select t.fails('처리할 신고 없음', format('select public.dismiss_reports(null, %s)', :c2), '처리할 신고가 없습니다');
 reset role;
 select t.ok('기각해도 댓글·경험치 그대로', pg_temp.xp(:'F') = 1 and (select status = 'visible' from post_comments where id = :c2));
 set role authenticated;
@@ -246,7 +246,7 @@ select t.ok('삭제된 글: 제목·본문 비움, 추천 0, 댓글은 그대로
   (select title = '' and body = '' and deleted_at is not null and up_count = 0 from posts where id = :p1)
   and (select count(*) = 3 from post_comments where post_id = :p1));
 select t.fails('삭제된 글 다시 지우기', format('select public.delete_my_post(%s)', :p1), '이미 삭제된 글');
-select t.fails('삭제된 글 고치기', format('select public.edit_post(%s, %L, %L)', :p1, 'x', 'y'), '삭제된 글이에요');
+select t.fails('삭제된 글 고치기', format('select public.edit_post(%s, %L, %L)', :p1, 'x', 'y'), '삭제된 글입니다');
 set request.jwt.claim.sub = :'D';
 select t.fails('삭제된 글에 댓글', format('select public.create_comment(%s, %L)', :p1, 'x'), '삭제된 글에는 댓글을');
 select t.fails('삭제된 글 추천', format('select public.vote_post(%s)', :p1), '추천할 수 없는 글');
@@ -318,8 +318,8 @@ update public.xp_rules set value = 5 where key = 'comment_interval';
 update public.board_last_write set post_at = now() - interval '10 seconds', comment_at = now() - interval '2 seconds' where user_id = :'F';
 set role authenticated;
 set request.jwt.claim.sub = :'F';
-select t.fails('글 30초 안에 다시', $$ select public.create_post('도배', '도배') $$, '글은 30초에 한 번 쓸 수 있어요. 20초 뒤에');
-select t.fails('댓글 5초 안에 다시', format('select public.create_comment(%s, %L)', pg_temp.id('cap6'), 'x'), '댓글은 5초에 한 번 쓸 수 있어요. 3초 뒤에');
+select t.fails('글 30초 안에 다시', $$ select public.create_post('도배', '도배') $$, '글은 30초에 한 번 쓸 수 있습니다. 20초 뒤에');
+select t.fails('댓글 5초 안에 다시', format('select public.create_comment(%s, %L)', pg_temp.id('cap6'), 'x'), '댓글은 5초에 한 번 쓸 수 있습니다. 3초 뒤에');
 reset role;
 update public.board_last_write set post_at = now() - interval '31 seconds', comment_at = now() - interval '6 seconds' where user_id = :'F';
 set role authenticated;

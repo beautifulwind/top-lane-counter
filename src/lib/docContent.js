@@ -23,9 +23,9 @@ export function docProblem(c) {
   const d = cleanDoc(c);
   if (!d.summary) return '한 줄 요약을 적어 주세요.';
   if ([...d.summary].length > LIMITS.summary) return `한 줄 요약은 ${LIMITS.summary}자 이하로 적어 주세요.`;
-  for (const lv of REQUIRED_LEVELS) if (!d.level_notes[lv]) return `${lv}레벨 딜교법은 꼭 적어야 해요.`;
+  for (const lv of REQUIRED_LEVELS) if (!d.level_notes[lv]) return `${lv}레벨 딜교법은 꼭 적어야 합니다.`;
   for (const [lv, t] of Object.entries(d.level_notes)) {
-    if (!ALL_LEVELS.includes(Number(lv))) return `레벨은 1~18 사이 숫자만 쓸 수 있어요. (${lv})`;
+    if (!ALL_LEVELS.includes(Number(lv))) return `레벨은 1~18 사이 숫자만 쓸 수 있습니다. (${lv})`;
     if ([...t].length > LIMITS.level) return `${lv}레벨 내용은 ${LIMITS.level}자 이하로 적어 주세요.`;
   }
   if ([...d.lane_cautions].length > LIMITS.lane_cautions) return `특이사항은 ${LIMITS.lane_cautions}자 이하로 적어 주세요.`;

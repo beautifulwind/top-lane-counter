@@ -51,7 +51,7 @@ function ResubmitForm() {
         {crumbs}
         <h1 className="doc-title">제안 고치기</h1>
         <p className="empty">
-          지금은 고칠 수 없는 제안이에요. 승인 대기 중이거나 재검토 요청을 받은 제안만 고칠 수 있어요.
+          지금은 고칠 수 없는 제안입니다. 승인 대기 중이거나 재검토 요청을 받은 제안만 고칠 수 있습니다.
           {p?.status === 'approved' && ' 승인된 내용을 바꾸려면 문서에서 [문서 수정 제안]을 보내 주세요.'}
         </p>
         {p && <div className="actions"><Link to={`/me/proposals/${p.id}`} className="btn">제안 자세히</Link></div>}
@@ -74,10 +74,10 @@ function ResubmitEditor({ p, data, crumbs }) {
   const submit = async (content) => {
     if (resubmit) {
       await resubmitProposal(p.id, content, isNew ? build : null, data.game.latest);
-      navigate('/me', { state: { sent: `${title} — 고친 내용을 다시 보냈어요.` } });
+      navigate('/me', { state: { sent: `${title} — 고친 내용을 다시 보냈습니다.` } });
     } else {
       await editMyProposal(p.id, content, isNew ? build : null, data.game.latest);
-      navigate(`/me/proposals/${p.id}`, { state: { sent: '고친 내용을 저장했어요. 승인 대기 순서는 그대로예요.' } });
+      navigate(`/me/proposals/${p.id}`, { state: { sent: '고친 내용을 저장했습니다. 승인 대기 순서는 그대로입니다.' } });
     }
   };
 
@@ -94,20 +94,20 @@ function ResubmitEditor({ p, data, crumbs }) {
       )}
       {!resubmit ? (
         <p className="lead">
-          승인 대기 중인 제안이에요. 보낸 {isNew ? '글과 빌드가' : '글이'} 채워져 있어요. 고쳐서 저장하면 운영자는 고친 내용을 보게 되고,
-          대기 순서는 그대로예요.{isNew && ' 빌드를 고치면 지금 패치로 기록돼요.'}
+          승인 대기 중인 제안입니다. 보낸 {isNew ? '글과 빌드가' : '글이'} 채워져 있습니다. 고쳐서 저장하면 운영자는 고친 내용을 보게 되고,
+          대기 순서는 그대로입니다.{isNew && ' 빌드를 고치면 지금 패치로 기록됩니다.'}
         </p>
       ) : hiddenFlow ? (
         <p className="lead">
-          숨기기 전의 문서와 첫 빌드가 채워져 있어요. 메모를 보고 글이나 빌드를 고친 뒤 다시 보내 주세요.
-          빌드를 바꾸면 승인될 때 원래 첫 빌드 대신 고친 빌드가 공개돼요.
+          숨기기 전의 문서와 첫 빌드가 채워져 있습니다. 메모를 보고 글이나 빌드를 고친 뒤 다시 보내 주세요.
+          빌드를 바꾸면 승인될 때 원래 첫 빌드 대신 고친 빌드가 공개됩니다.
         </p>
       ) : (
         <p className="lead">
-          보낸 {isNew ? '글과 빌드가' : '글이'} 채워져 있어요. 메모를 보고 고친 뒤 다시 보내면 다시 승인 대기로 들어가요.
+          보낸 {isNew ? '글과 빌드가' : '글이'} 채워져 있습니다. 메모를 보고 고친 뒤 다시 보내면 다시 승인 대기로 들어갑니다.
         </p>
       )}
-      {isNew && !p.build && <p className="notice" role="status">이 제안에는 빌드가 없어요. 이제 새 카운터에는 빌드가 꼭 있어야 하니 빌드도 채워 주세요.</p>}
+      {isNew && !p.build && <p className="notice" role="status">이 제안에는 빌드가 없습니다. 이제 새 카운터에는 빌드가 꼭 있어야 하니 빌드도 채워 주세요.</p>}
       <DocForm
         initial={p.content}
         onSubmit={submit}
@@ -116,7 +116,7 @@ function ResubmitEditor({ p, data, crumbs }) {
         cancelTo={`/me/proposals/${p.id}`}
         requireChange
         changedElsewhere={isNew && !sameBuild(p.build, build)}
-        unchangedMessage={resubmit ? `고친 내용이 없어요. 운영자 메모를 보고 ${isNew ? '글이나 빌드를' : '글을'} 고쳐 주세요.` : '고친 내용이 없어요.'}
+        unchangedMessage={resubmit ? `고친 내용이 없습니다. 운영자 메모를 보고 ${isNew ? '글이나 빌드를' : '글을'} 고쳐 주세요.` : '고친 내용이 없습니다.'}
         blocked={isNew ? buildMissing(build, data.game) : null}
       >
         {isNew && (

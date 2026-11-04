@@ -22,7 +22,7 @@ export function CharCount({ value, max }) {
 }
 
 /**
- * 그 자리에 열리는 확인 줄: "정말 지울까요? [지우기] [취소]". onConfirm이 던지면 이유를 보여 준다.
+ * 그 자리에 열리는 확인 줄: "정말 지우시겠습니까? [지우기] [취소]". onConfirm이 던지면 이유를 보여 준다.
  * 열리면 [취소]에 초점이 가서(실수로 Enter를 눌러도 안 지워짐) Esc로 닫을 수 있다.
  */
 export function ConfirmInline({ question, confirmLabel, onConfirm, onCancel }) {
@@ -88,7 +88,7 @@ export function ReportForm({ id, what, photos = true, onSubmit, onCancel }) {
       </fieldset>
       <label htmlFor={`${id}-detail`}>{reason === 'other' ? '내용 (필수)' : '내용 (선택)'}</label>
       <textarea id={`${id}-detail`} rows={2} maxLength={500} value={detail} onChange={(e) => setDetail(e.target.value)} />
-      <small className="hint">신고 내용은 운영자만 봐요.</small>
+      <small className="hint">신고 내용은 운영자만 봅니다.</small>
       <div className="note-form-actions">
         <button type="submit" className="btn btn-small btn-danger" disabled={!ready || busy}>{busy ? '보내는 중…' : '신고 보내기'}</button>
         <button type="button" className="btn btn-small" onClick={onCancel} disabled={busy}>취소</button>
@@ -106,7 +106,7 @@ export function HiddenBand({ row, what, onRestore, onDone }) {
       <p>
         <strong>숨김</strong> · {fmtDateTime(row.hidden_at)} · 메모: {row.hidden_note}
         <br />
-        <small>운영자에게만 보여요.</small>
+        <small>운영자에게만 보입니다.</small>
       </p>
       {!open && (
         <button type="button" className="btn btn-small btn-op" onClick={() => setOpen(true)}>다시 공개</button>
@@ -114,13 +114,13 @@ export function HiddenBand({ row, what, onRestore, onDone }) {
       {open && (
         <NoteForm
           id={`restore-${what}-${row.id}`}
-          label="다시 공개 메모 (필수, 작성자에게 보여요)"
+          label="다시 공개 메모 (필수, 작성자에게 보입니다)"
           confirmLabel="다시 공개 확정"
           busyLabel="공개하는 중…"
           onCancel={() => setOpen(false)}
           onSubmit={async (note) => {
             await onRestore(note);
-            onDone(`${what}을 다시 공개했어요.`);
+            onDone(`${what}을 다시 공개했습니다.`);
           }}
         />
       )}
