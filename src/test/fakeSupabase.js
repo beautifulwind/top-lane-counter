@@ -47,6 +47,7 @@ export const TABLES = {
   xp_events: [],
   user_titles: [],
   offmeta_champions: [],
+  frequent_items: [],
   // 015 자유게시판 (author = select가 돌려주는 관계 모양)
   posts: [],
   post_comments: [],
@@ -121,6 +122,7 @@ export function resetFake() {
   TABLES.xp_events = [];
   TABLES.user_titles = [];
   TABLES.offmeta_champions = [];
+  TABLES.frequent_items = [];
   TABLES.posts = [];
   TABLES.post_comments = [];
   TABLES.post_votes = [];
@@ -355,8 +357,18 @@ async function rpc(name, args) {
     return { data: mine.length, error: null };
   }
   if (name === 'set_item_prices') {
-    TABLES.item_prices = Object.entries(args.p_prices).map(([id, gold]) => ({ id, gold, patch: args.p_patch }));
+    if (!args.p_kinds) return { data: null, error: { message: '아이템 종류가 없습니다.', code: '23514' } };
+    TABLES.item_prices = Object.entries(args.p_prices).map(([id, gold]) => ({ id, gold, kind: args.p_kinds[id], patch: args.p_patch }));
     return { data: TABLES.item_prices.length, error: null };
+  }
+  if (name === 'add_frequent_item') {
+    if (!isAdminNow()) return { data: null, error: { message: '운영자만 할 수 있습니다.', code: '42501' } };
+    TABLES.frequent_items.push({ slot: args.p_slot, item_id: args.p_item, created_at: new Date(Date.now() + TABLES.frequent_items.length).toISOString() });
+    return { data: null, error: null };
+  }
+  if (name === 'remove_frequent_item') {
+    TABLES.frequent_items = TABLES.frequent_items.filter((f) => !(f.slot === args.p_slot && f.item_id === args.p_item));
+    return { data: null, error: null };
   }
   if (name === 'add_offmeta') {
     TABLES.offmeta_champions.push({ champion_id: args.p_champion, created_at: new Date().toISOString() });

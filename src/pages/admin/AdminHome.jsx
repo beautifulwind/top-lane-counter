@@ -24,8 +24,9 @@ import MediaUsage from '../../components/MediaUsage';
 import { matchupTitle } from '../../lib/josa';
 import VoteTally from '../../components/VoteTally';
 import SectionHead from '../../components/SectionHead';
+import FrequentItems from '../../components/FrequentItems';
 import {
-  ClockIcon, CoinsIcon, DiceIcon, EyeOffIcon, ImageIcon, LayersIcon, MessageIcon, SendIcon, ShieldIcon, TrashIcon,
+  ClockIcon, CoinsIcon, DiceIcon, EyeOffIcon, ImageIcon, LayersIcon, MessageIcon, SendIcon, ShieldIcon, SparklesIcon, TrashIcon,
 } from '../../components/Icons';
 
 /**
@@ -154,6 +155,11 @@ function PendingList() {
           <ItemPrices game={data.game} />
         </section>
       )}
+
+      <section className="section">
+        <SectionHead icon={SparklesIcon}>자주 쓰는 아이템</SectionHead>
+        <FrequentItems />
+      </section>
 
       <section className="section">
         <SectionHead icon={MessageIcon}>자유게시판·댓글</SectionHead>

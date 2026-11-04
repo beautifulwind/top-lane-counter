@@ -2,6 +2,7 @@
 // 권한은 DB가 막는다: 등록은 RLS + 검사 트리거(승인 대기로만), 투표는 vote_build(), 승인·거절·숨기기·다시 공개는 운영자 전용 함수.
 import { db } from './supabase';
 import { getItems, getLatestVersion, getRunes, getSummonerSpells } from './ddragon';
+import { getFrequentItems } from './items';
 import { START_GOLD_MAX, compareBuilds, toProposalBuild, toRow } from '../lib/buildContent';
 
 const PERSON = 'nickname, level, main_title, is_guest';
@@ -175,12 +176,14 @@ export async function getStartGoldMax() {
   return row?.value ?? START_GOLD_MAX;
 }
 
-/** 빌드 입력·검토 화면이 쓰는 게임 데이터 + 시작템 합계 상한 */
+/** 빌드 입력·검토 화면이 쓰는 게임 데이터 + 시작템 합계 상한 + 자주 쓰는 아이템 (028) */
 export async function getBuildGame() {
-  const [items, runes, spells, latest, startGoldMax] = await Promise.all([
+  const [items, runes, spells, latest, startGoldMax, frequent] = await Promise.all([
     getItems(), getRunes(), getSummonerSpells(), getLatestVersion(), getStartGoldMax(),
+    // 자주 쓰는 아이템을 못 불러와도 빌드는 쓸 수 있게 ([더보기]가 펼쳐진 채로 시작)
+    getFrequentItems().catch(() => ({ core: [], starting: [] })),
   ]);
-  return { items, runes, spells, latest, startGoldMax };
+  return { items, runes, spells, latest, startGoldMax, frequent };
 }
 
 /** DB 아이템 가격표 상태: 기준 패치와 아이템 수 (비어 있으면 patch = null) */
@@ -189,8 +192,10 @@ export async function getItemPriceInfo() {
   return { patch: rows?.[0]?.patch ?? null };
 }
 
-/** 운영자: DB 가격표를 지금 패치의 상점 아이템 가격으로 통째로 바꾼다. 바뀐 아이템 수를 돌려준다 */
+/** 운영자: DB 가격표를 지금 패치의 상점 아이템 가격·종류로 통째로 바꾼다. 바뀐 아이템 수를 돌려준다 */
 export async function updateItemPrices(items, patch) {
-  const prices = Object.fromEntries(Object.values(items).filter((it) => it.shop).map((it) => [it.id, it.gold]));
-  return rpc('set_item_prices', { p_patch: patch, p_prices: prices }, '아이템 가격표를 갱신하지 못했습니다.');
+  const shop = Object.values(items).filter((it) => it.shop);
+  const prices = Object.fromEntries(shop.map((it) => [it.id, it.gold]));
+  const kinds = Object.fromEntries(shop.map((it) => [it.id, it.kind])); // 028: 핵심 템트리 검사용 종류
+  return rpc('set_item_prices', { p_patch: patch, p_prices: prices, p_kinds: kinds }, '아이템 가격표를 갱신하지 못했습니다.');
 }

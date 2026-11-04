@@ -136,13 +136,13 @@ select t.fails('같은 규칙으로 검사',
   format($$select edit_my_build(%s, %L)$$, (select v from ids where k = 'b'), t.build(array['3071'])), '3~6개');
 -- 유저2의 빌드가 먼저 공개됨
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
-select pg_temp.add_build(array['6632','3047','3053']);
+select pg_temp.add_build(array['3181','3047','3053']);
 insert into ids select 'b2', max(id) from builds where author_id = auth.uid();
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select approve_build((select v from ids where k = 'b2'), '좋습니다', null, 1);
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.fails('공개된 빌드와 똑같이 고칠 수 없음',
-  format($$select edit_my_build(%s, %L)$$, (select v from ids where k = 'b'), t.build(array['6632','3047','3053'])), '똑같은 빌드가 이미 공개');
+  format($$select edit_my_build(%s, %L)$$, (select v from ids where k = 'b'), t.build(array['3181','3047','3053'])), '똑같은 빌드가 이미 공개');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 select t.fails('남의 빌드는 고칠 수 없음',
   format($$select edit_my_build(%s, %L)$$, (select v from ids where k = 'b'), t.build(array['3071','3111','3053'])), '빌드를 찾지 못했습니다');

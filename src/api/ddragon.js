@@ -1,4 +1,6 @@
 // Riot Data Dragon 접근 모듈. 게임 데이터는 DB에 복사하지 않고 여기서 읽는다.
+import { itemKind } from '../lib/itemKinds';
+
 const BASE = 'https://ddragon.leagueoflegends.com';
 const LANG = 'ko_KR';
 
@@ -59,7 +61,7 @@ export async function getChampionMap() {
 }
 
 /**
- * 아이템 (id → { id, name, icon, gold, shop }).
+ * 아이템 (id → { id, name, icon, gold, shop, kind }). kind: 전설·서사·신발 등 (lib/itemKinds.js)
  * shop: 소환사의 협곡 상점에서 살 수 있는 아이템 (빌드 등록 화면의 고르기 목록). 예전 빌드 표시용으로 나머지도 다 담는다.
  */
 export function getItems() {
@@ -68,12 +70,18 @@ export function getItems() {
     const { data } = await getJson(`${BASE}/cdn/${v}/data/${LANG}/item.json`);
     const map = {};
     const shopNames = new Set();
+    const shopIds = new Set();
     // 같은 이름이 여러 id로 있으면(모드별 사본) 작은 id 하나만 상점 목록에 넣는다
     for (const [id, it] of Object.entries(data).sort((a, b) => Number(a[0]) - Number(b[0]))) {
       const shop = isShopItem(id, it) && !shopNames.has(it.name);
-      if (shop) shopNames.add(it.name);
+      if (shop) {
+        shopNames.add(it.name);
+        shopIds.add(id);
+      }
       map[id] = { id, name: it.name, icon: `${BASE}/cdn/${v}/img/item/${it.image.full}`, gold: it.gold?.total ?? 0, shop };
     }
+    // 종류는 상점 목록을 다 안 뒤에 (서사 = 상점 아이템으로 이어지는 것)
+    for (const [id, it] of Object.entries(data)) map[id].kind = itemKind(it, data, shopIds);
     return map;
   });
 }

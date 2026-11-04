@@ -47,9 +47,9 @@ test('빌드 등록: 시작 아이템 목록에는 500골드 이하만, 안내 �
   asUser();
   start(`${MATCHUP}/build/new`);
   await screen.findByRole('heading', { name: /빌드 등록/ });
-  // 1100골드 탐식의 망치는 시작 아이템에는 없고 핵심 템트리에는 있다
-  expect(within(startGroup()).queryByRole('button', { name: '탐식의 망치' })).toBeNull();
-  expect(within(screen.getByRole('group', { name: '핵심 템트리 고르기' })).getByRole('button', { name: '탐식의 망치' })).toBeDefined();
+  // 1100골드 탐식의 망치(서사)는 시작 아이템에는 없고 핵심 템트리에는 있다
+  expect(within(startGroup()).queryByRole('button', { name: /탐식의 망치/ })).toBeNull();
+  expect(within(screen.getByRole('group', { name: '핵심 템트리 고르기' })).getByRole('button', { name: '탐식의 망치 (서사)' })).toBeDefined();
   expect(screen.queryByText(/합계 500골드까지/)).toBeNull();
   expect(screen.queryByText(/1~4개/)).toBeNull();
   expect(screen.queryByLabelText('시작 아이템 골드 합계')).toBeNull();
@@ -142,6 +142,8 @@ test('운영자: 아이템 가격표 — 기준 패치와 상한을 보여 주�
   expect(args.p_patch).toBe('99.1.1');
   expect(args.p_prices).toMatchObject({ 1055: 450, 2003: 50, 3044: 1100 });
   expect(args.p_prices['3400']).toBeUndefined(); // 상점에서 못 사는 아이템은 빼고
+  expect(args.p_kinds).toMatchObject({ 1055: 'basic', 2003: 'consumable', 3044: 'epic', 3053: 'legendary', 3047: 'boots' }); // 028: 종류도 함께
+  expect(Object.keys(args.p_kinds).sort()).toEqual(Object.keys(args.p_prices).sort());
   expect(await within(sec).findByText(/DB 가격표: 패치 99.1.1 기준/)).toBeDefined();
   expect(within(sec).queryByRole('alert')).toBeNull();
 });

@@ -16,17 +16,27 @@ export function Icon({ entry, size = 32, round = false, fallback = '?' }) {
       </span>
     );
   }
-  return (
+  const img = (name) => (
     <img
       src={entry.icon}
-      alt={entry.name}
-      title={entry.name}
+      alt={name}
+      title={name}
       width={size}
       height={size}
       className={round ? 'ico round' : 'ico'}
       loading="lazy"
     />
   );
+  // 서사 아이템 (028): 아이콘 아래 작은 "서사" 태그로 완성템과 구분 (읽는 이름은 "덤불 조끼 (서사)")
+  if (entry.kind === 'epic') {
+    return (
+      <span className="ico-wrap">
+        {img(`${entry.name} (서사)`)}
+        <span className="epic-tag" aria-hidden="true">서사</span>
+      </span>
+    );
+  }
+  return img(entry.name);
 }
 
 /** 작성자 표시: 닉네임 / 작성자가 없으면 탈퇴한 유저 */

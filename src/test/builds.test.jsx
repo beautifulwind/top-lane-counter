@@ -182,7 +182,9 @@ test('빌드 등록: 상점에서 못 사는 아이템·협곡에 없는 주문�
   expect(within(screen.getByRole('group', { name: '소환사 주문' })).queryByRole('button', { name: '표식' })).toBeNull();
   // 초성 검색
   fireEvent.change(screen.getByLabelText('핵심 템트리 검색'), { target: { value: 'ㅁㅎㅇㄷㄱ' } });
-  expect(within(core).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['무한의 대검']);
+  // 검색하면 목록이 검색 결과로 바뀐다 (028: 언제나 고를 수 있는 아이템 전체에서)
+  const found = screen.getByRole('group', { name: '핵심 템트리 고르기' });
+  expect(within(found).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['무한의 대검']);
 });
 
 test('빌드 등록: 보조 룬은 같은 줄이면 바뀌고, 2개를 넘으면 먼저 고른 것이 빠진다 / 핵심 템트리는 중복 불가', async () => {

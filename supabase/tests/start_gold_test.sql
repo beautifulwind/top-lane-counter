@@ -24,12 +24,12 @@ select t.ok('가격표: 처음 값 16.21.1, 도란의 검 450', (select gold = 4
 set role anon;
 set request.jwt.claim.sub = '';
 select t.ok('비로그인도 가격표를 읽음', (select count(*) > 100 from item_prices));
-select t.fails('비로그인은 가격표를 못 바꿈', $$select set_item_prices('16.22.1', '{"1055": 1}')$$, 'permission denied');
+select t.fails('비로그인은 가격표를 못 바꿈', $$select set_item_prices('16.22.1', '{"1055": 1}', '{"1055": "basic"}')$$, 'permission denied');
 set role authenticated;
 
 -- ===== 2. 일반 유저는 가격표를 못 바꿈 =====
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
-select t.fails('일반 유저는 가격 갱신 불가', $$select set_item_prices('16.22.1', '{"1055": 1}')$$, '운영자만');
+select t.fails('일반 유저는 가격 갱신 불가', $$select set_item_prices('16.22.1', '{"1055": 1}', '{"1055": "basic"}')$$, '운영자만');
 select t.fails('가격표 직접 수정 불가', $$update item_prices set gold = 1 where id = '1055'$$, 'permission denied');
 
 -- ===== 3. 등록: 합계 500까지 (딱 500은 됨) =====
@@ -75,14 +75,15 @@ update xp_rules set value = 500 where key = 'starting_gold_max';
 set role authenticated;
 
 -- ===== 7. 운영자 가격 갱신 =====
-select t.fails('패치 형식', $$select set_item_prices('latest', '{"1055": 450}')$$, '패치 버전 형식');
-select t.fails('너무 적은 아이템', $$select set_item_prices('16.22.1', '{"1055": 450}')$$, '아이템이 너무 적습니다');
+select t.fails('패치 형식', $$select set_item_prices('latest', '{"1055": 450}', '{"1055": "basic"}')$$, '패치 버전 형식');
+select t.fails('너무 적은 아이템', $$select set_item_prices('16.22.1', '{"1055": 450}', '{"1055": "basic"}')$$, '아이템이 너무 적습니다');
 select t.fails('가격이 숫자가 아님',
-  $$select set_item_prices('16.22.1', (select jsonb_object_agg(id, gold) from item_prices) || '{"1055": "450"}')$$, '가격표 형식');
+  $$select set_item_prices('16.22.1', (select jsonb_object_agg(id, gold) from item_prices) || '{"1055": "450"}', (select jsonb_object_agg(id, kind) from item_prices))$$, '가격표 형식');
 select t.fails('가격이 음수',
-  $$select set_item_prices('16.22.1', (select jsonb_object_agg(id, gold) from item_prices) || '{"1055": -1}')$$, '가격표 형식');
+  $$select set_item_prices('16.22.1', (select jsonb_object_agg(id, gold) from item_prices) || '{"1055": -1}', (select jsonb_object_agg(id, kind) from item_prices))$$, '가격표 형식');
 select t.ok('갱신: 아이템 수를 돌려줌',
-  (select set_item_prices('16.22.1', (select jsonb_object_agg(id, gold) from item_prices where id <> '1036') || '{"1055": 600}')
+  (select set_item_prices('16.22.1', (select jsonb_object_agg(id, gold) from item_prices where id <> '1036') || '{"1055": 600}',
+     (select jsonb_object_agg(id, kind) from item_prices where id <> '1036'))
    = (select count(*) - 1 from item_prices)));
 select t.ok('갱신: 통째로 바뀜 (패치·가격, 빠진 아이템은 사라짐)',
   (select bool_and(patch = '16.22.1') from item_prices)

@@ -1,5 +1,6 @@
-// 빌드 내용 규칙. DB 검사(018 clean_build·check_start_gold)와 같은 규칙을 화면에서 먼저 확인한다.
+// 빌드 내용 규칙. DB 검사(018 clean_build·check_start_gold, 028 check_core_items)와 같은 규칙을 화면에서 먼저 확인한다.
 import { SHARD_ROWS } from '../api/ddragon';
+import { isCoreItem } from './itemKinds';
 
 export const SKILLS = ['Q', 'W', 'E'];
 export const ITEM_LIMITS = { starting: [1, 4], core: [3, 6] };
@@ -72,6 +73,8 @@ export function buildProblem(b, game) {
   if (game) {
     const unknown = unknownParts(b, game);
     if (unknown) return unknown;
+    const core = coreItemProblem(b.core_items, game.items);
+    if (core) return core;
     const gold = startGoldProblem(b, game);
     if (gold) return gold;
     const wrong = runeLayoutProblem(r, game.runes);
@@ -87,6 +90,19 @@ export function unknownParts(b, { items, runes, spells }) {
   if ([r.keystone, ...r.primary, ...r.secondary].some((id) => !runes.runes[id])) return '게임 데이터에 없는 룬이 있습니다.';
   if (b.summoner_spells.some((id) => !spells[id])) return '게임 데이터에 없는 소환사 주문이 있습니다.';
   if ([...b.starting_items, ...b.core_items].some((id) => !items[id])) return '게임 데이터에 없는 아이템이 있습니다.';
+  return null;
+}
+
+/**
+ * 핵심 템트리 종류 (028): 지금 상점의 전설·서사·신발만, 전설은 1개 이상 (없으면 null).
+ * DB(check_core_items)는 핵심 템트리를 새로 넣거나 바꿀 때만 검사한다 — 그대로 승인되는 예전 빌드는 통과.
+ */
+export function coreItemProblem(ids, items) {
+  const wrong = ids.filter((id) => !isCoreItem(items[id]));
+  if (wrong.length > 0) {
+    return `핵심 템트리에 넣을 수 없는 아이템이 있습니다: ${wrong.map((id) => items[id]?.name ?? id).join(', ')} (전설·서사·신발만)`;
+  }
+  if (!ids.some((id) => items[id]?.kind === 'legendary')) return '핵심 템트리에 전설 아이템을 1개 이상 넣어 주세요.';
   return null;
 }
 
