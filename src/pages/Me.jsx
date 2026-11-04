@@ -20,7 +20,7 @@ import AccountSettings from '../components/AccountSettings';
 
 /**
  * 마이페이지 (/me): 내 제안·내 빌드 목록과 상태, 로그인 연결, 닉네임 바꾸기·회원 탈퇴.
- * 레벨·경험치·칭호는 6단계에서 채운다 (SPEC 3장).
+ * 레벨·칭호판은 MyRewards (SPEC 6장).
  */
 export default function Me() {
   const auth = useAuth();
@@ -89,8 +89,7 @@ function MyActivity({ userId, operator }) {
   return (
     <>
       {operator ? (
-        <section className="me-section" aria-labelledby="my-level">
-          <h2 id="my-level">Level</h2>
+        <section className="me-section me-level" aria-label="레벨">
           <p className="hint">운영자는 경험치·레벨·칭호가 없어요 (항상 Lv.0).</p>
         </section>
       ) : (

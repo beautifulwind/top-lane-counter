@@ -52,3 +52,70 @@ export const PlusIcon = (p) => <Line {...p}><path d="M12 5v14M5 12h14" /></Line>
 export const UserIcon = (p) => <Line {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></Line>;
 /** 세 줄 (☰ 메뉴) */
 export const MenuIcon = (p) => <Line {...p}><path d="M4 6h16M4 12h16M4 18h16" /></Line>;
+
+/*
+ * 칭호 훈장 (/me 칭호판): 위 리본 두 갈래 + 둥근 메달 + 칭호마다 다른 그림.
+ * 선·점은 글자 색(currentColor), 메달 바탕은 CSS(.medal-disc). 얻은 칭호는 칭호색, 못 얻은 칭호는 회색 — 색은 CSS가 정한다.
+ * 카운터 승인 단계 칭호(10 → 25 → 50)는 메달 아래 점 1·2·3개.
+ */
+const MEDAL_GLYPH = {
+  // 탑신병자: 불꽃 (탑 중독의 시작)
+  top_addict: <path d="M24 19c1 4 7 6 7 12a7 7 0 0 1-14 0c0-3 2-5 3-6 0 2 1 4 3 4-1-4 0-7 1-10z" />,
+  // 도구혐오자: 부러진 렌치
+  tool_hater: (
+    <>
+      <path d="M32.5 20.5a5 5 0 0 1-6.6 6.6l-1.4 1.4" /><path d="M32.5 20.5l-3 3-2-1-1-2 3-3a5 5 0 0 0-3.5 7.6" />
+      <path d="M24.5 28.5l-.4 1.6" /><path d="M21.8 31.2l-5.3 5.3" /><path d="M19.5 28l1.2 1.3M27 34.5l-1.3-1.2" />
+    </>
+  ),
+  // 단단묵직: 모루
+  solid_heavy: (
+    <>
+      <path d="M15 23h17c0 3 2 4 4 4h-6c-1 2-2 3-4 3h-6c-2 0-4-2-4-4z" />
+      <path d="M21 30l-1 4h9l-1-4" /><path d="M18 37h13" />
+    </>
+  ),
+  // 백정주인: 식칼
+  butcher_owner: (
+    <>
+      <path d="M21 20h12v12.5c0 1-.8 1.5-1.5 1.5H21z" /><path d="M21 22.5h-7.5v3H21" />
+      <circle cx="29.5" cy="23.5" r="1.3" fill="currentColor" stroke="none" />
+    </>
+  ),
+  // 장군: 별 단 투구
+  general: (
+    <>
+      <path d="M16 35v-5a8 8 0 0 1 16 0v5z" /><path d="M21 35v-3h6v3" />
+      <path d="M24 23.5l1.1 2.2 2.4.3-1.8 1.7.5 2.4-2.2-1.2-2.2 1.2.5-2.4-1.8-1.7 2.4-.3z" fill="currentColor" strokeWidth="1" />
+    </>
+  ),
+  // 비주류: 주사위 (남들이 안 고르는 픽)
+  offmeta: (
+    <>
+      <rect x="17" y="22" width="14" height="14" rx="3" />
+      <g fill="currentColor" stroke="none">
+        <circle cx="20.8" cy="25.8" r="1.4" /><circle cx="24" cy="29" r="1.4" /><circle cx="27.2" cy="32.2" r="1.4" />
+      </g>
+    </>
+  ),
+};
+const MEDAL_TIER = { tool_hater: 1, solid_heavy: 2, butcher_owner: 3 };
+
+export const MedalIcon = ({ titleKey, size = 52 }) => {
+  const tier = MEDAL_TIER[titleKey] ?? 0;
+  return (
+    <svg
+      width={size} height={size * (54 / 48)} viewBox="0 0 48 54" fill="none" stroke="currentColor" strokeWidth="2"
+      strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" className="medal-icon"
+    >
+      <path className="medal-ribbon" d="M14 2h8l4 11h-8zM34 2h-8l-4 11h8z" />
+      <circle className="medal-disc" cx="24" cy="29" r="15" />
+      {MEDAL_GLYPH[titleKey]}
+      {tier > 0 && (
+        <g fill="currentColor" stroke="none">
+          {Array.from({ length: tier }, (_, i) => <circle key={i} cx={24 + (i - (tier - 1) / 2) * 6} cy="50" r="1.8" />)}
+        </g>
+      )}
+    </svg>
+  );
+};
