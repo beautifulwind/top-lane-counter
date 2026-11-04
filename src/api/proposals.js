@@ -79,33 +79,6 @@ export function getMyProposal(userId, id) {
   );
 }
 
-// ---------------- 알림 (확인하면 꺼짐) ----------------
-// 알림은 DB 함수만 만든다 (재검토 요청, 제안 승인·거절, 빌드 승인·거절·숨김·다시 공개). /me에서 보이면 읽음 처리 → 상단 빨간 점이 꺼진다.
-
-const NOTIFICATIONS_CHANGED = 'tlc:notifications-changed';
-/** 읽음 처리 등으로 알림 개수가 바뀌었을 때 상단 빨간 점이 다시 세도록 */
-export function onNotificationsChanged(cb) {
-  window.addEventListener(NOTIFICATIONS_CHANGED, cb);
-  return () => window.removeEventListener(NOTIFICATIONS_CHANGED, cb);
-}
-
-/** 안 읽은 내 알림 (최근 순). RLS가 내 것만 돌려준다. */
-export function getMyUnreadNotifications(userId) {
-  return run(
-    db().from('notifications')
-      .select('id, kind, proposal_id, build_id, post_id, counter_id, message, created_at, counter:counters!notifications_counter_id_fkey(target_champion, counter_champion, status)')
-      .eq('user_id', userId).is('read_at', null).order('created_at', { ascending: false }),
-    '알림을 불러오지 못했습니다.',
-  );
-}
-
-/** 내 알림 읽음 처리 (본인 것만 처리된다 — DB 함수가 확인) */
-export async function markNotificationsRead(ids) {
-  if (ids.length === 0) return;
-  await rpc('mark_notifications_read', { p_ids: ids }, '알림을 확인 처리하지 못했습니다.');
-  window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED));
-}
-
 /**
  * 재검토 요청 받은 내 제안을 고쳐서 다시 제출 → 승인 대기. 본인만 (DB 함수가 확인)
  * 새 카운터 제안은 글 + 빌드(필수), 문서 수정 제안은 글만 (build = null)

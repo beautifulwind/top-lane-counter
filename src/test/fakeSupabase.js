@@ -183,6 +183,26 @@ function visibleRows(table) {
       doc_comment: r.doc_comment_id != null ? withCounter(TABLES.doc_comments.find((c) => c.id === r.doc_comment_id)) : null,
     }));
   }
+  if (table === 'notifications') {
+    // select가 붙여 주는 관계 (counter, proposal, build.counter, post) — 테스트가 직접 넣은 값이 있으면 그대로
+    const counterOf = (id) => {
+      const k = TABLES.counters.find((x) => x.id === id);
+      return k ? { target_champion: k.target_champion, counter_champion: k.counter_champion, status: k.status } : null;
+    };
+    return rows.map((n) => {
+      const p = n.proposal_id != null ? TABLES.edit_proposals?.find((x) => x.id === n.proposal_id) : null;
+      const b = n.build_id != null ? TABLES.builds.find((x) => x.id === n.build_id) : null;
+      const post = n.post_id != null ? TABLES.posts.find((x) => x.id === n.post_id && (x.status === 'visible' || isAdminNow())) : null;
+      return {
+        read_at: null,
+        ...n,
+        counter: n.counter !== undefined ? n.counter : counterOf(n.counter_id),
+        proposal: n.proposal !== undefined ? n.proposal : p ? { type: p.type, target_champion: p.target_champion, counter_champion: p.counter_champion } : null,
+        build: n.build !== undefined ? n.build : b ? { counter: counterOf(b.counter_id) } : null,
+        post: n.post !== undefined ? n.post : post ? { title: post.title } : null,
+      };
+    });
+  }
   if (table === 'doc_comments') {
     const all = rows.map(withCounter);
     // RLS 흉내: 숨긴 댓글·숨긴 카운터의 댓글은 운영자에게만
@@ -208,6 +228,7 @@ function query(table) {
     eq: (col, v) => { rows = rows.filter((r) => r[col] === v); return q; },
     is: (col, v) => { rows = rows.filter((r) => (r[col] ?? null) === v); return q; },
     in: (col, vs) => { rows = rows.filter((r) => vs.includes(r[col])); return q; },
+    lt: (col, v) => { rows = rows.filter((r) => r[col] < v); return q; },
     order: (col, { ascending = true } = {}) => {
       rows.sort((a, b) => (a[col] < b[col] ? -1 : a[col] > b[col] ? 1 : 0) * (ascending ? 1 : -1));
       return q;
@@ -319,6 +340,13 @@ async function rpc(name, args) {
   }
   fakeState.rpcCalls.push({ name, args });
   if (fakeState.rpcError) return { data: null, error: { message: fakeState.rpcError, code: '42501' } };
+  if (name === 'mark_all_notifications_read') {
+    // DB 함수처럼 내 것 중 p_upto 번호까지 한 번에, 처리한 시각을 돌려준다
+    const me = fakeState.session?.user.id;
+    const t = new Date().toISOString();
+    TABLES.notifications.filter((n) => n.user_id === me && !n.read_at && n.id <= args.p_upto).forEach((n) => { n.read_at = t; });
+    return { data: t, error: null };
+  }
   if (name === 'mark_notifications_read') {
     // DB 함수처럼 내 것만 읽음 처리
     const me = fakeState.session?.user.id;

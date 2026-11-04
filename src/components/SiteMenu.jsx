@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
 import { signOut } from '../api/auth';
-import { getMyUnreadNotifications, onNotificationsChanged } from '../api/proposals';
+import { getUnreadCount, onNotificationsChanged } from '../api/notifications';
 import { isGuest, useAuth } from '../lib/auth';
 import { isCurrentNav, navItemsFor } from '../lib/navItems';
-import { MenuIcon, MessageIcon, ShieldIcon, UserIcon, XIcon } from './Icons';
+import { BellIcon, MenuIcon, MessageIcon, ShieldIcon, UserIcon, XIcon } from './Icons';
 import UserName from './UserName';
 
 /**
@@ -23,11 +23,11 @@ export function accountKind(auth) {
 
 export const logout = () => signOut().catch((e) => alert(e.message));
 
-const ICONS = { user: UserIcon, message: MessageIcon, shield: ShieldIcon };
+const ICONS = { user: UserIcon, message: MessageIcon, shield: ShieldIcon, bell: BellIcon };
 
 /**
  * 안 읽은 알림 개수 (빨간 점). 페이지를 옮길 때와 읽음 처리했을 때 다시 센다.
- * 마이페이지에서 알림을 확인하면 꺼진다.
+ * 알림 화면(/notifications)을 열면 꺼진다.
  */
 function useUnreadCount(userId, pathname) {
   const [count, setCount] = useState(0);
@@ -39,7 +39,7 @@ function useUnreadCount(userId, pathname) {
   useEffect(() => {
     if (!userId) return undefined;
     let alive = true;
-    getMyUnreadNotifications(userId).then((rows) => alive && setCount(rows.length), () => {}); // 알림은 실패해도 조용히
+    getUnreadCount(userId).then((n) => alive && setCount(n), () => {}); // 알림은 실패해도 조용히
     return () => { alive = false; };
   }, [userId, pathname, changed]);
   return userId ? count : 0;
@@ -50,8 +50,8 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input, select, textarea, [ta
 /**
  * 상단 바 오른쪽 ☰ + 오른쪽에서 나오는 메뉴 패널 (SPEC 3장 상단 바·메뉴). PC·폰 같은 방식.
  * - 패널 맨 위: 닉네임·Level·칭호(비회원 표시) / 로그인 전 [로그인 · 가입] / 닉네임 전 [닉네임 정하기]
- * - 항목: src/lib/navItems.js (마이페이지●·자유게시판·관리(운영자, 보라)), 맨 아래 [로그아웃](비회원·로그인 전에는 없음)
- * - 새 알림 빨간 점: ☰와 메뉴의 마이페이지 둘 다
+ * - 항목: src/lib/navItems.js (마이페이지·알림●·자유게시판·관리(운영자, 보라)), 맨 아래 [로그아웃](비회원·로그인 전에는 없음)
+ * - 새 알림 빨간 점: ☰와 메뉴의 [알림] 둘 다
  * - 닫힘: 바깥 누르기, Esc, [X], 항목을 눌러 이동, 로그아웃. 열리면 초점이 패널 안으로, 닫히면 ☰로 돌아온다
  * 상단 바에 뒤 흐림(backdrop-filter)이 있어 그 안의 fixed가 바에 갇히므로 패널은 body에 그린다.
  */
@@ -59,8 +59,8 @@ export default function SiteMenu() {
   const auth = useAuth();
   const { pathname, search } = useLocation();
   const kind = accountKind(auth);
-  const named = !!auth.profile?.nickname;
-  const unread = useUnreadCount(named ? auth.user?.id : null, pathname);
+  const signedIn = !['loading', 'signedOut'].includes(kind);
+  const unread = useUnreadCount(signedIn ? auth.user?.id : null, pathname);
   const [open, setOpen] = useState(false);
   const opener = useRef(null);
   const panel = useRef(null);

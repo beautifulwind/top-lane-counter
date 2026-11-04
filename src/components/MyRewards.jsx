@@ -6,18 +6,15 @@ import { TITLES, titleCondition, titleName } from '../lib/titles';
 import { fmtDateTime } from '../lib/format';
 import { MedalIcon } from './Icons';
 
-export const REWARD_KINDS = ['level_up', 'level_down', 'title_earned', 'title_revoked'];
-
 /**
  * /me 레벨·칭호 (SPEC 6장): 큰 "Lv.N", 다음 레벨까지 막대와 작은 숫자 "현재 / 목표", 칭호판(훈장).
  * 제목("Level")·"경험치" 글자는 없다 (2026-11-04).
- * rewards = getMyRewards() 결과, unread = 이번에 처음 보는 알림
+ * rewards = getMyRewards() 결과. 레벨·칭호 알림은 알림 화면(/notifications)에서 본다 (027)
  * 지급·회수·레벨은 DB가 정한다. 여기서 바꾸는 건 대표 칭호뿐.
  */
-export default function MyRewards({ rewards, unread }) {
+export default function MyRewards({ rewards }) {
   const auth = useAuth();
   const p = levelProgress(rewards.xp ?? 0, rewards.levels, rewards.rules.level_step);
-  const notices = unread.filter((n) => REWARD_KINDS.includes(n.kind));
   // 상단 닉네임은 로그인할 때 불러온 값 → 여기서 새로 읽은 레벨·대표 칭호(회수되면 비워짐)로 맞춘다
   const { profile, setProfile } = auth;
   useEffect(() => {
@@ -29,9 +26,6 @@ export default function MyRewards({ rewards, unread }) {
 
   return (
     <section className="me-section me-level" aria-label="레벨">
-      {notices.map((n) => (
-        <p key={n.id} className="notice" role="status"><span className="new-badge">새 알림</span>{n.message}</p>
-      ))}
       <p className="lv-big">Lv.{rewards.level}</p>
       <div
         className="xp-bar" role="progressbar" aria-label={`Lv.${p.level + 1}까지`}

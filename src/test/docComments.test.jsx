@@ -176,21 +176,3 @@ test('운영자 /admin/reports: 문서 댓글 신고 — 매치업 이름, [보�
   expect(rpcs('hide_doc_comment')).toEqual([{ p_id: 5, p_note: '광고' }]);
 });
 
-test('/me: 문서 댓글 알림 — 매치업 이름과 [문서 보기] (022: 경험치 내역 칸은 없음)', async () => {
-  TABLES.notifications.push({
-    id: 1, user_id: 'u-old', kind: 'doc_comment', counter_id: 1, message: '내가 제안한 카운터 문서에 새 댓글 2개가 달렸습니다.',
-    created_at: '2026-11-02T00:00:00Z', read_at: null, counter: { target_champion: 'Darius', counter_champion: 'Quinn', status: 'approved' },
-  });
-  TABLES.xp_events.push({
-    id: 1, user_id: 'u-old', type: 'doc_comment', amount: 1, change: 'grant', reason: null,
-    target_champion: 'Darius', counter_champion: 'Quinn', created_at: '2026-11-02T00:00:00Z',
-  });
-  fakeLogin('u-old');
-  start('/me');
-  const sec = (await screen.findByRole('heading', { name: '댓글·자유게시판 알림' })).closest('section');
-  const item = within(sec).getByRole('listitem');
-  expect(item.textContent).toContain('새 댓글 2개');
-  expect(item.textContent).toContain('퀸으로 다리우스 잡는 법');
-  expect(within(item).getByRole('link', { name: '문서 보기' }).getAttribute('href')).toBe('/champion/Darius/counter/Quinn#comments');
-  expect(screen.queryByRole('list', { name: '경험치 내역' })).toBeNull();
-});

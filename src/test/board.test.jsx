@@ -341,17 +341,3 @@ test('운영자 /admin: 자유게시판 칸 — 처리할 신고 수, 숨긴 글
   expect(rpcs('restore_post')).toEqual([{ p_id: 1, p_note: '괜찮음' }]);
 });
 
-test('/me: 자유게시판 알림 (새 댓글은 [글 보기], 숨김은 링크 없음)', async () => {
-  TABLES.notifications.push(
-    { id: 1, user_id: 'u-old', kind: 'post_comment', post_id: 5, message: '내 글 「첫 글」에 새 댓글 3개가 달렸습니다.', created_at: '2026-11-02T00:00:00Z', read_at: null },
-    { id: 2, user_id: 'u-old', kind: 'post_hidden', post_id: 6, message: '내 글 「광고」을 운영자가 숨겼습니다. 메모: 광고', created_at: '2026-11-02T00:00:00Z', read_at: null },
-  );
-  fakeLogin('u-old');
-  start('/me');
-  const sec = (await screen.findByRole('heading', { name: '댓글·자유게시판 알림' })).closest('section');
-  const [comment, hidden] = within(sec).getAllByRole('listitem');
-  expect(comment.textContent).toContain('새 댓글 3개');
-  expect(within(comment).getByRole('link', { name: '글 보기' }).getAttribute('href')).toBe('/board/5');
-  expect(within(hidden).queryByRole('link')).toBeNull();
-  await vi.waitFor(() => expect(TABLES.notifications.every((n) => n.read_at)).toBe(true));
-});

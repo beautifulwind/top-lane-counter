@@ -50,6 +50,25 @@ export const SearchIcon = (p) => <Line {...p}><circle cx="11" cy="11" r="7" /><p
 export const PlusIcon = (p) => <Line {...p}><path d="M12 5v14M5 12h14" /></Line>;
 /** 사람 (마이페이지) */
 export const UserIcon = (p) => <Line {...p}><circle cx="12" cy="8" r="4" /><path d="M4 21a8 8 0 0 1 16 0" /></Line>;
+/** 종 (알림) */
+export const BellIcon = (p) => (
+  <Line {...p}><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" /><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" /></Line>
+);
+/** 동그라미 체크 (알림: 승인·공개) */
+export const CheckCircleIcon = (p) => <Line {...p}><circle cx="12" cy="12" r="9" /><path d="M8 12.5l2.8 2.8L16 10" /></Line>;
+/** 동그라미 금지 (알림: 거절) */
+export const BanIcon = (p) => <Line {...p}><circle cx="12" cy="12" r="9" /><path d="M5.6 5.6l12.8 12.8" /></Line>;
+/** 눈 (알림: 다시 공개) */
+export const EyeIcon = (p) => (
+  <Line {...p}><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></Line>
+);
+/** 눈 가림 (알림: 숨김) */
+export const EyeOffIcon = (p) => (
+  <Line {...p}>
+    <path d="M9.9 5.2A9.7 9.7 0 0 1 12 5c6.5 0 10 7 10 7a17.6 17.6 0 0 1-2.6 3.6M6.6 6.6C3.6 8.4 2 12 2 12s3.5 7 10 7a9.7 9.7 0 0 0 5.4-1.6" />
+    <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" /><path d="M2 2l20 20" />
+  </Line>
+);
 /** 세 줄 (☰ 메뉴) */
 export const MenuIcon = (p) => <Line {...p}><path d="M4 6h16M4 12h16M4 18h16" /></Line>;
 

@@ -148,18 +148,6 @@ test('/me: 메뉴 맨 위 닉네임도 새로 읽은 레벨·대표 칭호로 �
   await vi.waitFor(async () => expect(await menuUserText()).toBe('Lv.3 기존유저'));
 });
 
-test('/me: 레벨업·칭호 알림은 레벨 칸 위에 "새 알림"으로 한 번 보이고 읽음 처리', async () => {
-  TABLES.notifications.push(
-    { id: 1, user_id: ME, kind: 'level_up', message: '레벨이 올랐습니다: Lv.3', created_at: '2026-11-02T00:00:00Z', read_at: null },
-    { id: 2, user_id: ME, kind: 'title_earned', message: "칭호 '탑신병자'를 얻었습니다. [마이페이지]에서 대표 칭호로 고를 수 있습니다.", created_at: '2026-11-02T00:00:00Z', read_at: null },
-  );
-  asUser();
-  start('/me');
-  expect(await screen.findByText('레벨이 올랐습니다: Lv.3')).toBeDefined();
-  expect(screen.getByText(/칭호 '탑신병자'를 얻었습니다/)).toBeDefined();
-  await vi.waitFor(() => expect(TABLES.notifications.every((n) => n.read_at)).toBe(true));
-});
-
 test('운영자 /me: 경험치·레벨·칭호 없음 안내', async () => {
   fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
   start('/me');

@@ -5,7 +5,9 @@
 // 로그인·로그아웃은 페이지 이동이 아니라 계정 동작이라 이 목록 밖(SiteMenu)에서 처리한다.
 export const NAV_ITEMS = [
   { key: 'home', to: '/', label: '챔피언 선택', icon: 'shield', needs: 'any', menu: false, tab: true, bar: false },
-  { key: 'me', to: '/me', label: '마이페이지', icon: 'user', needs: 'signedIn', menu: true, tab: true, bar: false, dot: 'unread' },
+  { key: 'me', to: '/me', label: '마이페이지', icon: 'user', needs: 'signedIn', menu: true, tab: true, bar: false },
+  // 새 알림 빨간 점은 [알림] 옆 (☰에도). 로그인한 사람 모두 (비회원·닉네임 전·운영자 포함)
+  { key: 'notifications', to: '/notifications', label: '알림', icon: 'bell', needs: 'signedIn', menu: true, tab: true, bar: false, dot: 'unread' },
   { key: 'board', to: '/board', label: '자유게시판', icon: 'message', needs: 'any', menu: true, tab: true, bar: false },
   { key: 'admin', to: '/admin', label: '관리', icon: 'shield', needs: 'operator', menu: true, tab: false, bar: false, tone: 'op' },
 ];

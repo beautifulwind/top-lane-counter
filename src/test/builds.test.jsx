@@ -248,7 +248,7 @@ test('남의 빌드 id로는 채워지지 않는다', async () => {
 
 // ---------------- /me: 내 빌드 + 알림 ----------------
 
-test('/me 내 빌드: 상태별 메모, 새 알림 표시 후 읽음 처리', async () => {
+test('/me 내 빌드: 상태별 메모 (알림은 /notifications — "새 알림" 태그 없음, 읽음 처리 안 함)', async () => {
   const me = { nickname: '기존유저', level: 1, main_title: null };
   TABLES.builds.push(
     fakeBuild(111, me, { author_id: 'u-old', approve_note: '깔끔합니다', reviewed_at: '2026-11-04T00:00:00Z', up_count: 4, down_count: 1 }),
@@ -266,14 +266,14 @@ test('/me 내 빌드: 상태별 메모, 새 알림 표시 후 읽음 처리', as
   expect(within(rejected).queryByText('새 알림')).toBeNull();
   expect(within(approved).getByText('공개')).toBeDefined();
   expect(within(approved).getByText('승인 메모: 깔끔합니다')).toBeDefined();
-  expect(within(approved).getByText('새 알림')).toBeDefined();
+  expect(within(approved).queryByText('새 알림')).toBeNull();
   expect(within(approved).getByRole('link', { name: '퀸으로 다리우스 잡는 법' }).getAttribute('href')).toBe('/me/builds/111');
   expect(within(approved).getByRole('link', { name: '문서 보기' }).getAttribute('href')).toBe(`${MATCHUP}#builds`);
   expect(within(rejected).queryByRole('link', { name: '문서 보기' })).toBeNull();
-  await vi.waitFor(() => expect(TABLES.notifications[0].read_at).not.toBeNull());
+  expect(TABLES.notifications[0].read_at).toBeNull();
 });
 
-test('/me 내 제안: 승인·거절 알림도 "새 알림"으로 보이고 확인하면 꺼진다', async () => {
+test('/me 내 제안: 승인 메모는 보이고 "새 알림" 태그는 없다 (알림은 /notifications)', async () => {
   TABLES.edit_proposals.push({
     id: 501, type: 'doc_edit', target_champion: 'Darius', counter_champion: 'Quinn', counter_id: 1, status: 'approved',
     approve_note: '반영했습니다', created_at: '2026-11-01T10:00:00Z', proposer_id: 'u-old', content: {},
@@ -284,8 +284,8 @@ test('/me 내 제안: 승인·거절 알림도 "새 알림"으로 보이고 확�
   asUser();
   start('/me');
   expect(await screen.findByText('승인 메모: 반영했습니다')).toBeDefined();
-  expect(screen.getByText('새 알림')).toBeDefined();
-  await vi.waitFor(() => expect(TABLES.notifications[0].read_at).not.toBeNull());
+  expect(screen.queryByText('새 알림')).toBeNull();
+  expect(screen.getByRole('link', { name: '알림 보기 (새 알림 1개)' }).getAttribute('href')).toBe('/notifications');
 });
 
 // ---------------- 운영자 ----------------

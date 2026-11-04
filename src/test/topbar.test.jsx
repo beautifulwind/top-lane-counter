@@ -40,7 +40,7 @@ test('로그인 전: 맨 위 [로그인 · 가입](보던 페이지로 돌아오
   expect(screen.queryByRole('dialog')).toBeNull();
 });
 
-test('회원: 맨 위 "Lv.7 [칭호] 닉네임"(글자만), 마이페이지·자유게시판·로그아웃, 관리 없음 → 마이페이지로 이동하며 닫힘', async () => {
+test('회원: 맨 위 "Lv.7 [칭호] 닉네임"(글자만), 마이페이지·알림·자유게시판·로그아웃, 관리 없음 → 마이페이지로 이동하며 닫힘', async () => {
   fakeLogin('u-user', { nickname: '탑고수', level: 7, main_title: 'solid_heavy' });
   start('/');
   const menu = await openMenu();
@@ -48,7 +48,7 @@ test('회원: 맨 위 "Lv.7 [칭호] 닉네임"(글자만), 마이페이지·자
   expect(who.closest('.menu-user').textContent).toBe('Lv.7 단단묵직 탑고수');
   expect(who.closest('a')).toBeNull(); // 닉네임을 눌러도 아무 동작 없음
   expect(menu.queryByRole('link', { name: '관리' })).toBeNull();
-  expect(menuNames()).toEqual(['', '마이페이지', '자유게시판', '로그아웃']);
+  expect(menuNames()).toEqual(['', '마이페이지', '알림', '자유게시판', '로그아웃']);
   fireEvent.click(menu.getByRole('link', { name: '마이페이지' }));
   expect(where()).toBe('/me');
   expect(screen.queryByRole('dialog')).toBeNull();
@@ -69,15 +69,15 @@ test('운영자: [관리](보라)가 메뉴에, 닉네임은 "Lv.0 닉네임"만
   expect(admin.getAttribute('href')).toBe('/admin');
   expect(admin.matches('.op-link')).toBe(true);
   expect(menu.getByRole('link', { name: '마이페이지' }).matches('.op-link')).toBe(false);
-  expect(menuNames()).toEqual(['', '마이페이지', '자유게시판', '관리', '로그아웃']);
+  expect(menuNames()).toEqual(['', '마이페이지', '알림', '자유게시판', '관리', '로그아웃']);
 });
 
-test('비회원: 닉네임 뒤 "비회원", 마이페이지·자유게시판만 — 로그아웃은 없다', async () => {
+test('비회원: 닉네임 뒤 "비회원", 마이페이지·알림·자유게시판만 — 로그아웃은 없다', async () => {
   fakeGuestLogin('g-1', { nickname: '손님' });
   start('/');
   const menu = await openMenu();
   expect((await menu.findByText('손님')).closest('.menu-user').textContent).toContain('비회원');
-  expect(menuNames()).toEqual(['', '마이페이지', '자유게시판']);
+  expect(menuNames()).toEqual(['', '마이페이지', '알림', '자유게시판']);
 });
 
 test('닉네임 정하기 전: 맨 위 [닉네임 정하기](→ /welcome), 로그아웃은 있다', async () => {
@@ -85,12 +85,12 @@ test('닉네임 정하기 전: 맨 위 [닉네임 정하기](→ /welcome), 로�
   start('/champion/Darius');
   const menu = await openMenu();
   expect(await menu.findByText('닉네임을 아직 정하지 않았습니다.')).toBeDefined();
-  expect(menuNames()).toEqual(['', '닉네임 정하기', '마이페이지', '자유게시판', '로그아웃']);
+  expect(menuNames()).toEqual(['', '닉네임 정하기', '마이페이지', '알림', '자유게시판', '로그아웃']);
   fireEvent.click(menu.getByRole('link', { name: '닉네임 정하기' }));
   await vi.waitFor(() => expect(where()).toBe('/welcome'));
 });
 
-test('새 알림 빨간 점: ☰와 메뉴의 마이페이지 둘 다, 개수는 이름으로 읽힌다', async () => {
+test('새 알림 빨간 점: ☰와 메뉴의 [알림] 둘 다 (마이페이지 옆에는 없음), 개수는 이름으로 읽힌다', async () => {
   fakeLogin('u-user', { nickname: '탑고수' });
   TABLES.notifications.push(
     { id: 71, user_id: 'u-user', kind: 'title_earned', message: '칭호를 얻었습니다', created_at: '2026-11-03T00:00:00Z', read_at: null },
@@ -101,7 +101,8 @@ test('새 알림 빨간 점: ☰와 메뉴의 마이페이지 둘 다, 개수는
   expect(btn.querySelector('.alert-dot')).not.toBeNull();
   fireEvent.click(btn);
   const menu = within(await screen.findByRole('dialog', { name: '메뉴' }));
-  expect(menu.getByRole('link', { name: '마이페이지, 새 알림 2개' }).querySelector('.alert-dot')).not.toBeNull();
+  expect(menu.getByRole('link', { name: '알림, 새 알림 2개' }).querySelector('.alert-dot')).not.toBeNull();
+  expect(menu.getByRole('link', { name: '마이페이지' }).querySelector('.alert-dot')).toBeNull();
   expect(menu.getByRole('link', { name: '자유게시판' }).querySelector('.alert-dot')).toBeNull();
 });
 
@@ -161,9 +162,10 @@ test('마이페이지 맨 위 [관리]·[로그아웃] 줄은 없다 (메뉴로 
 });
 
 test('메뉴 항목은 한 곳(navItems): 메뉴와 나중의 아래 탭 바가 같은 목록을 읽는다', () => {
-  expect(NAV_ITEMS.map((it) => it.to)).toEqual(['/', '/me', '/board', '/admin']);
+  expect(NAV_ITEMS.map((it) => it.to)).toEqual(['/', '/me', '/notifications', '/board', '/admin']);
   expect(navItemsFor('menu', 'signedOut').map((it) => it.key)).toEqual(['board']);
-  expect(navItemsFor('menu', 'operator').map((it) => it.key)).toEqual(['me', 'board', 'admin']);
-  expect(navItemsFor('tab', 'member').map((it) => it.key)).toEqual(['home', 'me', 'board']);
+  expect(navItemsFor('menu', 'operator').map((it) => it.key)).toEqual(['me', 'notifications', 'board', 'admin']);
+  expect(navItemsFor('menu', 'guest').map((it) => it.key)).toEqual(['me', 'notifications', 'board']);
+  expect(navItemsFor('tab', 'member').map((it) => it.key)).toEqual(['home', 'me', 'notifications', 'board']);
   expect(navItemsFor('bar', 'operator')).toEqual([]); // 상단 바에 꺼낸 항목 없음
 });

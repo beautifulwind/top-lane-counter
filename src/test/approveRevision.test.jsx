@@ -247,17 +247,6 @@ test('/me: 재검토 요청 받은 빌드 → 고쳐서 다시 보내기 (지금
   }]);
 });
 
-test('/me: 운영자가 재검토 요청을 취소하면 그 메모를 알림으로 보여 준다', async () => {
-  TABLES.edit_proposals.push(fakeProposal());
-  TABLES.notifications.push({
-    id: 1, user_id: 'u-old', kind: 'revision_cancelled', proposal_id: 501, build_id: null, message: '제가 잘못 봤습니다',
-    created_at: '2026-11-03T00:00:00Z', read_at: null,
-  });
-  asProposer();
-  start('/me');
-  expect(await screen.findByText('운영자가 재검토 요청을 취소했습니다. 보낸 내용 그대로 승인 대기 중입니다. 메모: 제가 잘못 봤습니다')).toBeDefined();
-});
-
 test('/me: 고쳐서 승인된 빌드는 원래 빌드 → 고친 빌드를 볼 수 있다', async () => {
   const b = fakeBuild(131, { nickname: '기존유저', level: 1, main_title: null }, { author_id: 'u-old', approve_note: '선마 정리' });
   TABLES.builds.push({ ...b, original_build: { ...b, max_skill: 'E' } });

@@ -1,8 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
 import { PROVIDERS, getIdentities, linkProvider } from '../api/auth';
 import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../api/ddragon';
-import { approvedWithEdits, getMyProposals, getMyUnreadNotifications, markNotificationsRead } from '../api/proposals';
+import { approvedWithEdits, getMyProposals } from '../api/proposals';
+import { getUnreadCount } from '../api/notifications';
 import { getMyBuilds } from '../api/builds';
 import { getMyRewards } from '../api/rewards';
 import { BUILD_STATUS_LABEL, STATUS_LABEL, TYPE_LABEL, fmtDateTime } from '../lib/format';
@@ -20,7 +21,7 @@ import AccountSettings from '../components/AccountSettings';
 
 /**
  * 마이페이지 (/me): 내 제안·내 빌드 목록과 상태, 로그인 연결, 닉네임 바꾸기·회원 탈퇴.
- * 레벨·칭호판은 MyRewards (SPEC 6장).
+ * 레벨·칭호판은 MyRewards (SPEC 6장). 알림은 맨 위 [알림 보기] → /notifications (027).
  */
 export default function Me() {
   const auth = useAuth();
@@ -35,6 +36,7 @@ export default function Me() {
       <h1 className="doc-title" data-page-title="마이페이지">
         <UserName profile={auth.profile} />
       </h1>
+      <NotificationsLink userId={auth.user.id} />
       {isGuest(auth) && <GuestUpgrade />}
       {sent && (
         <p className="notice" role="status">
@@ -69,20 +71,13 @@ function GuestUpgrade() {
 
 function MyActivity({ userId, operator }) {
   const { data, error, loading, retry } = useAsync(async () => {
-    const [champs, proposals, builds, unread, items, runes, spells, latest, rewards] = await Promise.all([
-      getChampionMap(), getMyProposals(userId), getMyBuilds(userId), getMyUnreadNotifications(userId),
+    const [champs, proposals, builds, items, runes, spells, latest, rewards] = await Promise.all([
+      getChampionMap(), getMyProposals(userId), getMyBuilds(userId),
       getItems(), getRunes(), getSummonerSpells(), getLatestVersion(),
       operator ? null : getMyRewards(userId),
     ]);
-    return { champs, proposals, builds, unread, rewards, game: { items, runes, spells, latest } };
+    return { champs, proposals, builds, rewards, game: { items, runes, spells, latest } };
   }, [userId, operator]);
-
-  // 화면에 보인 알림 = 확인한 것 → 읽음 처리 (상단 빨간 점이 꺼진다).
-  // "새 알림" 표시는 이번에 불러온 화면에서만 보인다. 재검토 요청 내용과 [고쳐서 다시 제출]은 제안 상태라 그대로 남는다.
-  const unread = data?.unread;
-  useEffect(() => {
-    if (unread?.length) markNotificationsRead(unread.map((n) => n.id)).catch(() => {}); // 실패하면 다음에 다시 확인
-  }, [unread]);
 
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
@@ -93,51 +88,22 @@ function MyActivity({ userId, operator }) {
           <p className="hint">운영자는 경험치·레벨·칭호가 없습니다 (항상 Lv.0).</p>
         </section>
       ) : (
-        <MyRewards rewards={data.rewards} unread={data.unread} />
+        <MyRewards rewards={data.rewards} />
       )}
-      <BoardNotices unread={data.unread} champs={data.champs} />
       <MyProposals data={data} />
       <MyBuilds data={data} />
     </>
   );
 }
 
-const BOARD_KINDS = [
-  'post_comment', 'post_hidden', 'post_restored', 'comment_hidden', 'comment_restored',
-  'doc_comment', 'doc_comment_hidden', 'doc_comment_restored',
-];
-
-/** 댓글·자유게시판 알림 (새 댓글·숨김·다시 공개): 이번에 처음 보는 것만, [글 보기]·[문서 보기]로 이동 */
-function BoardNotices({ unread, champs }) {
-  const list = unread.filter((n) => BOARD_KINDS.includes(n.kind));
-  if (list.length === 0) return null;
-  const name = (id) => champs[id]?.name ?? id;
+/** 맨 위 [알림 보기] (알림은 /notifications에서 본다 — 마이페이지의 알림 칸은 027에서 없앰) */
+function NotificationsLink({ userId }) {
+  const { data: count } = useAsync(() => getUnreadCount(userId).catch(() => 0), [userId]);
   return (
-    <section className="me-section" aria-labelledby="board-notices">
-      <h2 id="board-notices">댓글·자유게시판 알림</h2>
-      <ul className="proposal-list">
-        {list.map((n) => (
-          <li key={n.id} className="proposal-row">
-            <p className="board-notice-msg"><span className="new-badge">새 알림</span>{n.message}</p>
-            <div className="proposal-meta">
-              {n.counter && <span>{matchupTitle(name(n.counter.counter_champion), name(n.counter.target_champion))}</span>}
-              <span>{fmtDateTime(n.created_at)}</span>
-              {n.post_id && !['post_hidden'].includes(n.kind) && <Link to={`/board/${n.post_id}`}>글 보기</Link>}
-              {n.counter?.status === 'approved' && (
-                <Link to={`/champion/${n.counter.target_champion}/counter/${n.counter.counter_champion}#comments`}>문서 보기</Link>
-              )}
-            </div>
-          </li>
-        ))}
-      </ul>
-    </section>
+    <p className="me-links">
+      <Link to="/notifications" className="btn btn-small">{count > 0 ? `알림 보기 (새 알림 ${count}개)` : '알림 보기'}</Link>
+    </p>
   );
-}
-
-/** 이번에 처음 보는 "재검토 요청 취소" 알림 (메모) — 해야 할 일이 없어지므로 알림으로만 알려 준다 */
-function CancelledNotice({ unread, match }) {
-  const n = unread.find((x) => x.kind === 'revision_cancelled' && match(x));
-  return n ? <p className="notice">운영자가 재검토 요청을 취소했습니다. 보낸 내용 그대로 승인 대기 중입니다. 메모: {n.message}</p> : null;
 }
 
 /** 운영자가 고쳐서 승인했을 때: 원래 제안 → 고친 내용 비교 */
@@ -164,7 +130,6 @@ function EditedCompare({ before, after, beforeBuild, afterBuild, author, game })
 
 function MyProposals({ data }) {
   const name = (id) => data.champs[id]?.name ?? id;
-  const isNew = (p) => data.unread.some((n) => n.proposal_id === p.id);
 
   return (
     <section className="me-section" aria-labelledby="my-proposals">
@@ -178,7 +143,6 @@ function MyProposals({ data }) {
             return (
               <li key={p.id} className={`proposal-row ${p.status}`}>
                 <div className="proposal-main">
-                  {isNew(p) && <span className="new-badge">새 알림</span>}
                   <span className="proposal-type">{TYPE_LABEL[p.type]}</span>{' '}
                   <Link to={`/me/proposals/${p.id}`}>{title}</Link>
                 </div>
@@ -195,7 +159,6 @@ function MyProposals({ data }) {
                     author={p.proposer} game={data.game}
                   />
                 )}
-                <CancelledNotice unread={data.unread} match={(n) => n.proposal_id === p.id} />
                 {p.status === 'rejected' && <p className="reject-reason">거절 사유: {p.reject_reason}</p>}
                 {p.status === 'revoked' && (
                   <p className="reject-reason">
@@ -236,7 +199,6 @@ function MyProposals({ data }) {
 /** 내 빌드: 상태·메모·추천 수, [이 빌드로 다시 쓰기] (승인된 빌드는 고치지 않고 새 빌드로 보낸다) */
 function MyBuilds({ data }) {
   const name = (id) => data.champs[id]?.name ?? id;
-  const isNew = (b) => data.unread.some((n) => n.build_id === b.id);
 
   return (
     <section className="me-section" aria-labelledby="my-builds">
@@ -252,7 +214,6 @@ function MyBuilds({ data }) {
             return (
               <li key={b.id} className={`proposal-row ${b.status}`} aria-label={`내 빌드: ${title}`}>
                 <div className="proposal-main">
-                  {isNew(b) && <span className="new-badge">새 알림</span>}
                   <span className="proposal-type">빌드</span>{' '}
                   <Link to={`/me/builds/${b.id}`}>{title}</Link>
                 </div>
@@ -267,7 +228,6 @@ function MyBuilds({ data }) {
                 {b.original_build && ['approved', 'hidden'].includes(b.status) && (
                   <EditedCompare beforeBuild={b.original_build} afterBuild={b} author={b.author} game={data.game} />
                 )}
-                <CancelledNotice unread={data.unread} match={(n) => n.build_id === b.id} />
                 {b.status === 'revision_requested' && (
                   <div className="revision-note">
                     <p>

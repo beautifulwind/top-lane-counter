@@ -238,12 +238,12 @@ kbd {
 }
 /* 페이지 제목(마이페이지 닉네임) 안: 제목 글꼴을 물려받지 않고(위 font-family) 한 단계 크게 */
 .doc-title .title-badge { font-size: var(--fs-sm); line-height: 22px; padding: 0 8px; }
-.title-badge.top_addict, .medal.top_addict, .medal-pop.top_addict { --t: var(--title-top_addict); --t-soft: var(--title-top_addict-soft); --t-line: var(--title-top_addict-line); }
-.title-badge.tool_hater, .medal.tool_hater, .medal-pop.tool_hater { --t: var(--title-tool_hater); --t-soft: var(--title-tool_hater-soft); --t-line: var(--title-tool_hater-line); }
-.title-badge.solid_heavy, .medal.solid_heavy, .medal-pop.solid_heavy { --t: var(--title-solid_heavy); --t-soft: var(--title-solid_heavy-soft); --t-line: var(--title-solid_heavy-line); }
-.title-badge.butcher_owner, .medal.butcher_owner, .medal-pop.butcher_owner { --t: var(--title-butcher_owner); --t-soft: var(--title-butcher_owner-soft); --t-line: var(--title-butcher_owner-line); }
-.title-badge.general, .medal.general, .medal-pop.general { --t: var(--title-general); --t-soft: var(--title-general-soft); --t-line: var(--title-general-line); }
-.title-badge.offmeta, .medal.offmeta, .medal-pop.offmeta { --t: var(--title-offmeta); --t-soft: var(--title-offmeta-soft); --t-line: var(--title-offmeta-line); }
+.title-badge.top_addict, .medal.top_addict, .medal-pop.top_addict, .title-color.top_addict { --t: var(--title-top_addict); --t-soft: var(--title-top_addict-soft); --t-line: var(--title-top_addict-line); }
+.title-badge.tool_hater, .medal.tool_hater, .medal-pop.tool_hater, .title-color.tool_hater { --t: var(--title-tool_hater); --t-soft: var(--title-tool_hater-soft); --t-line: var(--title-tool_hater-line); }
+.title-badge.solid_heavy, .medal.solid_heavy, .medal-pop.solid_heavy, .title-color.solid_heavy { --t: var(--title-solid_heavy); --t-soft: var(--title-solid_heavy-soft); --t-line: var(--title-solid_heavy-line); }
+.title-badge.butcher_owner, .medal.butcher_owner, .medal-pop.butcher_owner, .title-color.butcher_owner { --t: var(--title-butcher_owner); --t-soft: var(--title-butcher_owner-soft); --t-line: var(--title-butcher_owner-line); }
+.title-badge.general, .medal.general, .medal-pop.general, .title-color.general { --t: var(--title-general); --t-soft: var(--title-general-soft); --t-line: var(--title-general-line); }
+.title-badge.offmeta, .medal.offmeta, .medal-pop.offmeta, .title-color.offmeta { --t: var(--title-offmeta); --t-soft: var(--title-offmeta-soft); --t-line: var(--title-offmeta-line); }
 
 /* 비회원 (020) */
 .login-btn.guest { background: transparent; }
@@ -531,6 +531,26 @@ a.op-link, .op-link { color: var(--op-dark); }
 .medal-pop .medal-pop-cond { margin-top: 4px; font-size: var(--fs-sm); color: var(--text-soft); }
 .medal-pop .medal-pop-date { margin-top: 4px; font-size: var(--fs-xs); color: var(--muted); }
 .medal-pop .btn { margin-top: 8px; }
+/* 알림 (/notifications, 027): 한 줄씩, 안 읽은 것은 왼쪽 주황 막대 + 진한 글자 + "새" */
+.noti-list { list-style: none; margin: 0 0 12px; padding: 0; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); overflow: hidden; box-shadow: var(--shadow-card); }
+.noti-row + .noti-row { border-top: 1px solid var(--line-soft); }
+.noti-main { display: flex; align-items: flex-start; gap: 12px; padding: 12px 14px; color: var(--text-soft); border-left: 3px solid transparent; }
+a.noti-main:hover { text-decoration: none; background: var(--raised); }
+.noti-row.new .noti-main { border-left-color: var(--brand); background: var(--soft); color: var(--text); }
+.noti-row.new a.noti-main:hover { background: var(--raised); }
+.noti-icon { flex: none; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: var(--field); color: var(--muted); }
+.noti-icon.check, .noti-icon.shown { color: var(--brand-dark); }
+.noti-icon.ban, .noti-icon.hidden { color: var(--warn); }
+.noti-icon.title-color { color: var(--t); background: transparent; }
+.noti-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+.noti-title { font-weight: 600; overflow-wrap: anywhere; }
+.noti-row.new .noti-title { font-weight: 800; }
+.noti-title .new-badge { margin-right: 6px; }
+.noti-subject { font-size: var(--fs-sm); color: var(--text-soft); }
+.noti-detail { font-size: var(--fs-sm); color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.noti-time { flex: none; font-size: var(--fs-xs); color: var(--muted); font-variant-numeric: tabular-nums; padding-top: 2px; }
+.noti-keep { text-align: center; }
+.me-links { margin: 0 0 12px; }
 /* 운영자: 비주류 픽 목록 */
 .offmeta-list { list-style: none; margin: 0 0 8px; padding: 0; display: flex; flex-wrap: wrap; gap: 8px; }
 .offmeta-list li { display: flex; align-items: center; gap: 6px; padding: 4px 8px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--paper); }
