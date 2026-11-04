@@ -42,9 +42,9 @@ select t.ok('비회원도 글·댓글·문서 댓글·제안',
   and exists (select 1 from doc_comments where author_id = auth.uid()) and exists (select 1 from edit_proposals where proposer_id = auth.uid()));
 select t.ok('비회원도 경험치가 쌓임', (select xp > 0 from profiles where id = auth.uid()));
 
--- ===== 3. 못 하는 것: 따봉/비추, 추천, 신고 =====
-select t.fails('따봉 불가', format('select public.vote_build(%s, 1::smallint)', (select v from ids where k = 'build')), '비회원은 따봉·비추를 누를 수 없어요');
-select t.fails('비추 불가', format('select public.vote_build(%s, (-1)::smallint)', (select v from ids where k = 'build')), '비회원은 따봉·비추를');
+-- ===== 3. 못 하는 것: 추천/비추천, 추천, 신고 =====
+select t.fails('추천 불가', format('select public.vote_build(%s, 1::smallint)', (select v from ids where k = 'build')), '비회원은 추천·비추천을 누를 수 없어요');
+select t.fails('비추천 불가', format('select public.vote_build(%s, (-1)::smallint)', (select v from ids where k = 'build')), '비회원은 추천·비추천을');
 set request.jwt.claim.sub = :'B';
 select public.create_post('회원 글', '본문');
 insert into ids select 'bpost', max(id) from posts where author_id = auth.uid();

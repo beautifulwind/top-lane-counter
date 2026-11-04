@@ -695,7 +695,7 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
 .pick-group, .approve-editor, .report-form, .note-form, .view-switch { box-shadow: var(--shadow-card); }
 .proposal-row:hover, .identity-row:hover { border-color: var(--line-hover); }
 
-/* 숫자는 자리 폭을 맞춰서 (점수·따봉·개수가 바뀌어도 흔들리지 않게) */
+/* 숫자는 자리 폭을 맞춰서 (점수·추천·개수가 바뀌어도 흔들리지 않게) */
 .vote, .vote-count, .post-count, .xp-nums, .pager .btn { font-variant-numeric: tabular-nums; }
 
 /* 새 알림 점: 천천히 깜빡임 */

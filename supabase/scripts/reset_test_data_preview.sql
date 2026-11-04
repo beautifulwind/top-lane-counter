@@ -34,8 +34,8 @@ rows (ord, what, to_delete, to_keep, note) as (
          (select count(*) from public.builds where id not in (select id from kept_builds)),
          (select count(*) from kept_builds),
          '말파 카운터의 공개 빌드만 남김 (대기·거절·숨김 빌드는 지움)'
-  union all select 6, 'build_votes (따봉·비추)', (select count(*) from public.build_votes), 0, '남는 빌드의 따봉 수도 0'
-  union all select 7, 'build_vote_log (따봉 기록)', (select count(*) from public.build_vote_log), 0, null
+  union all select 6, 'build_votes (추천·비추천)', (select count(*) from public.build_votes), 0, '남는 빌드의 추천·비추천 수도 0'
+  union all select 7, 'build_vote_log (빌드 추천·비추천 기록)', (select count(*) from public.build_vote_log), 0, null
   union all select 8, 'build_status_log (빌드 승인·숨김 기록)', (select count(*) from public.build_status_log), 0, null
   union all select 9, 'counter_status_log (카운터 숨김 기록)', (select count(*) from public.counter_status_log), 0, null
   union all select 10, 'counter_deletions (완전 삭제 기록)', (select count(*) from public.counter_deletions), 0, null

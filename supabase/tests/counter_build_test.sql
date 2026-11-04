@@ -114,7 +114,7 @@ select t.ok('다시 제출: 대기 + 고친 빌드 저장',
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select approve_proposal((select v from ids where k = 'garen_p'), '고친 빌드 좋아요', null, null, t.pv((select v from ids where k = 'garen_p')));
 select t.ok('다시 승인: 카운터 공개', (select status = 'approved' from counters where id = :garen));
-select t.ok('원래 첫 빌드는 숨김 (재검토로 교체), 따봉 수는 그대로',
+select t.ok('원래 첫 빌드는 숨김 (재검토로 교체), 추천 수는 그대로',
   (select status = 'hidden' and hide_reason = '재검토로 교체: 고친 빌드 좋아요' and up_count = 1 from builds where id = (select v from ids where k = 'g1')));
 select t.ok('고친 빌드가 새 첫 빌드로 공개',
   (select count(*) = 1 from builds where proposal_id = (select v from ids where k = 'garen_p') and status = 'approved'

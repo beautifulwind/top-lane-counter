@@ -22,13 +22,13 @@ const section = (name) => screen.getByRole('region', { name });
 
 // ---------------- 닉네임 없이 둘러보기 ----------------
 
-test('닉네임 없음: 매치업 문서는 읽히고, 댓글 칸 대신 안내, 따봉은 닉네임 설정으로', async () => {
+test('닉네임 없음: 매치업 문서는 읽히고, 댓글 칸 대신 안내, 추천은 닉네임 설정으로', async () => {
   fakeLogin('u-new');
   start(MATCHUP);
   await screen.findByText(/퀸으로 다리우스 잡는 법/);
   expect(screen.getByText(/닉네임을 정하면 제안·빌드·투표·글·댓글을 쓸 수 있어요/)).toBeDefined();
   expect(await screen.findByText((_, el) => el?.tagName === 'P' && el.textContent === '닉네임을 정하면 댓글을 달 수 있어요.')).toBeDefined();
-  fireEvent.click(within(card('탑고수')).getByRole('button', { name: '따봉 5' }));
+  fireEvent.click(within(card('탑고수')).getByRole('button', { name: '추천 5' }));
   expect(await screen.findByRole('heading', { name: '닉네임 정하기' })).toBeDefined();
   expect(fakeState.rpcCalls.filter((c) => c.name === 'vote_build')).toEqual([]);
 });

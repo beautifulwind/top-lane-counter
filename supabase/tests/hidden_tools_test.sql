@@ -17,7 +17,7 @@ insert into ids values ('quinn', (select id from counters where counter_champion
 \set v1 '{"summary":"가렌 고친 요약","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"},"lane_cautions":"주의"}'
 \set v2 '{"summary":"가렌 두 번째 고침","level_notes":{"1":"a2","2":"b","3":"c","6":"d","9":"e","11":"f"},"lane_cautions":"주의"}'
 
--- 준비: 유저가 가렌 제안 → 운영자 승인 → (postgres로) 빌드 1개 + 유저2 따봉 → 유저2 문서 수정 제안(대기) → 운영자가 숨김
+-- 준비: 유저가 가렌 제안 → 운영자 승인 → (postgres로) 빌드 1개 + 유저2 추천 → 유저2 문서 수정 제안(대기) → 운영자가 숨김
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
@@ -211,7 +211,7 @@ select t.ok('삭제: 카운터·문서·수정 기록·빌드·제안·숨김 �
       and (select count(*) from edit_proposals where counter_id = :garen) = 0
       and (select count(*) from counter_status_log where counter_id = :garen) = 0));
 reset role;
-select t.ok('삭제: 따봉도 없음 (postgres로 확인)', (select count(*) = 0 from build_votes));
+select t.ok('삭제: 추천도 없음 (postgres로 확인)', (select count(*) = 0 from build_votes));
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select t.ok('삭제 기록: 누가·언제·왜·어떤 매치업·원래 제안자·지운 개수',

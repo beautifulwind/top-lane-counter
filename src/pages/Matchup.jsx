@@ -96,7 +96,7 @@ export default function Matchup() {
 
       <section className="section" id="builds">
         <h2 className="section-title"><span className="num">1.</span> 빌드</h2>
-        <p className="hint">점수(따봉 − 비추)가 높은 순서예요. 점수가 같으면 투표가 많은 빌드, 그다음 최근 빌드가 먼저예요.</p>
+        <p className="hint">점수(추천 − 비추천)가 높은 순서예요. 점수가 같으면 투표가 많은 빌드, 그다음 최근 빌드가 먼저예요.</p>
         {buildNotice && <p className="notice" role="status">{buildNotice}</p>}
         {data.builds.length === 0 ? (
           <p className="empty">아직 등록된 빌드가 없어요.</p>

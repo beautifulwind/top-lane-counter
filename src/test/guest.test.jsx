@@ -260,12 +260,12 @@ test('이미 다른 회원의 카카오면: 합치지 않고 [기존 계정으�
 
 // ---------------- 투표·추천·신고 막기 ----------------
 
-test('비회원이 따봉을 누르면 투표 대신 연결 안내', async () => {
+test('비회원이 추천을 누르면 투표 대신 연결 안내', async () => {
   guestWithName();
   start(MATCHUP);
   const card = await screen.findByRole('article', { name: '빌드: 탑고수' });
-  fireEvent.click(within(card).getByRole('button', { name: '따봉 5' }));
-  expect(within(card).getByText(/비회원은 따봉·비추를 누를 수 없어요/)).toBeDefined();
+  fireEvent.click(within(card).getByRole('button', { name: '추천 5' }));
+  expect(within(card).getByText(/비회원은 추천·비추천을 누를 수 없어요/)).toBeDefined();
   expect(within(card).getByRole('link', { name: '구글·카카오 연결하기' }).getAttribute('href')).toBe('/me#upgrade');
   expect(fakeState.rpcCalls.filter((c) => c.name === 'vote_build')).toEqual([]);
 });

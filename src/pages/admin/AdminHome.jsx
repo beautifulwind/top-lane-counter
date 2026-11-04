@@ -182,7 +182,7 @@ function PendingList() {
                   </div>
                   <p className="reject-reason">사유: {d.reason}</p>
                   <small className="hint">
-                    지운 것: 제안 {d.proposals_count} · 수정 기록 {d.revisions_count} · 빌드 {d.builds_count} · 따봉 {d.votes_count} · 댓글 {d.comments_count ?? 0}
+                    지운 것: 제안 {d.proposals_count} · 수정 기록 {d.revisions_count} · 빌드 {d.builds_count} · 빌드 추천 {d.votes_count} · 댓글 {d.comments_count ?? 0}
                   </small>
                 </li>
               ))}
@@ -493,7 +493,7 @@ function HiddenBuildRow({ build: b, game, name, onDone }) {
       <div className="proposal-meta">
         <BuildAuthor build={b} />
         {b.hidden_at && <span>숨긴 날 {fmtDateTime(b.hidden_at)}</span>}
-        <span>👍 {b.up} · 👎 {b.down}</span>
+        <span aria-label={`추천 ${b.up} · 비추천 ${b.down}`}>👍 {b.up} · 👎 {b.down}</span>
       </div>
       <p className="reject-reason">사유: {b.hide_reason}</p>
       {counterHidden && <p className="hint">카운터가 숨겨져 있어서, 다시 공개해도 카운터를 공개하기 전까지는 안 보여요.</p>}

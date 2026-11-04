@@ -72,7 +72,7 @@ function DeleteForm() {
       <ul className="hint-list" aria-label="함께 지워지는 것">
         <li>카운터와 매치업 문서</li>
         <li>문서 수정 기록 {counts.revisions}개</li>
-        <li>빌드 {counts.builds}개와 따봉 {counts.votes}개</li>
+        <li>빌드 {counts.builds}개와 추천·비추천 {counts.votes}개</li>
         <li>문서 댓글 {counts.comments}개 (댓글 경험치도 회수돼요)</li>
         <li>이 카운터에 대한 제안 {counts.proposals}개 (제안자의 [마이페이지]에서도 사라져요)</li>
         <li>숨김·공개·재검토 기록</li>

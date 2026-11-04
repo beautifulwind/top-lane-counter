@@ -225,7 +225,7 @@ test('완전 삭제: 지워지는 개수를 보여 주고, 사유 + 챔피언 �
   expect(await screen.findByRole('heading', { name: '카운터 완전 삭제' })).toBeDefined();
   const list = screen.getByRole('list', { name: '함께 지워지는 것' });
   expect(list.textContent).toMatch(/수정 기록 2개/);
-  expect(list.textContent).toMatch(/빌드 1개와 따봉 1개/);
+  expect(list.textContent).toMatch(/빌드 1개와 추천·비추천 1개/);
   expect(list.textContent).toMatch(/제안 1개/);
 
   const del = screen.getByRole('button', { name: '완전 삭제' });
@@ -279,5 +279,5 @@ test('운영자 페이지: 삭제 기록(누가·언제·왜·어떤 매치업·
   expect(within(r).getByText('가렌으로 다리우스 잡는 법')).toBeDefined();
   expect(r.textContent).toMatch(/삭제: Lv\.0 영자\(운\)/);
   expect(r.textContent).toMatch(/원래 제안자: Lv\.1 기존유저/);
-  expect(r.textContent).toMatch(/제안 2 · 수정 기록 3 · 빌드 1 · 따봉 4/);
+  expect(r.textContent).toMatch(/제안 2 · 수정 기록 3 · 빌드 1 · 빌드 추천 4/);
 });

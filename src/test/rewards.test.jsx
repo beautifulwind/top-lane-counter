@@ -82,7 +82,7 @@ test('/me 칭호판: 마우스를 올리면 이름·조건·날짜 말풍선(버
   fireEvent.mouseLeave(medal(board, '도구혐오자'));
   expect(screen.queryByRole('tooltip')).toBeNull();
   fireEvent.mouseEnter(medal(board, '장군'));
-  expect(screen.getByRole('tooltip').textContent).toMatch(/따봉 합계 100아직 못 얻음$/);
+  expect(screen.getByRole('tooltip').textContent).toMatch(/추천 합계 100아직 못 얻음$/);
 });
 
 test('/me 칭호판: 얻은 훈장을 누르면 [대표로 설정] → 훈장에 "대표" + 메뉴 닉네임 배지 반영, 다시 누르면 [대표 해제]', async () => {

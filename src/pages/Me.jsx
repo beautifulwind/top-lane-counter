@@ -233,7 +233,7 @@ function MyProposals({ data }) {
   );
 }
 
-/** 내 빌드: 상태·메모·따봉 수, [이 빌드로 다시 쓰기] (승인된 빌드는 고치지 않고 새 빌드로 보낸다) */
+/** 내 빌드: 상태·메모·추천 수, [이 빌드로 다시 쓰기] (승인된 빌드는 고치지 않고 새 빌드로 보낸다) */
 function MyBuilds({ data }) {
   const name = (id) => data.champs[id]?.name ?? id;
   const isNew = (b) => data.unread.some((n) => n.build_id === b.id);
@@ -261,7 +261,7 @@ function MyBuilds({ data }) {
                   <span>보낸 날 {fmtDateTime(b.created_at)}</span>
                   {b.edited_at && b.status === 'pending' && <span>고친 때 {fmtDateTime(b.edited_at)}</span>}
                   {b.reviewed_at && <span>처리 {fmtDateTime(b.reviewed_at)}</span>}
-                  {['approved', 'hidden'].includes(b.status) && <span>👍 {b.up} · 👎 {b.down}</span>}
+                  {['approved', 'hidden'].includes(b.status) && <span aria-label={`추천 ${b.up} · 비추천 ${b.down}`}>👍 {b.up} · 👎 {b.down}</span>}
                 </div>
                 {b.status === 'approved' && b.approve_note && <p className="approve-note">승인 메모: {b.approve_note}</p>}
                 {b.original_build && ['approved', 'hidden'].includes(b.status) && (

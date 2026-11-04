@@ -341,7 +341,7 @@ async function rpc(name, args) {
   const board = boardRpc(name, args);
   if (board) return board;
   if (name === 'vote_build') {
-    // DB 함수처럼: 한 사람 한 표, null = 취소, 따봉 수 다시 세기
+    // DB 함수처럼: 한 사람 한 표, null = 취소, 추천 수 다시 세기
     const me = fakeState.session?.user.id;
     const b = TABLES.builds.find((x) => x.id === args.p_build_id);
     const old = TABLES.build_votes.find((v) => v.build_id === b.id && v.user_id === me);

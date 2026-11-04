@@ -75,7 +75,7 @@ function BuildView({ b, data, crumbs, sent }) {
         {b.edited_at && b.status === 'pending' && <span>고친 때 {fmtDateTime(b.edited_at)}</span>}
         {b.resubmitted_at && <span>다시 보낸 날 {fmtDateTime(b.resubmitted_at)}</span>}
         {b.reviewed_at && <span>처리 {fmtDateTime(b.reviewed_at)}</span>}
-        {['approved', 'hidden'].includes(b.status) && <span>👍 {b.up} · 👎 {b.down}</span>}
+        {['approved', 'hidden'].includes(b.status) && <span aria-label={`추천 ${b.up} · 비추천 ${b.down}`}>👍 {b.up} · 👎 {b.down}</span>}
       </div>
 
       {b.status === 'pending' && (

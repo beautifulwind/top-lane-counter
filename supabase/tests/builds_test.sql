@@ -1,5 +1,5 @@
 -- 로컬 검사 전용 (supabase/tests/run.sh). 실제 Supabase SQL Editor에서 실행하지 말 것.
--- 008: 빌드 등록(내용 검사) → 승인·거절·숨기기·다시 공개(메모 필수, 기록, 알림) / 따봉(함수로만, 기록) / 탈퇴 처리
+-- 008: 빌드 등록(내용 검사) → 승인·거절·숨기기·다시 공개(메모 필수, 기록, 알림) / 추천(함수로만, 기록) / 탈퇴 처리
 \set ON_ERROR_STOP 1
 \set QUIET 1
 insert into auth.users (id, email) values
@@ -125,7 +125,7 @@ select t.ok('알림 확인 → 꺼짐', (select mark_notifications_read(array(se
 select t.fails('똑같은 빌드는 다시 못 냄 (패치만 달라도)', $$select pg_temp.add(starting => array['1036','2003','2003'], patch => '16.22')$$, '똑같은 빌드가 이미 공개');
 select t.ok('작성자는 처리 기록을 못 봄 (운영자만)', (select count(*) = 0 from build_status_log));
 
--- ===== 5. 따봉/비추 =====
+-- ===== 5. 추천/비추천 =====
 select t.fails('내 빌드에는 투표 불가', format('select vote_build(%s, 1::smallint)', (select v from ids where k = 'b1')), '내 빌드에는');
 select t.fails('표 직접 넣기 불가', format('insert into build_votes (build_id, user_id, value) values (%s, auth.uid(), 1)', (select v from ids where k = 'b1')), 'permission denied');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000c';
@@ -137,9 +137,9 @@ set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 select t.fails('투표 값: 2', format('select vote_build(%s, 2::smallint)', (select v from ids where k = 'b1')), '투표 값이 잘못');
 select t.fails('없는 빌드', 'select vote_build(999999, 1::smallint)', '공개된 빌드에만');
-select t.ok('따봉 → {up 1, down 0, mine 1}', (select vote_build((select v from ids where k = 'b1'), 1::smallint) = '{"up":1,"down":0,"mine":1}'::jsonb));
+select t.ok('추천 → {up 1, down 0, mine 1}', (select vote_build((select v from ids where k = 'b1'), 1::smallint) = '{"up":1,"down":0,"mine":1}'::jsonb));
 select t.ok('같은 표 다시 → 그대로', (select vote_build((select v from ids where k = 'b1'), 1::smallint) = '{"up":1,"down":0,"mine":1}'::jsonb));
-select t.ok('비추로 바꾸기', (select vote_build((select v from ids where k = 'b1'), (-1)::smallint) = '{"up":0,"down":1,"mine":-1}'::jsonb));
+select t.ok('비추천으로 바꾸기', (select vote_build((select v from ids where k = 'b1'), (-1)::smallint) = '{"up":0,"down":1,"mine":-1}'::jsonb));
 select t.ok('내 표는 읽을 수 있음', (select value = -1 from build_votes where build_id = (select v from ids where k = 'b1')));
 select t.ok('취소', (select vote_build((select v from ids where k = 'b1'), null) = '{"up":0,"down":0,"mine":null}'::jsonb));
 select t.ok('취소한 표는 없어짐', (select count(*) = 0 from build_votes));
@@ -161,7 +161,7 @@ select t.ok('투표 기록 내용 (받은 사람·카운터·이전값·새값)'
 select t.fails('숨기기: 사유 공백', format($$select hide_build(%s, ' ')$$, (select v from ids where k = 'b1')), '숨기는 사유를 적어');
 select t.fails('다시 공개: 숨긴 빌드가 아님', format($$select restore_build(%s, '다시')$$, (select v from ids where k = 'b1')), '숨긴 빌드가 아니에요');
 select hide_build((select v from ids where k = 'b1'), '아이템이 바뀌었어요');
-select t.ok('숨김: 상태·사유·시각, 따봉 수는 그대로',
+select t.ok('숨김: 상태·사유·시각, 추천 수는 그대로',
   (select status = 'hidden' and hide_reason = '아이템이 바뀌었어요' and hidden_at is not null and up_count = 2
    from builds where id = (select v from ids where k = 'b1')));
 select t.fails('두 번 숨기기 불가', format($$select hide_build(%s, '또')$$, (select v from ids where k = 'b1')), '이미 숨긴');
@@ -179,7 +179,7 @@ select t.ok('숨긴 동안에는 같은 빌드를 다시 낼 수 있음 (승인 
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select t.fails('다시 공개: 메모 공백', format($$select restore_build(%s, '')$$, (select v from ids where k = 'b1')), '다시 공개 메모를 적어');
 select restore_build((select v from ids where k = 'b1'), '패치 확인했어요');
-select t.ok('다시 공개: 공개 + 숨김 사유 지움 + 따봉 유지',
+select t.ok('다시 공개: 공개 + 숨김 사유 지움 + 추천 유지',
   (select status = 'approved' and hide_reason is null and hidden_at is null and up_count = 2
    from builds where id = (select v from ids where k = 'b1')));
 select t.fails('똑같은 빌드가 공개 중이면 승인 불가', format($$select approve_build(%s, '좋아요', null, t.bv(%1$s))$$, (select v from ids where k = 'b2')), '똑같은 빌드가 이미 공개');
@@ -231,7 +231,7 @@ select t.ok('알림 종류 검사', (select count(*) = 0 from notifications wher
    'level_up','level_down','title_earned','title_revoked')));
 
 -- ===== 10. 탈퇴(계정 삭제) =====
--- 유저(b): 공개 빌드 b1(따봉 2), 거절 b2·b3 / 유저2(d): b1에 따봉
+-- 유저(b): 공개 빌드 b1(추천 2), 거절 b2·b3 / 유저2(d): b1에 추천
 delete from auth.users where id = '00000000-0000-0000-0000-00000000000d';
 select t.ok('투표한 사람 탈퇴: 표는 지워지고 수 반영, 투표 기록은 이름만 비움',
   (select up_count = 1 from builds where id = (select v from ids where k = 'b1'))

@@ -41,7 +41,7 @@ export default function Login() {
     <article className="login">
       <h1 className="doc-title">로그인 · 가입</h1>
       <p className="lead">
-        로그인하면 카운터·문서 수정·빌드를 제안하고, 따봉·비추를 누르고, 자유게시판과 문서에 글·댓글을 쓸 수 있어요. 보기는 로그인 없이도 돼요.
+        로그인하면 카운터·문서 수정·빌드를 제안하고, 빌드에 추천·비추천을 누르고, 자유게시판과 문서에 글·댓글을 쓸 수 있어요. 보기는 로그인 없이도 돼요.
       </p>
       {guest ? (
         <p className="notice login-join">지금은 비회원이에요. 구글·카카오를 고르면 지금 기록을 이어 갈지 정할 수 있어요.</p>
@@ -126,7 +126,7 @@ function GuestStart({ busy, onStart, onCancel }) {
   return (
     <section className="guest-start" aria-label="비회원으로 시작" onKeyDown={(e) => e.key === 'Escape' && !busy && onCancel()}>
       <p className="warn">{guestNotice('web')}</p>
-      <p className="hint">비회원은 읽기·자유게시판 글·댓글·문서 댓글·제안을 할 수 있어요. 따봉·비추·추천·신고는 구글·카카오를 연결한 뒤에 돼요.</p>
+      <p className="hint">비회원은 읽기·자유게시판 글·댓글·문서 댓글·제안을 할 수 있어요. 추천·비추천·신고는 구글·카카오를 연결한 뒤에 돼요.</p>
       <Captcha ref={captcha} onToken={setToken} onError={setCaptchaError} />
       {captchaError && <p className="form-error" role="alert">{captchaError}</p>}
       <div className="row-actions">

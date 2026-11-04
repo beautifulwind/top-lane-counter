@@ -36,7 +36,7 @@ export function BuildAuthor({ build }) {
 
 /**
  * 빌드 카드 (매치업 문서·등록 미리보기·운영자 화면 공용).
- * interactive: 따봉/비추 누르기 + 운영자 [빌드 숨기기] (매치업 문서에서만). 아니면 숫자만 보인다.
+ * interactive: 추천/비추천 누르기 + 운영자 [빌드 숨기기] (매치업 문서에서만). 아니면 숫자만 보인다.
  * onHidden(message): 운영자가 숨긴 뒤 / lastOne: 이 매치업의 마지막 공개 빌드 (숨기기 잠금)
  */
 export default function BuildCard({ build, items, runes, spells, latest, interactive = false, onHidden, lastOne = false }) {
@@ -109,8 +109,8 @@ export default function BuildCard({ build, items, runes, spells, latest, interac
       ) : (
         build.up !== undefined && (
           <div className="votes">
-            <span className="vote-count">👍 {build.up}</span>
-            <span className="vote-count">👎 {build.down}</span>
+            <span className="vote-count" aria-label={`추천 ${build.up}`}>👍 {build.up}</span>
+            <span className="vote-count" aria-label={`비추천 ${build.down}`}>👎 {build.down}</span>
           </div>
         )
       )}
@@ -118,7 +118,7 @@ export default function BuildCard({ build, items, runes, spells, latest, interac
   );
 }
 
-/** 따봉/비추 (로그인한 사람만, 한 사람 한 표, 같은 버튼 다시 누르면 취소, 내 빌드는 못 누름) + 운영자 숨기기 */
+/** 추천/비추천 (로그인한 사람만, 한 사람 한 표, 같은 버튼 다시 누르면 취소, 내 빌드는 못 누름) + 운영자 숨기기 */
 function BuildActions({ build, onHidden, lastOne }) {
   const auth = useAuth();
   const navigate = useNavigate();
@@ -143,7 +143,7 @@ function BuildActions({ build, onHidden, lastOne }) {
     }
     if (own || busy) return;
     if (isGuest(auth)) {
-      setGuestHint(true); // 비회원은 따봉·비추 불가 (DB 트리거도 막는다)
+      setGuestHint(true); // 비회원은 추천·비추천 불가 (DB 트리거도 막는다)
       return;
     }
     setBusy(true);
@@ -166,7 +166,7 @@ function BuildActions({ build, onHidden, lastOne }) {
           type="button"
           className={votes.mine === 1 ? 'vote on' : 'vote'}
           aria-pressed={votes.mine === 1}
-          aria-label={`따봉 ${votes.up}`}
+          aria-label={`추천 ${votes.up}`}
           onClick={() => vote(1)}
           disabled={own || busy}
           title={title}
@@ -177,7 +177,7 @@ function BuildActions({ build, onHidden, lastOne }) {
           type="button"
           className={votes.mine === -1 ? 'vote on down' : 'vote'}
           aria-pressed={votes.mine === -1}
-          aria-label={`비추 ${votes.down}`}
+          aria-label={`비추천 ${votes.down}`}
           onClick={() => vote(-1)}
           disabled={own || busy}
           title={title}
@@ -188,7 +188,7 @@ function BuildActions({ build, onHidden, lastOne }) {
         <span className="score">점수 {score > 0 ? `+${score}` : score}</span>
       </div>
       {error && <p className="form-error" role="alert">{error}</p>}
-      {guestHint && <GuestHint what="따봉·비추를 누를" />}
+      {guestHint && <GuestHint what="추천·비추천을 누를" />}
       {auth.isOperator && (
         <div className="row-actions">
           <button type="button" className="btn btn-small btn-op" onClick={() => setHiding((v) => !v)} aria-expanded={hiding} disabled={lastOne}>
@@ -201,7 +201,7 @@ function BuildActions({ build, onHidden, lastOne }) {
         <NoteForm
           id={`hide-build-${build.id}`}
           label="숨기는 사유 (필수, 작성자에게 보여요)"
-          hint="숨기면 다른 사람에게 이 빌드가 안 보여요. 따봉 수는 그대로 남고, 운영자 페이지에서 다시 공개할 수 있어요."
+          hint="숨기면 다른 사람에게 이 빌드가 안 보여요. 추천 수는 그대로 남고, 운영자 페이지에서 다시 공개할 수 있어요."
           confirmLabel="숨기기 확정"
           busyLabel="숨기는 중…"
           onCancel={() => setHiding(false)}

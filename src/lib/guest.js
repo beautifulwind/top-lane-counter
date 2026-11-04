@@ -1,5 +1,5 @@
 // 비회원(Supabase 익명 로그인) 규칙과 문구 — 화면(웹)과 나중에 앱(Expo)이 같이 쓴다. DOM·Supabase를 부르지 않는다.
-// 실제 권한 검사는 DB(020_guest.sql)가 한다: 따봉/비추·추천·신고는 막고, 글·댓글·제안·빌드는 회원과 같다.
+// 실제 권한 검사는 DB(020_guest.sql)가 한다: 빌드 추천·비추천, 자유게시판 추천, 신고는 막고, 글·댓글·제안·빌드는 회원과 같다.
 
 /** 비회원으로 시작할 때 보여 줄 안내 (platform: 'web' | 'app') */
 export function guestNotice(platform = 'web') {
@@ -10,7 +10,7 @@ export function guestNotice(platform = 'web') {
 }
 
 /** 마이페이지 연결 권유 문구 */
-export const GUEST_UPGRADE_TEXT = '비회원 기록은 이 브라우저에만 있어요. 구글·카카오를 연결하면 어디서든 이어지고, 따봉·추천·신고도 할 수 있어요.';
+export const GUEST_UPGRADE_TEXT = '비회원 기록은 이 브라우저에만 있어요. 구글·카카오를 연결하면 어디서든 이어지고, 추천·신고도 할 수 있어요.';
 
 /** 오래 안 쓴 비회원 정리 기준 (DB xp_rules guest_empty_days·guest_idle_days와 같은 값, 안내 문구용) */
 export const GUEST_CLEANUP_DAYS = { empty: 30, idle: 90 };

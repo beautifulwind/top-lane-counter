@@ -1,5 +1,5 @@
 -- 로컬 검사 전용 (supabase/tests/run.sh). 실제 Supabase SQL Editor에서 실행하지 말 것.
--- 014: 경험치·레벨·칭호 — 지급, 회수(숨김·삭제), 한 번분만, 따봉 상한, 비주류 고정, 규칙 변경 다시 계산, 운영자 제외, 권한
+-- 014: 경험치·레벨·칭호 — 지급, 회수(숨김·삭제), 한 번분만, 추천 상한, 비주류 고정, 규칙 변경 다시 계산, 운영자 제외, 권한
 -- (각 문장이 끝나면 커밋 → 그때 경험치 트리거가 돈다)
 \set ON_ERROR_STOP 1
 \set QUIET 1
@@ -130,7 +130,7 @@ reset role;
 select t.ok('다시 공개 +30', pg_temp.xp(:'D') = 30);
 
 -- ===================================================================
--- 4. 따봉: +2, 처음 누른 것만, 하루 +40 상한, 취소해도 회수 안 함
+-- 4. 추천: +2, 처음 누른 것만, 하루 +40 상한, 취소해도 회수 안 함
 -- ===================================================================
 set role authenticated;
 do $$
@@ -142,7 +142,7 @@ begin
   end loop;
 end $$;
 reset role;
-select t.ok('따봉 22개 → 하루 상한 +40 (20개분)', pg_temp.xp(:'D') = 70
+select t.ok('추천 22개 → 하루 상한 +40 (20개분)', pg_temp.xp(:'D') = 70
   and (select count(*) = 20 from xp_events where user_id = :'D' and type = 'vote'));
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000101';
@@ -150,18 +150,18 @@ select vote_build((select v from ids where k = 'dbuild'), null);
 select vote_build((select v from ids where k = 'dbuild'), 1::smallint);
 select vote_build((select v from ids where k = 'dbuild'), -1::smallint);
 reset role;
-select t.ok('취소·다시 따봉·비추 반복: 늘지도 줄지도 않음', pg_temp.xp(:'D') = 70
+select t.ok('취소·다시 추천·비추천 반복: 늘지도 줄지도 않음', pg_temp.xp(:'D') = 70
   and (select count(*) = 1 from build_vote_log where voter_id = '00000000-0000-0000-0000-000000000101' and first_up));
 
--- 장군 (기준을 잠깐 낮춰 확인): 공개 중인 빌드의 지금 따봉 21개
+-- 장군 (기준을 잠깐 낮춰 확인): 공개 중인 빌드의 지금 추천 21개
 update xp_rules set value = 21 where key = 'title_general';
 select public.recalc_all_xp();
-select t.ok('장군: 지금 따봉 21 ≥ 21', 'general' = any (pg_temp.titles(:'D')));
+select t.ok('장군: 지금 추천 21 ≥ 21', 'general' = any (pg_temp.titles(:'D')));
 set role authenticated;
 set request.jwt.claim.sub = '00000000-0000-0000-0000-000000000102';
 select vote_build((select v from ids where k = 'dbuild'), null);
 reset role;
-select t.ok('따봉이 취소돼 20 → 장군 회수 (경험치는 그대로)', not ('general' = any (pg_temp.titles(:'D'))) and pg_temp.xp(:'D') = 70);
+select t.ok('추천이 취소돼 20 → 장군 회수 (경험치는 그대로)', not ('general' = any (pg_temp.titles(:'D'))) and pg_temp.xp(:'D') = 70);
 update xp_rules set value = 100 where key = 'title_general';
 
 -- ===================================================================
@@ -192,7 +192,7 @@ set role authenticated;
 set request.jwt.claim.sub = :'A';
 select hide_counter(:garen, '삭제 전');
 reset role;
-select t.ok('숨김: 새 카운터만 회수, 문서 수정·빌드·따봉은 유지', pg_temp.xp(:'B') = 50 and pg_temp.xp(:'D') = 70);
+select t.ok('숨김: 새 카운터만 회수, 문서 수정·빌드·추천은 유지', pg_temp.xp(:'B') = 50 and pg_temp.xp(:'D') = 70);
 set role authenticated;
 set request.jwt.claim.sub = :'A';
 select delete_counter(:garen, 'Garen', '중복');
@@ -200,7 +200,7 @@ reset role;
 select t.ok('삭제: 문서 수정 −50 → 0 (새 카운터는 이미 회수돼 또 회수 안 함)', pg_temp.xp(:'B') = 0
   and pg_temp.key_sum(:'B', 'proposal:' || (select v from ids where k = 'garen_p')) = 0
   and (select count(*) = 4 from xp_events where user_id = :'B' and change = 'revoke'));  -- 숨김 3번 + 삭제 1
-select t.ok('삭제: 빌드 −30·따봉 −40 → 0, 이유 "카운터 삭제"', pg_temp.xp(:'D') = 0
+select t.ok('삭제: 빌드 −30·추천 −40 → 0, 이유 "카운터 삭제"', pg_temp.xp(:'D') = 0
   and (select count(*) = 1 from xp_events where user_id = :'D' and change = 'revoke' and type = 'build' and reason = '카운터 삭제')
   and (select count(*) = 20 from xp_events where user_id = :'D' and change = 'revoke' and type = 'vote' and reason = '빌드 삭제 (카운터 삭제)'));
 select t.ok('지워진 카운터의 내역도 매치업 이름과 함께 남음',

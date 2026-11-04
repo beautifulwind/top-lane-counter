@@ -63,7 +63,7 @@ export async function submitBuild(userId, counterRowId, build, patch) {
   );
 }
 
-/** 따봉(1)·비추(-1)·취소(null). 돌려주는 값: { up, down, mine } */
+/** 추천(1)·비추천(-1)·취소(null). 돌려주는 값: { up, down, mine } */
 export const voteBuild = (buildId, value) =>
   rpc('vote_build', { p_build_id: buildId, p_value: value }, '투표하지 못했어요.');
 

@@ -92,7 +92,7 @@ export const needsNickname = (auth) => auth.status === 'signedIn' && auth.profil
 /** 쓰기(제안·빌드·투표·글·댓글·신고)를 할 수 있나 = 로그인 + 닉네임. 실제 검사는 DB가 한다 */
 export const canWrite = (auth) => auth.status === 'signedIn' && !!auth.profile?.nickname;
 
-/** 따봉/비추·추천·신고를 할 수 있나 = 쓰기 + 비회원 아님 (020, 실제 검사는 DB 트리거) */
+/** 빌드 추천·비추천, 자유게시판 추천, 신고를 할 수 있나 = 쓰기 + 비회원 아님 (020, 실제 검사는 DB 트리거) */
 export const canVote = (auth) => canWrite(auth) && !isGuest(auth);
 
 export { isGuest };

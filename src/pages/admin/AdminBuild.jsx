@@ -216,7 +216,7 @@ function Review() {
           <NoteForm
             id="hide-build"
             label="숨기는 사유 (필수, 작성자에게 보여요)"
-            hint="숨기면 다른 사람에게 이 빌드가 안 보여요. 따봉 수는 그대로 남아요."
+            hint="숨기면 다른 사람에게 이 빌드가 안 보여요. 추천 수는 그대로 남아요."
             confirmLabel="숨기기 확정"
             busyLabel="숨기는 중…"
             onCancel={() => setOpen(null)}

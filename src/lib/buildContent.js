@@ -139,7 +139,7 @@ export const patchMinor = (patch) => String(patch ?? '').split('.').slice(0, 2).
 /** 구버전 빌드인가: 앞 두 자리만 비교 (16.21.1과 16.21.3은 같은 패치) */
 export const isOutdated = (patch, latest) => !!latest && patchMinor(patch) !== patchMinor(latest);
 
-/** 정렬: 점수(따봉 − 비추) 높은 순 → 투표 수 많은 순 → 최신순 */
+/** 정렬: 점수(추천 − 비추천) 높은 순 → 투표 수 많은 순 → 최신순 */
 export function compareBuilds(a, b) {
   return (b.up - b.down) - (a.up - a.down) || (b.up + b.down) - (a.up + a.down) || String(b.created_at).localeCompare(String(a.created_at));
 }

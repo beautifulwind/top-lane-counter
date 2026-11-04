@@ -129,7 +129,7 @@ function Review() {
           {resubmitted && buildChanged && (
             <>
               <h2 className="section-title">바뀐 빌드 (원래 첫 빌드 → 고친 빌드)</h2>
-              <p className="hint">승인하면 원래 첫 빌드는 숨기고("재검토로 교체"), 고친 빌드를 공개해요. 원래 빌드의 따봉 수는 숨긴 빌드에 남아요.</p>
+              <p className="hint">승인하면 원래 첫 빌드는 숨기고("재검토로 교체"), 고친 빌드를 공개해요. 원래 빌드의 추천 수는 숨긴 빌드에 남아요.</p>
               <div className="build-compare">
                 <div>
                   <h3>원래 첫 빌드</h3>

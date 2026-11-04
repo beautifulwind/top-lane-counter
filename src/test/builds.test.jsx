@@ -44,10 +44,10 @@ test('빈 빌드는 고를 것을 차례로 알려 준다', () => {
 
 // ---------------- 매치업 문서: 투표 ----------------
 
-test('비로그인: 따봉을 누르면 로그인 화면으로, [+ 빌드 등록]도 로그인부터', async () => {
+test('비로그인: 추천을 누르면 로그인 화면으로, [+ 빌드 등록]도 로그인부터', async () => {
   start(MATCHUP);
   await screen.findByText(/퀸으로 다리우스 잡는 법/);
-  click('따봉 5', card('탑고수'));
+  click('추천 5', card('탑고수'));
   expect(where()).toBe('/login');
   expect(rpcCalls('vote_build')).toEqual([]);
   cleanup();
@@ -56,19 +56,19 @@ test('비로그인: 따봉을 누르면 로그인 화면으로, [+ 빌드 등록
   expect(await screen.findByRole('heading', { name: '로그인 · 가입' })).toBeDefined();
 });
 
-test('따봉 → 같은 버튼 다시 누르면 취소 → 비추로 바꾸기 (한 사람 한 표)', async () => {
+test('추천 → 같은 버튼 다시 누르면 취소 → 비추천으로 바꾸기 (한 사람 한 표)', async () => {
   asUser();
   start(MATCHUP);
   await screen.findByText(/퀸으로 다리우스 잡는 법/);
   const c = card('탑고수');
-  click('따봉 5', c);
-  const up = await within(c).findByRole('button', { name: '따봉 6' });
+  click('추천 5', c);
+  const up = await within(c).findByRole('button', { name: '추천 6' });
   expect(up.getAttribute('aria-pressed')).toBe('true');
   expect(within(c).getByText('점수 +5')).toBeDefined();
   fireEvent.click(up);
-  expect(await within(c).findByRole('button', { name: '따봉 5' })).toHaveAttribute('aria-pressed', 'false');
-  click('비추 1', c);
-  expect(await within(c).findByRole('button', { name: '비추 2' })).toHaveAttribute('aria-pressed', 'true');
+  expect(await within(c).findByRole('button', { name: '추천 5' })).toHaveAttribute('aria-pressed', 'false');
+  click('비추천 1', c);
+  expect(await within(c).findByRole('button', { name: '비추천 2' })).toHaveAttribute('aria-pressed', 'true');
   expect(rpcCalls('vote_build')).toEqual([
     { p_build_id: 102, p_value: 1 }, { p_build_id: 102, p_value: null }, { p_build_id: 102, p_value: -1 },
   ]);
@@ -80,11 +80,11 @@ test('내가 이미 누른 표가 보이고, 내 빌드에는 못 누른다', as
   asUser();
   start(MATCHUP);
   await screen.findByText(/퀸으로 다리우스 잡는 법/);
-  expect(within(card('칭호없음')).getByRole('button', { name: '따봉 2' })).toHaveAttribute('aria-pressed', 'true');
+  expect(within(card('칭호없음')).getByRole('button', { name: '추천 2' })).toHaveAttribute('aria-pressed', 'true');
   const mine = card('탑고수');
   expect(within(mine).getByText('내 빌드')).toBeDefined();
-  expect(within(mine).getByRole('button', { name: '따봉 5' })).toBeDisabled();
-  expect(within(mine).getByRole('button', { name: '비추 1' })).toBeDisabled();
+  expect(within(mine).getByRole('button', { name: '추천 5' })).toBeDisabled();
+  expect(within(mine).getByRole('button', { name: '비추천 1' })).toBeDisabled();
 });
 
 test('투표 실패하면 이유를 보여 주고 숫자는 그대로', async () => {
@@ -92,9 +92,9 @@ test('투표 실패하면 이유를 보여 주고 숫자는 그대로', async ()
   start(MATCHUP);
   await screen.findByText(/퀸으로 다리우스 잡는 법/);
   fakeState.rpcError = '공개된 빌드에만 투표할 수 있어요.';
-  click('따봉 5', card('탑고수'));
+  click('추천 5', card('탑고수'));
   expect(await screen.findByRole('alert')).toHaveTextContent('공개된 빌드에만 투표할 수 있어요.');
-  expect(within(card('탑고수')).getByRole('button', { name: '따봉 5' })).toBeDefined();
+  expect(within(card('탑고수')).getByRole('button', { name: '추천 5' })).toBeDefined();
 });
 
 test('정렬: 점수가 같으면 투표가 많은 빌드가 먼저', async () => {

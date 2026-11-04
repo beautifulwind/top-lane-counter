@@ -25,7 +25,7 @@ test('닉네임 표시: 대표 칭호가 없으면 칭호 자리 없이 "Lv.3 �
   expect(container.querySelector('.user-title')).toBeNull();
 });
 
-test('매치업 빌드: 승인된 것만, 따봉 점수 높은 순, 작성자는 레벨·칭호와 함께', async () => {
+test('매치업 빌드: 승인된 것만, 추천 점수 높은 순, 작성자는 레벨·칭호와 함께', async () => {
   start('/champion/Darius/counter/Quinn');
   await screen.findByText(/퀸으로 다리우스 잡는 법/);
   const authors = [...document.querySelectorAll('.build-author')].map((e) => e.textContent);
