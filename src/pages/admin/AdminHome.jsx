@@ -20,6 +20,7 @@ import { EditedBadge, useAuthorChanged } from '../../components/AuthorChanged';
 import OffmetaPicks from '../../components/OffmetaPicks';
 import BoardAdmin from '../../components/BoardAdmin';
 import ItemPrices from '../../components/ItemPrices';
+import MediaUsage from '../../components/MediaUsage';
 import { matchupTitle } from '../../lib/josa';
 
 /**
@@ -152,6 +153,11 @@ function PendingList() {
       <section className="section">
         <h2 className="section-title">노가리방·댓글</h2>
         <BoardAdmin />
+      </section>
+
+      <section className="section">
+        <h2 className="section-title">사진 저장 공간</h2>
+        <MediaUsage />
       </section>
 
       <section className="section">

@@ -4,7 +4,10 @@ import { COMMENT_MAX, beginEdit } from '../api/board';
 import { canEditNow, fmtTime, useNow } from '../lib/editWindow';
 import { BoardByline, CharCount, ConfirmInline, HiddenBand, ReportForm } from './BoardParts';
 import NoteForm from './NoteForm';
-import { canVote, canWrite } from '../lib/auth';
+import { canVote, canWrite, isGuest } from '../lib/auth';
+import { DEFAULT_MEDIA_RULES, finishMedia } from '../api/media';
+import { MediaGallery, MediaPicker, mediaToItems, sameMedia } from './Media';
+import GuestHint from './GuestHint';
 
 /**
  * 댓글 칸 (노가리방 글, 매치업 문서 공통 — SPEC 6-5, 6-6, 고치기 시간 6-7).
@@ -14,9 +17,10 @@ import { canVote, canWrite } from '../lib/auth';
  * live: 글·문서가 보이는 상태인가 (아니면 고치기·신고 숨김 — 숨긴 글·카운터는 운영자만 봄)
  * rules: 고치기 시간 { post, comment, grace }
  * title: 칸 제목 앞부분 (예: "댓글", "4. 댓글")
+ * mediaRules: 사진 숫자 (ops.media일 때만 — 노가리방 댓글. 문서 댓글은 사진 없음)
  */
 export default function CommentThread({
-  ops, parentId, comments, auth, open, closedHint, live, rules, title = '댓글', onDone, onReload,
+  ops, parentId, comments, auth, open, closedHint, live, rules, mediaRules = DEFAULT_MEDIA_RULES, title = '댓글', onDone, onReload,
 }) {
   const { pathname } = useLocation();
   const now = useNow();
@@ -28,13 +32,16 @@ export default function CommentThread({
       {comments.length > 0 && (
         <ul className="comment-list" aria-label="댓글">
           {comments.map((c) => (
-            <Comment key={c.id} comment={c} ops={ops} live={live} rules={rules} now={now} auth={auth} onDone={onDone} onReload={onReload} />
+            <Comment
+              key={c.id} comment={c} ops={ops} live={live} rules={rules} mediaRules={mediaRules} now={now} auth={auth}
+              onDone={onDone} onReload={onReload}
+            />
           ))}
         </ul>
       )}
       {!open && closedHint && <p className="hint">{closedHint}</p>}
       {open && (canWrite(auth) ? (
-        <CommentForm ops={ops} parentId={parentId} onDone={onReload} />
+        <CommentForm ops={ops} parentId={parentId} auth={auth} mediaRules={mediaRules} onDone={onReload} />
       ) : auth.status === 'signedIn' ? (
         <p className="hint">
           <Link to="/welcome" state={{ from: pathname }}>닉네임을 정하면</Link> 댓글을 달 수 있어요.
@@ -48,9 +55,10 @@ export default function CommentThread({
   );
 }
 
-function Comment({ comment: c, ops, live, rules, now, auth, onDone, onReload }) {
+function Comment({ comment: c, ops, live, rules, mediaRules, now, auth, onDone, onReload }) {
   const [mode, setMode] = useState(null); // 'edit' | 'delete' | 'report' | 'hide'
   const [body, setBody] = useState(c.body);
+  const [media, setMedia] = useState(() => mediaToItems(c.media));
   const [deadline, setDeadline] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -67,6 +75,7 @@ function Comment({ comment: c, ops, live, rules, now, auth, onDone, onReload }) 
       const until = await beginEdit(ops.kind, c.id);
       setDeadline(until);
       setBody(c.body);
+      setMedia(mediaToItems(c.media));
       setMode('edit');
     } catch (err) {
       setError(err.message);
@@ -77,6 +86,7 @@ function Comment({ comment: c, ops, live, rules, now, auth, onDone, onReload }) 
   const cancelEdit = () => {
     setMode(null);
     setBody(c.body);
+    setMedia(mediaToItems(c.media));
     setError(null);
   };
 
@@ -85,7 +95,12 @@ function Comment({ comment: c, ops, live, rules, now, auth, onDone, onReload }) 
     setBusy(true);
     setError(null);
     try {
-      await ops.edit(c.id, body);
+      if (ops.media) {
+        const paths = await finishMedia(media, auth.user.id);
+        await ops.edit(c.id, body, sameMedia(media, c.media) ? null : paths);
+      } else {
+        await ops.edit(c.id, body);
+      }
       setMode(null);
       onReload();
     } catch (err) {
@@ -105,10 +120,15 @@ function Comment({ comment: c, ops, live, rules, now, auth, onDone, onReload }) 
           <label htmlFor={`edit-comment-${c.id}`} className="sr-only">댓글 고치기</label>
           {/* eslint-disable-next-line jsx-a11y/no-autofocus -- [고치기]를 눌러 연 칸이라 바로 쓰게 한다 */}
           <textarea id={`edit-comment-${c.id}`} rows={3} value={body} onChange={(e) => setBody(e.target.value)} autoFocus />
+          {ops.media && !isGuest(auth) && (
+            <MediaPicker
+              id={`edit-comment-media-${c.id}`} items={media} onChange={setMedia} max={mediaRules.commentMax} rules={mediaRules} disabled={busy}
+            />
+          )}
           {deadline && <small className="hint edit-deadline">{fmtTime(deadline)}까지 저장할 수 있어요.</small>}
           <div className="comment-form-foot">
             <CharCount value={body} max={COMMENT_MAX} />
-            <button type="submit" className="btn btn-small" disabled={busy || !body.trim() || body.trim().length > COMMENT_MAX}>
+            <button type="submit" className="btn btn-small" disabled={busy || (!body.trim() && media.length === 0) || body.trim().length > COMMENT_MAX}>
               {busy ? '저장하는 중…' : '고친 내용 저장'}
             </button>
             <button type="button" className="btn btn-small" disabled={busy} onClick={cancelEdit}>취소</button>
@@ -116,7 +136,10 @@ function Comment({ comment: c, ops, live, rules, now, auth, onDone, onReload }) 
           {error && <p className="form-error" role="alert">{error}</p>}
         </form>
       ) : (
-        <div className="comment-body">{c.body}</div>
+        <>
+          {c.body && <div className="comment-body">{c.body}</div>}
+          <MediaGallery media={c.media} label="댓글 사진" />
+        </>
       )}
       {mode === null && (
         <div className="comment-actions">
@@ -142,7 +165,7 @@ function Comment({ comment: c, ops, live, rules, now, auth, onDone, onReload }) 
       )}
       {mode === 'report' && (
         <ReportForm
-          id={`report-${ops.kind}-${c.id}`} what="댓글" onCancel={() => setMode(null)}
+          id={`report-${ops.kind}-${c.id}`} what="댓글" photos={Boolean(ops.media)} onCancel={() => setMode(null)}
           onSubmit={async (reason, detail) => {
             await ops.report(c.id, reason, detail);
             setMode(null);
@@ -169,20 +192,24 @@ function Comment({ comment: c, ops, live, rules, now, auth, onDone, onReload }) 
 }
 
 /** 댓글 달기: 보내는 동안 버튼을 잠가 두 번 눌러도 한 번만 */
-function CommentForm({ ops, parentId, onDone }) {
+function CommentForm({ ops, parentId, auth, mediaRules, onDone }) {
   const [body, setBody] = useState('');
+  const [media, setMedia] = useState([]);
+  const withMedia = ops.media && !isGuest(auth);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const n = body.trim().length;
 
   const submit = async (e) => {
     e.preventDefault();
-    if (busy || n === 0 || n > COMMENT_MAX) return;
+    if (busy || (n === 0 && media.length === 0) || n > COMMENT_MAX) return;
     setBusy(true);
     setError(null);
     try {
-      await ops.create(parentId, body);
+      if (withMedia) await ops.create(parentId, body, await finishMedia(media, auth.user.id));
+      else await ops.create(parentId, body);
       setBody('');
+      setMedia([]);
       onDone();
     } catch (err) {
       setError(err.message);
@@ -194,9 +221,13 @@ function CommentForm({ ops, parentId, onDone }) {
     <form className="comment-form" onSubmit={submit}>
       <label htmlFor="new-comment" className="sr-only">댓글 쓰기</label>
       <textarea id="new-comment" rows={3} placeholder="댓글을 남겨 주세요" value={body} onChange={(e) => setBody(e.target.value)} />
+      {withMedia && (
+        <MediaPicker id="new-comment-media" items={media} onChange={setMedia} max={mediaRules.commentMax} rules={mediaRules} disabled={busy} />
+      )}
+      {ops.media && isGuest(auth) && <GuestHint what="사진을 붙일" />}
       <div className="comment-form-foot">
         <CharCount value={body} max={COMMENT_MAX} />
-        <button type="submit" className="btn btn-small btn-primary" disabled={busy || n === 0 || n > COMMENT_MAX}>
+        <button type="submit" className="btn btn-small btn-primary" disabled={busy || (n === 0 && media.length === 0) || n > COMMENT_MAX}>
           {busy ? '올리는 중…' : '댓글 올리기'}
         </button>
       </div>

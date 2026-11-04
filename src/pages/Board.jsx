@@ -76,6 +76,7 @@ export default function Board() {
                 <span className="post-title-line">
                   {p.status === 'hidden' && <span className="op-badge">숨김</span>}
                   <span className={p.deleted ? 'post-title deleted' : 'post-title'}>{p.deleted ? '(삭제된 글)' : p.title}</span>
+                  {p.media_count > 0 && !p.deleted && <span className="post-media" role="img" aria-label="사진 있음" title="사진 있음">📷</span>}
                   {p.comment_count > 0 && <span className="post-count" aria-label={`댓글 ${p.comment_count}개`}>[{p.comment_count}]</span>}
                 </span>
                 <span className="post-meta">

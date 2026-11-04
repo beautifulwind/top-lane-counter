@@ -18,6 +18,24 @@ create function auth.uid() returns uuid language sql stable as $$
   select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid
 $$;
 grant execute on function auth.uid() to anon, authenticated;
+-- Storage 흉내 (023): 버킷·파일 표, storage.foldername. 진짜 Storage API가 하는 "파일 줄 넣기"는 검사에서 insert로 대신한다
+create schema storage;
+grant usage on schema storage to anon, authenticated, service_role;
+create table storage.buckets (
+  id text primary key, name text not null, public boolean default false, file_size_limit bigint, allowed_mime_types text[],
+  created_at timestamptz default now()
+);
+create table storage.objects (
+  id uuid primary key default gen_random_uuid(), bucket_id text references storage.buckets (id), name text not null,
+  owner uuid, owner_id text, metadata jsonb, created_at timestamptz default now(), unique (bucket_id, name)
+);
+alter table storage.objects enable row level security;
+grant select, insert on storage.objects to anon, authenticated;
+grant all on storage.objects to service_role;
+create function storage.foldername(name text) returns text[] language sql immutable as $$
+  select (string_to_array(name, '/'))[1:greatest(cardinality(string_to_array(name, '/')) - 1, 0)]
+$$;
+grant execute on function storage.foldername(text) to anon, authenticated, service_role;
 -- 테스트 도우미: sql을 실행해서 기대한 오류가 나는지 확인
 create schema t;
 grant usage on schema t to anon, authenticated, service_role;

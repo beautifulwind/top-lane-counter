@@ -88,7 +88,7 @@ test('글쓰기: 빈 칸이면 못 보냄, 올리면 글로 이동 / 도배 간�
   expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('첫 글');
   expect(document.querySelector('.post-body').textContent).toBe('안녕\n하세요');
   expect(rpcs('create_post')).toEqual([
-    { p_title: '  첫 글 ', p_body: '안녕\n하세요' }, { p_title: '  첫 글 ', p_body: '안녕\n하세요' },
+    { p_title: '  첫 글 ', p_body: '안녕\n하세요', p_media: [] }, { p_title: '  첫 글 ', p_body: '안녕\n하세요', p_media: [] },
   ]);
 });
 
@@ -200,7 +200,7 @@ test('댓글: 달기(빈 칸이면 못 보냄) → 바로 보임, 내 댓글 고
   expect(await screen.findByRole('heading', { name: '댓글 2' })).toBeDefined();
   expect(within(screen.getByRole('list', { name: '댓글' })).getByText('내 댓글이에요')).toBeDefined();
   expect(screen.getByLabelText('댓글 쓰기').value).toBe('');
-  expect(rpcs('create_comment')).toEqual([{ p_post: 1, p_body: '내 댓글이에요' }]);
+  expect(rpcs('create_comment')).toEqual([{ p_post: 1, p_body: '내 댓글이에요', p_media: [] }]);
 
   const [other, mine] = within(screen.getByRole('list', { name: '댓글' })).getAllByRole('listitem');
   expect(within(other).queryByRole('button', { name: '고치기' })).toBeNull();

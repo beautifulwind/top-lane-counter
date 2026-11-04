@@ -2,6 +2,7 @@
 // 쓰기·고치기·지우기·추천·신고·숨기기는 모두 DB 함수(015)로만 — 로그인·닉네임·도배 간격·길이·권한은 DB가 막는다.
 import { db } from './supabase';
 import { editRulesFrom } from '../lib/editWindow';
+import { signMedia } from './media';
 
 export const PAGE_SIZE = 20;
 export const TITLE_MAX = 100;
@@ -11,6 +12,7 @@ export const COMMENT_MAX = 1000;
 export const REPORT_REASONS = {
   abuse: '욕설·인신공격',
   hate: '혐오·비하',
+  obscene: '음란·잔혹한 사진',
   privacy: '신상 공개·개인정보',
   spam: '도배·광고',
   other: '기타',
@@ -18,7 +20,10 @@ export const REPORT_REASONS = {
 export const REPORT_REASON_HINTS = {
   hate: '실존 인물·고인 비하, 성별·지역·장애 등을 이유로 한 비하 포함',
   privacy: '실명·연락처·사진·학교·직장 등 본인 동의 없는 정보',
+  obscene: '노출·성적인 사진, 잔인하거나 끔찍한 사진·GIF',
 };
+/** 사진을 붙일 수 없는 곳(문서 댓글)의 신고에는 사진 사유를 빼고 보여 준다 */
+export const PHOTO_REPORT_REASONS = ['obscene'];
 
 const PERSON = 'nickname, level, main_title, is_guest';
 const POST_FIELDS =
@@ -26,6 +31,11 @@ const POST_FIELDS =
 const COMMENT_FIELDS = 'id, post_id, author_id, body, status, hidden_note, hidden_at, edited_at, edit_grace_until, created_at';
 const DOC_COMMENT_FIELDS = 'id, counter_id, author_id, body, status, hidden_note, hidden_at, edited_at, edit_grace_until, created_at';
 const COUNTER = 'counter:counters!doc_comments_counter_id_fkey(id, target_champion, counter_champion, status)';
+// 023: 붙은 사진 (보이는 글·댓글의 것만 RLS가 돌려준다)
+const MEDIA = 'path, mime, size, position';
+const POST_MEDIA = `media:board_attachments!board_attachments_post_id_fkey(${MEDIA})`;
+const COMMENT_MEDIA = `media:board_attachments!board_attachments_comment_id_fkey(${MEDIA})`;
+const byPosition = (list) => [...(list ?? [])].sort((a, b) => a.position - b.position);
 
 function friendly(error, fallback) {
   const msg = error?.message ?? '';
@@ -50,16 +60,16 @@ async function rpc(name, args, fallback) {
 export const getBoardPage = (q, page) =>
   rpc('board_page', { p_q: q || null, p_page: page, p_size: PAGE_SIZE }, '글 목록을 불러오지 못했어요.');
 
-/** 글 하나 + 댓글 (+ 내 추천 여부). 숨긴 글은 운영자에게만 보인다 → 없으면 null */
+/** 글 하나 + 댓글 (+ 내 추천 여부). 숨긴 글은 운영자에게만 보인다 → 없으면 null. 글·댓글의 media = [{ path, mime, size, url }] */
 export async function getPost(id, userId = null) {
   const post = await run(
-    db().from('posts').select(`${POST_FIELDS}, author:profiles!posts_author_id_fkey(${PERSON})`).eq('id', id).maybeSingle(),
+    db().from('posts').select(`${POST_FIELDS}, author:profiles!posts_author_id_fkey(${PERSON}), ${POST_MEDIA}`).eq('id', id).maybeSingle(),
     '글을 불러오지 못했어요.',
   );
   if (!post) return null;
-  const [comments, vote] = await Promise.all([
+  const [rawComments, vote] = await Promise.all([
     run(
-      db().from('post_comments').select(`${COMMENT_FIELDS}, author:profiles!post_comments_author_id_fkey(${PERSON})`)
+      db().from('post_comments').select(`${COMMENT_FIELDS}, author:profiles!post_comments_author_id_fkey(${PERSON}), ${COMMENT_MEDIA}`)
         .eq('post_id', id).order('created_at', { ascending: true }).order('id', { ascending: true }),
       '댓글을 불러오지 못했어요.',
     ),
@@ -67,19 +77,26 @@ export async function getPost(id, userId = null) {
       ? run(db().from('post_votes').select('post_id').eq('post_id', id).eq('user_id', userId).maybeSingle(), '추천을 불러오지 못했어요.')
       : null,
   ]);
-  return { ...post, comments, voted: Boolean(vote) };
+  const [postMedia, ...commentMedia] = await signMedia([byPosition(post.media), ...rawComments.map((c) => byPosition(c.media))]);
+  const comments = rawComments.map((c, i) => ({ ...c, media: commentMedia[i] }));
+  return { ...post, media: postMedia, comments, voted: Boolean(vote) };
 }
 
-/** 글쓰기 → 새 글 id */
-export const createPost = (title, body) => rpc('create_post', { p_title: title, p_body: body }, '글을 올리지 못했어요.');
-export const editPost = (id, title, body) => rpc('edit_post', { p_id: id, p_title: title, p_body: body }, '글을 고치지 못했어요.');
+/** 글쓰기 → 새 글 id. media = 올린 사진 경로 (보이는 순서) */
+export const createPost = (title, body, media = []) =>
+  rpc('create_post', { p_title: title, p_body: body, p_media: media }, '글을 올리지 못했어요.');
+/** media: 경로 목록이면 그 목록으로 바꾸고, null이면 사진은 그대로 */
+export const editPost = (id, title, body, media = null) =>
+  rpc('edit_post', { p_id: id, p_title: title, p_body: body, p_media: media }, '글을 고치지 못했어요.');
 /** 'soft'(다른 사람 댓글이 있어 "삭제된 글"로 남음) | 'hard' */
 export const deleteMyPost = (id) => rpc('delete_my_post', { p_id: id }, '글을 지우지 못했어요.');
 /** 추천 누르기/취소 → { up, mine } */
 export const votePost = (id) => rpc('vote_post', { p_id: id }, '추천하지 못했어요.');
 
-export const createComment = (postId, body) => rpc('create_comment', { p_post: postId, p_body: body }, '댓글을 올리지 못했어요.');
-export const editComment = (id, body) => rpc('edit_comment', { p_id: id, p_body: body }, '댓글을 고치지 못했어요.');
+export const createComment = (postId, body, media = []) =>
+  rpc('create_comment', { p_post: postId, p_body: body, p_media: media }, '댓글을 올리지 못했어요.');
+export const editComment = (id, body, media = null) =>
+  rpc('edit_comment', { p_id: id, p_body: body, p_media: media }, '댓글을 고치지 못했어요.');
 export const deleteMyComment = (id) => rpc('delete_my_comment', { p_id: id }, '댓글을 지우지 못했어요.');
 
 export const reportPost = (id, reason, detail) =>
@@ -200,7 +217,7 @@ export const restoreDocComment = (id, note) => rpc('restore_doc_comment', { p_id
 
 /** 댓글 화면(CommentThread)에 넘기는 처리 묶음 */
 export const POST_COMMENT_OPS = {
-  kind: 'comment', create: createComment, edit: editComment, remove: deleteMyComment,
+  kind: 'comment', media: true, create: createComment, edit: editComment, remove: deleteMyComment,
   report: reportComment, hide: hideComment, restore: restoreComment,
 };
 export const DOC_COMMENT_OPS = {

@@ -16,6 +16,8 @@
   --placeholder: #cccccc;    /* 그림이 아직 안 뜬 자리 */
   --icon-bg: #222222;        /* 아이템·룬 아이콘 바탕 */
   --shadow: rgba(0, 0, 0, .15);
+  --viewer-bg: rgba(0, 0, 0, .85); /* 사진 크게 보기 뒤 어두운 막 */
+  --on-viewer: #ffffff;
 
   /* 상단 막대 위 (브랜드색 바탕) */
   --on-brand: #ffffff;

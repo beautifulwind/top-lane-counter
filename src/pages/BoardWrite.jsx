@@ -2,11 +2,14 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BODY_MAX, TITLE_MAX, beginEdit, createPost, editPost, getPost } from '../api/board';
 import { fmtTime } from '../lib/editWindow';
-import { useAuth } from '../lib/auth';
+import { isGuest, useAuth } from '../lib/auth';
+import { finishMedia } from '../api/media';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
 import { RequireLogin } from '../components/RequireOperator';
 import { CharCount } from '../components/BoardParts';
+import GuestHint from '../components/GuestHint';
+import { MediaGallery, MediaPicker, mediaToItems, sameMedia, useMediaRules } from '../components/Media';
 
 /**
  * 글쓰기 (/board/new) · 고치기 (/board/:id/edit). 로그인 + 닉네임 필요 (닉네임은 Layout이 먼저 보낸다)
@@ -50,13 +53,18 @@ function WriteOrEdit() {
 
 function PostForm({ post = null, deadline = null }) {
   const navigate = useNavigate();
+  const auth = useAuth();
+  const guest = isGuest(auth);
+  const rules = useMediaRules();
+  const [media, setMedia] = useState(() => mediaToItems(post?.media));
   const [title, setTitle] = useState(post?.title ?? '');
   const [body, setBody] = useState(post?.body ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const t = title.trim().length;
   const b = body.trim().length;
-  const ready = t > 0 && t <= TITLE_MAX && b > 0 && b <= BODY_MAX;
+  // 사진만 올리는 글도 된다 (제목은 꼭)
+  const ready = t > 0 && t <= TITLE_MAX && b <= BODY_MAX && (b > 0 || media.length > 0);
 
   const submit = async (e) => {
     e.preventDefault();
@@ -64,11 +72,12 @@ function PostForm({ post = null, deadline = null }) {
     setBusy(true);
     setError(null);
     try {
+      const paths = await finishMedia(media, auth.user.id);
       if (post) {
-        await editPost(post.id, title, body);
+        await editPost(post.id, title, body, sameMedia(media, post.media) ? null : paths);
         navigate(`/board/${post.id}`, { replace: true, state: { done: '글을 고쳤어요.' } });
       } else {
-        const newId = await createPost(title, body);
+        const newId = await createPost(title, body, paths);
         navigate(`/board/${newId}`, { replace: true, state: { done: '글을 올렸어요.' } });
       }
     } catch (err) {
@@ -92,6 +101,17 @@ function PostForm({ post = null, deadline = null }) {
         <label htmlFor="post-body">본문</label>
         <textarea id="post-body" rows={12} value={body} onChange={(e) => setBody(e.target.value)} />
         <CharCount value={body} max={BODY_MAX} />
+        <span className="field-label" id="post-media-label">사진·GIF</span>
+        {guest ? (
+          <>
+            {post?.media?.length > 0 && <MediaGallery media={post.media} />}
+            <GuestHint what="사진을 붙일" />
+          </>
+        ) : (
+          <MediaPicker
+            id="post-media" items={media} onChange={setMedia} max={rules.postMax} gifMax={rules.postGifMax} rules={rules} disabled={busy}
+          />
+        )}
         {error && <p className="form-error" role="alert">{error}</p>}
         <div className="actions">
           <button type="submit" className="btn btn-primary" disabled={!ready || busy}>

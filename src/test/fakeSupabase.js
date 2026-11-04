@@ -65,6 +65,7 @@ export const TABLES = {
     ['title_general', 100], ['title_offmeta', 5],
     ['post_edit_minutes', 60], ['comment_edit_minutes', 10], ['edit_grace_minutes', 5], ['nickname_change_days', 30],
     ['starting_gold_max', 500],
+    ['media_post_max', 4], ['media_post_gif_max', 1], ['media_comment_max', 1], ['media_photo_max_kb', 600], ['media_gif_max_kb', 3072],
   ].map(([key, value]) => ({ key, value })),
 };
 
@@ -87,12 +88,18 @@ export function fakeProposal(extra = {}) {
   };
 }
 
+/** 운영자 사진 저장 공간 (023 media_usage) 기본: 아무것도 없음 */
+export const EMPTY_USAGE = () => ({
+  bytes: 0, files: 0, gif_bytes: 0, gifs: 0, hidden_bytes: 0, recent_bytes: 0, recent_files: 0, trash: 0, orphans: 0, top: [],
+  total_mb: 1024, warn_mb: 800, block_mb: 900,
+});
 // 테스트가 바꾸는 상태. setupTests.js가 테스트마다 초기화한다.
 export const fakeState = {
   error: null, session: null, initError: null, oauthCalls: [], linkCalls: [], linkError: null, listeners: new Set(),
   inserts: [], insertError: null, rpcCalls: [], rpcError: null, boardError: null,
   functionCalls: [], functionError: null, // Edge Function 호출 (017 delete-account)
   anonCalls: [], anonError: null, anonDelay: null, hideCounts: {}, signOutCalls: [], touched: 0, // 비회원 (020)
+  uploads: [], uploadError: null, mediaProblem: null, mediaUsage: EMPTY_USAGE(), // 사진 (023, mediaUsage = media_usage 결과)
 };
 const INITIAL_PROFILES = TABLES.profiles.map((p) => ({ ...p }));
 
@@ -135,6 +142,10 @@ export function resetFake() {
   fakeState.hideCounts = {};
   fakeState.signOutCalls = [];
   fakeState.touched = 0;
+  fakeState.uploads = [];
+  fakeState.uploadError = null;
+  fakeState.mediaProblem = null;
+  fakeState.mediaUsage = EMPTY_USAGE();
 }
 
 /** 비회원(익명 로그인)으로 들어온 상태. DB 트리거처럼 is_guest 프로필을 만든다 */
@@ -297,6 +308,11 @@ async function rpc(name, args) {
     if (!isAdminNow()) return { data: null, error: { message: '운영자만 할 수 있어요.', code: '42501' } };
     return { data: { days: 90, counts: Object.fromEntries(args.p_users.map((u) => [u, fakeState.hideCounts[u] ?? 0])) }, error: null };
   }
+  if (name === 'media_upload_problem') return { data: fakeState.mediaProblem, error: null }; // 화면이 알아서 묻는 것
+  if (name === 'media_usage') {
+    if (!isAdminNow()) return { data: null, error: { message: '운영자만 할 수 있어요.', code: '42501' } };
+    return { data: fakeState.mediaUsage, error: null };
+  }
   if (name === 'touch_last_seen') {
     fakeState.touched += 1; // 화면이 알아서 부르는 것이라 rpcCalls에는 넣지 않는다
     return { data: null, error: null };
@@ -353,7 +369,7 @@ export function fakePost(id, extra = {}) {
   return {
     id, author_id: 'u-old', author: { nickname: '기존유저', level: 1, main_title: null }, title: `글 ${id}`, body: `본문 ${id}`,
     status: 'visible', hidden_note: null, hidden_at: null, edited_at: null, deleted_at: null, comment_count: 0, up_count: 0,
-    created_at: `2026-11-01T0${id % 10}:00:00Z`, ...extra,
+    created_at: `2026-11-01T0${id % 10}:00:00Z`, media: [], ...extra,
   };
 }
 /** 테스트에서 쓰는 문서 댓글 한 줄 (기본: 퀸 매치업, 기존유저) */
@@ -367,8 +383,17 @@ export function fakeDocComment(id, extra = {}) {
 export function fakeComment(id, postId, extra = {}) {
   return {
     id, post_id: postId, author_id: 'u-old', author: { nickname: '기존유저', level: 1, main_title: null }, body: `댓글 ${id}`,
-    status: 'visible', hidden_note: null, hidden_at: null, edited_at: null, created_at: `2026-11-01T1${id % 10}:00:00Z`, ...extra,
+    status: 'visible', hidden_note: null, hidden_at: null, edited_at: null, created_at: `2026-11-01T1${id % 10}:00:00Z`, media: [],
+    ...extra,
   };
+}
+
+/** 붙인 사진 경로 → 붙은 사진 줄 (올린 파일의 형식·크기를 쓴다) */
+function mediaRows(paths = []) {
+  return (paths ?? []).map((path, position) => {
+    const up = fakeState.uploads.find((u) => u.path === path);
+    return { path, mime: up?.mime ?? 'image/webp', size: up?.size ?? 1000, position };
+  });
 }
 
 /** 게시판 DB 함수 흉내 (015). 권한·간격 같은 검사는 DB 검사(board_test.sql)에서 하고, 여기서는 화면 흐름만 */
@@ -390,7 +415,7 @@ function boardRpc(name, args) {
         total: rows.length, size: args.p_size,
         rows: rows.slice(from, from + args.p_size).map((p) => ({
           id: p.id, title: p.title, status: p.status, deleted: p.deleted_at != null, comment_count: p.comment_count,
-          up_count: p.up_count, created_at: p.created_at, edited_at: p.edited_at, author: p.author,
+          up_count: p.up_count, created_at: p.created_at, edited_at: p.edited_at, author: p.author, media_count: p.media?.length ?? 0,
         })),
       });
     }
@@ -399,6 +424,7 @@ function boardRpc(name, args) {
       const id = 700 + TABLES.posts.length;
       TABLES.posts.push(fakePost(id, {
         author_id: me(), author: person(me()), title: args.p_title.trim(), body: args.p_body.trim(), created_at: new Date().toISOString(),
+        media: mediaRows(args.p_media),
       }));
       return ok(id);
     }
@@ -440,6 +466,7 @@ function boardRpc(name, args) {
     }
     case 'edit_post':
       Object.assign(post(args.p_id), { title: args.p_title.trim(), body: args.p_body.trim(), edited_at: new Date().toISOString() });
+      if (args.p_media != null) post(args.p_id).media = mediaRows(args.p_media);
       return ok();
     case 'delete_my_post': {
       const p = post(args.p_id);
@@ -463,6 +490,7 @@ function boardRpc(name, args) {
       const id = 800 + TABLES.post_comments.length;
       TABLES.post_comments.push(fakeComment(id, args.p_post, {
         author_id: me(), author: person(me()), body: args.p_body.trim(), created_at: new Date().toISOString(),
+        media: mediaRows(args.p_media),
       }));
       recount(args.p_post);
       return ok(id);
@@ -470,6 +498,7 @@ function boardRpc(name, args) {
     case 'edit_comment':
       if (fakeState.boardError) return fail(fakeState.boardError);
       Object.assign(comment(args.p_id), { body: args.p_body.trim(), edited_at: new Date().toISOString() });
+      if (args.p_media != null) comment(args.p_id).media = mediaRows(args.p_media);
       return ok();
     case 'delete_my_comment': {
       const c = comment(args.p_id);
@@ -516,6 +545,21 @@ function boardRpc(name, args) {
   }
 }
 
+// Storage 흉내 (023 board-media): 올린 파일은 fakeState.uploads, 실패는 fakeState.uploadError. 서명 주소는 가짜 주소
+const storage = {
+  from: (bucket) => ({
+    upload: async (path, blob, opts) => {
+      if (fakeState.uploadError) return { data: null, error: { message: fakeState.uploadError } };
+      fakeState.uploads.push({ bucket, path, mime: opts?.contentType, size: blob?.size ?? 0 });
+      return { data: { path }, error: null };
+    },
+    createSignedUrls: async (paths) => ({
+      data: paths.map((path) => ({ path, signedUrl: `https://fake.storage/${bucket}/${path}?token=t`, error: null })),
+      error: null,
+    }),
+  }),
+};
+
 export function db() {
-  return { from: query, auth, rpc, functions };
+  return { from: query, auth, rpc, functions, storage };
 }

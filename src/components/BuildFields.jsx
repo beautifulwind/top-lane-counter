@@ -8,6 +8,7 @@ import { SHARD_ROWS } from '../api/ddragon';
 import { matchesQuery } from '../lib/chosung';
 import { ITEM_LIMITS, NO_SPELLS, SKILLS, buildProblem, startGold, startGoldMax } from '../lib/buildContent';
 import BuildCard, { Icon } from './BuildCard';
+import { XIcon } from './Icons';
 
 /**
  * 빌드 입력 (룬·주문·아이템·스킬 + 미리보기). 빌드 등록·새 카운터 제안·다시 제출 공용.
@@ -190,13 +191,6 @@ function SpellPicker({ spells, value, onChange }) {
 }
 
 const SHOW = 60;
-
-/** X 아이콘 (빼기 버튼) */
-const XIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true" focusable="false">
-    <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-  </svg>
-);
 
 const OVER_MS = 2000;
 

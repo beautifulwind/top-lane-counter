@@ -361,6 +361,19 @@
 - 빌드 입력: 강타 빼기(화면 목록 + DB `check_no_smite` 트리거 — 새 등록·주문을 바꿀 때·새 카운터 제안만 검사, 예전 빌드와 그대로 승인은 통과), 시작 아이템 안내 숨기고 넘길 때만 "500골드를 넘어요", 검색칸 "판금장화 ex) ㅍㄱㅈㅎ", 핵심 템트리 드래그(@dnd-kit), [빼기]는 X 아이콘.
 - 마이페이지: 칭호는 가진 것만, 경험치 내역 칸 없음.
 
+### 6-13. 노가리방 사진·GIF (2026-11-03, 023)
+- **회원만** 노가리방 글·댓글에 사진·GIF를 붙인다 (비회원은 "비회원은 사진을 붙일 수 없어요" 안내). 문서 댓글에는 없음.
+- 숫자 (`xp_rules`, SQL Editor에서 바꿈): 글 4개(그중 GIF 1개) `media_post_max`·`media_post_gif_max`, 댓글 1개 `media_comment_max`, 한 사람 하루 20개 `media_daily_max`,
+  사진 600KB `media_photo_max_kb`, GIF 3MB `media_gif_max_kb`, 전체 1GB `media_total_mb` 중 800MB 경고 `media_warn_mb`·900MB부터 새 첨부 막음 `media_block_mb`, 안 붙은 파일 정리 24시간 `media_orphan_hours`.
+- **브라우저에서 줄이기** (`src/lib/imageCompress.js`): JPG·PNG·WebP는 긴 변 1600px, WebP(안 되면 JPEG) 400KB 안팎 — 다시 그리면서 EXIF(위치·기기)가 빠진다. GIF는 그대로(3MB까지). 원본 20MB 넘으면 거절.
+- **저장**: Supabase Storage 비공개 버킷 `board-media` (`<사용자id>/<임의이름>.<확장자>`). 올리기는 Storage 규칙(로그인·닉네임·회원·내 폴더·하루 개수·전체 용량 — `media_upload_problem()`), 붙이기는 글·댓글 함수(`create_post`·`edit_post`·`create_comment`·`edit_comment`의 `p_media` — 개수·GIF 수·크기·형식·내 파일인지·다른 데 안 붙었는지).
+- **보기**: 붙은 사진은 그 글·댓글과 같은 범위(`board_attachments` RLS가 글·댓글 RLS를 따라감)로, 하루짜리 서명 주소. 숨긴 글·댓글의 사진은 운영자만, 올린 사람은 자기 파일을 본다. 작은 칸 → 누르면 크게(Esc·[닫기]). 목록에 📷.
+- **사진만 있는 글·댓글**도 된다 (글은 제목 필수). 고치기 시간(6-7) 안에 사진 바꾸기·빼기, 안 건드리면 `p_media = null`(그대로).
+- **지우기**: 글·댓글을 지우거나(삭제된 글 포함), 고치면서 빼거나, 탈퇴하면 `board_attachments` 줄이 지워지고 트리거가 경로를 `storage_trash`에 넣는다. SQL은 Storage 파일을 못 지우므로 Edge Function `media-cleanup`이 매일(pg_cron, 11-10) 대기열 + 안 붙은 지 24시간 지난 파일을 Storage API로 지운다. 숨김은 지우지 않는다.
+- 신고 사유 **"음란·잔혹한 사진"**(`obscene`) — 노가리방 글·댓글만 (문서 댓글 신고에는 안 보임).
+- 운영자 `/admin` **"사진 저장 공간"** (`media_usage()`): 사용량 막대(800MB 넘으면 보라, 900MB 넘으면 빨강 "새 사진 첨부가 막혔어요"), 파일·GIF 수, 숨긴 글의 사진, 최근 7일, 정리 대기·안 붙은 파일, 많이 올린 5명.
+- 방침·약관: 수집 항목(사진, EXIF 제거), 파기(하루 안), 공개 범위, 위탁(Supabase 파일 저장), 사진 권리·초상, 금지(음란·잔혹, 개인정보 캡처), 사진 수 제한 — 정식 공개 전이라 시행일만 2026-11-03으로.
+
 ## 7. 데이터 구조 (Supabase 초안)
 
 챔피언·아이템·룬·소환사 주문은 Data Dragon의 ID(예: 챔피언 `"Darius"`, 아이템 `3078`)로 참조한다.
@@ -380,9 +393,11 @@
 - **post_comments**: `id`, `post_id`, `author_id`, `body`, `status`, `hidden_note`·`hidden_at`·`hidden_by`, `edited_at`, `edit_grace_until`, `created_at`
 - **doc_comments**: 문서 댓글 — `id`, `counter_id`(카운터를 지우면 같이 지움), `author_id`, `body`, `status`, `hidden_note`·`hidden_at`·`hidden_by`, `edited_at`, `edit_grace_until`, `created_at`. 보이는 댓글 + 공개 중인 카운터만 누구나 읽기, 나머지는 운영자
 - **post_votes**: 글 추천 (`post_id`, `user_id`) — 본인 것만 읽기
-- **reports**: 신고 — `reporter_id`, `post_id`·`comment_id`·`doc_comment_id` 중 하나, `reason`, `detail`, `status`(open/resolved/dismissed), `handled_by`·`handled_at`·`handled_note`. (신고자, 대상) 고유, 운영자만 읽기. `reason`: abuse/hate/spam/privacy/other (hate는 021)
+- **reports**: 신고 — `reporter_id`, `post_id`·`comment_id`·`doc_comment_id` 중 하나, `reason`, `detail`, `status`(open/resolved/dismissed), `handled_by`·`handled_at`·`handled_note`. (신고자, 대상) 고유, 운영자만 읽기. `reason`: abuse/hate/spam/privacy/obscene/other (hate는 021, obscene은 023 — 글·댓글만)
 - **hide_log** (021): `author_id`(탈퇴하면 같이 삭제), `kind`(post/comment/doc_comment), `target_id`(대상과 연결 안 함 — 지워져도 남음), `hidden_at`, `unhidden_at`. 트리거만 쓰고 아무도 직접 못 읽음 — 운영자 함수 `hide_counts`로만
 - **board_last_write**: 도배 방지용 마지막으로 쓴 때 (아무도 직접 못 읽음)
+- **board_attachments** (023): 노가리방 사진 — `id`, `post_id`·`comment_id` 중 하나(지우면 같이 지움), `author_id`, `path`(Storage 경로, 고유), `mime`(webp/jpeg/gif), `size`, `position`, `created_at`. 읽기는 붙은 글·댓글이 보일 때만, 쓰기는 글·댓글 함수만
+- **storage_trash** (023): Storage에서 지울 파일 경로 대기열 (`path`, `reason`, `queued_at`) — 트리거만 넣고, `media_cleanup_list`·`media_cleanup_done`(service_role만)으로 Edge Function이 비운다. 아무도 직접 못 읽음
 - **xp_events**: 경험치 기록 (지우지 않고 차이만 쌓음) — `user_id`, `type`(new_counter/doc_edit/build/vote/post/comment/doc_comment), `amount`(+/−), `ref_id`, `source_key`(지급할 일의 키), `change`(grant/revoke/adjust), `reason`, `target_champion`·`counter_champion`(매치업 이름 복사), `created_at`. 본인·운영자만 읽기, 쓰기는 DB 함수만
 - **xp_rules**(경험치·하루 상한·칭호 기준), **xp_levels**(레벨표): 누구나 읽기, 바꾸기는 SQL Editor에서만
 - **user_titles**: `user_id`, `title_key`, `earned_at` — 누구나 읽기, 쓰기는 DB 함수만
@@ -499,6 +514,7 @@ RLS 원칙:
 20. `supabase/migrations/020_guest.sql` (실행 **전에** 11-9의 익명 로그인 켜기, 실행 뒤 11-9 나머지)
 21. `supabase/migrations/021_report_reasons_hide_log.sql`
 22. `supabase/migrations/022_rename_wording.sql`
+23. `supabase/migrations/023_board_media.sql` (실행 뒤 11-10)
 - **테스트 데이터 비우기** (마이그레이션 아님, 정식 공개 직전 등 필요할 때): `supabase/scripts/reset_test_data_preview.sql`(읽기만 — 지울·남을 개수)로 확인 → `supabase/scripts/reset_test_data.sql`. 계정·프로필·설정값과 트린다미어 상대 말파이트 카운터(지금 문서·공개 빌드·처음 제안)만 남기고, 말파 문서의 수정 기록은 지금 내용 1줄로 정리, 경험치·레벨·칭호는 알림 없이 다시 계산한다. SQL Editor가 RLS를 물으면 **"Run without RLS"**로 실행 ("Run and enable RLS"는 임시 표 `reset_keep` 때문에 에러).
 - 합쳐서 한 번에 돌리지 않는다: 파일마다 `begin … commit`이라 중간에 실패하면 앞부분만 반영되고, 다시 돌리면 "already exists"가 난다.
 - 새 마이그레이션(010 …)을 만들면 이 목록에 추가한다. `supabase/tests/run.sh`가 빈 DB에 같은 순서로 실행한 뒤 검사용 데이터(`tests/fixtures.sql`)를 넣고 검사한다 (`supabase/tests`는 실제 프로젝트에서 실행하지 않음).
@@ -565,3 +581,25 @@ RLS 원칙:
    ```
    확인: `select * from cron.job;` / 기록: `select * from cron.job_run_details order by start_time desc limit 5;`. 끄기: `select cron.unschedule('cleanup-guests');`
 4. 확인: 시크릿 창에서 [비회원으로 시작하기] → Authentication → Users에 "Anonymous" 사용자, `select is_guest from profiles` = true. 그 상태로 `/me`에서 구글 연결 → 같은 줄이 false.
+
+### 11-10. 노가리방 사진 정리 (023 실행 뒤)
+023이 버킷 `board-media`(비공개)와 Storage 규칙을 만든다. SQL은 Storage 파일을 지울 수 없어서, 지울 파일은 Edge Function이 매일 지운다.
+1. **비밀 값 만들기**: 아무 긴 임의 문자열 (예: 내 컴퓨터 터미널에서 `openssl rand -hex 32`). 저장소·`.env`·대화에 쓰지 않는다.
+2. **Edge Functions → Secrets**: `MEDIA_CLEANUP_SECRET` = 1번 값.
+3. **Edge Functions → Deploy a new function → Via Editor**: 이름 `media-cleanup` ← `supabase/functions/media-cleanup/index.ts` 그대로, **Verify JWT 끔** (pg_cron은 로그인 토큰 없이 부름 — 대신 `x-cleanup-secret` 헤더를 비밀 값과 비교).
+4. **Database → Extensions**: `pg_net` 켜기 (`pg_cron`은 11-9에서 켬).
+5. **Vault** (Integrations → Vault → Add new secret, 또는 Project Settings → Vault): 이름 `media_cleanup_secret`, 값 = 1번 값.
+6. **SQL Editor** (`<프로젝트ID>`만 바꿔서):
+   ```sql
+   select cron.schedule('media-cleanup', '40 19 * * *', $$
+     select net.http_post(
+       url := 'https://<프로젝트ID>.supabase.co/functions/v1/media-cleanup',
+       headers := jsonb_build_object(
+         'content-type', 'application/json',
+         'x-cleanup-secret', (select decrypted_secret from vault.decrypted_secrets where name = 'media_cleanup_secret')),
+       body := '{}'::jsonb);
+   $$); -- 매일 한국 시간 새벽 4:40
+   ```
+7. 확인: Storage에 `board-media`(Private) 버킷. 사진 붙인 글을 올렸다 지운 뒤 `select * from storage_trash;`에 경로 → 다음 날 Edge Functions → media-cleanup → Logs에 `{"event":"media_cleanup","removed":…}`, 대기열이 비고 Storage에서 파일이 사라짐.
+   바로 해 보려면 `select cron.schedule`의 안쪽 `select net.http_post(…)`만 한 번 실행 → `select * from net._http_response order by id desc limit 1;`이 200.
+   기록: `select * from cron.job_run_details order by start_time desc limit 5;`. 끄기: `select cron.unschedule('media-cleanup');`

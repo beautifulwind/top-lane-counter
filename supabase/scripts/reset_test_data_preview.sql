@@ -42,6 +42,10 @@ rows (ord, what, to_delete, to_keep, note) as (
   union all select 11, 'posts (노가리방 글)', (select count(*) from public.posts), 0, null
   union all select 12, 'post_comments (노가리방 댓글)', (select count(*) from public.post_comments), 0, null
   union all select 13, 'post_votes (글 추천)', (select count(*) from public.post_votes), 0, null
+  union all select 13.1, 'board_attachments (글·댓글에 붙은 사진, 023)', (select count(*) from public.board_attachments), 0,
+         '사진 파일은 정리 대기열(storage_trash)로 → 매일 사진 정리(media-cleanup)가 Storage에서 지움'
+  union all select 13.2, 'Storage board-media (사진 파일)', 0, (select count(*) from storage.objects where bucket_id = 'board-media'),
+         '이 스크립트는 바로 못 지움 — 다음 사진 정리 때 대기열·안 붙은 지 24시간 지난 파일이 지워짐'
   union all select 14, 'doc_comments (문서 댓글)', (select count(*) from public.doc_comments), 0, null
   union all select 15, 'reports (신고)', (select count(*) from public.reports), 0, null
   union all select 16, 'hide_log (숨김 기록)', (select count(*) from public.hide_log), 0, null

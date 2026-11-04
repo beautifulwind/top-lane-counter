@@ -11,6 +11,7 @@ import { ErrorBox, Loading } from '../components/Status';
 import NoteForm from '../components/NoteForm';
 import { BoardByline, ConfirmInline, HiddenBand, ReportForm } from '../components/BoardParts';
 import CommentThread from '../components/CommentThread';
+import { MediaGallery, useMediaRules } from '../components/Media';
 
 /**
  * 글 보기 (/board/:id): 본문, 추천, 내 글이면 [고치기][지우기], 남의 글이면 [신고], 운영자는 [숨기기]/[다시 공개].
@@ -23,6 +24,7 @@ export default function BoardPost() {
   const auth = useAuth();
   const userId = auth.user?.id ?? null;
   const location = useLocation();
+  const mediaRules = useMediaRules();
   const [done, setDone] = useState(location.state?.done ?? null);
   const { data, error, loading, retry } = useAsync(
     async () => {
@@ -70,13 +72,14 @@ export default function BoardPost() {
         <>
           <h1 className="doc-title post-heading">{post.title}</h1>
           <BoardByline row={post} />
-          <div className="post-body">{post.body}</div>
+          {post.body && <div className="post-body">{post.body}</div>}
+          <MediaGallery media={post.media} />
           <PostActions post={post} mine={mine} auth={auth} onDone={finished} />
         </>
       )}
 
       <CommentThread
-        ops={POST_COMMENT_OPS} parentId={post.id} comments={post.comments} auth={auth} rules={post.rules}
+        ops={POST_COMMENT_OPS} parentId={post.id} comments={post.comments} auth={auth} rules={post.rules} mediaRules={mediaRules}
         open={!deleted && post.status === 'visible'} live={post.status === 'visible'}
         closedHint={deleted ? '삭제된 글에는 댓글을 달 수 없어요.' : null}
         onDone={finished} onReload={retry}

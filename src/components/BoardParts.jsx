@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { REPORT_REASONS, REPORT_REASON_HINTS } from '../api/board';
+import { PHOTO_REPORT_REASONS, REPORT_REASONS, REPORT_REASON_HINTS } from '../api/board';
 import { fmtDateTime } from '../lib/format';
 import UserName from './UserName';
 import NoteForm from './NoteForm';
@@ -53,7 +53,8 @@ export function ConfirmInline({ question, confirmLabel, onConfirm, onCancel }) {
  * 신고 폼: 이유 고르기(기타는 내용 필수) → [신고하기]. 같은 사람이 같은 글·댓글은 한 번만 (DB가 막는다)
  * onSubmit(reason, detail): 실패하면 던진다
  */
-export function ReportForm({ id, what, onSubmit, onCancel }) {
+/** photos=false: 사진을 붙일 수 없는 곳(문서 댓글)이라 사진 신고 사유를 뺀다 */
+export function ReportForm({ id, what, photos = true, onSubmit, onCancel }) {
   const [reason, setReason] = useState(null);
   const [detail, setDetail] = useState('');
   const [busy, setBusy] = useState(false);
@@ -77,7 +78,7 @@ export function ReportForm({ id, what, onSubmit, onCancel }) {
     <form className="report-form" onSubmit={submit} onKeyDown={(e) => e.key === 'Escape' && !busy && onCancel()}>
       <fieldset>
         <legend>{what} 신고 — 이유를 골라 주세요</legend>
-        {Object.entries(REPORT_REASONS).map(([key, label]) => (
+        {Object.entries(REPORT_REASONS).filter(([key]) => photos || !PHOTO_REPORT_REASONS.includes(key)).map(([key, label]) => (
           <label key={key} className="report-reason">
             <input type="radio" name={`${id}-reason`} value={key} checked={reason === key} onChange={() => setReason(key)} />
             {label}
