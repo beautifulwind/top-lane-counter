@@ -47,6 +47,7 @@ const Captcha = forwardRef(function Captcha({ onToken, onError }, ref) {
       widget.current = ts.render(box.current, {
         sitekey: siteKey,
         language: 'ko',
+        theme: 'dark', // 사이트가 다크 테마 하나라서
         callback: (token) => onToken(token),
         'expired-callback': () => onToken(null),
         'timeout-callback': () => onToken(null),

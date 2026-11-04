@@ -65,5 +65,5 @@ test('색은 tokens.css 한 곳에서만: index.css에는 색 값이 없다', ()
   const css = readFileSync('src/index.css', 'utf8');
   expect(css.match(/#[0-9a-f]{3,8}\b|rgba?\(/gi)).toBeNull();
   const tokens = readFileSync('src/styles/tokens.css', 'utf8');
-  expect(tokens).toMatch(/--op: #6f42c1;/);
+  expect(tokens).toMatch(/--op: #a48bff;/);
 });

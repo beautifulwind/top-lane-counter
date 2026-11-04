@@ -1,64 +1,79 @@
 /*
  * 색 토큰: 사이트의 모든 색은 여기서만 정한다. index.css와 컴포넌트는 var(--이름)만 쓴다.
  * 디자인을 바꿀 때는 이 파일의 값만 고치면 된다.
+ *
+ * 다크 테마 하나 (2026-11-04): 거의 검정 바탕 위에 살짝 밝은 둥근 카드, 주 색은 주황·호박, 위험·상대는 빨강.
+ * 글자 대비는 WCAG AA(본문 4.5:1 이상), 입력칸 테두리는 3:1 이상으로 맞췄다 (옆 주석의 숫자 = 카드 바탕 위 대비).
  */
 :root {
-  /* 기본 */
-  --brand: #00a495;          /* 상단 막대, 버튼 테두리, 링크 */
-  --brand-dark: #008275;     /* 버튼 글자 */
-  --bg: #f5f5f5;             /* 페이지 바탕 */
-  --paper: #ffffff;          /* 카드·입력칸 바탕 */
-  --text: #212529;
-  --muted: #6c757d;          /* 보조 글자 */
-  --line: #dddddd;           /* 테두리 */
-  --line-soft: #f0f0f0;      /* 목록 줄 사이 옅은 선 */
-  --soft: #eef7f6;           /* 브랜드 옅은 바탕 (눌림, 강조 칸) */
-  --placeholder: #cccccc;    /* 그림이 아직 안 뜬 자리 */
-  --icon-bg: #222222;        /* 아이템·룬 아이콘 바탕 */
-  --shadow: rgba(0, 0, 0, .15);
-  --viewer-bg: rgba(0, 0, 0, .85); /* 사진 크게 보기 뒤 어두운 막 */
+  /* 바탕·글자 */
+  --bg: #0e0f12;             /* 페이지 바탕 (거의 검정) */
+  --paper: #181a1f;          /* 카드 바탕 */
+  --field: #22252b;          /* 카드 안 칸·입력칸·보조 버튼 바탕 */
+  --text: #f1f2f4;           /* 15.5 */
+  --muted: #a3a7b0;          /* 보조 글자 7.2 (입력칸 위 6.4) */
+  --line: #2e3138;           /* 카드 테두리 (은은하게) */
+  --line-soft: #24272d;      /* 목록 줄 사이 옅은 선 */
+  --line-strong: #6b717c;    /* 입력칸·보조 버튼 테두리 (입력칸 바탕과 3.1, 카드와 3.6) */
+  --placeholder: #2a2d33;    /* 그림이 아직 안 뜬 자리 */
+  --icon-bg: #0b0c0e;        /* 아이템·룬 아이콘 바탕 */
+  --shadow: rgba(0, 0, 0, .5);
+  --viewer-bg: rgba(0, 0, 0, .9); /* 사진 크게 보기 뒤 어두운 막 */
   --on-viewer: #ffffff;
 
-  /* 상단 막대 위 (브랜드색 바탕) */
-  --on-brand: #ffffff;
-  --on-brand-line: rgba(255, 255, 255, .8);
-  --on-brand-hover: rgba(255, 255, 255, .12);
+  /* 주 색: 주황·호박 (주요 버튼, 순위 배지, 점수, 강조 숫자) */
+  --brand: #ffa31a;          /* 주요 버튼 바탕, 강조 테두리 (카드 위 8.7) */
+  --brand-hover: #ffb84d;
+  --brand-active: #e88f0a;
+  --brand-dark: #ffad33;     /* 어두운 바탕 위 주황 글자·링크 9.4 (이름은 예전 그대로: "주 색 글자") */
+  --on-brand: #1a1100;       /* 주황 바탕 위 글자 9.4 */
+  --soft: #382d1e;           /* 주황 옅은 바탕 (눌림, 강조 칸) — 위 주황 글자 7.2 */
 
-  /* 경고·삭제 */
-  --warn: #c0392b;
-  --warn-soft: #fdecea;      /* 경고 칸 바탕 */
-  --alert: #e74c3c;          /* 안 읽은 알림 점, NEW 표시 */
+  /* 상단 막대 */
+  --bar-bg: #121317;
+  --on-bar: #f1f2f4;
+  --on-bar-line: #4a4f58;    /* 상단 막대 버튼 테두리 */
+  --on-bar-hover: rgba(255, 255, 255, .08);
+
+  /* 위험·상대 강조·삭제: 빨강 (테두리와 은은한 빛) */
+  --warn: #ff6b6b;           /* 빨간 글자 6.3 */
+  --warn-line: #e5484d;      /* 빨간 테두리 */
+  --warn-soft: #392126;      /* 빨간 옅은 바탕 — 위 빨간 글자 5.3 */
+  --warn-glow: rgba(229, 72, 77, .35); /* 상대 강조 카드의 은은한 빛 */
+  --alert: #d93a40;          /* 안 읽은 알림 점, NEW 표시 (흰 글자 4.5) */
   --on-alert: #ffffff;
 
   /* 비교 (고친 부분) */
-  --diff-add-bg: #e6f4ea;
-  --diff-add-text: #1e6b34;
-  --diff-del-bg: #fdecea;
-  --diff-del-text: #a12a1e;
+  --diff-add-bg: #12301d;
+  --diff-add-text: #7ee2a1;  /* 9.1 */
+  --diff-del-bg: #3a1518;
+  --diff-del-text: #ff9b9b;  /* 8.0 */
 
   /* "여기 채워 주세요" 표시 */
-  --fill-bg: #fff3a3;
-  --fill-text: #5c4a00;
+  --fill-bg: #3d3300;
+  --fill-text: #ffe066;      /* 9.6 */
   --fill-line: #e0b400;
 
-  /* 운영자 전용: 운영자에게만 보이는 버튼·링크 (일반 사용자에게는 이 색이 나오지 않는다) */
-  --op: #6f42c1;
-  --op-dark: #59359a;        /* 운영자 버튼 글자 */
-  --op-soft: #f3eefb;        /* 운영자 버튼 눌림·운영자 칸 바탕 */
+  /* 운영자 전용: 운영자에게만 보이는 버튼·링크 (일반 사용자에게는 이 색이 나오지 않는다). 주황의 반대쪽인 보라 */
+  --op: #a48bff;             /* 운영자 버튼 테두리, 운영자 표시 바탕 */
+  --op-dark: #b9a3ff;        /* 운영자 버튼 글자 8.1 (이름은 예전 그대로: "운영자 글자") */
+  --on-op: #140a2e;          /* 보라 바탕 위 글자 6.9 */
+  --op-soft: #2e2c43;        /* 운영자 버튼 눌림·운영자 칸 바탕 — 위 보라 글자 6.3 */
 
-  /* 칭호 배지 (022): 칭호마다 테두리·글자 색 + 옅은 바탕. 사이트 청록(--brand)·운영자 보라(--op)와 겹치지 않게 */
-  --title-top_addict: #5b6b7f;      --title-top_addict-soft: #eef1f5;      /* 탑신병자: 청회색 (첫 칭호) */
-  --title-tool_hater: #2f7d3a;      --title-tool_hater-soft: #eaf5ec;      /* 도구혐오자: 초록 */
-  --title-solid_heavy: #2b6cb0;     --title-solid_heavy-soft: #e9f1fa;     /* 단단묵직: 파랑 */
-  --title-butcher_owner: #b02a37;   --title-butcher_owner-soft: #fbeaec;   /* 백정주인: 진홍 */
-  --title-general: #9a6512;         --title-general-soft: #fbf3e2;         /* 장군: 금색 */
-  --title-offmeta: #b8336f;         --title-offmeta-soft: #fbebf3;         /* 비주류: 분홍 */
+  /* 칭호 배지 (022): 칭호마다 테두리·글자 색 + 옅은 바탕. 주황(--brand)·위험 빨강·운영자 보라와 겹치지 않게. 숫자 = 옅은 바탕 위 대비 */
+  --title-top_addict: #a9b8cc;      --title-top_addict-soft: #2c3037;      /* 탑신병자: 청회색 (첫 칭호) 6.6 */
+  --title-tool_hater: #5fd38d;      --title-tool_hater-soft: #22342e;      /* 도구혐오자: 초록 7.0 */
+  --title-solid_heavy: #6db3ff;     --title-solid_heavy-soft: #242f3e;     /* 단단묵직: 파랑 6.1 */
+  --title-butcher_owner: #ff7b8a;   --title-butcher_owner-soft: #38282e;   /* 백정주인: 분홍빛 진홍 (위험 빨강보다 분홍 쪽) 5.6 */
+  --title-general: #3dd6c3;         --title-general-soft: #1d3436;         /* 장군: 청록 (금색은 주 색 주황과 겹쳐서) 7.2 */
+  --title-offmeta: #f08bd8;         --title-offmeta-soft: #362a39;         /* 비주류: 자주빛 분홍 6.1 */
 
-  /* 카카오 디자인 가이드: 배경 #FEE500, 글자·심볼 검정(85%) */
+  /* 카카오 디자인 가이드: 배경 #FEE500, 글자·심볼 검정(85%) — 다크에서도 그대로 */
   --kakao: #FEE500;
   --kakao-hover: #F5DC00;
   --on-kakao: rgba(0, 0, 0, .85);
 
-  --radius: 6px;
-  color-scheme: light;
+  --radius: 12px;            /* 카드 */
+  --radius-sm: 10px;         /* 버튼·입력칸·작은 칸 */
+  color-scheme: dark;
 }

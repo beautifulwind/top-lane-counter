@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
+import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css'; // 한글 글꼴 (사이트 안에 넣음, 쓰는 글자 조각만 받음)
 import './styles/tokens.css';
 import './index.css';
 import App from './App';
