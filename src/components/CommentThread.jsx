@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { COMMENT_MAX, beginEdit } from '../api/board';
 import { canEditNow, fmtTime, useNow } from '../lib/editWindow';
@@ -59,6 +59,7 @@ function Comment({ comment: c, ops, live, rules, mediaRules, now, auth, onDone, 
   const [mode, setMode] = useState(null); // 'edit' | 'delete' | 'report' | 'hide'
   const [body, setBody] = useState(c.body);
   const [media, setMedia] = useState(() => mediaToItems(c.media));
+  const editRef = useRef(null);
   const [deadline, setDeadline] = useState(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -116,13 +117,14 @@ function Comment({ comment: c, ops, live, rules, mediaRules, now, auth, onDone, 
       )}
       <BoardByline row={c} />
       {mode === 'edit' ? (
-        <form className="comment-form" onSubmit={save} onKeyDown={(e) => e.key === 'Escape' && !busy && cancelEdit()}>
+        <form className="comment-form media-drop-zone" ref={editRef} onSubmit={save} onKeyDown={(e) => e.key === 'Escape' && !busy && cancelEdit()}>
           <label htmlFor={`edit-comment-${c.id}`} className="sr-only">댓글 고치기</label>
           {/* eslint-disable-next-line jsx-a11y/no-autofocus -- [고치기]를 눌러 연 칸이라 바로 쓰게 한다 */}
           <textarea id={`edit-comment-${c.id}`} rows={3} value={body} onChange={(e) => setBody(e.target.value)} autoFocus />
           {ops.media && !isGuest(auth) && (
             <MediaPicker
               id={`edit-comment-media-${c.id}`} items={media} onChange={setMedia} max={mediaRules.commentMax} rules={mediaRules} disabled={busy}
+              dropRef={editRef}
             />
           )}
           {deadline && <small className="hint edit-deadline">{fmtTime(deadline)}까지 저장할 수 있어요.</small>}
@@ -195,6 +197,7 @@ function Comment({ comment: c, ops, live, rules, mediaRules, now, auth, onDone, 
 function CommentForm({ ops, parentId, auth, mediaRules, onDone }) {
   const [body, setBody] = useState('');
   const [media, setMedia] = useState([]);
+  const formRef = useRef(null);
   const withMedia = ops.media && !isGuest(auth);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -218,11 +221,13 @@ function CommentForm({ ops, parentId, auth, mediaRules, onDone }) {
   };
 
   return (
-    <form className="comment-form" onSubmit={submit}>
+    <form className="comment-form media-drop-zone" onSubmit={submit} ref={formRef}>
       <label htmlFor="new-comment" className="sr-only">댓글 쓰기</label>
       <textarea id="new-comment" rows={3} placeholder="댓글을 남겨 주세요" value={body} onChange={(e) => setBody(e.target.value)} />
       {withMedia && (
-        <MediaPicker id="new-comment-media" items={media} onChange={setMedia} max={mediaRules.commentMax} rules={mediaRules} disabled={busy} />
+        <MediaPicker
+          id="new-comment-media" items={media} onChange={setMedia} max={mediaRules.commentMax} rules={mediaRules} disabled={busy} dropRef={formRef}
+        />
       )}
       {ops.media && isGuest(auth) && <GuestHint what="사진을 붙일" />}
       <div className="comment-form-foot">

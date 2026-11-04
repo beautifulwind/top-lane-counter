@@ -212,3 +212,97 @@ test('운영자 /admin: 사진 저장 공간 — 사용량 막대, 800MB 넘으�
   const sec2 = (await screen.findByRole('heading', { name: '사진 저장 공간' })).closest('section');
   expect(await within(sec2).findByRole('alert')).toHaveTextContent('새 사진 첨부가 막혔어요');
 });
+
+// 끌어다 놓기·Ctrl+V 붙여넣기 — 버튼과 같은 길(개수·GIF 수·크기·압축·올리기 가능 여부)
+const files = (list, extra = []) => ({ types: [...extra, 'Files'], files: list, dropEffect: 'none' });
+const dragIn = (zone, list) => fireEvent.dragEnter(zone, { dataTransfer: files(list) });
+const dropOn = (zone, list) => fireEvent.drop(zone, { dataTransfer: files(list) });
+const pasteOn = (el, list, extra) => fireEvent.paste(el, { clipboardData: files(list, extra) });
+
+test('글쓰기: 끌어다 놓으면 "여기에 놓으면 첨부돼요" → 놓으면 첨부, 사진이 아니면 안내, 붙여넣기도 첨부', async () => {
+  fakeLogin('u-old');
+  start('/board/new');
+  await screen.findByRole('button', { name: /사진·GIF 추가 \(0\/4\)/ });
+  const form = screen.getByLabelText('제목').closest('form');
+  const body = screen.getByLabelText('본문');
+
+  dragIn(body, [photo()]); // 칸 안 어디든 (본문 위에서도)
+  expect(screen.getByText('여기에 놓으면 첨부돼요')).toBeDefined();
+  fireEvent.dragLeave(body, { dataTransfer: files([]) });
+  expect(screen.queryByText('여기에 놓으면 첨부돼요')).toBeNull();
+
+  dragIn(form, [photo()]);
+  expect(dropOn(form, [photo('1.jpg'), gif()])).toBe(false); // 브라우저 기본 동작(새 탭으로 열기) 막음
+  expect(screen.queryByText('여기에 놓으면 첨부돼요')).toBeNull();
+  const thumbs = await screen.findByRole('list', { name: '붙일 사진' });
+  await vi.waitFor(() => expect(within(thumbs).getAllByRole('listitem')).toHaveLength(2));
+
+  dropOn(form, [new File(['%PDF'], 'a.pdf', { type: 'application/pdf' })]);
+  expect(await screen.findByRole('alert')).toHaveTextContent('사진·GIF만 올릴 수 있어요.');
+  expect(within(thumbs).getAllByRole('listitem')).toHaveLength(2);
+
+  // 섞여 있으면 사진은 붙이고 안내도 보여 준다. GIF 수 제한도 버튼과 같다
+  dropOn(form, [new File(['x'], 'memo.txt', { type: 'text/plain' }), gif()]);
+  await vi.waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('사진·GIF만 올릴 수 있어요. GIF는 1개까지 붙일 수 있어요.'));
+  expect(within(thumbs).getAllByRole('listitem')).toHaveLength(2);
+
+  // Ctrl+V: 캡처·이미지 복사는 첨부, 글자가 같이 있는 복사(엑셀·워드)는 글자 붙여넣기로 둔다
+  expect(pasteOn(body, [photo('cap.png')])).toBe(false);
+  await vi.waitFor(() => expect(within(thumbs).getAllByRole('listitem')).toHaveLength(3));
+  expect(pasteOn(body, [photo('cell.png')], ['text/plain'])).toBe(true);
+  expect(pasteOn(body, [photo('4.png')])).toBe(false);
+  await vi.waitFor(() => expect(within(thumbs).getAllByRole('listitem')).toHaveLength(4));
+
+  dragIn(form, [photo()]); // 다 찼으면 놓기 전에 알려 주고, 놓으면 개수 안내
+  expect(screen.getByText('사진은 4개까지 붙일 수 있어요')).toBeDefined();
+  dropOn(form, [photo()]);
+  expect(await screen.findByRole('alert')).toHaveTextContent('사진은 4개까지 붙일 수 있어요.');
+  expect(within(thumbs).getAllByRole('listitem')).toHaveLength(4);
+  expect(fakeState.uploads).toHaveLength(0); // 보낼 때 올린다
+});
+
+test('끌어다 놓기도 올리기가 막히면(하루 개수) 그 이유를 보여 준다', async () => {
+  fakeLogin('u-old');
+  start('/board/new');
+  await screen.findByRole('button', { name: /사진·GIF 추가/ });
+  fakeState.mediaProblem = '사진은 하루 20개까지 올릴 수 있어요. 내일 다시 올려 주세요.';
+  dropOn(screen.getByLabelText('제목').closest('form'), [photo()]);
+  await vi.waitFor(() => expect(screen.getByRole('alert')).toHaveTextContent('하루 20개까지'));
+  expect(screen.queryByRole('list', { name: '붙일 사진' })).toBeNull();
+});
+
+test('댓글: 댓글 칸에 붙여넣기·끌어다 놓기로 첨부 (1개까지), 고치기 칸에서도', async () => {
+  TABLES.posts.push(fakePost(1, { author_id: 'u-x', author: OTHER, comment_count: 1 }));
+  TABLES.post_comments.push(fakeComment(11, 1, { author_id: 'u-old', created_at: new Date().toISOString() }));
+  fakeLogin('u-old');
+  start('/board/1');
+  await screen.findByRole('button', { name: /사진·GIF 추가 \(0\/1\)/ });
+  const box = screen.getByLabelText('댓글 쓰기');
+  pasteOn(box, [photo('cap.png')]);
+  const newForm = box.closest('form');
+  await vi.waitFor(() => expect(within(newForm).getAllByRole('img', { name: /붙일 사진/ })).toHaveLength(1));
+  dropOn(newForm, [photo()]);
+  expect(await within(newForm).findByRole('alert')).toHaveTextContent('사진은 1개까지 붙일 수 있어요.');
+
+  const mine = document.getElementById('comment-11');
+  fireEvent.click(within(mine).getByRole('button', { name: '고치기' }));
+  const editForm = (await within(mine).findByLabelText('댓글 고치기')).closest('form');
+  dropOn(editForm, [gif()]);
+  await vi.waitFor(() => expect(within(editForm).getAllByRole('img', { name: /붙일 사진/ })).toHaveLength(1));
+  expect(within(newForm).getAllByRole('img', { name: /붙일 사진/ })).toHaveLength(1); // 다른 칸에는 안 붙는다
+});
+
+test('첨부 칸 밖에 파일을 떨어뜨려도 새 탭으로 열리지 않는다 (글자 끌기는 그대로)', async () => {
+  const { blockStrayFileDrops } = await import('../components/Media');
+  const stop = blockStrayFileDrops(window);
+  try {
+    const out = document.createElement('div');
+    document.body.appendChild(out);
+    expect(fireEvent.dragOver(out, { dataTransfer: files([photo()]) })).toBe(false);
+    expect(fireEvent.drop(out, { dataTransfer: files([photo()]) })).toBe(false);
+    expect(fireEvent.drop(out, { dataTransfer: { types: ['text/plain'], files: [] } })).toBe(true);
+    out.remove();
+  } finally {
+    stop();
+  }
+});

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { BODY_MAX, TITLE_MAX, beginEdit, createPost, editPost, getPost } from '../api/board';
 import { fmtTime } from '../lib/editWindow';
@@ -56,6 +56,7 @@ function PostForm({ post = null, deadline = null }) {
   const auth = useAuth();
   const guest = isGuest(auth);
   const rules = useMediaRules();
+  const formRef = useRef(null);
   const [media, setMedia] = useState(() => mediaToItems(post?.media));
   const [title, setTitle] = useState(post?.title ?? '');
   const [body, setBody] = useState(post?.body ?? '');
@@ -94,7 +95,7 @@ function PostForm({ post = null, deadline = null }) {
         승인 없이 바로 올라가요. 욕설·혐오·비하·신상 공개·도배는 운영자가 숨길 수 있어요. 자세한 건 <Link to="/terms">이용약관</Link>을 봐 주세요.
       </p>
       {deadline && <p className="notice edit-deadline">{fmtTime(deadline)}까지 저장할 수 있어요. 그 뒤에는 지우기만 할 수 있어요.</p>}
-      <form className="doc-form post-form" onSubmit={submit}>
+      <form className="doc-form post-form media-drop-zone" onSubmit={submit} ref={formRef}>
         <label htmlFor="post-title">제목</label>
         <input id="post-title" value={title} onChange={(e) => setTitle(e.target.value)} autoComplete="off" />
         <CharCount value={title} max={TITLE_MAX} />
@@ -109,7 +110,7 @@ function PostForm({ post = null, deadline = null }) {
           </>
         ) : (
           <MediaPicker
-            id="post-media" items={media} onChange={setMedia} max={rules.postMax} gifMax={rules.postGifMax} rules={rules} disabled={busy}
+            id="post-media" items={media} onChange={setMedia} max={rules.postMax} gifMax={rules.postGifMax} rules={rules} disabled={busy} dropRef={formRef}
           />
         )}
         {error && <p className="form-error" role="alert">{error}</p>}
