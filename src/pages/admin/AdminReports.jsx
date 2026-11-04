@@ -9,6 +9,7 @@ import RequireOperator from '../../components/RequireOperator';
 import UserName from '../../components/UserName';
 import NoteForm from '../../components/NoteForm';
 import { matchupTitle } from '../../lib/josa';
+import { FlagIcon } from '../../components/Icons';
 
 /**
  * 운영자: 자유게시판·문서 댓글 신고 (/admin/reports). 같은 글·댓글의 신고는 한 줄로 묶는다.
@@ -36,7 +37,10 @@ function ReportList() {
   return (
     <article>
       <nav className="crumbs"><Link to="/admin" className="op-link">← 운영자 페이지</Link></nav>
-      <h1 className="doc-title">신고 {data ? `(${data.groups.length})` : ''}</h1>
+      <div className="page-head">
+        <h1 className="doc-title page-title"><FlagIcon size={26} className="title-icon op" /> 신고</h1>
+        {data && <span className="count-badge">{data.groups.length}개</span>}
+      </div>
       {done && <p className="notice" role="status">{done}</p>}
       <p className="hint">같은 글·댓글의 신고는 한 줄로 묶었습니다. 숨기면 작성자에게 메모와 함께 알림이 갑니다. 기각하면 그대로 두고 신고만 닫습니다.</p>
       {loading && <Loading />}

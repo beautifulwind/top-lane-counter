@@ -9,6 +9,7 @@ import { ErrorBox, Loading } from '../components/Status';
 import { RequireLogin } from '../components/RequireOperator';
 import DocView from '../components/DocView';
 import { matchupTitle } from '../lib/josa';
+import VoteTally from '../components/VoteTally';
 
 /**
  * 내 빌드 자세히: /me/builds/:id — 보낸 빌드를 매치업 문서의 빌드 모양으로.
@@ -75,7 +76,7 @@ function BuildView({ b, data, crumbs, sent }) {
         {b.edited_at && b.status === 'pending' && <span>고친 때 {fmtDateTime(b.edited_at)}</span>}
         {b.resubmitted_at && <span>다시 보낸 날 {fmtDateTime(b.resubmitted_at)}</span>}
         {b.reviewed_at && <span>처리 {fmtDateTime(b.reviewed_at)}</span>}
-        {['approved', 'hidden'].includes(b.status) && <span aria-label={`추천 ${b.up} · 비추천 ${b.down}`}>👍 {b.up} · 👎 {b.down}</span>}
+        {['approved', 'hidden'].includes(b.status) && <VoteTally up={b.up} down={b.down} />}
       </div>
 
       {b.status === 'pending' && (

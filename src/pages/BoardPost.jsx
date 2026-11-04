@@ -12,6 +12,7 @@ import NoteForm from '../components/NoteForm';
 import { BoardByline, ConfirmInline, HiddenBand, ReportForm } from '../components/BoardParts';
 import CommentThread from '../components/CommentThread';
 import { MediaGallery, useMediaRules } from '../components/Media';
+import { ThumbIcon } from '../components/Icons';
 
 /**
  * 글 보기 (/board/:id): 본문, 추천, 내 글이면 [고치기][지우기], 남의 글이면 [신고], 운영자는 [숨기기]/[다시 공개].
@@ -64,18 +65,20 @@ export default function BoardPost() {
       {post.status === 'hidden' && <HiddenBand row={post} what="글" onRestore={(note) => restorePost(post.id, note)} onDone={finished} />}
 
       {deleted ? (
-        <>
+        <div className="post-card">
           <h1 className="doc-title post-heading deleted">(삭제된 글)</h1>
           <p className="empty">작성자가 삭제한 글입니다. 댓글은 그대로 남아 있습니다.</p>
-        </>
+        </div>
       ) : (
-        <>
-          <h1 className="doc-title post-heading">{post.title}</h1>
-          <BoardByline row={post} />
+        <div className="post-card">
+          <header className="post-card-head">
+            <h1 className="doc-title post-heading">{post.title}</h1>
+            <BoardByline row={post} />
+          </header>
           {post.body && <div className="post-body">{post.body}</div>}
           <MediaGallery media={post.media} />
           <PostActions post={post} mine={mine} auth={auth} onDone={finished} />
-        </>
+        </div>
       )}
 
       <CommentThread
@@ -111,13 +114,13 @@ function PostActions({ post, mine, auth, onDone }) {
       <div className="row-actions">
         {signedIn && !mine && visible ? (
           <button
-            type="button" className={vote.mine ? 'btn btn-small vote-btn on' : 'btn btn-small vote-btn'}
+            type="button" className={vote.mine ? 'vote vote-btn on' : 'vote vote-btn'}
             aria-pressed={vote.mine} onClick={toggleVote} disabled={vote.busy}
           >
-            👍 추천 {vote.up}
+            <ThumbIcon /> 추천 {vote.up}
           </button>
         ) : (
-          <span className="vote-count" aria-label={`추천 ${vote.up}`}>👍 {vote.up}</span>
+          <span className="vote-count" aria-label={`추천 ${vote.up}`}><ThumbIcon /> {vote.up}</span>
         )}
         {mine && visible && canEditNow('post', post, post.rules, now) && (
           <Link to={`/board/${post.id}/edit`} className="btn btn-small">고치기</Link>

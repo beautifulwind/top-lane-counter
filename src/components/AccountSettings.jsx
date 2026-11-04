@@ -7,6 +7,8 @@ import { josaOf } from '../lib/josa';
 import { CharCount } from './BoardParts';
 import { ErrorBox, Loading } from './Status';
 import { isGuest } from '../lib/guest';
+import SectionHead from './SectionHead';
+import { PencilIcon, TrashIcon } from './Icons';
 
 /** /me 아래쪽 "계정": 닉네임 바꾸기(30일에 한 번) · 회원 탈퇴 (SPEC 6-8) */
 export default function AccountSettings({ auth }) {
@@ -52,7 +54,7 @@ function NicknameChange({ auth }) {
 
   return (
     <section className="me-section" aria-labelledby="nickname-change">
-      <h2 id="nickname-change">닉네임 바꾸기</h2>
+      <SectionHead icon={PencilIcon} id="nickname-change">닉네임 바꾸기</SectionHead>
       {done && <p className="notice" role="status">{done}</p>}
       {loading && <Loading />}
       {error && <ErrorBox error={error} onRetry={retry} />}
@@ -124,7 +126,7 @@ export function DeleteAccount({ auth }) {
 
   return (
     <section className="me-section" aria-labelledby="delete-account">
-      <h2 id="delete-account">{guest ? '비회원 기록 지우기' : '회원 탈퇴'}</h2>
+      <SectionHead icon={TrashIcon} id="delete-account">{guest ? '비회원 기록 지우기' : '회원 탈퇴'}</SectionHead>
       {auth.isOperator ? (
         <p className="hint">운영자 계정은 탈퇴할 수 없습니다.</p>
       ) : (

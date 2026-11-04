@@ -18,6 +18,9 @@ import DiffView from '../components/DiffView';
 import MyRewards from '../components/MyRewards';
 import { matchupTitle } from '../lib/josa';
 import AccountSettings from '../components/AccountSettings';
+import VoteTally from '../components/VoteTally';
+import SectionHead from '../components/SectionHead';
+import { BellIcon, CheckCircleIcon, LayersIcon, LinkIcon, SendIcon, UserIcon } from '../components/Icons';
 
 /**
  * 마이페이지 (/me): 내 제안·내 빌드 목록과 상태, 로그인 연결, 닉네임 바꾸기·회원 탈퇴.
@@ -33,10 +36,16 @@ export default function Me() {
 
   return (
     <article className="me-page">
-      <h1 className="doc-title" data-page-title="마이페이지">
-        <UserName profile={auth.profile} />
-      </h1>
-      <NotificationsLink userId={auth.user.id} />
+      <header className="me-hero">
+        <span className="me-avatar" aria-hidden="true"><UserIcon size={28} /></span>
+        <div className="me-hero-text">
+          <p className="me-hero-label">마이페이지</p>
+          <h1 className="doc-title" data-page-title="마이페이지">
+            <UserName profile={auth.profile} />
+          </h1>
+        </div>
+        <NotificationsLink userId={auth.user.id} />
+      </header>
       {isGuest(auth) && <GuestUpgrade />}
       {sent && (
         <p className="notice" role="status">
@@ -55,7 +64,7 @@ function GuestUpgrade() {
   const [choosing, setChoosing] = useState(null);
   return (
     <section id="upgrade" className="me-section guest-upgrade" aria-labelledby="guest-upgrade">
-      <h2 id="guest-upgrade">구글·카카오 연결하기</h2>
+      <SectionHead icon={LinkIcon} id="guest-upgrade">구글·카카오 연결하기</SectionHead>
       <p>{GUEST_UPGRADE_TEXT}</p>
       <div className="row-actions">
         {Object.entries(PROVIDERS).map(([provider, name]) => (
@@ -84,7 +93,7 @@ function MyActivity({ userId, operator }) {
   return (
     <>
       {operator ? (
-        <section className="me-section me-level" aria-label="레벨">
+        <section className="me-section me-level me-card" aria-label="레벨">
           <p className="hint">운영자는 경험치·레벨·칭호가 없습니다 (항상 Lv.0).</p>
         </section>
       ) : (
@@ -100,9 +109,13 @@ function MyActivity({ userId, operator }) {
 function NotificationsLink({ userId }) {
   const { data: count } = useAsync(() => getUnreadCount(userId).catch(() => 0), [userId]);
   return (
-    <p className="me-links">
-      <Link to="/notifications" className="btn btn-small">{count > 0 ? `알림 보기 (새 알림 ${count}개)` : '알림 보기'}</Link>
-    </p>
+    <Link
+      to="/notifications" className="btn btn-small me-noti-btn"
+      aria-label={count > 0 ? `알림 보기 (새 알림 ${count}개)` : '알림 보기'}
+    >
+      <BellIcon size={16} /> 알림 보기
+      {count > 0 && <span className="new-count">{count}</span>}
+    </Link>
   );
 }
 
@@ -133,7 +146,7 @@ function MyProposals({ data }) {
 
   return (
     <section className="me-section" aria-labelledby="my-proposals">
-      <h2 id="my-proposals">내 제안</h2>
+      <SectionHead icon={SendIcon} id="my-proposals" count={data.proposals.length}>내 제안</SectionHead>
       {data && data.proposals.length === 0 && <p className="empty">아직 보낸 제안이 없습니다.</p>}
       {data && data.proposals.length > 0 && (
         <ul className="proposal-list">
@@ -202,7 +215,7 @@ function MyBuilds({ data }) {
 
   return (
     <section className="me-section" aria-labelledby="my-builds">
-      <h2 id="my-builds">내 빌드</h2>
+      <SectionHead icon={LayersIcon} id="my-builds" count={data.builds.length}>내 빌드</SectionHead>
       {data.builds.length === 0 && <p className="empty">아직 보낸 빌드가 없습니다. 매치업 문서의 [+ 빌드 등록]에서 보낼 수 있습니다.</p>}
       {data.builds.length > 0 && (
         <ul className="proposal-list">
@@ -222,7 +235,7 @@ function MyBuilds({ data }) {
                   <span>보낸 날 {fmtDateTime(b.created_at)}</span>
                   {b.edited_at && b.status === 'pending' && <span>고친 때 {fmtDateTime(b.edited_at)}</span>}
                   {b.reviewed_at && <span>처리 {fmtDateTime(b.reviewed_at)}</span>}
-                  {['approved', 'hidden'].includes(b.status) && <span aria-label={`추천 ${b.up} · 비추천 ${b.down}`}>👍 {b.up} · 👎 {b.down}</span>}
+                  {['approved', 'hidden'].includes(b.status) && <VoteTally up={b.up} down={b.down} />}
                 </div>
                 {b.status === 'approved' && b.approve_note && <p className="approve-note">승인 메모: {b.approve_note}</p>}
                 {b.original_build && ['approved', 'hidden'].includes(b.status) && (
@@ -282,7 +295,7 @@ function LinkedLogins({ userId }) {
 
   return (
     <section className="me-section" aria-labelledby="linked-logins">
-      <h2 id="linked-logins">로그인 연결</h2>
+      <SectionHead icon={LinkIcon} id="linked-logins">로그인 연결</SectionHead>
       <p className="lead">둘 다 연결하면 구글·카카오 어느 쪽으로 로그인해도 이 계정으로 들어옵니다.</p>
       {loading && <Loading />}
       {error && <ErrorBox error={error} onRetry={retry} />}
@@ -297,7 +310,7 @@ function LinkedLogins({ userId }) {
                   {linked?.email && <small>{linked.email}</small>}
                 </span>
                 {linked ? (
-                  <span className="identity-linked">✓ 연결됨</span>
+                  <span className="identity-linked"><CheckCircleIcon size={16} /> 연결됨</span>
                 ) : (
                   <button
                     type="button"

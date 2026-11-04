@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { LEGAL, SITE_NAME } from '../lib/legal';
 import LegalFill from '../components/LegalFill';
+import { LockIcon } from '../components/Icons';
 
 /**
  * 개인정보처리방침 (/privacy) — 로그인·닉네임 설정 없이도 열린다.
@@ -10,8 +11,13 @@ export default function Privacy() {
   const email = <LegalFill value={LEGAL.contactEmail} label="운영자 이메일" email />;
   return (
     <article className="legal">
-      <h1 className="doc-title">개인정보처리방침</h1>
-      <p className="doc-sub">시행일: <LegalFill value={LEGAL.effectiveDate} label="시행일" /></p>
+      <header className="legal-head">
+        <span className="legal-icon" aria-hidden="true"><LockIcon size={24} /></span>
+        <div>
+          <h1 className="doc-title">개인정보처리방침</h1>
+          <p className="doc-sub">시행일: <LegalFill value={LEGAL.effectiveDate} label="시행일" /></p>
+        </div>
+      </header>
       <p>
         {SITE_NAME}(이하 &ldquo;사이트&rdquo;)는 이용자의 개인정보를 소중히 여기며, 「개인정보 보호법」에 따라 아래와 같이
         개인정보를 처리합니다.

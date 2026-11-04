@@ -4,7 +4,7 @@ import { useAuth } from '../lib/auth';
 import { levelProgress } from '../lib/levels';
 import { TITLES, titleCondition, titleName } from '../lib/titles';
 import { fmtDateTime } from '../lib/format';
-import { MedalIcon } from './Icons';
+import { MedalIcon, SparklesIcon } from './Icons';
 
 /**
  * /me 레벨·칭호 (SPEC 6장): 큰 "Lv.N", 다음 레벨까지 막대와 작은 숫자 "현재 / 목표", 칭호판(훈장).
@@ -14,6 +14,7 @@ import { MedalIcon } from './Icons';
  */
 export default function MyRewards({ rewards }) {
   const auth = useAuth();
+  const ownedCount = Object.keys(TITLES).filter((k) => rewards.titles.some((o) => o.title_key === k)).length;
   const p = levelProgress(rewards.xp ?? 0, rewards.levels, rewards.rules.level_step);
   // 상단 닉네임은 로그인할 때 불러온 값 → 여기서 새로 읽은 레벨·대표 칭호(회수되면 비워짐)로 맞춘다
   const { profile, setProfile } = auth;
@@ -25,7 +26,7 @@ export default function MyRewards({ rewards }) {
   }, [rewards]);
 
   return (
-    <section className="me-section me-level" aria-label="레벨">
+    <section className="me-section me-level me-card" aria-label="레벨">
       <p className="lv-big">Lv.{rewards.level}</p>
       <div
         className="xp-bar" role="progressbar" aria-label={`Lv.${p.level + 1}까지`}
@@ -35,7 +36,10 @@ export default function MyRewards({ rewards }) {
       </div>
       <p className="xp-nums"><span className="sr-only">경험치 </span>{p.xp.toLocaleString()} / {p.to.toLocaleString()}</p>
 
-      <h3>칭호</h3>
+      <div className="sub-head">
+        <h3><SparklesIcon size={18} className="title-icon" /> 칭호</h3>
+        <span className="count-badge" aria-label={`칭호 ${Object.keys(TITLES).length}개 중 ${ownedCount}개 얻음`}>{ownedCount} / {Object.keys(TITLES).length}</span>
+      </div>
       <TitleBoard owned={rewards.titles} current={auth.profile?.main_title ?? null} rules={rewards.rules} />
     </section>
   );

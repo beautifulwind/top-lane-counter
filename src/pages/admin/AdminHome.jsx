@@ -22,6 +22,11 @@ import BoardAdmin from '../../components/BoardAdmin';
 import ItemPrices from '../../components/ItemPrices';
 import MediaUsage from '../../components/MediaUsage';
 import { matchupTitle } from '../../lib/josa';
+import VoteTally from '../../components/VoteTally';
+import SectionHead from '../../components/SectionHead';
+import {
+  ClockIcon, CoinsIcon, DiceIcon, EyeOffIcon, ImageIcon, LayersIcon, MessageIcon, SendIcon, ShieldIcon, TrashIcon,
+} from '../../components/Icons';
 
 /**
  * 운영자 페이지: 승인 대기·재검토 기다리는 중·숨긴 카운터·빌드 승인 대기·숨긴 빌드를 목록에서 바로 처리
@@ -62,12 +67,12 @@ function PendingList() {
 
   return (
     <article>
-      <h1 className="doc-title">운영자 페이지</h1>
+      <h1 className="doc-title page-title"><ShieldIcon size={26} className="title-icon op" /> 운영자 페이지</h1>
       {done && <p className="notice" role="status">{done}</p>}
       <p className="hint">카운터 순서 변경은 각 챔피언 문서의 [순서 변경], 문서 되돌리기는 매치업 문서의 [수정 기록]에서 합니다.</p>
 
       <section className="section">
-        <h2 className="section-title">승인 대기 {data ? `(${data.pending.length})` : ''}</h2>
+        <SectionHead icon={SendIcon} count={data?.pending.length}>승인 대기</SectionHead>
         {loading && <Loading />}
         {error && <ErrorBox error={error} onRetry={retry} />}
         {data && data.pending.length === 0 && <p className="empty">대기 중인 제안이 없습니다.</p>}
@@ -82,7 +87,7 @@ function PendingList() {
 
       {data && (
         <section className="section">
-          <h2 className="section-title">재검토 기다리는 중 ({data.waiting.length})</h2>
+          <SectionHead icon={ClockIcon} count={data.waiting.length}>재검토 기다리는 중</SectionHead>
           {data.waiting.length === 0 ? (
             <p className="empty">재검토를 기다리는 제안·빌드가 없습니다.</p>
           ) : (
@@ -100,7 +105,7 @@ function PendingList() {
 
       {data && (
         <section className="section">
-          <h2 className="section-title">숨긴 카운터 ({data.hidden.length})</h2>
+          <SectionHead icon={EyeOffIcon} count={data.hidden.length}>숨긴 카운터</SectionHead>
           {data.hidden.length === 0 ? (
             <p className="empty">숨긴 카운터가 없습니다.</p>
           ) : (
@@ -115,7 +120,7 @@ function PendingList() {
 
       {data && (
         <section className="section">
-          <h2 className="section-title">빌드 승인 대기 ({data.pendingBuilds.length})</h2>
+          <SectionHead icon={LayersIcon} count={data.pendingBuilds.length}>빌드 승인 대기</SectionHead>
           {data.pendingBuilds.length === 0 ? (
             <p className="empty">대기 중인 빌드가 없습니다.</p>
           ) : (
@@ -130,7 +135,7 @@ function PendingList() {
 
       {data && (
         <section className="section">
-          <h2 className="section-title">숨긴 빌드 ({data.hiddenBuilds.length})</h2>
+          <SectionHead icon={EyeOffIcon} count={data.hiddenBuilds.length}>숨긴 빌드</SectionHead>
           {data.hiddenBuilds.length === 0 ? (
             <p className="empty">숨긴 빌드가 없습니다.</p>
           ) : (
@@ -145,29 +150,29 @@ function PendingList() {
 
       {data && (
         <section className="section">
-          <h2 className="section-title">아이템 가격표</h2>
+          <SectionHead icon={CoinsIcon}>아이템 가격표</SectionHead>
           <ItemPrices game={data.game} />
         </section>
       )}
 
       <section className="section">
-        <h2 className="section-title">자유게시판·댓글</h2>
+        <SectionHead icon={MessageIcon}>자유게시판·댓글</SectionHead>
         <BoardAdmin />
       </section>
 
       <section className="section">
-        <h2 className="section-title">사진 저장 공간</h2>
+        <SectionHead icon={ImageIcon}>사진 저장 공간</SectionHead>
         <MediaUsage />
       </section>
 
       <section className="section">
-        <h2 className="section-title">비주류 픽</h2>
+        <SectionHead icon={DiceIcon}>비주류 픽</SectionHead>
         <OffmetaPicks />
       </section>
 
       {data && (
         <section className="section">
-          <h2 className="section-title">삭제 기록 ({data.deletions.length})</h2>
+          <SectionHead icon={TrashIcon} count={data.deletions.length}>삭제 기록</SectionHead>
           {data.deletions.length === 0 ? (
             <p className="empty">삭제한 카운터가 없습니다.</p>
           ) : (
@@ -493,7 +498,7 @@ function HiddenBuildRow({ build: b, game, name, onDone }) {
       <div className="proposal-meta">
         <BuildAuthor build={b} />
         {b.hidden_at && <span>숨긴 날 {fmtDateTime(b.hidden_at)}</span>}
-        <span aria-label={`추천 ${b.up} · 비추천 ${b.down}`}>👍 {b.up} · 👎 {b.down}</span>
+        <VoteTally up={b.up} down={b.down} />
       </div>
       <p className="reject-reason">사유: {b.hide_reason}</p>
       {counterHidden && <p className="hint">카운터가 숨겨져 있어서, 다시 공개해도 카운터를 공개하기 전까지는 안 보입니다.</p>}

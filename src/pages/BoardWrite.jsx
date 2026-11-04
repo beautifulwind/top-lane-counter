@@ -10,6 +10,7 @@ import { RequireLogin } from '../components/RequireOperator';
 import { CharCount } from '../components/BoardParts';
 import GuestHint from '../components/GuestHint';
 import { MediaGallery, MediaPicker, mediaToItems, sameMedia, useMediaRules } from '../components/Media';
+import { PencilIcon } from '../components/Icons';
 
 /**
  * 글쓰기 (/board/new) · 고치기 (/board/:id/edit). 로그인 + 닉네임 필요 (닉네임은 Layout이 먼저 보낸다)
@@ -90,12 +91,12 @@ function PostForm({ post = null, deadline = null }) {
   return (
     <article>
       <nav className="crumbs"><Link to={post ? `/board/${post.id}` : '/board'}>← {post ? '글로 돌아가기' : '자유게시판'}</Link></nav>
-      <h1 className="doc-title">{post ? '글 고치기' : '글쓰기'}</h1>
+      <h1 className="doc-title page-title"><PencilIcon size={24} className="title-icon" /> {post ? '글 고치기' : '글쓰기'}</h1>
       <p className="lead">
         승인 없이 바로 올라갑니다. 욕설·혐오·비하·신상 공개·도배는 운영자가 숨길 수 있습니다. 자세한 건 <Link to="/terms">이용약관</Link>을 봐 주세요.
       </p>
       {deadline && <p className="notice edit-deadline">{fmtTime(deadline)}까지 저장할 수 있습니다. 그 뒤에는 지우기만 할 수 있습니다.</p>}
-      <form className="doc-form post-form media-drop-zone" onSubmit={submit} ref={formRef}>
+      <form className="doc-form post-form form-card media-drop-zone" onSubmit={submit} ref={formRef}>
         <label htmlFor="post-title">제목</label>
         <input id="post-title" value={title} onChange={(e) => setTitle(e.target.value)} autoComplete="off" />
         <CharCount value={title} max={TITLE_MAX} />

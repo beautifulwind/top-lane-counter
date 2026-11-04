@@ -6,6 +6,7 @@ import { useAsync } from '../lib/useAsync';
 import { fmtDateTime } from '../lib/format';
 import { ErrorBox, Loading } from '../components/Status';
 import UserName from '../components/UserName';
+import { ChevronIcon, ImageIcon, MessageIcon, PencilIcon, SearchIcon, ThumbIcon } from '../components/Icons';
 
 /**
  * 자유게시판 목록 (/board): 최신순 20개씩, 제목·본문 검색. 검색어·쪽은 주소(?q=&page=)에 남는다.
@@ -41,9 +42,9 @@ export default function Board() {
   return (
     <article className="board">
       <div className="board-head">
-        <h1 className="doc-title">자유게시판</h1>
+        <h1 className="doc-title page-title"><MessageIcon size={26} className="title-icon" /> 자유게시판</h1>
         {auth.status === 'signedIn' ? (
-          <Link to="/board/new" className="btn btn-primary">글쓰기</Link>
+          <Link to="/board/new" className="btn btn-primary"><PencilIcon size={16} /> 글쓰기</Link>
         ) : (
           <Link to="/login" state={{ from: '/board/new' }} className="btn">로그인하고 글쓰기</Link>
         )}
@@ -51,10 +52,13 @@ export default function Board() {
       {done && <p className="notice" role="status">{done}</p>}
 
       <form className="search board-search" role="search" onSubmit={search}>
-        <input
-          type="search" value={draft} onChange={(e) => setDraft(e.target.value)}
-          placeholder="제목·본문 검색" aria-label="제목·본문 검색" maxLength={50} enterKeyHint="search"
-        />
+        <span className="search-field">
+          <SearchIcon size={18} className="search-icon" />
+          <input
+            type="search" value={draft} onChange={(e) => setDraft(e.target.value)}
+            placeholder="제목·본문 검색" aria-label="제목·본문 검색" maxLength={50} enterKeyHint="search"
+          />
+        </span>
         <button type="submit" className="btn">검색</button>
       </form>
       {q && (
@@ -76,14 +80,17 @@ export default function Board() {
                 <span className="post-title-line">
                   {p.status === 'hidden' && <span className="op-badge">숨김</span>}
                   <span className={p.deleted ? 'post-title deleted' : 'post-title'}>{p.deleted ? '(삭제된 글)' : p.title}</span>
-                  {p.media_count > 0 && !p.deleted && <span className="post-media" role="img" aria-label="사진 있음" title="사진 있음">📷</span>}
-                  {p.comment_count > 0 && <span className="post-count" aria-label={`댓글 ${p.comment_count}개`}>[{p.comment_count}]</span>}
+                  {p.media_count > 0 && !p.deleted && <span className="post-media" role="img" aria-label="사진 있음" title="사진 있음"><ImageIcon size={16} /></span>}
                 </span>
                 <span className="post-meta">
                   {p.author ? <UserName profile={p.author} /> : <span>(탈퇴한 유저)</span>}
                   <span>{fmtDateTime(p.created_at)}</span>
-                  {p.up_count > 0 && <span aria-label={`추천 ${p.up_count}`}>👍 {p.up_count}</span>}
                 </span>
+                <span className="post-stats">
+                  {p.comment_count > 0 && <span className="post-count" aria-label={`댓글 ${p.comment_count}개`}><MessageIcon size={14} /> {p.comment_count}</span>}
+                  {p.up_count > 0 && <span className="post-up" aria-label={`추천 ${p.up_count}`}><ThumbIcon size={14} /> {p.up_count}</span>}
+                </span>
+                <span className="chev" aria-hidden="true"><ChevronIcon size={18} /></span>
               </Link>
             </li>
           ))}

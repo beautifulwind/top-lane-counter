@@ -70,7 +70,7 @@ test('/me: 연결된 방식은 "연결됨", 안 된 방식은 [연결하기] →
   expect(where()).toBe('/me');
 
   const google = (await screen.findByText('구글')).closest('li');
-  expect(within(google).getByText('✓ 연결됨')).toBeDefined();
+  expect(within(google).getByText('연결됨')).toBeDefined();
   expect(within(google).getByText('old@gmail.com')).toBeDefined();
 
   fireEvent.click(screen.getByRole('button', { name: '카카오 연결하기' }));
@@ -96,7 +96,7 @@ test('/me에서 연결하고 돌아오면 연결했다고 알려 주고, 카카�
   returnFrom('link', 'kakao', '?code=abc', '/me');
   expect(await screen.findByText(/카카오 로그인을 이 계정에 연결했습니다/)).toBeDefined();
   const kakao = (await screen.findByText('카카오')).closest('li');
-  expect(within(kakao).getByText('✓ 연결됨')).toBeDefined();
+  expect(within(kakao).getByText('연결됨')).toBeDefined();
 });
 
 test('이미 다른 회원 계정에 붙은 카카오를 연결하려 하면 쉬운 말로 알려 주고, [다시 연결하기]는 /me로 간다', async () => {

@@ -6,6 +6,7 @@ import { guestNotice } from '../lib/guest';
 import { Loading } from '../components/Status';
 import Captcha, { captchaSiteKey } from '../components/Captcha';
 import GuestLinkDialog from '../components/GuestLinkDialog';
+import { ShieldIcon, UserIcon } from '../components/Icons';
 
 export default function Login() {
   const auth = useAuth();
@@ -39,64 +40,67 @@ export default function Login() {
 
   return (
     <article className="login">
-      <h1 className="doc-title">로그인 · 가입</h1>
-      <p className="lead">
-        로그인하면 카운터·문서 수정·빌드를 제안하고, 빌드에 추천·비추천을 누르고, 자유게시판과 문서에 글·댓글을 쓸 수 있습니다. 보기는 로그인 없이도 됩니다.
-      </p>
-      {guest ? (
-        <p className="notice login-join">지금은 비회원입니다. 구글·카카오를 고르면 지금 기록을 이어 갈지 정할 수 있습니다.</p>
-      ) : (
-        <p className="notice login-join">처음이면 자동으로 가입됩니다. 따로 회원가입할 필요 없습니다.</p>
-      )}
-      <div className="login-buttons">
-        {Object.entries(PROVIDERS).map(([provider, name]) => (
-          <button
-            key={provider}
-            type="button"
-            className={`btn login-btn ${provider}`}
-            onClick={() => start(provider)}
-            disabled={busy !== null}
-          >
-            {provider === 'kakao' && <KakaoSymbol />}
-            {busy === provider ? `${name}로 이동 중…` : `${name}로 시작하기`}
-          </button>
-        ))}
-        {!guest && (
-          <button
-            type="button"
-            className="btn login-btn guest"
-            onClick={() => setGuestOpen(true)}
-            disabled={busy !== null}
-            aria-expanded={guestOpen}
-          >
-            비회원으로 시작하기
-          </button>
+      <div className="login-card">
+        <span className="login-logo" aria-hidden="true"><ShieldIcon size={30} /></span>
+        <h1 className="doc-title">로그인 · 가입</h1>
+        <p className="lead">
+          로그인하면 카운터·문서 수정·빌드를 제안하고, 빌드에 추천·비추천을 누르고, 자유게시판과 문서에 글·댓글을 쓸 수 있습니다. 보기는 로그인 없이도 됩니다.
+        </p>
+        {guest ? (
+          <p className="notice login-join">지금은 비회원입니다. 구글·카카오를 고르면 지금 기록을 이어 갈지 정할 수 있습니다.</p>
+        ) : (
+          <p className="notice login-join">처음이면 자동으로 가입됩니다. 따로 회원가입할 필요 없습니다.</p>
         )}
+        <div className="login-buttons">
+          {Object.entries(PROVIDERS).map(([provider, name]) => (
+            <button
+              key={provider}
+              type="button"
+              className={`btn login-btn ${provider}`}
+              onClick={() => start(provider)}
+              disabled={busy !== null}
+            >
+              {provider === 'kakao' && <KakaoSymbol />}
+              {busy === provider ? `${name}로 이동 중…` : `${name}로 시작하기`}
+            </button>
+          ))}
+          {!guest && (
+            <button
+              type="button"
+              className="btn login-btn guest"
+              onClick={() => setGuestOpen(true)}
+              disabled={busy !== null}
+              aria-expanded={guestOpen}
+            >
+              <UserIcon size={18} /> 비회원으로 시작하기
+            </button>
+          )}
+        </div>
+        {choosing && <GuestLinkDialog provider={choosing} returnTo={from} onClose={() => setChoosing(null)} />}
+        {guestOpen && !guest && (
+          <GuestStart
+            busy={busy === 'guest'}
+            onCancel={() => setGuestOpen(false)}
+            onStart={async (token) => {
+              setBusy('guest');
+              setError(null);
+              try {
+                await signInAsGuest(token);
+                navigate('/welcome', { replace: true, state: { from } }); // 닉네임은 지금 정하거나 나중에
+              } catch (e) {
+                setError(e.message);
+                setBusy(null);
+                throw e; // GuestStart가 캡차를 다시 돌린다
+              }
+            }}
+          />
+        )}
+        <p className="login-consent">
+          시작하면 <Link to="/terms">이용약관</Link>과 <Link to="/privacy">개인정보처리방침</Link>에 동의하는 것으로 봅니다.
+          만 14세 이상만 가입할 수 있습니다.
+        </p>
+        {error && <p className="form-error" role="alert">{error}</p>}
       </div>
-      {choosing && <GuestLinkDialog provider={choosing} returnTo={from} onClose={() => setChoosing(null)} />}
-      {guestOpen && !guest && (
-        <GuestStart
-          busy={busy === 'guest'}
-          onCancel={() => setGuestOpen(false)}
-          onStart={async (token) => {
-            setBusy('guest');
-            setError(null);
-            try {
-              await signInAsGuest(token);
-              navigate('/welcome', { replace: true, state: { from } }); // 닉네임은 지금 정하거나 나중에
-            } catch (e) {
-              setError(e.message);
-              setBusy(null);
-              throw e; // GuestStart가 캡차를 다시 돌린다
-            }
-          }}
-        />
-      )}
-      <p className="login-consent">
-        시작하면 <Link to="/terms">이용약관</Link>과 <Link to="/privacy">개인정보처리방침</Link>에 동의하는 것으로 봅니다.
-        만 14세 이상만 가입할 수 있습니다.
-      </p>
-      {error && <p className="form-error" role="alert">{error}</p>}
     </article>
   );
 }

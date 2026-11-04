@@ -16,6 +16,8 @@ import ApproveEditor from '../../components/ApproveEditor';
 import { EditedBadge, useAuthorChanged } from '../../components/AuthorChanged';
 import NotFound from '../NotFound';
 import { matchupTitle } from '../../lib/josa';
+import SectionHead from '../../components/SectionHead';
+import { ClockIcon } from '../../components/Icons';
 
 /**
  * 운영자: 빌드 하나 자세히 (/admin/builds/:id) — 확인할 점, 처리 기록,
@@ -242,7 +244,7 @@ function Review() {
       </section>
 
       <section className="section">
-        <h2 className="section-title">처리 기록 ({b.logs.length})</h2>
+        <SectionHead icon={ClockIcon} count={b.logs.length}>처리 기록</SectionHead>
         {b.logs.length === 0 ? (
           <p className="empty">아직 처리 기록이 없습니다.</p>
         ) : (

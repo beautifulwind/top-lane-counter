@@ -85,6 +85,42 @@ export const ThumbIcon = ({ down = false, size = 18 }) => (
     <path d="M7 10v11" /><path d="M15 5.9L14 10h5.8a2 2 0 0 1 1.9 2.6l-2.3 7A2 2 0 0 1 17.5 21H4a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1h2.8a2 2 0 0 0 1.8-1.1L12 2a3.1 3.1 0 0 1 3 3.9z" />
   </Line>
 );
+/** 사진 (자유게시판 사진 있는 글) */
+export const ImageIcon = (p) => (
+  <Line {...p}><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="9" cy="9" r="2" /><path d="M21 15l-3.1-3.1a2 2 0 0 0-2.8 0L6 21" /></Line>
+);
+/** 연필 (글쓰기·고치기·닉네임) */
+export const PencilIcon = (p) => (
+  <Line {...p}><path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5z" /><path d="M15 5l4 4" /></Line>
+);
+/** 보낸 종이 (내 제안·승인 대기) */
+export const SendIcon = (p) => <Line {...p}><path d="M22 2L11 13" /><path d="M22 2l-7 20-4-9-9-4z" /></Line>;
+/** 시계 (재검토 기다리는 중) */
+export const ClockIcon = (p) => <Line {...p}><circle cx="12" cy="12" r="9" /><path d="M12 7v5l3 2" /></Line>;
+/** 휴지통 (삭제 기록·탈퇴) */
+export const TrashIcon = (p) => (
+  <Line {...p}><path d="M3 6h18" /><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" /><path d="M10 11v6M14 11v6" /><path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" /></Line>
+);
+/** 고리 (로그인 연결) */
+export const LinkIcon = (p) => (
+  <Line {...p}><path d="M10 13a5 5 0 0 0 7.5.5l3-3a5 5 0 0 0-7-7l-1.7 1.7" /><path d="M14 11a5 5 0 0 0-7.5-.5l-3 3a5 5 0 0 0 7 7l1.7-1.7" /></Line>
+);
+/** 동전 (아이템 가격표) */
+export const CoinsIcon = (p) => (
+  <Line {...p}><circle cx="8" cy="8" r="6" /><path d="M18.1 10.4A6 6 0 1 1 10.3 18" /><path d="M7 6h1v4M16.7 13.9l.7.7-2.8 2.8" /></Line>
+);
+/** 자물쇠 (개인정보처리방침) */
+export const LockIcon = (p) => (
+  <Line {...p}><rect x="4" y="11" width="16" height="10" rx="2" /><path d="M8 11V7a4 4 0 0 1 8 0v4" /></Line>
+);
+/** 문서 (이용약관) */
+export const FileIcon = (p) => (
+  <Line {...p}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6M8 13h8M8 17h6" /></Line>
+);
+/** 주사위 (비주류 픽) */
+export const DiceIcon = (p) => (
+  <Line {...p}><rect x="3" y="3" width="18" height="18" rx="3" /><path d="M8 8h.01M12 12h.01M16 16h.01" strokeWidth="3" /></Line>
+);
 /** 세 줄 (☰ 메뉴) */
 export const MenuIcon = (p) => <Line {...p}><path d="M4 6h16M4 12h16M4 18h16" /></Line>;
 

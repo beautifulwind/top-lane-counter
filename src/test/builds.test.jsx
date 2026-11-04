@@ -6,6 +6,7 @@ import { fakeFetch } from './fakeDdragon';
 import { TABLES, fakeBuild, fakeLogin, fakeState } from './fakeSupabase';
 import { buildProblem, compareBuilds, emptyBuild, isOutdated } from '../lib/buildContent';
 import { fillBuild, pick } from './buildHelpers';
+import { sectionCount } from './sectionCount';
 
 beforeEach(() => {
   vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch());
@@ -226,7 +227,7 @@ test('[이 빌드로 다시 쓰기]: 내 빌드 내용이 채워진 채로 새 �
   const row = await screen.findByRole('listitem', { name: '내 빌드: 퀸으로 다리우스 잡는 법' });
   expect(within(row).getByText('숨김')).toBeDefined();
   expect(within(row).getByText(/숨긴 사유: 아이템이 바뀌었습니다/)).toBeDefined();
-  expect(within(row).getByText('👍 3 · 👎 0')).toBeDefined();
+  expect(within(row).getByLabelText('추천 3 · 비추천 0')).toBeDefined();
   fireEvent.click(within(row).getByRole('link', { name: '이 빌드로 다시 쓰기' }));
   expect(await screen.findByText(/내 빌드 내용을 채워 뒀습니다/)).toBeDefined();
   expect(where()).toBe(`${MATCHUP}/build/new?from=110`);
@@ -295,7 +296,7 @@ const pendingRow = () => screen.getByRole('listitem', { name: '[빌드] 퀸으�
 test('/admin 빌드 승인 대기: 똑같은 빌드가 공개돼 있으면 줄에서 승인 잠금 (거절은 가능)', async () => {
   asOperator();
   start('/admin');
-  await screen.findByRole('heading', { name: '빌드 승인 대기 (1)' });
+  await sectionCount('빌드 승인 대기', 1);
   const row = pendingRow();
   expect(within(row).getByText(/똑같은 빌드가 이미 공개돼 있습니다/)).toBeDefined();
   expect(within(row).getByRole('button', { name: '승인' })).toBeDisabled();
@@ -305,14 +306,14 @@ test('/admin 빌드 승인 대기: 똑같은 빌드가 공개돼 있으면 줄�
   click('거절 확정', row);
   expect(await screen.findByText('빌드를 거절했습니다: 퀸으로 다리우스 잡는 법 (대기중)')).toBeDefined();
   expect(rpcCalls('reject_build')).toEqual([{ p_id: 104, p_reason: '이미 있는 빌드', p_version: 1 }]);
-  expect(await screen.findByRole('heading', { name: '빌드 승인 대기 (0)' })).toBeDefined();
+  await sectionCount('빌드 승인 대기', 0);
 });
 
 test('/admin 빌드 승인 대기: 걸리는 점이 없으면 줄에서 메모 쓰고 바로 승인', async () => {
   TABLES.builds.find((b) => b.id === 104).core_items = ['6631', '3047', '3053'];
   asOperator();
   start('/admin');
-  await screen.findByRole('heading', { name: '빌드 승인 대기 (1)' });
+  await sectionCount('빌드 승인 대기', 1);
   const row = pendingRow();
   expect(within(row).queryByText(/내용을 \[자세히\]에서/)).toBeNull();
   click('승인', row);
@@ -330,18 +331,18 @@ test('/admin 빌드 승인 대기: 구버전 패치·게임 데이터에 없는 
   Object.assign(b, { core_items: ['6631', '3047', '3053'], patch: '98.3.1' });
   asOperator();
   start('/admin');
-  await screen.findByRole('heading', { name: '빌드 승인 대기 (1)' });
+  await sectionCount('빌드 승인 대기', 1);
   expect(within(pendingRow()).getByText(/지금 패치\(99\.1\)와 다른 패치\(98\.3\)로 등록됐습니다/)).toBeDefined();
   expect(within(pendingRow()).getByRole('button', { name: '승인' })).toBeDisabled();
   cleanup();
   Object.assign(b, { patch: '99.1.1', core_items: ['6631', '3047', '9999'] });
   start('/admin');
-  await screen.findByRole('heading', { name: '빌드 승인 대기 (1)' });
+  await sectionCount('빌드 승인 대기', 1);
   expect(within(pendingRow()).getByText(/게임 데이터에 없는 아이템이 있습니다/)).toBeDefined();
   cleanup();
   Object.assign(b, { core_items: ['6631', '3047', '3053'], counter: { ...b.counter, status: 'hidden' } });
   start('/admin');
-  await screen.findByRole('heading', { name: '빌드 승인 대기 (1)' });
+  await sectionCount('빌드 승인 대기', 1);
   expect(within(pendingRow()).getByText(/숨긴 카운터의 빌드입니다/)).toBeDefined();
 });
 
@@ -352,7 +353,7 @@ test('/admin/builds/:id: 구버전이면 경고를 보고 승인할 수 있다',
   });
   asOperator();
   start('/admin');
-  await screen.findByRole('heading', { name: '빌드 승인 대기 (1)' });
+  await sectionCount('빌드 승인 대기', 1);
   fireEvent.click(within(pendingRow()).getByRole('link', { name: '자세히' }));
   expect(await screen.findByText(/지금 패치\(99\.1\)와 다른 패치\(98\.3\)로 등록됐습니다/)).toBeDefined();
   click('승인');
@@ -381,7 +382,7 @@ test('/admin 숨긴 빌드: 줄에서 다시 공개 (메모 필수)', async () =
   }));
   asOperator();
   start('/admin');
-  await screen.findByRole('heading', { name: '숨긴 빌드 (1)' });
+  await sectionCount('숨긴 빌드', 1);
   const row = screen.getByRole('listitem', { name: '[숨긴 빌드] 퀸으로 다리우스 잡는 법' });
   expect(within(row).getByText('사유: 패치로 안 맞음')).toBeDefined();
   click('다시 공개', row);
@@ -390,7 +391,7 @@ test('/admin 숨긴 빌드: 줄에서 다시 공개 (메모 필수)', async () =
   click('다시 공개 확정', row);
   expect(await screen.findByText('빌드를 다시 공개했습니다: 퀸으로 다리우스 잡는 법 (숨김당함)')).toBeDefined();
   expect(rpcCalls('restore_build')).toEqual([{ p_id: 120, p_note: '다시 맞습니다' }]);
-  expect(await screen.findByRole('heading', { name: '숨긴 빌드 (0)' })).toBeDefined();
+  await sectionCount('숨긴 빌드', 0);
 });
 
 test('일반 유저는 /admin/builds/:id를 볼 수 없다', async () => {

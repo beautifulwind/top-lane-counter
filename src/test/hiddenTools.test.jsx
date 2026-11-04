@@ -5,6 +5,7 @@ import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
 import { FAKE_PROPOSAL_BUILD, TABLES, fakeLogin, fakeProposal, fakeState } from './fakeSupabase';
 import { clickMenu } from './menu';
+import { sectionCount } from './sectionCount';
 
 const COUNTERS = TABLES.counters.map((c) => ({ ...c }));
 const BUILDS = TABLES.builds.map((b) => ({ ...b }));
@@ -277,7 +278,7 @@ test('운영자 페이지: 삭제 기록(누가·언제·왜·어떤 매치업·
   });
   asOperator();
   start('/admin');
-  expect(await screen.findByRole('heading', { name: '삭제 기록 (1)' })).toBeDefined();
+  await sectionCount('삭제 기록', 1);
   const r = screen.getByText('사유: 중복 카운터').closest('li');
   expect(within(r).getByText('가렌으로 다리우스 잡는 법')).toBeDefined();
   expect(r.textContent).toMatch(/삭제: Lv\.0 영자\(운\)/);

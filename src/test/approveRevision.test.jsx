@@ -6,6 +6,7 @@ import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
 import { FAKE_PROPOSAL_BUILD, TABLES, fakeBuild, fakeLogin, fakeProposal, fakeState } from './fakeSupabase';
 import { pick } from './buildHelpers';
+import { sectionCount } from './sectionCount';
 
 beforeEach(() => {
   vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch());
@@ -76,7 +77,7 @@ test('/admin 재검토 기다리는 중: 제안·빌드 모두 보이고 [요청
   });
   asOperator();
   start('/admin');
-  expect(await screen.findByRole('heading', { name: '재검토 기다리는 중 (2)' })).toBeDefined();
+  await sectionCount('재검토 기다리는 중', 2);
   expect(screen.queryByText('보낸 메모: 숨김 재검토')).toBeNull();
 
   const p = screen.getByRole('listitem', { name: '[재검토 중 문서 수정] 퀸으로 다리우스 잡는 법' });

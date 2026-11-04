@@ -118,13 +118,13 @@ test('남의 글: 추천 누르기·취소, 신고(이유 필수, 기타는 내�
   TABLES.post_votes.push({ post_id: 1, user_id: 'u-y' });
   fakeLogin('u-old');
   start('/board/1');
-  const vote = await screen.findByRole('button', { name: '👍 추천 1' });
+  const vote = await screen.findByRole('button', { name: '추천 1' });
   expect(vote.getAttribute('aria-pressed')).toBe('false');
   fireEvent.click(vote);
-  expect(await screen.findByRole('button', { name: '👍 추천 2' })).toBeDefined();
-  expect(screen.getByRole('button', { name: '👍 추천 2' }).getAttribute('aria-pressed')).toBe('true');
-  fireEvent.click(screen.getByRole('button', { name: '👍 추천 2' }));
-  expect(await screen.findByRole('button', { name: '👍 추천 1' })).toBeDefined();
+  expect(await screen.findByRole('button', { name: '추천 2' })).toBeDefined();
+  expect(screen.getByRole('button', { name: '추천 2' }).getAttribute('aria-pressed')).toBe('true');
+  fireEvent.click(screen.getByRole('button', { name: '추천 2' }));
+  expect(await screen.findByRole('button', { name: '추천 1' })).toBeDefined();
   expect(screen.queryByRole('button', { name: '고치기' })).toBeNull();
 
   fireEvent.click(screen.getByRole('button', { name: '신고' }));

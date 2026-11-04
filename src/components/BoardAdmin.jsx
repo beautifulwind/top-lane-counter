@@ -36,7 +36,10 @@ export default function BoardAdmin() {
           처리할 신고 {data.reports.length}건
         </Link>
       </p>
-      <h3>숨긴 글·댓글 ({rows.length})</h3>
+      <div className="sub-head">
+        <h3>숨긴 글·댓글</h3>
+        <span className="count-badge">{rows.length}개</span>
+      </div>
       {rows.length === 0 ? (
         <p className="empty">숨긴 글·댓글이 없습니다.</p>
       ) : (

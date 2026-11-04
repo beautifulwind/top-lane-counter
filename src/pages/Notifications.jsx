@@ -27,7 +27,7 @@ export default function Notifications() {
   if (auth.status === 'signedOut') return <Navigate to="/login" replace state={{ from: '/notifications' }} />;
   return (
     <article className="notifications-page">
-      <h1 className="doc-title">알림</h1>
+      <h1 className="doc-title page-title"><BellIcon size={26} className="title-icon" /> 알림</h1>
       <NotificationList userId={auth.user.id} />
     </article>
   );
