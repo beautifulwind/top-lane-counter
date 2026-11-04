@@ -125,3 +125,6 @@ dist
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+
+# 예전 롤 보조 앱 코드 (디자인 참고용, 저장소·사이트 빌드에 넣지 않음)
+/old-app-reference/

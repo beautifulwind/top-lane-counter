@@ -1,6 +1,7 @@
 import { useRef } from 'react';
 import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import ErrorBoundary from './ErrorBoundary';
+import { ShieldIcon } from './Icons';
 import AuthBar from './AuthBar';
 import { needsNickname, needsNicknameFor, useAuth } from '../lib/auth';
 import { noticeText, startFresh } from '../api/auth';
@@ -28,6 +29,7 @@ export default function Layout() {
         <nav className="top-nav" aria-label="사이트">
           <span className="brand-wrap">
             <Link to="/" className="brand">
+              <span className="brand-logo"><ShieldIcon size={18} /></span>
               {SITE_NAME}
             </Link>
             <span className="tagline">{SITE_TAGLINE}</span>

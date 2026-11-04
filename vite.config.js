@@ -11,6 +11,8 @@ export default defineConfig({
     strictPort: true,
   },
   optimizeDeps: {
+    // 개발 서버가 미리 훑는 시작점은 사이트의 index.html만 (old-app-reference/의 예전 앱 index.html은 훑지 않는다)
+    entries: ['index.html'],
     // 미리 묶어 두어 개발 중 의존성 재최적화로 인한 강제 새로고침을 막는다.
     include: ['react', 'react-dom', 'react-dom/client', 'react-router-dom'],
   },
@@ -18,5 +20,6 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/setupTests.js'],
+    exclude: ['**/node_modules/**', 'old-app-reference/**'],
   },
 })
