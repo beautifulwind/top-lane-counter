@@ -9,7 +9,7 @@ import { matchesQuery } from '../lib/chosung';
 import { ITEM_LIMITS, NO_SPELLS, SKILLS, buildProblem, startGold, startGoldMax } from '../lib/buildContent';
 import BuildCard, { Icon } from './BuildCard';
 import { XIcon } from './Icons';
-import { CORE_FILTERS, isCoreItem } from '../lib/itemKinds';
+import { CORE_FILTERS, START_FILTERS, isCoreItem } from '../lib/itemKinds';
 
 /**
  * 빌드 입력 (룬·주문·아이템·스킬 + 미리보기). 빌드 등록·새 카운터 제안·다시 제출 공용.
@@ -31,7 +31,7 @@ export default function BuildFields({ game, value: build, onChange, author }) {
         max={ITEM_LIMITS.starting[1]}
         goldMax={startGoldMax(game)}
         order="cheap"
-        frequent={game.frequent?.starting}
+        filters={START_FILTERS}
         onChange={(starting_items) => set({ starting_items })}
       />
       <ItemPicker
@@ -45,7 +45,6 @@ export default function BuildFields({ game, value: build, onChange, author }) {
         movable
         allow={isCoreItem}
         filters={CORE_FILTERS}
-        frequent={game.frequent?.core}
         onChange={(core_items) => set({ core_items })}
       />
       <SkillPicker value={build} onChange={set} />
@@ -201,16 +200,16 @@ const SHOW = 60;
 const OVER_MS = 2000;
 
 /**
- * 아이템 고르기 (028): 처음에는 "자주 쓰는 아이템"(운영자가 /admin에서 정함)만, 나머지는 [더보기]를 눌러야 펼쳐진다.
- * 검색(초성 포함)은 항상 고를 수 있는 아이템 전체에서. filters가 있으면 [더보기] 안에 [전체][전설][서사][신발] 거르기.
- * allow: 이 칸에 넣을 수 있는 아이템인가 (핵심 템트리 = 전설·서사·신발). 자주 쓰는 아이템이 없으면 [더보기]를 펼친 채로 시작한다.
+ * 아이템 고르기: 이 칸에서 고를 수 있는 아이템 전체 목록 + 종류 거르기(filters) + 검색(초성 포함, 항상 전체에서).
+ * 핵심 템트리는 [전체][전설][서사][신발], 시작 아이템은 [전체][기본][소모품].
+ * allow: 이 칸에 넣을 수 있는 아이템인가 (핵심 템트리 = 전설·서사·신발).
  * goldMax: 시작 아이템처럼 골드 합계 상한이 있으면 그 값 (그보다 비싼 아이템은 목록에 없다).
  * 합계를 넘기는 아이템을 누르면 넣지 않고 "N골드를 넘습니다"를 잠깐 보여 준다 (022: 합계·남은 골드 안내는 숨김).
  * movable: 끌어서 순서 바꾸기 (PC는 마우스로 끌기, 폰은 꾹 눌러 끌기, 키보드는 Space 후 화살표)
  */
 function ItemPicker({
   id, title, hint, items, value, max, goldMax = null, distinct = false, movable = false, order = 'expensive',
-  allow = null, filters = null, frequent = [], onChange,
+  allow = null, filters = null, onChange,
 }) {
   const [query, setQuery] = useState('');
   const [over, setOver] = useState(false);
@@ -224,12 +223,9 @@ function ItemPicker({
   const byOrder = (a, b) => (order === 'cheap' ? a.gold - b.gold : b.gold - a.gold) || a.name.localeCompare(b.name, 'ko');
   // 이 칸에서 고를 수 있는 아이템 전부 (지금 상점에 있는 것)
   const pool = Object.values(items).filter((it) => it.shop && (!budget || it.gold <= goldMax) && (!allow || allow(it))).sort(byOrder);
-  const freqIds = new Set(frequent ?? []);
-  const common = pool.filter((it) => freqIds.has(it.id));
-  const [moreOpen, setMoreOpen] = useState(common.length === 0);
   const searching = query.trim() !== '';
   const found = searching ? pool.filter((it) => matchesQuery(query, it.name)) : [];
-  const rest = pool.filter((it) => !freqIds.has(it.id) && (kind === 'all' || it.kind === kind));
+  const shown = pool.filter((it) => kind === 'all' || it.kind === kind);
   const full = value.length >= max;
   const name = (itemId) => items[itemId]?.name ?? itemId;
   const keys = value.map((itemId, i) => `${itemId}-${i}`);
@@ -303,35 +299,17 @@ function ItemPicker({
         </>
       ) : (
         <>
-          {common.length > 0 && (
-            <>
-              <p className="pick-caption">자주 쓰는 아이템</p>
-              {picks(common, `${title} 고르기`)}
-            </>
-          )}
-          {common.length > 0 && (
-            <button
-              type="button" className="btn btn-small more-btn" aria-expanded={moreOpen} aria-controls={`${id}-more`}
-              onClick={() => setMoreOpen((o) => !o)}
-            >
-              {moreOpen ? '접기' : `더보기 (${pool.length - common.length}개)`}
-            </button>
-          )}
-          {moreOpen && (
-            <div id={`${id}-more`} className="pick-more">
-              {filters && (
-                <div className="view-switch kind-switch" role="group" aria-label={`${title} 종류`}>
-                  {filters.map((f) => (
-                    <button key={f.key} type="button" className="btn btn-small" aria-pressed={kind === f.key} onClick={() => setKind(f.key)}>
-                      {f.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-              {picks(rest, common.length > 0 ? `${title} 더보기` : `${title} 고르기`)}
-              {rest.length === 0 && <p className="empty">이 종류의 아이템이 없습니다.</p>}
+          {filters && (
+            <div className="view-switch kind-switch" role="group" aria-label={`${title} 종류`}>
+              {filters.map((f) => (
+                <button key={f.key} type="button" className="btn btn-small" aria-pressed={kind === f.key} onClick={() => setKind(f.key)}>
+                  {f.label}
+                </button>
+              ))}
             </div>
           )}
+          {picks(shown, `${title} 고르기`)}
+          {shown.length === 0 && <p className="empty">이 종류의 아이템이 없습니다.</p>}
         </>
       )}
       {full && <small className="hint">{max}개까지 고를 수 있습니다.</small>}

@@ -16,7 +16,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); TABLES.counters = COUNTERS.ma
 function Where() { const l = useLocation(); return <output data-testid="where">{l.pathname}</output>; }
 const start = (path) => render(<MemoryRouter initialEntries={[path]}><AppRoutes /><Where /></MemoryRouter>);
 const where = () => screen.getByTestId('where').textContent;
-const asOperator = () => fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
+const asOperator = () => fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
 
 test('일반 유저: /admin은 "운영자만 볼 수 있습니다", 상단 [관리]·[순서 변경]·[수정 기록]도 안 보인다', async () => {
   fakeLogin('u-old');
@@ -39,7 +39,7 @@ test('운영자: [관리] → 대기 목록 → [자세히] → 바뀐 칸만 �
   vi.spyOn(window, 'confirm');
   start('/');
   await clickMenu('관리');
-  const row = await screen.findByRole('listitem', { name: '[문서 수정] 퀸으로 다리우스 잡는 법' });
+  const row = await screen.findByRole('listitem', { name: '[문서 수정] 퀸으로 다리우스 이기는 법' });
   expect(within(row).getByText('기존유저')).toBeDefined();
   fireEvent.click(within(row).getByRole('link', { name: '자세히' }));
   expect(where()).toBe('/admin/proposals/501');
@@ -60,7 +60,7 @@ test('운영자: [관리] → 대기 목록 → [자세히] → 바뀐 칸만 �
   expect(ok.disabled).toBe(true);
   fireEvent.change(screen.getByLabelText(/승인 메모/), { target: { value: ' 좋은 수정입니다 ' } });
   fireEvent.click(ok);
-  expect(await screen.findByText(/승인했습니다: \[문서 수정\] 퀸으로 다리우스 잡는 법/)).toBeDefined();
+  expect(await screen.findByText(/승인했습니다: \[문서 수정\] 퀸으로 다리우스 이기는 법/)).toBeDefined();
   expect(fakeState.rpcCalls).toEqual([{ name: 'approve_proposal', args: { p_id: 501, p_note: '좋은 수정입니다', p_content: null, p_build: null, p_version: 1 } }]);
   expect(where()).toBe('/admin');
   expect(window.confirm).not.toHaveBeenCalled();
@@ -101,7 +101,7 @@ test('새 카운터 제안: 전체가 "새로 씀"으로 보이고, 이미 공�
   );
   asOperator();
   start('/admin/proposals/601');
-  expect(await screen.findByRole('heading', { name: '[새 카운터] 가렌으로 다리우스 잡는 법' })).toBeDefined();
+  expect(await screen.findByRole('heading', { name: '[새 카운터] 가렌으로 다리우스 이기는 법' })).toBeDefined();
   expect(within(screen.getByRole('region', { name: '한 줄 요약 변경' })).getByText('새로 씀')).toBeDefined();
   expect(screen.getByRole('button', { name: '승인' }).disabled).toBe(false);
   cleanup();
@@ -136,7 +136,7 @@ test('순서 변경: [순서 변경] → ▲로 옮기고 [순서 저장]하면 
 test('수정 기록: 버전 목록과 지금 버전 표시, 예전 버전 비교, 메모를 써야 되돌리기 확정 → revert_doc(메모)', async () => {
   TABLES.doc_revisions.push(
     { id: 7, kind: 'edit', content: {}, created_at: '2026-11-01T09:00:00Z', reverted_from: null,
-      editor: { nickname: '기존유저', level: 1, main_title: null }, approver: { nickname: '영자(운)', level: 0, main_title: null } },
+      editor: { nickname: '기존유저', level: 1, main_title: null }, approver: { nickname: '영자', role: 'admin', level: 0, main_title: null } },
     { id: 5, kind: 'create', created_at: '2026-10-30T09:00:00Z', reverted_from: null, editor: null, approver: null,
       content: { summary: '처음 요약', level_notes: { 1: '1렙 내용', 2: '2렙', 3: '3렙', 6: '6렙', 9: '9렙', 11: '11렙' }, lane_cautions: 'E 사거리 주의' } },
   );
@@ -171,7 +171,7 @@ test('대기 목록 줄에서 바로: [승인]·[거절]은 그 자리에 메모
   asOperator();
   vi.spyOn(window, 'confirm');
   start('/admin');
-  const [row1] = await screen.findAllByRole('listitem', { name: '[문서 수정] 퀸으로 다리우스 잡는 법' });
+  const [row1] = await screen.findAllByRole('listitem', { name: '[문서 수정] 퀸으로 다리우스 이기는 법' });
 
   fireEvent.click(within(row1).getByRole('button', { name: '승인' }));
   const ok = within(row1).getByRole('button', { name: '승인 확정' });
@@ -182,16 +182,16 @@ test('대기 목록 줄에서 바로: [승인]·[거절]은 그 자리에 메모
   fireEvent.click(within(row1).getByRole('button', { name: '승인' }));
   fireEvent.change(within(row1).getByLabelText(/승인 메모/), { target: { value: '좋습니다' } });
   fireEvent.click(within(row1).getByRole('button', { name: '승인 확정' }));
-  expect(await screen.findByText('승인했습니다: [문서 수정] 퀸으로 다리우스 잡는 법')).toBeDefined();
+  expect(await screen.findByText('승인했습니다: [문서 수정] 퀸으로 다리우스 이기는 법')).toBeDefined();
   expect(where()).toBe('/admin');
   expect(fakeState.rpcCalls).toEqual([{ name: 'approve_proposal', args: { p_id: 501, p_note: '좋습니다', p_content: null, p_build: null, p_version: 1 } }]);
 
   fakeState.rpcCalls.length = 0;
-  const again = (await screen.findAllByRole('listitem', { name: '[문서 수정] 퀸으로 다리우스 잡는 법' }))[1];
+  const again = (await screen.findAllByRole('listitem', { name: '[문서 수정] 퀸으로 다리우스 이기는 법' }))[1];
   fireEvent.click(within(again).getByRole('button', { name: '거절' }));
   fireEvent.change(within(again).getByLabelText(/거절 사유/), { target: { value: '근거 부족' } });
   fireEvent.click(within(again).getByRole('button', { name: '거절 확정' }));
-  expect(await screen.findByText('거절했습니다: [문서 수정] 퀸으로 다리우스 잡는 법')).toBeDefined();
+  expect(await screen.findByText('거절했습니다: [문서 수정] 퀸으로 다리우스 이기는 법')).toBeDefined();
   expect(fakeState.rpcCalls).toEqual([{ name: 'reject_proposal', args: { p_id: 502, p_reason: '근거 부족', p_version: 1 } }]);
   expect(window.confirm).not.toHaveBeenCalled();
 });
@@ -204,15 +204,15 @@ test('대기 목록: 바로 승인하면 위험한 제안은 줄에서 [승인]�
   );
   asOperator();
   start('/admin');
-  const stale = await screen.findByRole('listitem', { name: '[문서 수정] 퀸으로 다리우스 잡는 법' });
+  const stale = await screen.findByRole('listitem', { name: '[문서 수정] 퀸으로 다리우스 이기는 법' });
   expect(within(stale).getByText('제안 뒤에 문서가 바뀌었습니다. 내용을 [자세히]에서 확인해 주세요.')).toBeDefined();
   expect(within(stale).getByRole('button', { name: '승인' }).disabled).toBe(true);
   expect(within(stale).getByRole('button', { name: '거절' }).disabled).toBe(false);
   expect(within(stale).getByRole('link', { name: '자세히' }).getAttribute('href')).toBe('/admin/proposals/701');
-  const dup = screen.getByRole('listitem', { name: '[새 카운터] 퀸으로 다리우스 잡는 법' });
+  const dup = screen.getByRole('listitem', { name: '[새 카운터] 퀸으로 다리우스 이기는 법' });
   expect(within(dup).getByText(/같은 카운터가 이미 공개돼 있습니다/)).toBeDefined();
   expect(within(dup).getByRole('button', { name: '승인' }).disabled).toBe(true);
-  const fine = screen.getByRole('listitem', { name: '[새 카운터] 가렌으로 다리우스 잡는 법' });
+  const fine = screen.getByRole('listitem', { name: '[새 카운터] 가렌으로 다리우스 이기는 법' });
   expect(within(fine).getByRole('button', { name: '승인' }).disabled).toBe(false);
   expect(within(fine).queryByText(/자세히\]에서 확인/)).toBeNull();
 });

@@ -1,5 +1,5 @@
 -- 로컬 검사 전용 (supabase/tests/run.sh). 실제 Supabase SQL Editor에서 실행하지 말 것.
--- 028: 핵심 템트리 종류(전설·서사·신발, 전설 1개 이상)와 자주 쓰는 아이템(frequent_items)
+-- 028: 핵심 템트리 종류(전설·서사·신발, 전설 1개 이상) 검사. (자주 쓰는 아이템은 029에서 없앰)
 \set ON_ERROR_STOP 1
 \set QUIET 1
 insert into auth.users (id, email) values
@@ -89,27 +89,3 @@ select t.fails('모르는 종류',
 select t.ok('갱신: 아이템 수를 돌려줌',
   (select set_item_prices('16.22.1', (select jsonb_object_agg(id, gold) from item_prices), (select jsonb_object_agg(id, kind) from item_prices) || '{"3076": "legendary"}') > 100));
 select t.ok('갱신: 종류도 바뀜', (select kind = 'legendary' from item_prices where id = '3076'));
-
--- ===== 6. 자주 쓰는 아이템 =====
-select t.ok('처음 목록: 핵심 19개, 시작 9개',
-  (select count(*) = 19 from frequent_items where slot = 'core') and (select count(*) = 9 from frequent_items where slot = 'starting'));
-set role anon;
-set request.jwt.claim.sub = '';
-select t.ok('비로그인도 읽음', (select count(*) = 28 from frequent_items));
-select t.fails('비로그인은 못 바꿈', $$select add_frequent_item('core', '3742')$$, 'permission denied');
-set role authenticated;
-set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
-select t.fails('일반 유저는 추가 불가', $$select add_frequent_item('core', '3742')$$, '운영자만');
-select t.fails('일반 유저는 빼기 불가', $$select remove_frequent_item('core', '3071')$$, '운영자만');
-select t.fails('표 직접 수정 불가', $$insert into frequent_items (slot, item_id) values ('core', '3742')$$, 'permission denied');
-set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select add_frequent_item('core', '3742');
-select t.ok('운영자: 망자의 갑옷 추가', exists (select 1 from frequent_items where slot = 'core' and item_id = '3742'));
-select t.fails('이미 있는 아이템', $$select add_frequent_item('core', '3742')$$, '이미 자주 쓰는 아이템에');
-select t.fails('핵심에 기본템', $$select add_frequent_item('core', '1036')$$, '전설·서사·신발 아이템만');
-select t.fails('시작에 비싼 아이템', $$select add_frequent_item('starting', '3071')$$, '500골드 이하만');
-select t.fails('가격표에 없는 아이템', $$select add_frequent_item('core', '999999')$$, '아이템 가격표에 없는');
-select t.fails('모르는 칸', $$select add_frequent_item('boots', '3047')$$, '칸은');
-select remove_frequent_item('core', '3742');
-select t.ok('운영자: 빼기', not exists (select 1 from frequent_items where slot = 'core' and item_id = '3742'));
-select t.fails('없는 것 빼기', $$select remove_frequent_item('core', '3742')$$, '자주 쓰는 아이템에 없는');

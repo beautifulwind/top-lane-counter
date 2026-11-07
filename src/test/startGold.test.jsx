@@ -18,7 +18,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 const start = (path) => render(<MemoryRouter initialEntries={[path]}><AppRoutes /></MemoryRouter>);
 const MATCHUP = '/champion/Darius/counter/Quinn';
 const asUser = () => fakeLogin('u-old');
-const asOperator = () => fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
+const asOperator = () => fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
 const startGroup = () => screen.getByRole('group', { name: '시작 아이템 고르기' });
 const rpcCalls = (name) => fakeState.rpcCalls.filter((c) => c.name === name).map((c) => c.args);
 
@@ -123,7 +123,7 @@ test('운영자 빌드 자세히: 시작템 합계를 넘는 대기 빌드는 �
   expect(await screen.findByText(/시작 아이템은 합계 500골드까지 고를 수 있습니다. \(지금 900골드\) 그대로는 승인할 수 없습니다/)).toBeDefined();
   cleanup();
   start('/admin');
-  const rows = await screen.findAllByRole('listitem', { name: '[빌드] 퀸으로 다리우스 잡는 법' });
+  const rows = await screen.findAllByRole('listitem', { name: '[빌드] 퀸으로 다리우스 이기는 법' });
   const row = rows.find((li) => within(li).queryByText(/지금 900골드/));
   expect(within(row).getByText(/지금 900골드/)).toBeDefined();
   expect(within(row).getByRole('button', { name: '승인' })).toBeDisabled();

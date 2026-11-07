@@ -27,12 +27,12 @@ test('닉네임 표시: 대표 칭호가 없으면 칭호 자리 없이 "Lv.3 �
 
 test('매치업 빌드: 승인된 것만, 추천 점수 높은 순, 작성자는 레벨·칭호와 함께', async () => {
   start('/champion/Darius/counter/Quinn');
-  await screen.findByText(/퀸으로 다리우스 잡는 법/);
+  await screen.findByText(/퀸으로 다리우스 이기는 법/);
   const authors = [...document.querySelectorAll('.build-author')].map((e) => e.textContent);
-  expect(authors).toEqual(['Lv.7 단단묵직 탑고수', 'Lv.3 칭호없음', '(탈퇴한 유저)', 'Lv.0 영자(운)']);
+  expect(authors).toEqual(['Lv.7 단단묵직 탑고수', 'Lv.3 칭호없음', '(탈퇴한 유저)', 'Lv.0 (운)영자']);
   expect(screen.queryByText(/대기중/)).toBeNull();
   expect(screen.queryByText(/대표 칭호 없음/)).toBeNull();
-  expect(screen.getByText('구버전 · 14.1')).toBeDefined(); // 앞 두 자리만 비교·표시
+  expect(screen.getByText('패치 14.1')).toBeDefined(); // 앞 두 자리만 표시 (구버전 글자는 화면에 없다)
   expect(screen.getAllByText('패치 99.1').length).toBe(3);
   expect(screen.getByText('최근 수정: 2026-11-01')).toBeDefined();
   expect(screen.getByText('4렙 추가')).toBeDefined();

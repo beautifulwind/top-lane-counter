@@ -55,10 +55,9 @@ rows (ord, what, to_delete, to_keep, note) as (
   union all select 20, 'user_titles (칭호)', 0, (select count(*) from public.user_titles), '지우지 않고 다시 계산 — 조건이 깨진 칭호만 회수 (알림 없음)'
   union all select 21, 'profiles (계정·닉네임·운영자)', 0, (select count(*) from public.profiles), '그대로. 경험치·레벨만 다시 계산'
   union all select 22, 'nickname_changes (닉네임 변경 기록)', 0, (select count(*) from public.nickname_changes), '계정 정보라 그대로'
-  union all select 23, '설정값 (xp_rules · item_prices · offmeta_champions · xp_levels · frequent_items)', 0,
+  union all select 23, '설정값 (xp_rules · item_prices · offmeta_champions · xp_levels)', 0,
          (select count(*) from public.xp_rules) + (select count(*) from public.item_prices)
-         + (select count(*) from public.offmeta_champions) + (select count(*) from public.xp_levels)
-         + (select count(*) from public.frequent_items), '그대로'
+         + (select count(*) from public.offmeta_champions) + (select count(*) from public.xp_levels), '그대로'
 )
 select what as "표", to_delete as "지울 개수", to_keep as "남는 개수", note as "메모"
 from rows order by ord;

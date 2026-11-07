@@ -1,9 +1,10 @@
+import { displayNickname } from '../lib/nickname';
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { hideBuild, voteBuild } from '../api/builds';
 import { canWrite, isGuest, useAuth } from '../lib/auth';
 import GuestHint from './GuestHint';
-import { isOutdated, patchMinor } from '../lib/buildContent';
+import { patchMinor } from '../lib/buildContent';
 import UserName from './UserName';
 import NoteForm from './NoteForm';
 import { ThumbIcon } from './Icons';
@@ -52,17 +53,14 @@ export function BuildAuthor({ build }) {
  */
 export default function BuildCard({ build, items, runes, spells, latest, interactive = false, onHidden, lastOne = false }) {
   const r = build.runes;
-  const outdated = isOutdated(build.patch, latest);
   return (
-    <article className="build" aria-label={`빌드: ${build.author?.nickname ?? '(탈퇴한 유저)'}`}>
+    <article className="build" aria-label={`빌드: ${displayNickname(build.author, '(탈퇴한 유저)')}`}>
       <div className="build-head">
         <span className="build-author">
           <BuildAuthor build={build} />
         </span>
         {build.patch && (
-          <span className={outdated ? 'badge old' : 'badge'} title={outdated ? '지금 패치와 앞 두 자리가 다릅니다' : undefined}>
-            {outdated ? `구버전 · ${patchMinor(build.patch)}` : `패치 ${patchMinor(build.patch)}`}
-          </span>
+          <span className="badge">{`패치 ${patchMinor(build.patch)}`}</span>
         )}
       </div>
 
@@ -218,7 +216,7 @@ function BuildActions({ build, onHidden, lastOne }) {
           onCancel={() => setHiding(false)}
           onSubmit={async (reason) => {
             await hideBuild(build.id, reason);
-            onHidden?.(`빌드를 숨겼습니다. (${build.author?.nickname ?? '탈퇴한 유저'})`);
+            onHidden?.(`빌드를 숨겼습니다. (${displayNickname(build.author)})`);
           }}
         />
       )}

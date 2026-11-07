@@ -89,6 +89,18 @@ test('빈 닉네임, 20자 초과 닉네임은 저장 전에 막는다', async (
   expect(screen.getByText('닉네임은 20자 이하로 정해 주세요.')).toBeDefined();
 });
 
+test('닉네임에 (운)·(감)과 그 변형은 저장 전에 막는다', async () => {
+  fakeLogin('u-new');
+  start('/welcome');
+  const input = await screen.findByLabelText('닉네임');
+  for (const v of ['탑(운)', '（감）탑', '[운]', '( 운 )']) {
+    fireEvent.change(input, { target: { value: v } });
+    fireEvent.click(screen.getByRole('button', { name: '시작하기' }));
+    expect(screen.getByText('닉네임에는 (운)·(감)을 쓸 수 없습니다.')).toBeDefined();
+  }
+  expect(where()).toBe('/welcome');
+});
+
 test('닉네임이 있는 유저: 상단에 "Lv.7 [칭호] 닉네임", 로그아웃하면 [로그인]으로 바뀐다', async () => {
   fakeLogin('u-user', { nickname: '탑고수', level: 7, main_title: 'solid_heavy' });
   start('/');
@@ -98,14 +110,14 @@ test('닉네임이 있는 유저: 상단에 "Lv.7 [칭호] 닉네임", 로그아
 });
 
 test('운영자: 상단에 "Lv.0 닉네임"만 보이고 "운영자"·"관리자" 글자는 붙지 않는다', async () => {
-  fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
+  fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
   start('/');
-  expect(await menuUserText()).toBe('Lv.0 영자(운)');
+  expect(await menuUserText()).toBe('Lv.0 (운)영자');
   expect(document.querySelector('.topbar').textContent).not.toMatch(/운영자|관리자/);
 });
 
 test('운영자 페이지(/admin)에도 관리자 지정 기능은 없다 (SPEC: 나중에 정함)', async () => {
-  fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
+  fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
   start('/admin');
   expect(await screen.findByRole('heading', { name: '운영자 페이지' })).toBeDefined();
   await screen.findByText('대기 중인 제안이 없습니다.');

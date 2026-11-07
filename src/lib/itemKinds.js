@@ -6,7 +6,7 @@ export const ITEM_KINDS = ['legendary', 'epic', 'boots', 'basic', 'consumable', 
 /** 핵심 템트리에 넣을 수 있는 종류 (전설은 1개 이상 — buildProblem·DB check_core_items) */
 export const CORE_KINDS = ['legendary', 'epic', 'boots'];
 
-/** 핵심 템트리 [더보기] 거르기: [전체][전설][서사][신발] */
+/** 핵심 템트리 거르기: [전체][전설][서사][신발] */
 export const CORE_FILTERS = [
   { key: 'all', label: '전체' },
   { key: 'legendary', label: '전설' },
@@ -33,3 +33,10 @@ export function itemKind(it, data, shopIds) {
 
 /** 핵심 템트리에 넣을 수 있는 아이템인가 (지금 상점에 있고 전설·서사·신발) */
 export const isCoreItem = (it) => !!it && it.shop && CORE_KINDS.includes(it.kind);
+
+/** 시작 아이템 거르기: [전체][기본][소모품] (도란 계열·여신의 눈물 / 물약·와드 등) */
+export const START_FILTERS = [
+  { key: 'all', label: '전체' },
+  { key: 'basic', label: '기본' },
+  { key: 'consumable', label: '소모품' },
+];

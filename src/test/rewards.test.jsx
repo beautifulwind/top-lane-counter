@@ -165,7 +165,7 @@ test('/me: 메뉴 맨 위 닉네임도 새로 읽은 레벨·대표 칭호로 �
 });
 
 test('운영자 /me: 경험치·레벨·칭호 없음 안내', async () => {
-  fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
+  fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
   start('/me');
   expect(await screen.findByText('운영자는 경험치·레벨·칭호가 없습니다 (항상 Lv.0).')).toBeDefined();
   expect(screen.queryByRole('progressbar')).toBeNull();
@@ -174,7 +174,7 @@ test('운영자 /me: 경험치·레벨·칭호 없음 안내', async () => {
 });
 
 test('운영자: 비주류 픽 추가·빼기 (보라 버튼, 이미 승인된 기여는 그대로라는 안내)', async () => {
-  fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
+  fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
   start('/admin');
   expect(await screen.findByText('비주류 픽이 아직 없습니다.')).toBeDefined();
   expect(screen.getByText(/목록을 바꿔도 이미 승인된 기여는 그대로입니다/)).toBeDefined();

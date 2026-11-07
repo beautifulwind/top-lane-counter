@@ -25,7 +25,7 @@ const section = (name) => screen.getByRole('region', { name });
 test('닉네임 없음: 매치업 문서는 읽히고, 댓글 칸 대신 안내, 추천은 닉네임 설정으로', async () => {
   fakeLogin('u-new');
   start(MATCHUP);
-  await screen.findByText(/퀸으로 다리우스 잡는 법/);
+  await screen.findByText(/퀸으로 다리우스 이기는 법/);
   expect(screen.getByText(/닉네임을 정하면 제안·빌드·투표·글·댓글을 쓸 수 있습니다/)).toBeDefined();
   expect(await screen.findByText((_, el) => el?.tagName === 'P' && el.textContent === '닉네임을 정하면 댓글을 달 수 있습니다.')).toBeDefined();
   fireEvent.click(within(card('탑고수')).getByRole('button', { name: '추천 5' }));
@@ -86,7 +86,7 @@ test('닉네임 바꾸기: 30일 안에 바꿨으면 버튼 대신 다음 날짜
 // ---------------- 회원 탈퇴 ----------------
 
 test('운영자는 탈퇴 버튼이 없다', async () => {
-  fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
+  fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
   start('/me/settings');
   const del = await screen.findByRole('region', { name: '회원 탈퇴' });
   expect(within(del).getByText('운영자 계정은 탈퇴할 수 없습니다.')).toBeDefined();

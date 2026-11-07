@@ -15,8 +15,8 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); TABLES.counters = COUNTERS.ma
 function Where() { const l = useLocation(); return <output data-testid="where">{l.pathname}</output>; }
 const start = (path) => render(<MemoryRouter initialEntries={[path]}><AppRoutes /><Where /></MemoryRouter>);
 const where = () => screen.getByTestId('where').textContent;
-const asOperator = () => fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
-const op = { nickname: '영자(운)', level: 0, main_title: null };
+const asOperator = () => fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
+const op = { nickname: '영자', role: 'admin', level: 0, main_title: null };
 
 /** 운영자가 숨긴 "가렌 → 다리우스" 카운터 (id 3) + 숨김 기록 */
 function hiddenGaren() {
@@ -52,7 +52,7 @@ test('운영자: 매치업 문서 [카운터 숨기기] → 그 자리에 사유
   expect(ok.disabled).toBe(true);
   fireEvent.change(screen.getByLabelText(/숨기는 사유/), { target: { value: ' 잘못 승인했습니다 ' } });
   fireEvent.click(ok);
-  expect(await screen.findByText('숨겼습니다: 퀸으로 다리우스 잡는 법')).toBeDefined();
+  expect(await screen.findByText('숨겼습니다: 퀸으로 다리우스 이기는 법')).toBeDefined();
   expect(where()).toBe('/champion/Darius');
   expect(fakeState.rpcCalls).toEqual([{ name: 'hide_counter', args: { p_counter_id: 1, p_reason: '잘못 승인했습니다' } }]);
   expect(window.confirm).not.toHaveBeenCalled();
@@ -73,7 +73,7 @@ test('운영자: 챔피언 문서 목록 줄의 [숨기기] → 사유 입력 �
   fireEvent.click(hideBtn);
   fireEvent.change(screen.getByLabelText(/퀸 숨기는 사유/), { target: { value: '중복' } });
   fireEvent.click(screen.getByRole('button', { name: '숨기기 확정' }));
-  expect(await screen.findByText('숨겼습니다: 퀸으로 다리우스 잡는 법')).toBeDefined();
+  expect(await screen.findByText('숨겼습니다: 퀸으로 다리우스 이기는 법')).toBeDefined();
   expect(where()).toBe('/champion/Darius');
   expect(fakeState.rpcCalls).toEqual([{ name: 'hide_counter', args: { p_counter_id: 1, p_reason: '중복' } }]);
 });
@@ -95,10 +95,10 @@ test('운영자 페이지: 숨긴 카운터와 사유·기록이 보이고, [다
   asOperator();
   vi.spyOn(window, 'confirm');
   start('/admin');
-  const row = await screen.findByRole('listitem', { name: '가렌으로 다리우스 잡는 법' });
+  const row = await screen.findByRole('listitem', { name: '가렌으로 다리우스 이기는 법' });
   expect(within(row).getByText('사유: 잘못 승인했습니다')).toBeDefined();
   expect(within(row).getByText('숨김·공개 기록 2개')).toBeDefined();
-  expect(row.querySelector('.log-list').textContent).toMatch(/숨김 · Lv\.0 영자\(운\) · 잘못 승인했습니다/);
+  expect(row.querySelector('.log-list').textContent).toMatch(/숨김 · Lv\.0 \(운\)영자 · 잘못 승인했습니다/);
   expect(within(row).queryByLabelText(/다시 공개 메모/)).toBeNull(); // 누를 때만 열림
 
   fireEvent.click(within(row).getByRole('button', { name: '다시 공개' }));
@@ -107,7 +107,7 @@ test('운영자 페이지: 숨긴 카운터와 사유·기록이 보이고, [다
   fireEvent.change(within(row).getByLabelText('다시 공개 메모 (필수)'), { target: { value: ' 확인해 보니 맞음 ' } });
   fireEvent.click(ok);
   await vi.waitFor(() => expect(fakeState.rpcCalls).toEqual([{ name: 'restore_counter', args: { p_counter_id: 3, p_note: '확인해 보니 맞음' } }]));
-  expect(await screen.findByText('다시 공개했습니다: 가렌으로 다리우스 잡는 법')).toBeDefined();
+  expect(await screen.findByText('다시 공개했습니다: 가렌으로 다리우스 이기는 법')).toBeDefined();
   expect(window.confirm).not.toHaveBeenCalled();
 });
 

@@ -41,16 +41,16 @@ test('제안·빌드 알림: 화면이 만든 제목 + [종류] 매치업 + 메�
   fakeLogin(ME);
   start('/notifications');
   const approved = await rowOf('제안이 승인됐습니다');
-  expect(approved.textContent).toContain('[문서 수정] 퀸으로 다리우스 잡는 법');
+  expect(approved.textContent).toContain('[문서 수정] 퀸으로 다리우스 이기는 법');
   expect(approved.textContent).toContain('승인 메모: 반영했습니다');
   expect(href(approved)).toBe('/me/proposals/501');
   expect(approved.querySelector('.noti-icon.check svg')).not.toBeNull();
   const rejected = await rowOf('제안이 거절됐습니다');
-  expect(rejected.textContent).toContain('[새 카운터] 가렌으로 다리우스 잡는 법');
+  expect(rejected.textContent).toContain('[새 카운터] 가렌으로 다리우스 이기는 법');
   expect(rejected.textContent).toContain('거절 사유: 이미 있는 카운터');
   expect(rejected.querySelector('.noti-icon.ban')).not.toBeNull();
   const hidden = await rowOf('운영자가 내 빌드를 숨겼습니다');
-  expect(hidden.textContent).toContain('[빌드] 퀸으로 다리우스 잡는 법');
+  expect(hidden.textContent).toContain('[빌드] 퀸으로 다리우스 이기는 법');
   expect(href(hidden)).toBe('/me/builds/111');
   const cancelled = await rowOf('재검토 요청이 취소됐습니다');
   expect(cancelled.textContent).toContain('보낸 내용 그대로 승인 대기 중입니다. 메모: 제가 잘못 봤습니다');
@@ -79,10 +79,10 @@ test('게시판·문서 댓글 알림: DB 문장이 제목, 메모는 둘째 줄
   expect(postHidden.querySelector('.noti-icon.hidden')).not.toBeNull();
   expect(href(await rowOf('「첫 글」에 쓴 내 댓글을 운영자가 숨겼습니다.'))).toBe('/board/5');
   const doc = await rowOf('내가 제안한 카운터 문서에 새 댓글 2개가 달렸습니다.');
-  expect(doc.textContent).toContain('퀸으로 다리우스 잡는 법');
+  expect(doc.textContent).toContain('퀸으로 다리우스 이기는 법');
   expect(href(doc)).toBe('/champion/Darius/counter/Quinn#comments');
   const restored = await rowOf('숨겨졌던 문서 댓글이 다시 공개됐습니다.');
-  expect(restored.textContent).toContain('티모로 다리우스 잡는 법');
+  expect(restored.textContent).toContain('티모로 다리우스 이기는 법');
   expect(href(restored)).toBeNull(); // 카운터가 숨겨져 있어 갈 곳 없음
 });
 

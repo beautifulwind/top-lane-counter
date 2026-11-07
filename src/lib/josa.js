@@ -31,8 +31,8 @@ export function josaOf(word, pair) {
 /** 낱말 + 조사 (예: josa('다리우스', '을/를') → '다리우스를') */
 export const josa = (word, pair) => `${word}${josaOf(word, pair)}`;
 
-/** 매치업 이름: "퀸으로 다리우스 잡는 법" (counterName = 이기는 쪽, targetName = 지는 쪽) */
-export const matchupTitle = (counterName, targetName) => `${josa(counterName, '으로/로')} ${targetName} 잡는 법`;
+/** 매치업 이름: "퀸으로 다리우스 이기는 법" (counterName = 이기는 쪽, targetName = 지는 쪽) */
+export const matchupTitle = (counterName, targetName) => `${josa(counterName, '으로/로')} ${targetName} 이기는 법`;
 
 /** 경험치 내역처럼 짧게: "퀸으로 다리우스" */
 export const matchupShort = (counterName, targetName) => `${josa(counterName, '으로/로')} ${targetName}`;

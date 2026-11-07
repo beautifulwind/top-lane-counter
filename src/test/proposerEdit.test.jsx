@@ -16,7 +16,7 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 function Where() { const l = useLocation(); return <output data-testid="where">{l.pathname + l.search}</output>; }
 const start = (path) => render(<MemoryRouter initialEntries={[path]}><AppRoutes /><Where /></MemoryRouter>);
 const where = () => screen.getByTestId('where').textContent;
-const asOperator = () => fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
+const asOperator = () => fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
 const asProposer = () => fakeLogin('u-old', { nickname: '기존유저' });
 const click = (name, root = document.body) => fireEvent.click(within(root).getByRole('button', { name }));
 const rpcCalls = (name) => fakeState.rpcCalls.filter((c) => c.name === name).map((c) => c.args);
@@ -29,9 +29,9 @@ test('/me 제안 제목 → 자세히: 보낸 글·빌드를 문서 모양으로
   TABLES.edit_proposals.push(fakeProposal({ id: 2, ...GAREN }));
   asProposer();
   start('/me');
-  fireEvent.click(await screen.findByRole('link', { name: '가렌으로 다리우스 잡는 법' }));
+  fireEvent.click(await screen.findByRole('link', { name: '가렌으로 다리우스 이기는 법' }));
   expect(where()).toBe('/me/proposals/2');
-  expect(await screen.findByRole('heading', { name: '[새 카운터] 가렌으로 다리우스 잡는 법' })).toBeDefined();
+  expect(await screen.findByRole('heading', { name: '[새 카운터] 가렌으로 다리우스 이기는 법' })).toBeDefined();
   expect(screen.getByText('고친 요약')).toBeDefined();
   // 022: 한 줄 요약 → 빌드 → 레벨별 딜교법 → 특이사항
   expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent).filter((t) => /^\d\./.test(t)))
@@ -89,7 +89,7 @@ test('[고치기]: 그대로면 안 보내고, 고치면 edit_my_proposal → �
   TABLES.edit_proposals.push(fakeProposal());
   asProposer();
   start('/me/proposals/501/edit');
-  expect(await screen.findByRole('heading', { name: '퀸으로 다리우스 잡는 법 — 고치기' })).toBeDefined();
+  expect(await screen.findByRole('heading', { name: '퀸으로 다리우스 이기는 법 — 고치기' })).toBeDefined();
   expect(screen.queryByText('운영자 메모')).toBeNull();
   click('고친 내용 저장');
   expect(screen.getByRole('alert').textContent).toBe('고친 내용이 없습니다.');
@@ -108,7 +108,7 @@ test('[고치기] 새 카운터 제안: 빌드만 고쳐도 저장, 빌드는 �
   TABLES.edit_proposals.push(fakeProposal({ id: 2, ...GAREN }));
   asProposer();
   start('/me/proposals/2/edit');
-  await screen.findByRole('heading', { name: '가렌으로 다리우스 잡는 법 — 고치기' });
+  await screen.findByRole('heading', { name: '가렌으로 다리우스 이기는 법 — 고치기' });
   pick('선마 (첫 번째로 마스터할 스킬)', '선마 W');
   click('고친 내용 저장');
   await screen.findByText(/고친 내용을 저장했습니다/);
@@ -128,12 +128,12 @@ test('빌드: /me → 자세히 → [수정] → edit_my_build (지금 패치), 
   TABLES.builds.push(fakeBuild(111, null, { author_id: 'u-old', status: 'pending' }));
   asProposer();
   start('/me');
-  const row = await screen.findByRole('listitem', { name: '내 빌드: 퀸으로 다리우스 잡는 법' });
-  fireEvent.click(within(row).getByRole('link', { name: '퀸으로 다리우스 잡는 법' }));
-  expect(await screen.findByRole('heading', { name: '[빌드] 퀸으로 다리우스 잡는 법' })).toBeDefined();
+  const row = await screen.findByRole('listitem', { name: '내 빌드: 퀸으로 다리우스 이기는 법' });
+  fireEvent.click(within(row).getByRole('link', { name: '퀸으로 다리우스 이기는 법' }));
+  expect(await screen.findByRole('heading', { name: '[빌드] 퀸으로 다리우스 이기는 법' })).toBeDefined();
   expect(screen.getByRole('heading', { name: '1. 빌드' })).toBeDefined();
   fireEvent.click(screen.getByRole('link', { name: '수정' }));
-  expect(await screen.findByRole('heading', { name: '퀸으로 다리우스 잡는 법 — 빌드 고치기' })).toBeDefined();
+  expect(await screen.findByRole('heading', { name: '퀸으로 다리우스 이기는 법 — 빌드 고치기' })).toBeDefined();
   pick('선마 (첫 번째로 마스터할 스킬)', '선마 W');
   click('고친 내용 저장');
   expect(await screen.findByText('고친 빌드를 저장했습니다. 승인 대기 순서는 그대로입니다.')).toBeDefined();
@@ -156,7 +156,7 @@ test('운영자: 승인 대기 줄·자세히에 "제안자가 고침 · 시각"
   asOperator();
   start('/admin');
   const rows = await screen.findAllByRole('listitem', { name: /^\[(문서 수정|새 카운터)\]/ });
-  expect(rows[0].getAttribute('aria-label')).toBe('[문서 수정] 퀸으로 다리우스 잡는 법');
+  expect(rows[0].getAttribute('aria-label')).toBe('[문서 수정] 퀸으로 다리우스 이기는 법');
   expect(within(rows[0]).getByText(/^제안자가 고침 · /)).toBeDefined();
   expect(within(rows[1]).queryByText(/제안자가 고침/)).toBeNull();
   cleanup();
@@ -168,7 +168,7 @@ test('운영자: 처리하는 사이 제안자가 고쳤으면 막히고 [새 �
   TABLES.edit_proposals.push(fakeProposal());
   asOperator();
   start('/admin/proposals/501');
-  await screen.findByRole('heading', { name: /퀸으로 다리우스 잡는 법/ });
+  await screen.findByRole('heading', { name: /퀸으로 다리우스 이기는 법/ });
   click('승인');
   fireEvent.change(screen.getByLabelText(/승인 메모/), { target: { value: '좋습니다' } });
   fakeState.rpcError = STALE;
@@ -196,7 +196,7 @@ test('운영자 목록 줄 거절도 막히면 [새 내용 불러오기]', async
   TABLES.builds.push(fakeBuild(111, { nickname: '기존유저', level: 1, main_title: null }, { author_id: 'u-old', status: 'pending', core_items: ['3071', '3047', '3053'] }));
   asOperator();
   start('/admin');
-  const row = (await screen.findAllByRole('listitem', { name: '[빌드] 퀸으로 다리우스 잡는 법' }))
+  const row = (await screen.findAllByRole('listitem', { name: '[빌드] 퀸으로 다리우스 이기는 법' }))
     .find((r) => within(r).queryAllByText('기존유저').length > 0);
   click('거절', row);
   fireEvent.change(within(row).getByLabelText(/거절 사유/), { target: { value: '중복' } });

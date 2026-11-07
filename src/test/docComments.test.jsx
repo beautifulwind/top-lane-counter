@@ -21,7 +21,7 @@ afterEach(() => {
 const start = (path) => render(<MemoryRouter initialEntries={[path]}><AppRoutes /></MemoryRouter>);
 const OTHER = { nickname: '남의글', level: 2, main_title: null };
 const MATCHUP = '/champion/Darius/counter/Quinn';
-const asOp = () => fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
+const asOp = () => fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
 const rpcs = (name) => fakeState.rpcCalls.filter((c) => c.name === name).map((c) => c.args);
 const ago = (min) => new Date(Date.now() - min * 60_000).toISOString();
 const section = async () => (await screen.findByRole('heading', { name: /4\. 댓글/ })).closest('section');
@@ -168,7 +168,7 @@ test('운영자 /admin/reports: 문서 댓글 신고 — 매치업 이름, [보�
   start('/admin/reports');
   const row = await screen.findByRole('listitem', { name: '문서 댓글 신고 1건' });
   expect(row.textContent).toContain('나쁜 문서 댓글');
-  expect(row.textContent).toContain('퀸으로 다리우스 잡는 법');
+  expect(row.textContent).toContain('퀸으로 다리우스 이기는 법');
   expect(within(row).getByRole('link', { name: '보러 가기' }).getAttribute('href')).toBe('/champion/Darius/counter/Quinn#comments');
   fireEvent.click(within(row).getByRole('button', { name: '숨기기' }));
   fireEvent.change(within(row).getByLabelText('숨기는 사유 (필수, 작성자에게 보입니다)'), { target: { value: '광고' } });

@@ -21,7 +21,7 @@ afterEach(() => {
 function Where() { const l = useLocation(); return <output data-testid="where">{l.pathname}</output>; }
 const start = (path) => render(<MemoryRouter initialEntries={[path]}><AppRoutes /><Where /></MemoryRouter>);
 const where = () => screen.getByTestId('where').textContent;
-const asOperator = () => fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
+const asOperator = () => fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
 const GAREN_DOC = { summary: '가렌 요약', level_notes: { 1: 'a', 2: 'b', 3: 'c', 6: 'd', 9: 'e', 11: 'f' }, lane_cautions: '' };
 const GAREN = { id: 3, target_champion: 'Darius', counter_champion: 'Garen', status: 'hidden' };
 
@@ -67,7 +67,7 @@ test('다시 제출: 예전 제안이라 빌드가 없으면 빌드를 채워야
 
 // ---------------- 운영자: 새 카운터 제안의 빌드 ----------------
 
-const pendingRow = () => screen.findByRole('listitem', { name: '[새 카운터] 가렌으로 다리우스 잡는 법' });
+const pendingRow = () => screen.findByRole('listitem', { name: '[새 카운터] 가렌으로 다리우스 이기는 법' });
 
 test('/admin: 새 카운터 제안 줄에서 함께 공개될 첫 빌드를 보고 바로 승인', async () => {
   TABLES.edit_proposals.push(fakeProposal({ id: 8, type: 'new_counter', counter_champion: 'Garen', counter_id: null }));

@@ -1,3 +1,4 @@
+import { displayNickname } from '../../lib/nickname';
 import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { REPORT_REASONS, dismissReports, getOpenReports, hideComment, hideDocComment, hidePost } from '../../api/board';
@@ -94,7 +95,7 @@ function ReportGroup({ group: g, champs, onDone }) {
           <li key={r.id}>
             <strong>{REPORT_REASONS[r.reason] ?? r.reason}</strong>
             {r.detail && <> — {r.detail}</>}
-            <small> ({r.reporter?.nickname ?? '탈퇴한 유저'}, {fmtDateTime(r.created_at)})</small>
+            <small> ({displayNickname(r.reporter)}, {fmtDateTime(r.created_at)})</small>
           </li>
         ))}
       </ul>

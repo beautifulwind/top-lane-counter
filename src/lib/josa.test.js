@@ -19,8 +19,8 @@ test('한글이 아니면 자리표시 그대로', () => {
 });
 
 test('매치업 이름', () => {
-  expect(matchupTitle('퀸', '다리우스')).toBe('퀸으로 다리우스 잡는 법');
-  expect(matchupTitle('말파이트', '트린다미어')).toBe('말파이트로 트린다미어 잡는 법');
+  expect(matchupTitle('퀸', '다리우스')).toBe('퀸으로 다리우스 이기는 법');
+  expect(matchupTitle('말파이트', '트린다미어')).toBe('말파이트로 트린다미어 이기는 법');
   expect(matchupShort('가렌', '다리우스')).toBe('가렌으로 다리우스');
 });
 

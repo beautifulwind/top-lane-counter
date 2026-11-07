@@ -22,7 +22,7 @@ const topbar = () => within(document.querySelector('.topbar'));
 const menuNames = () => [...document.querySelectorAll('.menu-panel a, .menu-panel button')].map((el) => el.textContent.trim());
 
 test('상단 바에는 로고(사이트 이름 → 홈)와 ☰만', async () => {
-  fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
+  fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
   start('/board');
   await menuButton();
   expect(topbar().getAllByRole('link').map((a) => a.getAttribute('href'))).toEqual(['/']);
@@ -61,10 +61,10 @@ test('회원: 맨 위 "Lv.7 [칭호] 닉네임"(글자만), 마이페이지·알
 });
 
 test('운영자: [관리](보라)가 메뉴에, 닉네임은 "Lv.0 닉네임"만 (운영자·관리자 글자 없음)', async () => {
-  fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
+  fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
   start('/');
   const menu = await openMenu();
-  expect((await menu.findByText('영자(운)')).closest('.menu-user').textContent).toBe('Lv.0 영자(운)');
+  expect((await menu.findByText('(운)영자')).closest('.menu-user').textContent).toBe('Lv.0 (운)영자');
   const admin = menu.getByRole('link', { name: '관리' });
   expect(admin.getAttribute('href')).toBe('/admin');
   expect(admin.matches('.op-link')).toBe(true);
@@ -154,7 +154,7 @@ test('로그아웃: 메뉴가 닫히고 다시 열면 [로그인 · 가입]', as
 });
 
 test('마이페이지 맨 위 [관리]·[로그아웃] 줄은 없다 (메뉴로 옮김)', async () => {
-  fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
+  fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
   start('/me');
   await screen.findByRole('heading', { level: 1, name: /영자/ });
   expect(document.querySelector('.account-row')).toBeNull();

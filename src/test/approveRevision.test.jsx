@@ -17,12 +17,12 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 function Where() { const l = useLocation(); return <output data-testid="where">{l.pathname + l.search}</output>; }
 const start = (path) => render(<MemoryRouter initialEntries={[path]}><AppRoutes /><Where /></MemoryRouter>);
 const where = () => screen.getByTestId('where').textContent;
-const asOperator = () => fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
+const asOperator = () => fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
 const asProposer = () => fakeLogin('u-old', { nickname: '기존유저' });
 const click = (name, root = document.body) => fireEvent.click(within(root).getByRole('button', { name }));
 const note = (label, value, root = document.body) => fireEvent.change(within(root).getByLabelText(label), { target: { value } });
 const rpcCalls = (name) => fakeState.rpcCalls.filter((c) => c.name === name).map((c) => c.args);
-const QUINN_ROW = '[문서 수정] 퀸으로 다리우스 잡는 법';
+const QUINN_ROW = '[문서 수정] 퀸으로 다리우스 이기는 법';
 
 // ---------------- 운영자: 목록 줄 ----------------
 
@@ -59,11 +59,11 @@ test('/admin 승인 대기 줄: [재검토 요청]은 메모를 써야 확정 �
 test('/admin 빌드 승인 대기 줄: [재검토 요청] → request_build_revision', async () => {
   asOperator();
   start('/admin');
-  const row = await screen.findByRole('listitem', { name: '[빌드] 퀸으로 다리우스 잡는 법' });
+  const row = await screen.findByRole('listitem', { name: '[빌드] 퀸으로 다리우스 이기는 법' });
   click('재검토 요청', row);
   note(/재검토 요청 메모/, '핵심 템을 하나 더', row);
   click('재검토 요청 확정', row);
-  expect(await screen.findByText(/빌드 재검토를 요청했습니다: 퀸으로 다리우스 잡는 법 \(대기중\)/)).toBeDefined();
+  expect(await screen.findByText(/빌드 재검토를 요청했습니다: 퀸으로 다리우스 이기는 법 \(대기중\)/)).toBeDefined();
   expect(rpcCalls('request_build_revision')).toEqual([{ p_id: 104, p_note: '핵심 템을 하나 더', p_version: 1 }]);
 });
 
@@ -80,7 +80,7 @@ test('/admin 재검토 기다리는 중: 제안·빌드 모두 보이고 [요청
   await sectionCount('재검토 기다리는 중', 2);
   expect(screen.queryByText('보낸 메모: 숨김 재검토')).toBeNull();
 
-  const p = screen.getByRole('listitem', { name: '[재검토 중 문서 수정] 퀸으로 다리우스 잡는 법' });
+  const p = screen.getByRole('listitem', { name: '[재검토 중 문서 수정] 퀸으로 다리우스 이기는 법' });
   expect(within(p).getByText('보낸 메모: 근거 부족')).toBeDefined();
   click('요청 취소', p);
   expect(within(p).getByText('원래 내용 그대로 승인 대기로 돌아갑니다.')).toBeDefined();
@@ -89,7 +89,7 @@ test('/admin 재검토 기다리는 중: 제안·빌드 모두 보이고 [요청
   expect(await screen.findByText(/재검토 요청을 취소했습니다: \[문서 수정\]/)).toBeDefined();
   expect(rpcCalls('cancel_proposal_revision')).toEqual([{ p_id: 501, p_note: '제가 잘못 봤습니다' }]);
 
-  const b = await screen.findByRole('listitem', { name: '[재검토 중 빌드] 퀸으로 다리우스 잡는 법' }); // 처리 뒤 목록을 다시 불러온다
+  const b = await screen.findByRole('listitem', { name: '[재검토 중 빌드] 퀸으로 다리우스 이기는 법' }); // 처리 뒤 목록을 다시 불러온다
   click('거절', b);
   note(/거절 사유/, '오래 기다렸습니다', b);
   click('거절 확정', b);
@@ -229,10 +229,10 @@ test('/me: 재검토 요청 받은 빌드 → 고쳐서 다시 보내기 (지금
   }));
   asProposer();
   start('/me');
-  const row = await screen.findByRole('listitem', { name: '내 빌드: 퀸으로 다리우스 잡는 법' });
+  const row = await screen.findByRole('listitem', { name: '내 빌드: 퀸으로 다리우스 이기는 법' });
   expect(within(row).getByText('운영자 메모: 선마를 바꿔 주세요')).toBeDefined();
   fireEvent.click(within(row).getByRole('link', { name: '고쳐서 다시 보내기' }));
-  expect(await screen.findByRole('heading', { name: '퀸으로 다리우스 잡는 법 — 빌드 고쳐서 다시 보내기' })).toBeDefined();
+  expect(await screen.findByRole('heading', { name: '퀸으로 다리우스 이기는 법 — 빌드 고쳐서 다시 보내기' })).toBeDefined();
   click('다시 보내기');
   expect(screen.getByRole('alert').textContent).toBe('고친 내용이 없습니다. 운영자 메모를 보고 빌드를 고쳐 주세요.');
   pick('선마 (첫 번째로 마스터할 스킬)', '선마 W');
@@ -253,7 +253,7 @@ test('/me: 고쳐서 승인된 빌드는 원래 빌드 → 고친 빌드를 볼 
   TABLES.builds.push({ ...b, original_build: { ...b, max_skill: 'E' } });
   asProposer();
   start('/me');
-  const row = await screen.findByRole('listitem', { name: '내 빌드: 퀸으로 다리우스 잡는 법' });
+  const row = await screen.findByRole('listitem', { name: '내 빌드: 퀸으로 다리우스 이기는 법' });
   const details = within(row).getByText('운영자가 고쳐서 승인했습니다 — 원래 제안 → 고친 내용 보기').closest('details');
   expect(within(details).getByRole('heading', { name: '원래 빌드' })).toBeDefined();
   expect(within(details).getByRole('heading', { name: '고친 빌드' })).toBeDefined();

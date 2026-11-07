@@ -20,6 +20,7 @@ import MyTitles, { LevelBar } from '../components/MyRewards';
 import { matchupTitle } from '../lib/josa';
 import VoteTally from '../components/VoteTally';
 import SectionHead from '../components/SectionHead';
+import { displayNickname } from '../lib/nickname';
 import { BellIcon, GearIcon, LayersIcon, LinkIcon, SendIcon, UserIcon } from '../components/Icons';
 
 /**
@@ -53,7 +54,7 @@ function ProfileName({ profile }) {
   return (
     <span className="user-name">
       {titleName(profile.main_title) && <><TitleBadge titleKey={profile.main_title} />{' '}</>}
-      <span className="user-nick">{profile.nickname}</span>
+      <span className="user-nick">{displayNickname(profile)}</span>
       {profile.is_guest && <>{' '}<span className="guest-badge">비회원</span></>}
     </span>
   );

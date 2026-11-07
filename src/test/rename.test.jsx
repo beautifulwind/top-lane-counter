@@ -43,7 +43,7 @@ test('자유게시판(예전 이름 노가리방)은 상단 바가 아니라 ☰
 
 test('매치업 문서 순서: 한 줄 요약 → 빌드 → 레벨별 딜교법 → 특이사항 → 댓글', async () => {
   start(MATCHUP);
-  await screen.findByRole('heading', { level: 1, name: '퀸으로 다리우스 잡는 법' });
+  await screen.findByRole('heading', { level: 1, name: '퀸으로 다리우스 이기는 법' });
   const toc = screen.getByRole('navigation', { name: '목차' });
   expect(within(toc).getAllByRole('link').map((a) => a.textContent)).toEqual(['빌드', '레벨별 딜교법', '특이사항', '댓글']);
   await screen.findByRole('heading', { name: /4\. 댓글/ });
@@ -60,7 +60,7 @@ test('카운터 등록: "상대법" 아래 입력 순서는 한 줄 요약 → �
   start('/champion/Darius/counter/Teemo');
   fireEvent.click(await screen.findByRole('link', { name: '+ 카운터 등록' }));
   await screen.findByRole('heading', { name: '2. 상대법' });
-  expect(screen.queryByRole('heading', { name: /티모로 다리우스 잡는 법/ })).toBeNull();
+  expect(screen.queryByRole('heading', { name: /티모로 다리우스 이기는 법/ })).toBeNull();
   const form = document.querySelector('form.doc-form');
   const summary = within(form).getByLabelText('한 줄 요약 (필수)');
   expect(summary.getAttribute('placeholder')).toBe('예) 트린 평타를 틀어막는 착취·E선마·얼심 말파');

@@ -2,10 +2,9 @@
 // 권한은 DB가 막는다: 등록은 RLS + 검사 트리거(승인 대기로만), 투표는 vote_build(), 승인·거절·숨기기·다시 공개는 운영자 전용 함수.
 import { db } from './supabase';
 import { getItems, getLatestVersion, getRunes, getSummonerSpells } from './ddragon';
-import { getFrequentItems } from './items';
 import { START_GOLD_MAX, compareBuilds, toProposalBuild, toRow } from '../lib/buildContent';
 
-const PERSON = 'nickname, level, main_title, is_guest';
+const PERSON = 'nickname, role, level, main_title, is_guest';
 const BUILD_FIELDS =
   'id, counter_id, author_id, proposal_id, runes, summoner_spells, starting_items, core_items, max_skill, patch, ' +
   'up_count, down_count, status, created_at, version, edited_at';
@@ -176,14 +175,12 @@ export async function getStartGoldMax() {
   return row?.value ?? START_GOLD_MAX;
 }
 
-/** 빌드 입력·검토 화면이 쓰는 게임 데이터 + 시작템 합계 상한 + 자주 쓰는 아이템 (028) */
+/** 빌드 입력·검토 화면이 쓰는 게임 데이터 + 시작템 합계 상한 */
 export async function getBuildGame() {
-  const [items, runes, spells, latest, startGoldMax, frequent] = await Promise.all([
+  const [items, runes, spells, latest, startGoldMax] = await Promise.all([
     getItems(), getRunes(), getSummonerSpells(), getLatestVersion(), getStartGoldMax(),
-    // 자주 쓰는 아이템을 못 불러와도 빌드는 쓸 수 있게 ([더보기]가 펼쳐진 채로 시작)
-    getFrequentItems().catch(() => ({ core: [], starting: [] })),
   ]);
-  return { items, runes, spells, latest, startGoldMax, frequent };
+  return { items, runes, spells, latest, startGoldMax };
 }
 
 /** DB 아이템 가격표 상태: 기준 패치와 아이템 수 (비어 있으면 patch = null) */

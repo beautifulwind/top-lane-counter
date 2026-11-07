@@ -21,7 +21,7 @@ function Where() {
 }
 const start = (path) => render(<MemoryRouter initialEntries={[path]}><AppRoutes /><Where /></MemoryRouter>);
 const OTHER = { nickname: '남의글', level: 2, main_title: null };
-const asOp = () => fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
+const asOp = () => fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
 const rpcs = (name) => fakeState.rpcCalls.filter((c) => c.name === name).map((c) => c.args);
 
 test('메뉴에 자유게시판 링크', async () => {

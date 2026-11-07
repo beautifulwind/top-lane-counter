@@ -1,4 +1,5 @@
 // 로그인·프로필 접근 계층. 화면 컴포넌트는 이 모듈만 호출한다.
+import { hasReservedMark } from '../lib/nickname';
 import { db } from './supabase';
 import { ALREADY_MEMBER_TEXT } from '../lib/guest';
 
@@ -239,6 +240,8 @@ export function onAuthChange(cb) {
   return () => data.subscription.unsubscribe();
 }
 
+const RESERVED_NICKNAME_MESSAGE = '닉네임에는 (운)·(감)을 쓸 수 없습니다.';
+
 const PROFILE_COLUMNS = 'id, nickname, role, xp, level, main_title, is_guest';
 
 /** 내 프로필 (첫 로그인 시 DB 트리거가 만든다. nickname이 null이면 닉네임 설정 전) */
@@ -253,6 +256,7 @@ export function nicknameProblem(raw) {
   const nickname = raw.trim();
   if (!nickname) return '닉네임을 입력해 주세요.';
   if ([...nickname].length > NICKNAME_MAX) return `닉네임은 ${NICKNAME_MAX}자 이하로 정해 주세요.`;
+  if (hasReservedMark(nickname)) return RESERVED_NICKNAME_MESSAGE;
   return null;
 }
 
@@ -268,6 +272,7 @@ export async function saveNickname(userId, raw) {
   if (error) {
     if (error.code === '23505') throw new Error('이미 사용 중인 닉네임입니다. 다른 닉네임을 정해 주세요.');
     if (error.code === 'P0001') throw new Error(error.message); // 30일에 한 번 (DB 문구에 다음 날짜가 들어 있다)
+    if (error.code === '23514' && /\(운\)/.test(error.message ?? '')) throw new Error(RESERVED_NICKNAME_MESSAGE);
     if (error.code === '23514') throw new Error(`닉네임은 앞뒤 공백 없이 1~${NICKNAME_MAX}자로 정해 주세요.`);
     throw new Error(`닉네임을 저장하지 못했습니다. (${error.message})`);
   }

@@ -197,7 +197,7 @@ test('운영자 /admin: 사진 저장 공간 — 사용량 막대, 800MB 넘으�
     bytes: 820 * MB, files: 1500, gif_bytes: 300 * MB, gifs: 120, hidden_bytes: 5 * MB, recent_bytes: 40 * MB, recent_files: 90,
     trash: 3, orphans: 2, top: [{ nickname: '사진왕', files: 300, bytes: 150 * MB }], total_mb: 1024, warn_mb: 800, block_mb: 900,
   };
-  fakeLogin('u-op', { nickname: '영자(운)', role: 'admin', level: 0, main_title: null });
+  fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
   start('/admin');
   const sec = (await screen.findByRole('heading', { name: '사진 저장 공간' })).closest('section');
   expect(await within(sec).findByText(/820MB/)).toBeDefined();

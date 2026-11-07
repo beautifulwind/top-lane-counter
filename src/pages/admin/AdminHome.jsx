@@ -1,3 +1,4 @@
+import { displayNickname } from '../../lib/nickname';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getChampionMap } from '../../api/ddragon';
@@ -24,9 +25,8 @@ import MediaUsage from '../../components/MediaUsage';
 import { matchupTitle } from '../../lib/josa';
 import VoteTally from '../../components/VoteTally';
 import SectionHead from '../../components/SectionHead';
-import FrequentItems from '../../components/FrequentItems';
 import {
-  ClockIcon, CoinsIcon, DiceIcon, EyeOffIcon, ImageIcon, LayersIcon, MessageIcon, SendIcon, ShieldIcon, SparklesIcon, TrashIcon,
+  ClockIcon, CoinsIcon, DiceIcon, EyeOffIcon, ImageIcon, LayersIcon, MessageIcon, SendIcon, ShieldIcon, TrashIcon,
 } from '../../components/Icons';
 
 /**
@@ -155,11 +155,6 @@ function PendingList() {
           <ItemPrices game={data.game} />
         </section>
       )}
-
-      <section className="section">
-        <SectionHead icon={SparklesIcon}>자주 쓰는 아이템</SectionHead>
-        <FrequentItems />
-      </section>
 
       <section className="section">
         <SectionHead icon={MessageIcon}>자유게시판·댓글</SectionHead>
@@ -412,7 +407,7 @@ function PendingBuildRow({ build: b, game, name, onDone, onReload }) {
   const { guard, notice } = useAuthorChanged(onReload, '작성자');
   const title = buildTitle(b, name);
   const toggle = (kind) => setOpen(open === kind ? null : kind);
-  const who = b.author?.nickname ?? '탈퇴한 유저';
+  const who = displayNickname(b.author);
 
   return (
     <li className="proposal-row" aria-label={`[빌드] ${title}`}>
@@ -494,7 +489,7 @@ function HiddenBuildRow({ build: b, game, name, onDone }) {
   const [open, setOpen] = useState(false);
   const title = buildTitle(b, name);
   const counterHidden = b.counter?.status !== 'approved';
-  const who = b.author?.nickname ?? '탈퇴한 유저';
+  const who = displayNickname(b.author);
 
   return (
     <li className="proposal-row" aria-label={`[숨긴 빌드] ${title}`}>
@@ -541,7 +536,7 @@ function WaitingRow({ kind, item, name, game, onDone }) {
   const isBuild = kind === 'build';
   const title = isBuild ? buildTitle(item, name) : `${matchupTitle(name(item.counter_champion), name(item.target_champion))}`;
   const label = isBuild ? '빌드' : TYPE_LABEL[item.type];
-  const who = isBuild ? (item.author?.nickname ?? '탈퇴한 유저') : (item.proposer?.nickname ?? '탈퇴한 유저');
+  const who = isBuild ? displayNickname(item.author) : displayNickname(item.proposer);
   const detail = isBuild ? `/admin/builds/${item.id}` : `/admin/proposals/${item.id}`;
   const toggle = (k) => setOpen(open === k ? null : k);
   const what = `[${label}] ${title} (${who})`;

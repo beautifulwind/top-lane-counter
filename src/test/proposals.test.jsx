@@ -35,8 +35,8 @@ test('새 카운터 제안: 이미 있는 카운터는 못 고르고, 필수 칸
 
   fireEvent.change(screen.getByLabelText('카운터 챔피언 검색'), { target: { value: 'ㄱㄹ' } });
   fireEvent.click(screen.getByRole('button', { name: '가렌' }));
-  expect(screen.getByRole('heading', { name: '2. 상대법' })).toBeDefined(); // 022: 제목(OO로 OO 잡는 법) 대신 "상대법"
-  expect(screen.queryByRole('heading', { name: /가렌으로 다리우스 잡는 법/ })).toBeNull();
+  expect(screen.getByRole('heading', { name: '2. 상대법' })).toBeDefined(); // 022: 제목(OO로 OO 이기는 법) 대신 "상대법"
+  expect(screen.queryByRole('heading', { name: /가렌으로 다리우스 이기는 법/ })).toBeNull();
 
   send();
   expect(screen.getByRole('alert').textContent).toBe('한 줄 요약을 적어 주세요.');
@@ -81,7 +81,7 @@ test('새 카운터 제안: 이미 있는 카운터는 못 고르고, 필수 칸
     },
   }]);
   expect(screen.getByText(/새 카운터 제안을 보냈습니다. 운영자가 승인하면 반영됩니다/)).toBeDefined();
-  const row = (await screen.findByText('가렌으로 다리우스 잡는 법')).closest('li');
+  const row = (await screen.findByText('가렌으로 다리우스 이기는 법')).closest('li');
   expect(within(row).getByText('새 카운터')).toBeDefined();
   expect(within(row).getByText('대기 중')).toBeDefined();
 });
@@ -170,9 +170,9 @@ test('/me: 거절된 제안은 거절 사유를, 승인된 제안은 문서 링�
   start('/me');
   const rejected = (await screen.findByText('거절')).closest('li');
   expect(within(rejected).getByText('거절 사유: 근거가 부족합니다')).toBeDefined();
-  expect(within(rejected).getByRole('link', { name: '퀸으로 다리우스 잡는 법' }).getAttribute('href')).toBe('/me/proposals/1');
+  expect(within(rejected).getByRole('link', { name: '퀸으로 다리우스 이기는 법' }).getAttribute('href')).toBe('/me/proposals/1');
   expect(within(rejected).getByRole('link', { name: '문서 보기' }).getAttribute('href')).toBe('/champion/Darius/counter/Quinn');
-  const pending = screen.getByText('가렌으로 다리우스 잡는 법').closest('li');
+  const pending = screen.getByText('가렌으로 다리우스 이기는 법').closest('li');
   expect(within(pending).queryByRole('link', { name: '문서 보기' })).toBeNull(); // 아직 없는 문서라 문서 링크 없음
   expect(within(pending).getByRole('link', { name: '수정' }).getAttribute('href')).toBe('/me/proposals/2/edit');
   expect(within(pending).getByText('대기 중')).toBeDefined();

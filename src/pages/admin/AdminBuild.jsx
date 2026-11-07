@@ -1,3 +1,4 @@
+import { displayNickname } from '../../lib/nickname';
 import { useState } from 'react';
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getChampionMap } from '../../api/ddragon';
@@ -57,7 +58,7 @@ function Review() {
   const c = b.counter;
   const title = c ? `${matchupTitle(name(c.counter_champion), name(c.target_champion))}` : '(알 수 없는 매치업)';
   const flags = buildReviewFlags(b, data.game, approved);
-  const who = b.author?.nickname ?? '탈퇴한 유저';
+  const who = displayNickname(b.author);
   const done = (message) => navigate('/admin', { state: { done: message } });
   const toggle = (kind) => setOpen(open === kind ? null : kind);
 

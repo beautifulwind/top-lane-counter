@@ -1,5 +1,6 @@
 // 테스트용 가짜 Supabase. src/api/supabase.js의 db()를 대신한다 (setupTests.js에서 연결).
 // 행 모양은 supabase/schema.sql + content.js의 select(관계 포함)가 돌려주는 모양을 따른다.
+import { hasReservedMark } from '../lib/nickname';
 const runes = (keystone) => ({ primaryPath: 8000, keystone, primary: [9111, 9104, 8014], secondaryPath: 8100, secondary: [8143, 8106], shards: [5005, 5008, 5011] });
 const QUINN = { id: 1, target_champion: 'Darius', counter_champion: 'Quinn', status: 'approved' };
 const build = (id, author, extra = {}) => ({
@@ -17,7 +18,7 @@ const INITIAL_BUILDS = () => [
     build(102, { nickname: '탑고수', level: 7, main_title: 'solid_heavy' }, { up_count: 5, down_count: 1 }),
     build(103, { nickname: '칭호없음', level: 3, main_title: null }, { up_count: 2 }),
     build(104, { nickname: '대기중', level: 1, main_title: null }, { status: 'pending', up_count: 99 }),
-    build(105, { nickname: '영자(운)', level: 0, main_title: null }), // 운영자가 쓴 빌드 (점수 0)
+    build(105, { nickname: '영자', role: 'admin', level: 0, main_title: null }), // 운영자가 쓴 빌드 (점수 0)
 ];
 
 export const TABLES = {
@@ -47,7 +48,6 @@ export const TABLES = {
   xp_events: [],
   user_titles: [],
   offmeta_champions: [],
-  frequent_items: [],
   // 015 자유게시판 (author = select가 돌려주는 관계 모양)
   posts: [],
   post_comments: [],
@@ -122,7 +122,6 @@ export function resetFake() {
   TABLES.xp_events = [];
   TABLES.user_titles = [];
   TABLES.offmeta_champions = [];
-  TABLES.frequent_items = [];
   TABLES.posts = [];
   TABLES.post_comments = [];
   TABLES.post_votes = [];
@@ -247,7 +246,7 @@ function query(table) {
       fakeState.inserts.push({ table, values: inserted });
       if (table === 'builds') {
         const me = TABLES.profiles.find((p) => p.id === inserted.author_id);
-        TABLES.builds.push(build(900 + TABLES.builds.length, me && { nickname: me.nickname, level: me.level, main_title: me.main_title }, {
+        TABLES.builds.push(build(900 + TABLES.builds.length, me && { nickname: me.nickname, role: me.role, level: me.level, main_title: me.main_title }, {
           ...inserted, status: 'pending', created_at: new Date().toISOString(),
           counter: TABLES.counters.find((c) => c.id === inserted.counter_id) ?? null,
         }));
@@ -257,7 +256,7 @@ function query(table) {
       TABLES[table].push({
         id: 900 + TABLES[table].length, status: 'pending', reject_reason: null, reviewed_at: null,
         created_at: new Date().toISOString(), base_revision_id: null, counter_id: null, ...inserted,
-        proposer: proposer && { nickname: proposer.nickname, level: proposer.level, main_title: proposer.main_title },
+        proposer: proposer && { nickname: proposer.nickname, role: proposer.role, level: proposer.level, main_title: proposer.main_title },
       });
       return { data: null, error: null };
     }
@@ -268,6 +267,9 @@ function query(table) {
       // DB 제약 흉내: 대표 칭호는 내가 가진 칭호만 (profiles_main_title_owned)
       if (patch.main_title && !TABLES.user_titles.some((t) => t.user_id === me && t.title_key === patch.main_title)) {
         return { data: null, error: { code: '23503', message: 'violates foreign key constraint "profiles_main_title_owned"' } };
+      }
+      if (patch.nickname && hasReservedMark(patch.nickname)) { // 029 트리거 흉내
+        return { data: null, error: { code: '23514', message: '닉네임에는 (운)·(감)을 쓸 수 없습니다.' } };
       }
       const nick = patch.nickname?.toLowerCase();
       if (nick && TABLES[table].some((r) => r.id !== me && r.nickname?.toLowerCase() === nick)) {
@@ -361,15 +363,6 @@ async function rpc(name, args) {
     TABLES.item_prices = Object.entries(args.p_prices).map(([id, gold]) => ({ id, gold, kind: args.p_kinds[id], patch: args.p_patch }));
     return { data: TABLES.item_prices.length, error: null };
   }
-  if (name === 'add_frequent_item') {
-    if (!isAdminNow()) return { data: null, error: { message: '운영자만 할 수 있습니다.', code: '42501' } };
-    TABLES.frequent_items.push({ slot: args.p_slot, item_id: args.p_item, created_at: new Date(Date.now() + TABLES.frequent_items.length).toISOString() });
-    return { data: null, error: null };
-  }
-  if (name === 'remove_frequent_item') {
-    TABLES.frequent_items = TABLES.frequent_items.filter((f) => !(f.slot === args.p_slot && f.item_id === args.p_item));
-    return { data: null, error: null };
-  }
   if (name === 'add_offmeta') {
     TABLES.offmeta_champions.push({ champion_id: args.p_champion, created_at: new Date().toISOString() });
     return { data: null, error: null };
@@ -399,7 +392,7 @@ async function rpc(name, args) {
 const me = () => fakeState.session?.user.id;
 const person = (id) => {
   const p = TABLES.profiles.find((x) => x.id === id);
-  return p ? { nickname: p.nickname, level: p.level, main_title: p.main_title } : null;
+  return p ? { nickname: p.nickname, role: p.role, level: p.level, main_title: p.main_title } : null;
 };
 const fail = (message) => ({ data: null, error: { message } });
 const ok = (data = null) => ({ data, error: null });
