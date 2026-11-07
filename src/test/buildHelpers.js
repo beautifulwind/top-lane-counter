@@ -2,7 +2,18 @@
 import { fireEvent, screen, within } from '@testing-library/react';
 import { expect } from 'vitest';
 
-export const pick = (group, name) => fireEvent.click(within(screen.getByRole('group', { name: group })).getByRole('button', { name }));
+/** 아이템 고르기는 처음 N개만 보이므로, 버튼이 없으면 같은 칸의 [더보기]를 먼저 눌러 펼친다 */
+export const pick = (group, name) => {
+  let g = screen.getByRole('group', { name: group });
+  if (!within(g).queryByRole('button', { name })) {
+    const more = within(g.closest('fieldset')).queryByRole('button', { name: /^더보기/ });
+    if (more) {
+      fireEvent.click(more);
+      g = screen.getByRole('group', { name: group });
+    }
+  }
+  fireEvent.click(within(g).getByRole('button', { name }));
+};
 
 /** 선마만 빼고 다 채운다 (선마는 테스트가 고른다). withSkill: 선마(Q)까지. 시작 아이템은 도란의 검 + 물약 = 500골드 */
 export function fillBuild({ withSkill = false } = {}) {

@@ -53,47 +53,72 @@ test('규칙: 핵심 템트리는 지금 상점의 전설·서사·신발만, �
 
 // ---------------- 고르기 목록 ----------------
 
-test('핵심 템트리: 전체 목록에 전설·서사·신발만, [전체][전설][서사][신발] 거르기', async () => {
+test('핵심 템트리: 처음 15개(전설 → 서사 → 신발 순, 같은 종류는 비싼 순), [더보기]로 나머지, [접기]로 되돌림, 거르기 버튼 없음', async () => {
   asUser();
   start(NEW_BUILD);
-  const all = await screen.findByRole('group', { name: '핵심 템트리 고르기' });
-  expect(screen.queryByRole('button', { name: /^더보기/ })).toBeNull();
-  expect(screen.queryByText('자주 쓰는 아이템')).toBeNull();
-  expect(names(all)).toContain('칠흑의 양날 도끼');
-  expect(names(all)).toContain('탐식의 망치 (서사)');
-  // 기본템·소모품은 핵심 템트리에 없다
-  for (const n of ['롱소드', '도란의 검', '체력 물약', '천 갑옷']) expect(names(all)).not.toContain(n);
+  const first = await screen.findByRole('group', { name: '핵심 템트리 고르기' });
+  const firstNames = names(first);
+  expect(firstNames).toHaveLength(15);
+  expect(screen.queryByRole('group', { name: '핵심 템트리 종류' })).toBeNull();
+  for (const n of ['전체', '전설', '서사', '신발']) expect(screen.queryByRole('button', { name: n })).toBeNull();
+  expect(firstNames[0]).toBe('무한의 대검'); // 가장 비싼 전설
+  expect(firstNames[13]).toBe('시험용 전설 1'); // 전설 14개가 먼저
+  expect(firstNames[14]).toBe('탐식의 망치 (서사)'); // 15번째부터 서사 (비싼 순)
+  expect(firstNames).not.toContain('덤불 조끼 (서사)');
 
-  const kinds = screen.getByRole('group', { name: '핵심 템트리 종류' });
-  expect(within(kinds).getAllByRole('button').map((b) => b.textContent)).toEqual(['전체', '전설', '서사', '신발']);
-  fireEvent.click(within(kinds).getByRole('button', { name: '서사' }));
-  expect(names(screen.getByRole('group', { name: '핵심 템트리 고르기' }))).toEqual(['탐식의 망치 (서사)', '덤불 조끼 (서사)']);
-  fireEvent.click(within(kinds).getByRole('button', { name: '신발' }));
-  expect(names(screen.getByRole('group', { name: '핵심 템트리 고르기' }))).toEqual(['강철판 장화', '광전사의 군화', '장화']);
+  const fs = first.closest('fieldset');
+  const more = within(fs).getByRole('button', { name: /^더보기/ });
+  expect(more.getAttribute('aria-expanded')).toBe('false');
+  fireEvent.click(more);
+  const all = names(within(fs).getByRole('group', { name: '핵심 템트리 고르기' }));
+  expect(all).toHaveLength(19);
+  expect(all.slice(0, 15)).toEqual(firstNames);
+  const kinds = all.map((n) => {
+    if (n.endsWith('(서사)')) return 'epic';
+    return ['강철판 장화', '광전사의 군화', '장화'].includes(n) ? 'boots' : 'legendary';
+  });
+  expect(kinds).toEqual([...kinds].sort((x, y) => ['legendary', 'epic', 'boots'].indexOf(x) - ['legendary', 'epic', 'boots'].indexOf(y)));
+  expect(all.indexOf('탐식의 망치 (서사)')).toBeLessThan(all.indexOf('덤불 조끼 (서사)')); // 서사 안에서 비싼 순
+  expect(all.slice(-3)).toEqual(['강철판 장화', '광전사의 군화', '장화']);
+  // 기본템·소모품은 핵심 템트리에 없다
+  for (const n of ['롱소드', '도란의 검', '체력 물약', '천 갑옷']) expect(all).not.toContain(n);
+
+  fireEvent.click(within(fs).getByRole('button', { name: '접기' }));
+  expect(names(within(fs).getByRole('group', { name: '핵심 템트리 고르기' }))).toEqual(firstNames);
 });
 
-test('핵심 템트리 검색: 전체에서 (초성 포함), 결과에도 서사 태그', async () => {
+test('핵심 템트리 검색: 더보기와 상관없이 전체에서 (초성 포함), 결과에도 서사 태그', async () => {
   asUser();
   start(NEW_BUILD);
   await screen.findByRole('group', { name: '핵심 템트리 고르기' });
   fireEvent.change(screen.getByLabelText('핵심 템트리 검색'), { target: { value: 'ㄷㅂㅈㄲ' } });
-  expect(names(screen.getByRole('group', { name: '핵심 템트리 고르기' }))).toEqual(['덤불 조끼 (서사)']);
+  expect(names(screen.getByRole('group', { name: '핵심 템트리 고르기' }))).toEqual(['덤불 조끼 (서사)']); // 처음 15개 밖이어도 찾는다
+  expect(within(screen.getByLabelText('핵심 템트리 검색').closest('fieldset')).queryByRole('button', { name: /^더보기/ })).toBeNull();
   fireEvent.change(screen.getByLabelText('핵심 템트리 검색'), { target: { value: '롱소드' } });
   expect(screen.getByText('찾는 아이템이 없습니다.')).toBeDefined(); // 기본템은 검색해도 없음
 });
 
-test('시작 아이템: 전체 목록(싼 순) + [전체][기본][소모품] 거르기', async () => {
+test('시작 아이템: 처음 9개(싼 순), [더보기]로 나머지, [접기]로 되돌림, 거르기 버튼 없음', async () => {
   asUser();
   start(NEW_BUILD);
-  const all = await screen.findByRole('group', { name: '시작 아이템 고르기' });
-  expect(names(all)).toContain('체력 물약');
-  expect(names(all)).toContain('롱소드');
-  const kinds = screen.getByRole('group', { name: '시작 아이템 종류' });
-  expect(within(kinds).getAllByRole('button').map((b) => b.textContent)).toEqual(['전체', '기본', '소모품']);
-  fireEvent.click(within(kinds).getByRole('button', { name: '소모품' }));
-  const consumables = names(screen.getByRole('group', { name: '시작 아이템 고르기' }));
-  expect(consumables).toContain('체력 물약');
-  expect(consumables).not.toContain('롱소드');
+  const first = await screen.findByRole('group', { name: '시작 아이템 고르기' });
+  const firstNames = names(first);
+  
+  expect(firstNames).toHaveLength(9);
+  expect(screen.queryByRole('group', { name: '시작 아이템 종류' })).toBeNull();
+  for (const n of ['기본', '소모품']) expect(screen.queryByRole('button', { name: n })).toBeNull();
+  const fs = first.closest('fieldset');
+  fireEvent.click(within(fs).getByRole('button', { name: /^더보기/ }));
+  const all = names(within(fs).getByRole('group', { name: '시작 아이템 고르기' }));
+  expect(all).toHaveLength(10);
+  expect(all.slice(0, 9)).toEqual(firstNames);
+  expect(firstNames[0]).toBe('체력 물약'); // 싼 순
+  expect(firstNames).toContain('롱소드');
+  fireEvent.click(within(fs).getByRole('button', { name: '접기' }));
+  expect(names(within(fs).getByRole('group', { name: '시작 아이템 고르기' }))).toEqual(firstNames);
+  // 검색은 처음 9개 밖에서도
+  fireEvent.change(screen.getByLabelText('시작 아이템 검색'), { target: { value: all[9] } });
+  expect(names(screen.getByRole('group', { name: '시작 아이템 고르기' }))).toEqual([all[9]]);
 });
 
 test('빌드 입력: 서사템에 "서사" 태그, 전설이 없으면 "전설 1개 이상" 안내', async () => {

@@ -9,7 +9,7 @@ import { matchesQuery } from '../lib/chosung';
 import { ITEM_LIMITS, NO_SPELLS, SKILLS, buildProblem, startGold, startGoldMax } from '../lib/buildContent';
 import BuildCard, { Icon } from './BuildCard';
 import { XIcon } from './Icons';
-import { CORE_FILTERS, START_FILTERS, isCoreItem } from '../lib/itemKinds';
+import { CORE_KINDS, isCoreItem } from '../lib/itemKinds';
 
 /**
  * 빌드 입력 (룬·주문·아이템·스킬 + 미리보기). 빌드 등록·새 카운터 제안·다시 제출 공용.
@@ -31,7 +31,7 @@ export default function BuildFields({ game, value: build, onChange, author }) {
         max={ITEM_LIMITS.starting[1]}
         goldMax={startGoldMax(game)}
         order="cheap"
-        filters={START_FILTERS}
+        initialCount={9}
         onChange={(starting_items) => set({ starting_items })}
       />
       <ItemPicker
@@ -44,7 +44,8 @@ export default function BuildFields({ game, value: build, onChange, author }) {
         distinct
         movable
         allow={isCoreItem}
-        filters={CORE_FILTERS}
+        initialCount={15}
+        kindOrder={CORE_KINDS}
         onChange={(core_items) => set({ core_items })}
       />
       <SkillPicker value={build} onChange={set} />
@@ -200,8 +201,9 @@ const SHOW = 60;
 const OVER_MS = 2000;
 
 /**
- * 아이템 고르기: 이 칸에서 고를 수 있는 아이템 전체 목록 + 종류 거르기(filters) + 검색(초성 포함, 항상 전체에서).
- * 핵심 템트리는 [전체][전설][서사][신발], 시작 아이템은 [전체][기본][소모품].
+ * 아이템 고르기: 이 칸에서 고를 수 있는 아이템을 하나의 목록으로. 처음에는 initialCount개만, [더보기]로 나머지를 펼치고 [접기]로 되돌린다.
+ * 검색(초성 포함)은 더보기와 상관없이 항상 전체에서. 종류 거르기 버튼은 없다.
+ * 순서: kindOrder가 있으면 그 종류 순(핵심 템트리: 전설 → 서사 → 신발) 안에서 order(비싼 순/싼 순), 없으면 order만.
  * allow: 이 칸에 넣을 수 있는 아이템인가 (핵심 템트리 = 전설·서사·신발).
  * goldMax: 시작 아이템처럼 골드 합계 상한이 있으면 그 값 (그보다 비싼 아이템은 목록에 없다).
  * 합계를 넘기는 아이템을 누르면 넣지 않고 "N골드를 넘습니다"를 잠깐 보여 준다 (022: 합계·남은 골드 안내는 숨김).
@@ -209,23 +211,25 @@ const OVER_MS = 2000;
  */
 function ItemPicker({
   id, title, hint, items, value, max, goldMax = null, distinct = false, movable = false, order = 'expensive',
-  allow = null, filters = null, onChange,
+  allow = null, initialCount = 15, kindOrder = null, onChange,
 }) {
   const [query, setQuery] = useState('');
   const [over, setOver] = useState(false);
-  const [kind, setKind] = useState('all');
+  const [expanded, setExpanded] = useState(false);
   const timer = useRef(null);
   useEffect(() => {
     return () => clearTimeout(timer.current);
   }, []);
   const budget = goldMax !== null;
   const total = budget ? startGold(value, items) : 0;
-  const byOrder = (a, b) => (order === 'cheap' ? a.gold - b.gold : b.gold - a.gold) || a.name.localeCompare(b.name, 'ko');
+  const rank = (it) => (kindOrder ? kindOrder.indexOf(it.kind) : 0);
+  const byOrder = (a, b) =>
+    (rank(a) - rank(b)) || (order === 'cheap' ? a.gold - b.gold : b.gold - a.gold) || a.name.localeCompare(b.name, 'ko');
   // 이 칸에서 고를 수 있는 아이템 전부 (지금 상점에 있는 것)
   const pool = Object.values(items).filter((it) => it.shop && (!budget || it.gold <= goldMax) && (!allow || allow(it))).sort(byOrder);
   const searching = query.trim() !== '';
   const found = searching ? pool.filter((it) => matchesQuery(query, it.name)) : [];
-  const shown = pool.filter((it) => kind === 'all' || it.kind === kind);
+  const shown = expanded ? pool : pool.slice(0, initialCount);
   const full = value.length >= max;
   const name = (itemId) => items[itemId]?.name ?? itemId;
   const keys = value.map((itemId, i) => `${itemId}-${i}`);
@@ -299,17 +303,15 @@ function ItemPicker({
         </>
       ) : (
         <>
-          {filters && (
-            <div className="view-switch kind-switch" role="group" aria-label={`${title} 종류`}>
-              {filters.map((f) => (
-                <button key={f.key} type="button" className="btn btn-small" aria-pressed={kind === f.key} onClick={() => setKind(f.key)}>
-                  {f.label}
-                </button>
-              ))}
-            </div>
-          )}
           {picks(shown, `${title} 고르기`)}
-          {shown.length === 0 && <p className="empty">이 종류의 아이템이 없습니다.</p>}
+          {pool.length > initialCount && (
+            <button
+              type="button" className="btn btn-small more-btn" aria-expanded={expanded} onClick={() => setExpanded((o) => !o)}
+            >
+              {expanded ? '접기' : `더보기 (${pool.length - initialCount}개)`}
+            </button>
+          )}
+          {pool.length === 0 && <p className="empty">고를 수 있는 아이템이 없습니다.</p>}
         </>
       )}
       {full && <small className="hint">{max}개까지 고를 수 있습니다.</small>}

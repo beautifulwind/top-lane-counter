@@ -520,8 +520,8 @@ a.op-link, .op-link { color: var(--op-dark); }
   font-family: var(--font-body); font-size: 10px; font-weight: 800; line-height: 13px; white-space: nowrap; pointer-events: none;
 }
 .pick .epic-tag { bottom: -3px; }
-/* 아이템 고르기: 종류 거르기 */
-.kind-switch { margin: 0 0 6px; }
+/* 아이템 고르기: [더보기]/[접기] — 서사 태그(아이콘 아래 -5px)와 겹치지 않게 위쪽 여백 */
+.more-btn { margin-top: 12px; }
 .offmeta-list li.gone { border-color: var(--warn-line); }
 .pick:disabled { cursor: default; opacity: .25; }
 .pick.on:disabled { opacity: 1; }
