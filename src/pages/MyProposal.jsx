@@ -81,7 +81,7 @@ function ProposalView({ p, data, crumbs, sent }) {
 
       {p.status === 'pending' && (
         <div className="status-box">
-          <p>승인 대기 중입니다. 운영자가 처리하기 전까지는 직접 고칠 수 있습니다. 고쳐도 대기 순서는 그대로입니다.</p>
+          <p>승인 대기 중입니다. 운영진이 처리하기 전까지는 직접 고칠 수 있습니다. 고쳐도 대기 순서는 그대로입니다.</p>
           <div className="actions"><Link to={`/me/proposals/${p.id}/edit`} className="btn">수정</Link></div>
         </div>
       )}

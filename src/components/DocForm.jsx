@@ -58,7 +58,7 @@ export default function DocForm({
         <button type="submit" className="btn" disabled={busy}>{busy ? busyLabel : submitLabel}</button>
         {cancelTo && <Link to={cancelTo} className="btn">취소</Link>}
       </div>
-      <p className="hint">보낸 제안은 운영자가 승인하면 반영됩니다. 진행 상황은 [마이페이지]에서 볼 수 있습니다.</p>
+      <p className="hint">보낸 제안은 운영진이 승인하면 반영됩니다. 진행 상황은 [마이페이지]에서 볼 수 있습니다.</p>
     </form>
   );
 }

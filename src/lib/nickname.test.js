@@ -16,8 +16,9 @@ describe('닉네임 예약어 (운)·(감)', () => {
   });
 });
 
-test('displayNickname: 운영자만 닉네임 앞에 (운), 사람이 없으면 fallback', () => {
+test('displayNickname: 운영자·감독관은 닉네임 앞에 똑같이 (운), 사람이 없으면 fallback', () => {
   expect(displayNickname({ nickname: '영자', role: 'admin' })).toBe('(운)영자');
+  expect(displayNickname({ nickname: '감독', role: 'moderator' })).toBe('(운)감독');
   expect(displayNickname({ nickname: '탑고수', role: 'user' })).toBe('탑고수');
   expect(displayNickname({ nickname: '탑고수' })).toBe('탑고수');
   expect(displayNickname(null)).toBe('탈퇴한 유저');

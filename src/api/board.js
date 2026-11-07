@@ -31,6 +31,10 @@ const POST_FIELDS =
 const COMMENT_FIELDS = 'id, post_id, author_id, body, status, hidden_note, hidden_at, edited_at, edit_grace_until, created_at';
 const DOC_COMMENT_FIELDS = 'id, counter_id, author_id, body, status, hidden_note, hidden_at, edited_at, edit_grace_until, created_at';
 const COUNTER = 'counter:counters!doc_comments_counter_id_fkey(id, target_champion, counter_champion, status)';
+// 숨긴 사람의 역할만 (감독관은 다른 감독관이 숨긴 것만 다시 공개할 수 있다, 030)
+const POST_HIDER = 'hider:profiles!posts_hidden_by_fkey(role)';
+const COMMENT_HIDER = 'hider:profiles!post_comments_hidden_by_fkey(role)';
+const DOC_HIDER = 'hider:profiles!doc_comments_hidden_by_fkey(role)';
 // 023: 붙은 사진 (보이는 글·댓글의 것만 RLS가 돌려준다)
 const MEDIA = 'path, mime, size, position';
 const POST_MEDIA = `media:board_attachments!board_attachments_post_id_fkey(${MEDIA})`;
@@ -63,13 +67,13 @@ export const getBoardPage = (q, page) =>
 /** 글 하나 + 댓글 (+ 내 추천 여부). 숨긴 글은 운영자에게만 보인다 → 없으면 null. 글·댓글의 media = [{ path, mime, size, url }] */
 export async function getPost(id, userId = null) {
   const post = await run(
-    db().from('posts').select(`${POST_FIELDS}, author:profiles!posts_author_id_fkey(${PERSON}), ${POST_MEDIA}`).eq('id', id).maybeSingle(),
+    db().from('posts').select(`${POST_FIELDS}, ${POST_HIDER}, author:profiles!posts_author_id_fkey(${PERSON}), ${POST_MEDIA}`).eq('id', id).maybeSingle(),
     '글을 불러오지 못했습니다.',
   );
   if (!post) return null;
   const [rawComments, vote] = await Promise.all([
     run(
-      db().from('post_comments').select(`${COMMENT_FIELDS}, author:profiles!post_comments_author_id_fkey(${PERSON}), ${COMMENT_MEDIA}`)
+      db().from('post_comments').select(`${COMMENT_FIELDS}, ${COMMENT_HIDER}, author:profiles!post_comments_author_id_fkey(${PERSON}), ${COMMENT_MEDIA}`)
         .eq('post_id', id).order('created_at', { ascending: true }).order('id', { ascending: true }),
       '댓글을 불러오지 못했습니다.',
     ),
@@ -116,8 +120,9 @@ export const dismissReports = ({ postId = null, commentId = null, docCommentId =
  * 처리할 신고를 대상(글·댓글·문서 댓글)별로 묶는다 (오래된 신고 먼저).
  * [{ key, postId, commentId, docCommentId, post, comment, docComment, reports: [{ reason, detail, created_at, reporter }] }]
  */
-export async function getOpenReports() {
-  const rows = await run(
+export async function getOpenReports(forModerator = false) {
+  // 감독관(030): 신고 표는 직접 못 읽는다. 처리할 수 있는 대상만, 신고자를 뺀 목록을 DB 함수로 받는다
+  const rows = forModerator ? await rpc('open_reports_for_moderator', {}, '신고를 불러오지 못했습니다.') : await run(
     db().from('reports')
       .select(
         'id, post_id, comment_id, doc_comment_id, reason, detail, created_at, ' +
@@ -164,17 +169,17 @@ async function getHideCounts(authorIds) {
 export async function getHiddenBoard() {
   const [posts, comments, docComments] = await Promise.all([
     run(
-      db().from('posts').select(`${POST_FIELDS}, author:profiles!posts_author_id_fkey(${PERSON})`)
+      db().from('posts').select(`${POST_FIELDS}, ${POST_HIDER}, author:profiles!posts_author_id_fkey(${PERSON})`)
         .eq('status', 'hidden').order('hidden_at', { ascending: false }),
       '숨긴 글을 불러오지 못했습니다.',
     ),
     run(
-      db().from('post_comments').select(`${COMMENT_FIELDS}, author:profiles!post_comments_author_id_fkey(${PERSON})`)
+      db().from('post_comments').select(`${COMMENT_FIELDS}, ${COMMENT_HIDER}, author:profiles!post_comments_author_id_fkey(${PERSON})`)
         .eq('status', 'hidden').order('hidden_at', { ascending: false }),
       '숨긴 댓글을 불러오지 못했습니다.',
     ),
     run(
-      db().from('doc_comments').select(`${DOC_COMMENT_FIELDS}, author:profiles!doc_comments_author_id_fkey(${PERSON}), ${COUNTER}`)
+      db().from('doc_comments').select(`${DOC_COMMENT_FIELDS}, ${DOC_HIDER}, author:profiles!doc_comments_author_id_fkey(${PERSON}), ${COUNTER}`)
         .eq('status', 'hidden').order('hidden_at', { ascending: false }),
       '숨긴 문서 댓글을 불러오지 못했습니다.',
     ),
@@ -201,7 +206,7 @@ export const beginEdit = (kind, id) => rpc('begin_edit', { p_kind: kind, p_id: i
 /** 매치업 문서의 댓글 (오래된 순). 숨긴 것과 숨긴 카운터의 댓글은 운영자에게만 보인다 */
 export function getDocComments(counterRowId) {
   return run(
-    db().from('doc_comments').select(`${DOC_COMMENT_FIELDS}, author:profiles!doc_comments_author_id_fkey(${PERSON})`)
+    db().from('doc_comments').select(`${DOC_COMMENT_FIELDS}, ${DOC_HIDER}, author:profiles!doc_comments_author_id_fkey(${PERSON})`)
       .eq('counter_id', counterRowId).order('created_at', { ascending: true }).order('id', { ascending: true }),
     '댓글을 불러오지 못했습니다.',
   );

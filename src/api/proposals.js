@@ -6,7 +6,7 @@ import { proposalBuildBlock, toProposalBuild } from '../lib/buildContent';
 
 const PERSON = 'nickname, role, level, main_title, is_guest';
 const PROPOSAL_COLUMNS =
-  'id, type, target_champion, counter_champion, counter_id, content, status, reject_reason, reviewed_at, created_at, base_revision_id, ' +
+  'id, proposer_id, type, target_champion, counter_champion, counter_id, content, status, reject_reason, reviewed_at, created_at, base_revision_id, ' +
   'revoke_reason, revoked_at, approve_note, revision_note, revision_requested_at, resubmitted_at, build, approved_content, approved_build, ' +
   'version, edited_at, ' +
   `proposer:profiles!edit_proposals_proposer_id_fkey(${PERSON})`;

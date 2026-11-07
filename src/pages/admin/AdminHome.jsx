@@ -14,7 +14,10 @@ import {
 import { useAsync } from '../../lib/useAsync';
 import { BUILD_STATUS_LABEL, TYPE_LABEL, fmtDateTime } from '../../lib/format';
 import { ErrorBox, Loading } from '../../components/Status';
-import RequireOperator from '../../components/RequireOperator';
+import { RequireStaff } from '../../components/RequireOperator';
+import ModeratorAdmin from '../../components/ModeratorAdmin';
+import { useAuth } from '../../lib/auth';
+import { isStaffPerson } from '../../lib/nickname';
 import UserName from '../../components/UserName';
 import NoteForm from '../../components/NoteForm';
 import { EditedBadge, useAuthorChanged } from '../../components/AuthorChanged';
@@ -35,9 +38,57 @@ import {
  */
 export default function AdminHome() {
   return (
-    <RequireOperator>
-      <PendingList />
-    </RequireOperator>
+    <RequireStaff>
+      <AdminBody />
+    </RequireStaff>
+  );
+}
+
+/** 운영자는 전체, 감독관은 허용된 구역만 (그 밖의 데이터는 불러오지도 않는다) */
+function AdminBody() {
+  const { isOperator } = useAuth();
+  return isOperator ? <PendingList /> : <ModeratorHome />;
+}
+
+/** 감독관: 새 카운터 승인 대기, 자유게시판·댓글(신고·숨긴 글) */
+function ModeratorHome() {
+  const { user } = useAuth();
+  const location = useLocation();
+  const [done, setDone] = useState(location.state?.done ?? null);
+  const { data, error, loading, retry } = useAsync(async () => {
+    const game = await getBuildGame();
+    const [champs, pending] = await Promise.all([getChampionMap(), getPendingProposals(game)]);
+    // RLS가 본인 제안도 돌려주므로, 처리할 수 있는 것(다른 회원의 새 카운터 제안)만 남긴다
+    const reviewable = pending.filter((p) => p.type === 'new_counter' && p.counter_id == null && p.proposer_id !== user.id && !isStaffPerson(p.proposer));
+    return { champs, pending: reviewable, game };
+  }, []);
+  const name = (id) => data.champs[id]?.name ?? id;
+  const finished = (message) => {
+    setDone(message);
+    retry();
+  };
+  return (
+    <article>
+      <h1 className="doc-title page-title"><ShieldIcon size={26} className="title-icon op" /> 운영자 페이지</h1>
+      {done && <p className="notice" role="status">{done}</p>}
+      <section className="section">
+        <SectionHead icon={SendIcon} count={data?.pending.length}>새 카운터 승인 대기</SectionHead>
+        {loading && <Loading />}
+        {error && <ErrorBox error={error} onRetry={retry} />}
+        {data && data.pending.length === 0 && <p className="empty">대기 중인 새 카운터 제안이 없습니다.</p>}
+        {data && data.pending.length > 0 && (
+          <ul className="proposal-list">
+            {data.pending.map((p) => (
+              <PendingRow key={p.id} proposal={p} name={name} game={data.game} onDone={finished} onReload={retry} />
+            ))}
+          </ul>
+        )}
+      </section>
+      <section className="section">
+        <SectionHead icon={MessageIcon}>자유게시판·댓글</SectionHead>
+        <BoardAdmin />
+      </section>
+    </article>
   );
 }
 
@@ -162,6 +213,11 @@ function PendingList() {
       </section>
 
       <section className="section">
+        <SectionHead icon={ShieldIcon}>감독관 관리</SectionHead>
+        <ModeratorAdmin />
+      </section>
+
+      <section className="section">
         <SectionHead icon={ImageIcon}>사진 저장 공간</SectionHead>
         <MediaUsage />
       </section>
@@ -219,6 +275,7 @@ function originState(origin) {
  */
 function PendingRow({ proposal: p, name, game, onDone, onReload }) {
   const [open, setOpen] = useState(null); // 'approve' | 'revision' | 'reject' | null
+  const { isOperator } = useAuth();
   const { guard, notice } = useAuthorChanged(onReload);
   const title = `${matchupTitle(name(p.counter_champion), name(p.target_champion))}`;
   const label = p.resubmitted ? '재검토 후 다시 낸 제안' : TYPE_LABEL[p.type];
@@ -246,9 +303,11 @@ function PendingRow({ proposal: p, name, game, onDone, onReload }) {
         <button type="button" className="btn btn-small btn-op" onClick={() => toggle('approve')} disabled={!!p.block} aria-expanded={open === 'approve'}>
           승인
         </button>
-        <button type="button" className="btn btn-small btn-op" onClick={() => toggle('revision')} aria-expanded={open === 'revision'}>
-          재검토 요청
-        </button>
+        {isOperator && (
+          <button type="button" className="btn btn-small btn-op" onClick={() => toggle('revision')} aria-expanded={open === 'revision'}>
+            재검토 요청
+          </button>
+        )}
         <button type="button" className="btn btn-small btn-op" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>
           거절
         </button>
@@ -267,7 +326,7 @@ function PendingRow({ proposal: p, name, game, onDone, onReload }) {
             onDone(`${p.resubmitted ? '승인하고 다시 공개' : '승인'}했습니다: [${label}] ${title}`);
           })}
         >
-          <Link to={`/admin/proposals/${p.id}?approve=1`} className="edit-link op-link">내용 고치기 (고쳐서 승인)</Link>
+          {isOperator && <Link to={`/admin/proposals/${p.id}?approve=1`} className="edit-link op-link">내용 고치기 (고쳐서 승인)</Link>}
         </NoteForm>
       )}
       {open === 'revision' && (

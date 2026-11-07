@@ -49,14 +49,14 @@ test('제안·빌드 알림: 화면이 만든 제목 + [종류] 매치업 + 메�
   expect(rejected.textContent).toContain('[새 카운터] 가렌으로 다리우스 이기는 법');
   expect(rejected.textContent).toContain('거절 사유: 이미 있는 카운터');
   expect(rejected.querySelector('.noti-icon.ban')).not.toBeNull();
-  const hidden = await rowOf('운영자가 내 빌드를 숨겼습니다');
+  const hidden = await rowOf('운영진이 내 빌드를 숨겼습니다');
   expect(hidden.textContent).toContain('[빌드] 퀸으로 다리우스 이기는 법');
   expect(href(hidden)).toBe('/me/builds/111');
   const cancelled = await rowOf('재검토 요청이 취소됐습니다');
   expect(cancelled.textContent).toContain('보낸 내용 그대로 승인 대기 중입니다. 메모: 제가 잘못 봤습니다');
   // 최신순 (번호 큰 것 위)
   expect(screen.getAllByRole('listitem').map((li) => li.querySelector('.noti-title').textContent)).toEqual([
-    '재검토 요청이 취소됐습니다', '운영자가 내 빌드를 숨겼습니다', '제안이 거절됐습니다', '제안이 승인됐습니다',
+    '재검토 요청이 취소됐습니다', '운영진이 내 빌드를 숨겼습니다', '제안이 거절됐습니다', '제안이 승인됐습니다',
   ]);
 });
 

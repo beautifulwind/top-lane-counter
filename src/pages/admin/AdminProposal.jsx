@@ -9,7 +9,9 @@ import {
 import { useAsync } from '../../lib/useAsync';
 import { STATUS_LABEL, TYPE_LABEL, fmtDateTime } from '../../lib/format';
 import { ErrorBox, Loading } from '../../components/Status';
-import RequireOperator from '../../components/RequireOperator';
+import { RequireStaff } from '../../components/RequireOperator';
+import { useAuth } from '../../lib/auth';
+import { isStaffPerson } from '../../lib/nickname';
 import DiffView from '../../components/DiffView';
 import UserName from '../../components/UserName';
 import NoteForm from '../../components/NoteForm';
@@ -22,13 +24,14 @@ import { matchupTitle } from '../../lib/josa';
 /** 제안 하나 검토: 기존 ↔ 제안 비교, [승인](고쳐서 승인 가능) / [재검토 요청] / [거절] — 모두 메모 필수. ?approve=1이면 [승인]을 연 채로 */
 export default function AdminProposal() {
   return (
-    <RequireOperator>
+    <RequireStaff>
       <Review />
-    </RequireOperator>
+    </RequireStaff>
   );
 }
 
 function Review() {
+  const { isOperator, user } = useAuth();
   const { id } = useParams();
   const navigate = useNavigate();
   const [search] = useSearchParams();
@@ -55,6 +58,8 @@ function Review() {
   const title = `${matchupTitle(name(p.counter_champion), name(p.target_champion))}`;
   const label = resubmitted ? '재검토 후 다시 낸 제안' : TYPE_LABEL[p.type];
 
+  // 감독관은 다른 회원의 새 카운터 제안만 처리한다 (실제 검사는 DB의 require_review_allowed)
+  const canReview = isOperator || (isNew && p.counter_id == null && p.proposer_id !== user?.id && !isStaffPerson(p.proposer));
   const hiddenFlow = isHiddenCounterFlow(p);
   const cannotApprove = hidden || (p.type === 'new_counter' && exists) || noBuild;
   const done = (what) => navigate('/admin', { state: { done: `${what}: [${label}] ${title}` } });
@@ -147,21 +152,38 @@ function Review() {
 
       {approvedWithEdits(p) && <EditedByOperator p={p} card={card} />}
 
-      {p.status === 'pending' && (
+      {!canReview && ['pending', 'revision_requested'].includes(p.status) && (
+        <p className="hint">운영자가 처리하는 제안입니다. 감독관은 다른 회원의 새 카운터 제안만 처리합니다.</p>
+      )}
+      {p.status === 'pending' && canReview && (
         <section className="section">
           {notice}
           <div className="row-actions">
             <button type="button" className="btn btn-op" onClick={() => toggle('approve')} disabled={cannotApprove} aria-expanded={open === 'approve'}>
               승인
             </button>
-            <button type="button" className="btn btn-op" onClick={() => toggle('revision')} aria-expanded={open === 'revision'}>
-              재검토 요청
-            </button>
+            {isOperator && (
+              <button type="button" className="btn btn-op" onClick={() => toggle('revision')} aria-expanded={open === 'revision'}>
+                재검토 요청
+              </button>
+            )}
             <button type="button" className="btn btn-op" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>
               거절
             </button>
           </div>
-          {open === 'approve' && !cannotApprove && (
+          {/* 감독관은 고쳐서 승인할 수 없다 (DB도 막는다): 메모만 쓰고 그대로 승인 */}
+          {open === 'approve' && !cannotApprove && !isOperator && (
+            <NoteForm
+              id="approve-note"
+              label="승인 메모 (필수, 제안자에게 보입니다)"
+              hint="제안 그대로 승인합니다."
+              confirmLabel="승인 확정"
+              busyLabel="승인 중…"
+              onCancel={() => setOpen(null)}
+              onSubmit={(note) => approve({ note })}
+            />
+          )}
+          {open === 'approve' && !cannotApprove && isOperator && (
             <ApproveEditor
               doc={p.content}
               build={isNew ? p.build : null}
@@ -203,7 +225,7 @@ function Review() {
         </section>
       )}
 
-      {p.status === 'revision_requested' && (
+      {p.status === 'revision_requested' && isOperator && (
         <section className="section">
           <div className="revision-note" role="note">
             <p><strong>재검토 요청 중</strong> — 제안자가 고쳐서 다시 내기를 기다리고 있습니다.{p.revision_requested_at && <small> ({fmtDateTime(p.revision_requested_at)})</small>}</p>

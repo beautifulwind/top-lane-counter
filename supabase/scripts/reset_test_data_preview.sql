@@ -49,6 +49,7 @@ rows (ord, what, to_delete, to_keep, note) as (
   union all select 14, 'doc_comments (문서 댓글)', (select count(*) from public.doc_comments), 0, null
   union all select 15, 'reports (신고)', (select count(*) from public.reports), 0, null
   union all select 16, 'hide_log (숨김 기록)', (select count(*) from public.hide_log), 0, null
+  union all select 16, 'moderation_log (운영진 처리 기록)', (select count(*) from public.moderation_log where action not in ('grant_moderator', 'revoke_moderator')), (select count(*) from public.moderation_log where action in ('grant_moderator', 'revoke_moderator')), '감독관 지정·해제 기록만 남김'
   union all select 17, 'board_last_write (도배 방지 시각)', (select count(*) from public.board_last_write), 0, null
   union all select 18, 'notifications (알림)', (select count(*) from public.notifications), 0, null
   union all select 19, 'xp_events (경험치 기록)', (select count(*) from public.xp_events), 0, '남은 데이터로 다시 계산해 새로 쌓음'

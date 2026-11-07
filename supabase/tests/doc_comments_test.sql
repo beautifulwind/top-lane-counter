@@ -120,7 +120,7 @@ select public.hide_doc_comment(:d1, '욕설');
 reset role;
 select t.ok('숨김: 신고 처리됨, 알림, 경험치 회수 (댓글 숨김), 탑신병자 회수',
   (select status = 'resolved' from reports where doc_comment_id = :d1)
-  and (select message = '문서에 쓴 내 댓글을 운영자가 숨겼습니다. 메모: 욕설' and counter_id = :garen from notifications where user_id = :'D' and kind = 'doc_comment_hidden')
+  and (select message = '문서에 쓴 내 댓글을 운영진이 숨겼습니다. 메모: 욕설' and counter_id = :garen from notifications where user_id = :'D' and kind = 'doc_comment_hidden')
   and (select reason = '댓글 숨김' from xp_events where user_id = :'D' and source_key = 'doc_comment:' || :d1 and change = 'revoke')
   and pg_temp.xp(:'D') = 1 and pg_temp.titles(:'D') = array['top_addict']);  -- 퀸 문서 댓글이 남아 있음
 set request.jwt.claim.sub = '';

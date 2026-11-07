@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   POST_COMMENT_OPS, deleteMyPost, getEditRules, getPost, hidePost, reportPost, restorePost, votePost,
 } from '../api/board';
-import { canVote, isGuest, useAuth } from '../lib/auth';
+import { canModerate, canVote, isGuest, useAuth } from '../lib/auth';
 import GuestHint from '../components/GuestHint';
 import { useAsync } from '../lib/useAsync';
 import { canEditNow, useNow } from '../lib/editWindow';
@@ -50,7 +50,7 @@ export default function BoardPost() {
     return (
       <article>
         <h1 className="doc-title">글을 찾지 못했습니다</h1>
-        <p className="empty">지워졌거나 운영자가 숨긴 글입니다.</p>
+        <p className="empty">지워졌거나 운영진이 숨긴 글입니다.</p>
         <p><Link to="/board">← 자유게시판</Link></p>
       </article>
     );
@@ -97,6 +97,7 @@ function PostActions({ post, mine, auth, onDone }) {
   const [vote, setVote] = useState({ up: post.up_count, mine: post.voted, busy: false, error: null });
   const signedIn = canVote(auth); // 추천·신고는 닉네임이 있고 비회원이 아니어야
   const visible = post.status === 'visible';
+  const canHide = canModerate(auth, post.author_id, post.author);
   const now = useNow();
 
   const toggleVote = async () => {
@@ -126,10 +127,10 @@ function PostActions({ post, mine, auth, onDone }) {
           <Link to={`/board/${post.id}/edit`} className="btn btn-small">고치기</Link>
         )}
         {mine && <button type="button" className="btn btn-small" onClick={() => setMode('delete')}>지우기</button>}
-        {signedIn && !mine && visible && !auth.isOperator && (
+        {signedIn && !mine && visible && !canHide && (
           <button type="button" className="btn btn-small" onClick={() => setMode('report')}>신고</button>
         )}
-        {auth.isOperator && visible && (
+        {canHide && visible && (
           <button type="button" className="btn btn-small btn-op" onClick={() => setMode('hide')}>숨기기</button>
         )}
       </div>
@@ -157,7 +158,7 @@ function PostActions({ post, mine, auth, onDone }) {
           onSubmit={async (reason, detail) => {
             await reportPost(post.id, reason, detail);
             setMode(null);
-            onDone('신고했습니다. 운영자가 확인하겠습니다.');
+            onDone('신고했습니다. 운영진이 확인하겠습니다.');
           }}
         />
       )}

@@ -80,7 +80,7 @@ test('새 카운터 제안: 이미 있는 카운터는 못 고르고, 필수 칸
       },
     },
   }]);
-  expect(screen.getByText(/새 카운터 제안을 보냈습니다. 운영자가 승인하면 반영됩니다/)).toBeDefined();
+  expect(screen.getByText(/새 카운터 제안을 보냈습니다. 운영진이 승인하면 반영됩니다/)).toBeDefined();
   const row = (await screen.findByText('가렌으로 다리우스 이기는 법')).closest('li');
   expect(within(row).getByText('새 카운터')).toBeDefined();
   expect(within(row).getByText('대기 중')).toBeDefined();

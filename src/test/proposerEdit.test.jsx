@@ -36,7 +36,7 @@ test('/me 제안 제목 → 자세히: 보낸 글·빌드를 문서 모양으로
   // 022: 한 줄 요약 → 빌드 → 레벨별 딜교법 → 특이사항
   expect(screen.getAllByRole('heading', { level: 2 }).map((h) => h.textContent).filter((t) => /^\d\./.test(t)))
     .toEqual(['1. 빌드', '2. 레벨별 딜교법', '3. 특이사항']);
-  expect(screen.getByText(/승인 대기 중입니다. 운영자가 처리하기 전까지는 직접 고칠 수 있습니다/)).toBeDefined();
+  expect(screen.getByText(/승인 대기 중입니다. 운영진이 처리하기 전까지는 직접 고칠 수 있습니다/)).toBeDefined();
   expect(screen.getByRole('link', { name: '수정' }).getAttribute('href')).toBe('/me/proposals/2/edit');
   expect(screen.queryByRole('link', { name: '문서 보기' })).toBeNull();
 });

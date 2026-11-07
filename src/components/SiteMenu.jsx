@@ -10,7 +10,7 @@ import UserName from './UserName';
 
 /**
  * 계정 종류. 메뉴(와 나중의 아래 탭 바)가 이 값 하나로 항목을 정한다.
- * 'loading'(로그인 확인·프로필 읽는 중 — 메뉴 항목 없음) | 'signedOut' | 'guest'(비회원: 로그아웃 없음) | 'noNickname'(로그인했지만 닉네임 전) | 'member' | 'operator'
+ * 'loading'(로그인 확인·프로필 읽는 중 — 메뉴 항목 없음) | 'signedOut' | 'guest'(비회원: 로그아웃 없음) | 'noNickname'(로그인했지만 닉네임 전) | 'member' | 'moderator' | 'operator'
  */
 export function accountKind(auth) {
   if (auth.status === 'loading') return 'loading';
@@ -18,7 +18,8 @@ export function accountKind(auth) {
   if (auth.profile === undefined) return 'loading'; // 로그인은 됐고 프로필을 읽는 중
   if (isGuest(auth)) return 'guest';
   if (!auth.profile?.nickname) return 'noNickname';
-  return auth.isOperator ? 'operator' : 'member';
+  if (auth.isOperator) return 'operator';
+  return auth.isModerator ? 'moderator' : 'member';
 }
 
 export const logout = () => signOut().catch((e) => alert(e.message));
@@ -108,7 +109,7 @@ export default function SiteMenu() {
   };
 
   const go = () => close(false); // 항목을 눌러 이동: 초점은 새 페이지가 가져간다
-  const canLogout = kind === 'member' || kind === 'operator' || kind === 'noNickname';
+  const canLogout = kind === 'member' || kind === 'moderator' || kind === 'operator' || kind === 'noNickname';
 
   return (
     <>

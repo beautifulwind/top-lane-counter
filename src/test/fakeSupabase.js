@@ -126,6 +126,7 @@ export function resetFake() {
   TABLES.post_comments = [];
   TABLES.post_votes = [];
   TABLES.reports = [];
+  TABLES.moderation_log = [];
   TABLES.doc_comments = [];
   TABLES.nickname_changes = [];
   TABLES.item_prices = [{ id: '1055', gold: 450, patch: '99.1.1' }, { id: '2003', gold: 50, patch: '99.1.1' }];
@@ -171,7 +172,9 @@ const withCounter = (c) => {
   const k = TABLES.counters.find((x) => x.id === c.counter_id);
   return { ...c, counter: k ? { id: k.id, target_champion: k.target_champion, counter_champion: k.counter_champion, status: k.status } : null };
 };
-const isAdminNow = () => TABLES.profiles.find((p) => p.id === fakeState.session?.user.id)?.role === 'admin';
+const roleNow = () => TABLES.profiles.find((p) => p.id === fakeState.session?.user.id)?.role;
+const isAdminNow = () => roleNow() === 'admin';
+const isStaffNow = () => roleNow() === 'admin' || roleNow() === 'moderator';
 /** RLS 흉내: 숨긴 글·댓글(숨긴 글의 댓글 포함)은 운영자에게만 */
 function visibleRows(table) {
   const rows = TABLES[table] ?? [];
@@ -193,7 +196,7 @@ function visibleRows(table) {
     return rows.map((n) => {
       const p = n.proposal_id != null ? TABLES.edit_proposals?.find((x) => x.id === n.proposal_id) : null;
       const b = n.build_id != null ? TABLES.builds.find((x) => x.id === n.build_id) : null;
-      const post = n.post_id != null ? TABLES.posts.find((x) => x.id === n.post_id && (x.status === 'visible' || isAdminNow())) : null;
+      const post = n.post_id != null ? TABLES.posts.find((x) => x.id === n.post_id && (x.status === 'visible' || isStaffNow())) : null;
       return {
         read_at: null,
         ...n,
@@ -207,9 +210,10 @@ function visibleRows(table) {
   if (table === 'doc_comments') {
     const all = rows.map(withCounter);
     // RLS 흉내: 숨긴 댓글·숨긴 카운터의 댓글은 운영자에게만
-    return isAdminNow() ? all : all.filter((c) => c.status === 'visible' && c.counter?.status === 'approved');
+    return isStaffNow() ? all : all.filter((c) => c.status === 'visible' && c.counter?.status === 'approved');
   }
-  if (isAdminNow()) return rows;
+  if (table === 'moderation_log') return isAdminNow() ? rows : [];
+  if (isStaffNow()) return rows;
   if (table === 'posts') return rows.filter((p) => p.status === 'visible');
   if (table === 'post_comments') {
     return rows.filter((c) => c.status === 'visible' && TABLES.posts.find((p) => p.id === c.post_id)?.status === 'visible');
@@ -230,6 +234,11 @@ function query(table) {
     is: (col, v) => { rows = rows.filter((r) => (r[col] ?? null) === v); return q; },
     in: (col, vs) => { rows = rows.filter((r) => vs.includes(r[col])); return q; },
     lt: (col, v) => { rows = rows.filter((r) => r[col] < v); return q; },
+    ilike: (col, pattern) => {
+      const word = pattern.replace(/^%|%$/g, '').replace(/\\([\\%_])/g, '$1').toLowerCase();
+      rows = rows.filter((r) => (r[col] ?? '').toLowerCase().includes(word));
+      return q;
+    },
     order: (col, { ascending = true } = {}) => {
       rows.sort((a, b) => (a[col] < b[col] ? -1 : a[col] > b[col] ? 1 : 0) * (ascending ? 1 : -1));
       return q;
@@ -330,8 +339,14 @@ const auth = {
 async function rpc(name, args) {
   if (name === 'hide_counts') {
     // 운영자 신고 목록이 알아서 부르는 것이라 rpcCalls에는 넣지 않는다. fakeState.hideCounts = { 작성자id: 횟수 }
-    if (!isAdminNow()) return { data: null, error: { message: '운영자만 할 수 있습니다.', code: '42501' } };
+    if (!isStaffNow()) return { data: null, error: { message: '운영진만 할 수 있습니다.', code: '42501' } };
     return { data: { days: 90, counts: Object.fromEntries(args.p_users.map((u) => [u, fakeState.hideCounts[u] ?? 0])) }, error: null };
+  }
+  if (name === 'open_reports_for_moderator') {
+    // 030: 신고자는 빼고, 감독관이 처리할 수 있는 것만 (테스트는 reports 표 그대로 넣는다)
+    if (!isStaffNow()) return { data: null, error: { message: '운영진만 할 수 있습니다.', code: '42501' } };
+    fakeState.moderatorReportsAsked = true;
+    return { data: visibleRows('reports').filter((r) => r.status === 'open').map((r) => ({ ...r, reporter_id: null, reporter: null })), error: null };
   }
   if (name === 'media_upload_problem') return { data: fakeState.mediaProblem, error: null }; // 화면이 알아서 묻는 것
   if (name === 'media_usage') {
@@ -357,6 +372,16 @@ async function rpc(name, args) {
     const mine = TABLES.notifications.filter((n) => args.p_ids.includes(n.id) && n.user_id === me && !n.read_at);
     mine.forEach((n) => { n.read_at = new Date().toISOString(); });
     return { data: mine.length, error: null };
+  }
+  if (name === 'set_moderator') {
+    if (!isAdminNow()) return { data: null, error: { message: '운영자만 할 수 있습니다.', code: '42501' } };
+    const u = TABLES.profiles.find((x) => x.id === args.p_user);
+    u.role = args.p_on ? 'moderator' : 'user';
+    TABLES.moderation_log.unshift({
+      id: TABLES.moderation_log.length + 1, actor_nickname: '영자', actor_role: 'admin', action: args.p_on ? 'grant_moderator' : 'revoke_moderator',
+      target_kind: 'user', target_id: u.id, target_nickname: u.nickname, note: args.p_note, created_at: new Date().toISOString(),
+    });
+    return { data: null, error: null };
   }
   if (name === 'set_item_prices') {
     if (!args.p_kinds) return { data: null, error: { message: '아이템 종류가 없습니다.', code: '23514' } };

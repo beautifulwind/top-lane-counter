@@ -41,7 +41,7 @@ export default function Me() {
       {isGuest(auth) && <GuestUpgrade />}
       {sent && (
         <p className="notice" role="status">
-          {sent} 운영자가 승인하면 반영됩니다.
+          {sent} 운영진이 승인하면 반영됩니다.
         </p>
       )}
       <MyActivity auth={auth} />

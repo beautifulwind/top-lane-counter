@@ -68,7 +68,7 @@ test('문서 댓글 달기 → 바로 보임 / 남의 댓글은 신고 / 빌드 
   expect(reasons[1]).toContain('실존 인물·고인 비하');
   fireEvent.click(within(other).getByLabelText(/^혐오·비하/));
   fireEvent.click(within(other).getByRole('button', { name: '신고 보내기' }));
-  expect(await screen.findByText('신고했습니다. 운영자가 확인하겠습니다.')).toBeDefined();
+  expect(await screen.findByText('신고했습니다. 운영진이 확인하겠습니다.')).toBeDefined();
   expect(rpcs('report_doc_comment')).toEqual([{ p_id: 1, p_reason: 'hate', p_detail: null }]);
 });
 

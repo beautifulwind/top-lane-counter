@@ -110,7 +110,7 @@ test('비로그인 글 보기: 본문·댓글, 추천은 숫자만, 댓글은 �
 test('숨긴 글·없는 글은 "글을 찾지 못했습니다"', async () => {
   TABLES.posts.push(fakePost(1, { status: 'hidden', hidden_note: '광고' }));
   start('/board/1');
-  expect(await screen.findByText('지워졌거나 운영자가 숨긴 글입니다.')).toBeDefined();
+  expect(await screen.findByText('지워졌거나 운영진이 숨긴 글입니다.')).toBeDefined();
 });
 
 test('남의 글: 추천 누르기·취소, 신고(이유 필수, 기타는 내용 필수)', async () => {
@@ -135,7 +135,7 @@ test('남의 글: 추천 누르기·취소, 신고(이유 필수, 기타는 내�
   expect(send.disabled).toBe(true); // 기타는 내용 필수
   fireEvent.change(within(form).getByLabelText('내용 (필수)'), { target: { value: '홍보 링크' } });
   fireEvent.click(send);
-  expect(await screen.findByText('신고했습니다. 운영자가 확인하겠습니다.')).toBeDefined();
+  expect(await screen.findByText('신고했습니다. 운영진이 확인하겠습니다.')).toBeDefined();
   expect(rpcs('report_post')).toEqual([{ p_id: 1, p_reason: 'other', p_detail: '홍보 링크' }]);
 
   // 같은 글을 또 신고하면 DB가 막는다
@@ -261,7 +261,7 @@ test('운영자: 글 [숨기기](보라, 메모 필수) → 숨김 띠·메모 �
   await vi.waitFor(() => expect(document.querySelector('.op-band')).not.toBeNull());
   const band = document.querySelector('.op-band');
   expect(band.textContent).toContain('메모: 광고 글');
-  expect(band.textContent).toContain('운영자에게만 보입니다.');
+  expect(band.textContent).toContain('운영진에게만 보입니다.');
 
   fireEvent.click(within(band).getByRole('button', { name: '다시 공개' }));
   fireEvent.change(screen.getByLabelText('다시 공개 메모 (필수, 작성자에게 보입니다)'), { target: { value: '오해' } });

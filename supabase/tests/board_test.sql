@@ -160,7 +160,7 @@ select t.ok('숨기면 글 신고는 처리됨, 댓글 신고는 그대로',
   (select count(*) = 2 from reports where post_id = :p1 and status = 'resolved' and handled_note = '광고 글')
   and (select count(*) = 1 from reports where comment_id = :c1 and status = 'open'));
 select t.ok('글쓴이에게 알림 (메모 포함)',
-  (select message = '내 글 「첫 글 (고침)」을 운영자가 숨겼습니다. 메모: 광고 글' and post_id = :p1 from notifications where user_id = :'B' and kind = 'post_hidden'));
+  (select message = '내 글 「첫 글 (고침)」을 운영진이 숨겼습니다. 메모: 광고 글' and post_id = :p1 from notifications where user_id = :'B' and kind = 'post_hidden'));
 select t.ok('글 숨김 → 글 경험치 회수, 댓글 쓴 사람은 그대로',
   pg_temp.xp(:'B') = 1 and pg_temp.xp(:'D') = 1 and pg_temp.xp(:'F') = 1
   and (select reason = '글 숨김' from xp_events where user_id = :'B' and source_key = 'post:' || :p1 and change = 'revoke'));
@@ -174,7 +174,7 @@ reset role;
 set role authenticated;
 set request.jwt.claim.sub = :'B';
 select t.ok('글쓴이도 숨긴 글은 안 보임', (select count(*) = 0 from posts));
-select t.fails('숨긴 글 고치기', format('select public.edit_post(%s, %L, %L)', :p1, 'x', 'y'), '운영자가 숨긴 글은 고칠 수 없습니다');
+select t.fails('숨긴 글 고치기', format('select public.edit_post(%s, %L, %L)', :p1, 'x', 'y'), '운영진이 숨긴 글은 고칠 수 없습니다');
 set request.jwt.claim.sub = :'D';
 select t.fails('숨긴 글에 댓글', format('select public.create_comment(%s, %L)', :p1, 'x'), '글을 찾지 못했습니다');
 select t.fails('숨긴 글 추천', format('select public.vote_post(%s)', :p1), '추천할 수 없는 글');
@@ -199,7 +199,7 @@ reset role;
 select t.ok('댓글 숨김: 경험치 회수, 댓글 수 2, 신고 처리됨, 알림',
   pg_temp.xp(:'D') = 0 and (select comment_count = 2 from posts where id = :p1)
   and (select status = 'resolved' from reports where comment_id = :c1)
-  and (select message = '「첫 글 (고침)」에 쓴 내 댓글을 운영자가 숨겼습니다. 메모: 욕설' from notifications where user_id = :'D' and kind = 'comment_hidden'));
+  and (select message = '「첫 글 (고침)」에 쓴 내 댓글을 운영진이 숨겼습니다. 메모: 욕설' from notifications where user_id = :'D' and kind = 'comment_hidden'));
 select t.ok('탑신병자 회수 (보이는 글·댓글·기여 없음)', pg_temp.titles(:'D') = '{}' and pg_temp.notes(:'D', 'title_revoked') = 1);
 set request.jwt.claim.sub = '';
 set role anon;
@@ -207,7 +207,7 @@ select t.ok('숨긴 댓글은 안 보임', (select count(*) = 2 from post_commen
 reset role;
 set role authenticated;
 set request.jwt.claim.sub = :'D';
-select t.fails('숨긴 댓글 고치기', format('select public.edit_comment(%s, %L)', :c1, 'x'), '운영자가 숨긴 댓글');
+select t.fails('숨긴 댓글 고치기', format('select public.edit_comment(%s, %L)', :c1, 'x'), '운영진이 숨긴 댓글');
 set request.jwt.claim.sub = :'A';
 select public.restore_comment(:c1, '다시 봤습니다');
 reset role;

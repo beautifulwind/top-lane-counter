@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getHiddenBoard, getOpenReports, restoreComment, restoreDocComment, restorePost } from '../api/board';
 import { getChampionMap } from '../api/ddragon';
+import { canRestore, useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
 import { fmtDateTime } from '../lib/format';
 import { ErrorBox, Loading } from './Status';
@@ -11,9 +12,10 @@ import { matchupTitle } from '../lib/josa';
 
 /** 운영자 페이지의 "자유게시판·댓글" 칸: 처리할 신고 수 → /admin/reports, 숨긴 글·댓글·문서 댓글 + [다시 공개] */
 export default function BoardAdmin() {
+  const auth = useAuth();
   const [done, setDone] = useState(null);
   const { data, error, loading, retry } = useAsync(async () => {
-    const [reports, hidden, champs] = await Promise.all([getOpenReports(), getHiddenBoard(), getChampionMap()]);
+    const [reports, hidden, champs] = await Promise.all([getOpenReports(auth.isModerator), getHiddenBoard(), getChampionMap()]);
     return { reports, hidden, champs };
   }, []);
   if (loading) return <Loading />;
@@ -56,6 +58,7 @@ export default function BoardAdmin() {
 const KIND_LABEL = { post: '글', comment: '댓글', doc_comment: '문서 댓글' };
 
 function HiddenBoardRow({ kind, row, champs, onDone }) {
+  const auth = useAuth();
   const [open, setOpen] = useState(false);
   const isPost = kind === 'post';
   const text = isPost ? row.title : row.body;
@@ -78,7 +81,9 @@ function HiddenBoardRow({ kind, row, champs, onDone }) {
       </div>
       <p className="reject-reason">메모: {row.hidden_note}</p>
       <div className="row-actions">
-        <button type="button" className="btn btn-small btn-op" onClick={() => setOpen((v) => !v)} aria-expanded={open}>다시 공개</button>
+        {canRestore(auth, row) && (
+          <button type="button" className="btn btn-small btn-op" onClick={() => setOpen((v) => !v)} aria-expanded={open}>다시 공개</button>
+        )}
         {goTo && <Link to={goTo} className="btn btn-small btn-op">보러 가기</Link>}
       </div>
       {open && (

@@ -4,7 +4,7 @@
 -- 남김: 계정(auth.users)·프로필(닉네임·운영자)·닉네임 변경 기록, 설정값(xp_rules·xp_levels·item_prices·offmeta_champions),
 --       트린다미어 상대 말파이트 카운터 1개 — 지금 문서, 공개 빌드, 그 카운터를 만든 처음 제안 1개.
 -- 지움: 그 밖의 카운터·문서·제안·빌드 전부, 빌드 추천·비추천과 그 기록, 자유게시판 글·댓글·추천, 문서 댓글, 신고, 알림,
---       경험치 기록, 숨김 기록, 빌드·카운터 상태 기록, 완전 삭제 기록, 도배 방지 시각, 018 백업 표의 내용,
+--       경험치 기록, 숨김 기록, 운영진 처리 기록(감독관 지정·해제 기록은 남김), 빌드·카운터 상태 기록, 완전 삭제 기록, 도배 방지 시각, 018 백업 표의 내용,
 --       자유게시판 사진(023): 붙은 사진 줄은 지우고 파일 경로는 정리 대기열(storage_trash)로 — SQL은 Storage 파일을 못 지우므로
 --       실제 파일은 다음 사진 정리(Edge Function media-cleanup, 매일)가 지운다. 바로 지우려면 Storage → board-media에서 직접.
 -- 말파 카운터의 기록 정리:
@@ -103,6 +103,7 @@ set constraints all immediate;
 delete from public.xp_events;
 delete from public.notifications;
 delete from public.hide_log;
+delete from public.moderation_log where action not in ('grant_moderator', 'revoke_moderator'); -- 감독관 지정·해제 기록은 계정 정보처럼 남긴다
 
 -- 018 백업 표 (지운 빌드의 예전 스킬 순서가 남아 있음): 있으면 비운다
 do $$

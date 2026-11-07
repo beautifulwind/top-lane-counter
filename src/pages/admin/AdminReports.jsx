@@ -6,7 +6,8 @@ import { getChampionMap } from '../../api/ddragon';
 import { useAsync } from '../../lib/useAsync';
 import { fmtDateTime } from '../../lib/format';
 import { ErrorBox, Loading } from '../../components/Status';
-import RequireOperator from '../../components/RequireOperator';
+import { RequireStaff } from '../../components/RequireOperator';
+import { useAuth } from '../../lib/auth';
 import UserName from '../../components/UserName';
 import NoteForm from '../../components/NoteForm';
 import { matchupTitle } from '../../lib/josa';
@@ -19,16 +20,17 @@ import { FlagIcon } from '../../components/Icons';
  */
 export default function AdminReports() {
   return (
-    <RequireOperator>
+    <RequireStaff>
       <ReportList />
-    </RequireOperator>
+    </RequireStaff>
   );
 }
 
 function ReportList() {
+  const auth = useAuth();
   const [done, setDone] = useState(null);
   const { data, error, loading, retry } = useAsync(async () => {
-    const [champs, groups] = await Promise.all([getChampionMap(), getOpenReports()]);
+    const [champs, groups] = await Promise.all([getChampionMap(), getOpenReports(auth.isModerator)]);
     return { champs, groups };
   }, []);
   const finished = (message) => {
@@ -57,6 +59,7 @@ function ReportList() {
 }
 
 function ReportGroup({ group: g, champs, onDone }) {
+  const { isModerator } = useAuth();
   const [mode, setMode] = useState(null); // 'hide' | 'dismiss'
   const isPost = g.postId != null;
   const isDoc = g.docCommentId != null;
@@ -95,7 +98,7 @@ function ReportGroup({ group: g, champs, onDone }) {
           <li key={r.id}>
             <strong>{REPORT_REASONS[r.reason] ?? r.reason}</strong>
             {r.detail && <> — {r.detail}</>}
-            <small> ({displayNickname(r.reporter)}, {fmtDateTime(r.created_at)})</small>
+            <small> ({!isModerator && <>{displayNickname(r.reporter)}, </>}{fmtDateTime(r.created_at)})</small>
           </li>
         ))}
       </ul>

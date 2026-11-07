@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { finishLoginFromUrl, getProfile, getSession, onAuthChange, touchLastSeen } from '../api/auth';
 import { isGuest } from './guest';
+import { isStaffPerson } from './nickname';
 
 /**
  * 로그인 상태를 앱 전체에 공유한다.
@@ -8,7 +9,7 @@ import { isGuest } from './guest';
  * profile: 로그인했을 때 내 프로필 (불러오는 중이면 undefined)
  */
 const AuthContext = createContext(null);
-const SIGNED_OUT = { status: 'signedOut', session: null, user: null, profile: null, isOperator: false, setProfile: () => {}, loginError: null, clearLoginError: () => {}, notice: null, clearNotice: () => {}, cameBack: false, clearCameBack: () => {} };
+const SIGNED_OUT = { status: 'signedOut', session: null, user: null, profile: null, isOperator: false, isModerator: false, isStaff: false, setProfile: () => {}, loginError: null, clearLoginError: () => {}, notice: null, clearNotice: () => {}, cameBack: false, clearCameBack: () => {} };
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined); // undefined = 아직 확인 중
@@ -69,6 +70,9 @@ export function AuthProvider({ children }) {
       profileError: loaded.userId === userId ? loaded.error : null,
       // 운영자 = role 'admin'인 유일한 계정 (모든 권한). 실제 권한 검사는 DB(RLS)가 한다.
       isOperator: profile?.role === 'admin',
+      // 감독관 (030): 운영자가 지정. 화면은 허용된 것만 보여 주고, 실제 권한 검사는 DB가 한다.
+      isModerator: profile?.role === 'moderator',
+      isStaff: profile?.role === 'admin' || profile?.role === 'moderator',
       setProfile,
       loginError, // 로그인한 채로 계정 연결에 실패했을 때
       clearLoginError,
@@ -87,6 +91,13 @@ export function useAuth() {
 }
 
 /** 로그인했고 프로필도 불러왔는데 닉네임이 아직 없는가 */
+/** 이 글·댓글에 [숨기기]를 보여 줄까: 운영자는 전부, 감독관은 본인·운영진의 것 빼고 (실제 검사는 DB) */
+export const canModerate = (auth, authorId, author) =>
+  auth.isOperator || (auth.isModerator && authorId !== auth.user?.id && !isStaffPerson(author));
+
+/** [다시 공개]를 보여 줄까: 운영자는 전부, 감독관은 다른 감독관이 숨긴 것만 (실제 검사는 DB) */
+export const canRestore = (auth, row) => auth.isOperator || (auth.isModerator && row.hider?.role === 'moderator');
+
 export const needsNickname = (auth) => auth.status === 'signedIn' && auth.profile !== undefined && !auth.profile?.nickname;
 
 /** 쓰기(제안·빌드·투표·글·댓글·신고)를 할 수 있나 = 로그인 + 닉네임. 실제 검사는 DB가 한다 */

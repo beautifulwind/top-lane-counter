@@ -10,7 +10,7 @@ const DECISION = {
   proposal_rejected: { icon: 'ban', title: '제안이 거절됐습니다', memo: '거절 사유' },
   build_approved: { icon: 'check', title: '빌드가 공개됐습니다', memo: '승인 메모' },
   build_rejected: { icon: 'ban', title: '빌드가 거절됐습니다', memo: '거절 사유' },
-  build_hidden: { icon: 'hidden', title: '운영자가 내 빌드를 숨겼습니다', memo: '숨긴 사유' },
+  build_hidden: { icon: 'hidden', title: '운영진이 내 빌드를 숨겼습니다', memo: '숨긴 사유' },
   build_restored: { icon: 'shown', title: '숨겨졌던 내 빌드가 다시 공개됐습니다', memo: '메모' },
   revision_request: { icon: 'flag', title: '재검토 요청을 받았습니다', memo: '운영자 메모' },
   revision_cancelled: { icon: 'flag', title: '재검토 요청이 취소됐습니다', memo: '보낸 내용 그대로 승인 대기 중입니다. 메모' },
@@ -46,6 +46,10 @@ export function describeNotification(n, name = (id) => id) {
   if (n.kind === 'level_up' || n.kind === 'level_down') return { icon: 'level', title: n.message, to: '/me' };
   if (n.kind === 'title_earned' || n.kind === 'title_revoked') {
     return { icon: 'medal', title: n.message, to: '/me', titleKey: titleKeyIn(n.message) };
+  }
+  if (n.kind === 'moderator_granted' || n.kind === 'moderator_revoked') {
+    const [title, memo] = (n.message ?? '').split(' 메모: ');
+    return { icon: 'flag', title, subject: null, detail: memo ? `메모: ${memo}` : null, to: n.kind === 'moderator_granted' ? '/admin' : null };
   }
   if (BOARD_ICON[n.kind]) {
     const [title, memo] = (n.message ?? '').split(' 메모: ');

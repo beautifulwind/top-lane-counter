@@ -4,7 +4,7 @@ import { COMMENT_MAX, beginEdit } from '../api/board';
 import { canEditNow, fmtTime, useNow } from '../lib/editWindow';
 import { BoardByline, CharCount, ConfirmInline, HiddenBand, ReportForm } from './BoardParts';
 import NoteForm from './NoteForm';
-import { canVote, canWrite, isGuest } from '../lib/auth';
+import { canModerate, canVote, canWrite, isGuest } from '../lib/auth';
 import { DEFAULT_MEDIA_RULES, finishMedia } from '../api/media';
 import { MediaGallery, MediaPicker, mediaToItems, sameMedia } from './Media';
 import GuestHint from './GuestHint';
@@ -66,6 +66,7 @@ function Comment({ comment: c, ops, live, rules, mediaRules, now, auth, onDone, 
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const mine = auth.user?.id != null && c.author_id === auth.user.id;
+  const canHide = canModerate(auth, c.author_id, c.author);
   const visible = c.status === 'visible' && live;
   const signedIn = canVote(auth); // 신고는 닉네임이 있고 비회원이 아니어야
   const editable = mine && visible && canEditNow(ops.kind, c, rules, now);
@@ -149,10 +150,10 @@ function Comment({ comment: c, ops, live, rules, mediaRules, now, auth, onDone, 
         <div className="comment-actions">
           {editable && <button type="button" className="link-btn" onClick={startEdit} disabled={busy}>고치기</button>}
           {mine && <button type="button" className="link-btn" onClick={() => setMode('delete')}>지우기</button>}
-          {signedIn && !mine && visible && !auth.isOperator && (
+          {signedIn && !mine && visible && !canHide && (
             <button type="button" className="link-btn" onClick={() => setMode('report')}>신고</button>
           )}
-          {auth.isOperator && c.status === 'visible' && (
+          {canHide && c.status === 'visible' && (
             <button type="button" className="link-btn op-link" onClick={() => setMode('hide')}>숨기기</button>
           )}
         </div>
@@ -173,7 +174,7 @@ function Comment({ comment: c, ops, live, rules, mediaRules, now, auth, onDone, 
           onSubmit={async (reason, detail) => {
             await ops.report(c.id, reason, detail);
             setMode(null);
-            onDone('신고했습니다. 운영자가 확인하겠습니다.');
+            onDone('신고했습니다. 운영진이 확인하겠습니다.');
           }}
         />
       )}

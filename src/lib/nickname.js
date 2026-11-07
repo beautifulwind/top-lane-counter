@@ -1,11 +1,15 @@
 // 닉네임 표시와 예약어 (2026-11-07)
-// - 운영자 표시 "(운)"은 role을 보고 화면이 닉네임 앞에 붙인다 (닉네임 글자에는 들어 있지 않다).
+// - 운영진 표시 "(운)"은 role을 보고 화면이 닉네임 앞에 붙인다 (닉네임 글자에는 들어 있지 않다).
+//   운영자(admin)와 감독관(moderator) 모두 같은 "(운)"이다. 권한 구분은 DB가 role로 한다 (030).
 // - 그래서 아무도 닉네임에 "(운)"·"(감)"을 쓸 수 없다. 화면(여기)과 DB(029 nickname_reserved)가 같은 기준으로 막는다.
 
-/** 이름 앞에 붙는 역할 표시 (지금은 운영자만) */
-export const roleMark = (person) => (person?.role === 'admin' ? '(운)' : '');
+/** 운영진(운영자·감독관)인가 */
+export const isStaffPerson = (person) => person?.role === 'admin' || person?.role === 'moderator';
 
-/** 화면에 보이는 닉네임: 운영자는 "(운)영자". 사람이 없으면(탈퇴 등) fallback */
+/** 이름 앞에 붙는 역할 표시 */
+export const roleMark = (person) => (isStaffPerson(person) ? '(운)' : '');
+
+/** 화면에 보이는 닉네임: 운영진은 "(운)영자". 사람이 없으면(탈퇴 등) fallback */
 export const displayNickname = (person, fallback = '탈퇴한 유저') =>
   person?.nickname ? `${roleMark(person)}${person.nickname}` : fallback;
 

@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { PHOTO_REPORT_REASONS, REPORT_REASONS, REPORT_REASON_HINTS } from '../api/board';
+import { canRestore, useAuth } from '../lib/auth';
 import { fmtDateTime } from '../lib/format';
 import UserName from './UserName';
 import NoteForm from './NoteForm';
@@ -88,7 +89,7 @@ export function ReportForm({ id, what, photos = true, onSubmit, onCancel }) {
       </fieldset>
       <label htmlFor={`${id}-detail`}>{reason === 'other' ? '내용 (필수)' : '내용 (선택)'}</label>
       <textarea id={`${id}-detail`} rows={2} maxLength={500} value={detail} onChange={(e) => setDetail(e.target.value)} />
-      <small className="hint">신고 내용은 운영자만 봅니다.</small>
+      <small className="hint">신고 내용은 운영진만 봅니다.</small>
       <div className="note-form-actions">
         <button type="submit" className="btn btn-small btn-danger" disabled={!ready || busy}>{busy ? '보내는 중…' : '신고 보내기'}</button>
         <button type="button" className="btn btn-small" onClick={onCancel} disabled={busy}>취소</button>
@@ -98,17 +99,19 @@ export function ReportForm({ id, what, photos = true, onSubmit, onCancel }) {
   );
 }
 
-/** 운영자에게만: 숨김 띠 + [다시 공개] */
+/** 운영진에게만: 숨김 띠 + [다시 공개] (감독관은 다른 감독관이 숨긴 것만) */
 export function HiddenBand({ row, what, onRestore, onDone }) {
+  const auth = useAuth();
   const [open, setOpen] = useState(false);
+  const restorable = canRestore(auth, row);
   return (
     <div className="op-band">
       <p>
         <strong>숨김</strong> · {fmtDateTime(row.hidden_at)} · 메모: {row.hidden_note}
         <br />
-        <small>운영자에게만 보입니다.</small>
+        <small>운영진에게만 보입니다.</small>
       </p>
-      {!open && (
+      {restorable && !open && (
         <button type="button" className="btn btn-small btn-op" onClick={() => setOpen(true)}>다시 공개</button>
       )}
       {open && (
