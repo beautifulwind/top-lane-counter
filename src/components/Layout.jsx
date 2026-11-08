@@ -3,6 +3,7 @@ import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
 import ErrorBoundary from './ErrorBoundary';
 import { ShieldIcon } from './Icons';
 import SiteMenu from './SiteMenu';
+import UpdateBanner from './UpdateBanner';
 import { needsNickname, needsNicknameFor, useAuth } from '../lib/auth';
 import { noticeText, startFresh } from '../api/auth';
 import { usePageTitle } from '../lib/pageTitle';
@@ -98,6 +99,7 @@ export default function Layout() {
         </nav>
         <p>{RIOT_NOTICE}</p>
       </footer>
+      <UpdateBanner />
     </div>
   );
 }

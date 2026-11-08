@@ -19,8 +19,9 @@ import MyProposal from './pages/MyProposal';
 import MyBuild from './pages/MyBuild';
 import { AuthProvider } from './lib/auth';
 import { Loading } from './components/Status';
+import { CHUNK_RELOAD_KEY } from './lib/reloadGuard';
 
-const RELOAD_KEY = 'tlc:chunk-reloaded';
+const RELOAD_KEY = CHUNK_RELOAD_KEY;
 
 /**
  * 자주 안 쓰는 화면(운영자·감독관 /admin, 제안·빌드 작성, 방침·약관)은 처음 들어갈 때만 불러온다

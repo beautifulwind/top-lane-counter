@@ -937,3 +937,15 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
 .invite-card p { margin: 0 0 var(--gap-md); }
 .invite-title { font-family: var(--font-display); font-size: var(--fs-lg); color: var(--brand); }
 .invite-card .actions { margin-top: var(--gap-lg); }
+
+/* 새 버전 알림 (SPEC 2장 PWA): 화면 아래, 메뉴(z 50)보다 아래층 */
+.update-banner {
+  position: fixed; z-index: 40; left: var(--gutter); right: var(--gutter);
+  bottom: calc(var(--gap-lg) + env(safe-area-inset-bottom));
+  max-width: calc(var(--page-max) - 2 * var(--gutter)); margin: 0 auto;
+  display: flex; align-items: center; justify-content: space-between; gap: var(--gap-md);
+  padding: var(--pad-box); background: var(--paper); border: 1px solid var(--brand); border-radius: var(--radius);
+  box-shadow: var(--shadow-card); font-weight: 600;
+}
+.update-banner span { min-width: 0; overflow-wrap: anywhere; }
+.update-banner .btn { flex: none; }
