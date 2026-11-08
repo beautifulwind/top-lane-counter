@@ -102,6 +102,7 @@ export function DocFields({ value, onChange, afterSummary = null }) {
 
       <fieldset>
         <legend>레벨별 딜교법</legend>
+        <small className="hint" id="doc-levels-hint">상대의 스킬별, 상황별로 어떻게 대처해야 하는지 적어 주세요.</small>
         {sortedLevels(notes).map((lv) => {
           const required = REQUIRED_LEVELS.includes(lv);
           return (

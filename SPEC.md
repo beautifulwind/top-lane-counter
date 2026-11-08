@@ -87,7 +87,7 @@
 - **상단 바** (2026-11-04, 024): 왼쪽 방패 로고 + 사이트 이름 "탑신병자"(누르면 홈) + 부제 "탑은 라인전이 전부" (`src/lib/legal.js`의 `SITE_NAME`·`SITE_TAGLINE`, 폰 폭에서는 이름 아래 줄), 오른쪽 **☰ 하나**. PC·폰 같은 방식. 탭 제목에는 부제를 넣지 않는다.
 - **☰ 메뉴** (`src/components/SiteMenu.jsx`): 누르면 오른쪽에서 패널(폭 85%, 최대 320px)이 나온다. 계정 종류(`accountKind` — 로그인 전 / 비회원 / 닉네임 전 / 회원 / 운영자)로 정한다.
   - 맨 위: 로그인 후 **`Lv.7 [칭호] 닉네임`**(비회원은 닉네임 뒤 "비회원" 태그) — 글자만, 눌러도 아무 동작 없음. 로그인 전 **[로그인 · 가입]**(로그인 뒤 보던 페이지로). 닉네임 전 "닉네임을 아직 정하지 않았습니다." + [닉네임 정하기](→ `/welcome`).
-  - 항목: **마이페이지**(로그인 후, → `/me`) · **알림**(로그인 후 — 비회원 포함, → `/notifications`, 종 아이콘) · **자유게시판**(누구나) · **문의하기**(로그인 후 — 비회원·닉네임 전 포함, → `/inquiries`, 물음표 아이콘, 032) · **관리**(운영자·감독관, 보라 `op-link`). 지금 보는 페이지 항목은 주황으로 강조(`aria-current`).
+  - 항목: **마이페이지**(로그인 후, → `/me`) · **알림**(로그인 후 — 비회원 포함, → `/notifications`, 종 아이콘) · **자유게시판**(누구나) · **문의하기**(로그인 후 — 비회원·닉네임 전 포함, → `/inquiries`, 물음표 아이콘, 032) · **관리**(운영자·감독관, 보라 `op-link`, 옆에 **처리 대기 건수** 숫자 — 033, 6-20). 지금 보는 페이지 항목은 주황으로 강조(`aria-current`).
   - **[앱 설치]** (2026-11-08, PWA): [로그아웃] 위. 안드로이드 크롬은 설치 창(`beforeinstallprompt`를 `src/lib/install.js`가 앱 시작 때 잡아 둠), 아이폰·아이패드는 메뉴 안에서 "공유 → 홈 화면에 추가" 안내. 이미 설치된 상태(standalone)나 설치할 수 없는 환경에서는 숨김. 이동이 아니라 동작이라 `NAV_ITEMS` 밖.
   - 맨 아래 **[로그아웃]**: 회원·운영자·닉네임 전. **비회원과 로그인 전에는 없다** (같이 쓰는 기기는 마이페이지 [비회원 기록 지우기]).
   - **새 알림 빨간 점**: ☰ 오른쪽 위와 메뉴의 **[알림]** 옆 둘 다 (027부터 마이페이지 옆에서는 뺌. 화면 읽기: "메뉴 열기, 새 알림 N개" / "알림, 새 알림 N개"). 알림 화면을 열면 꺼진다.
@@ -179,7 +179,7 @@
   - 알림 화면을 열면 확인한 것으로 보고 모두 읽음 처리(`mark_all_notifications_read`, 본인 것만) → 빨간 점이 꺼진다. 안 읽었던 항목에는 그 방문 동안 "새" 표시.
   - 알림은 "알려 주기"만 한다. 해야 할 일(예: 재검토 요청 내용과 [고쳐서 다시 보내기])은 제안 상태로 `/me`에 계속 남는다.
   - 알림이 더 의미 없어지면(재검토 요청 취소, 다시 제출) DB가 자동으로 읽음 처리한다.
-  - 지금 종류: `revision_request`(재검토 요청 — 제안·빌드), `revision_cancelled`(재검토 요청 취소, 메모가 내용), `proposal_approved`·`proposal_rejected`(제안 승인·거절, 메모·사유가 내용), `build_approved`·`build_rejected`·`build_hidden`·`build_restored`(빌드 승인·거절·숨김·다시 공개), `inquiry_answered`(문의 답변, 032 — 「"오류 신고" 문의에 답변이 도착했습니다.」). 운영자가 자기 것을 처리하면 알림을 만들지 않는다.
+  - 지금 종류: `revision_request`(재검토 요청 — 제안·빌드), `revision_cancelled`(재검토 요청 취소, 메모가 내용), `proposal_approved`·`proposal_rejected`(제안 승인·거절, 메모·사유가 내용), `build_approved`·`build_rejected`·`build_hidden`·`build_restored`(빌드 승인·거절·숨김·다시 공개), `inquiry_answered`(문의 답변, 032 — 「"오류 신고" 문의에 답변이 도착했습니다.」), `proposal_submitted`·`build_submitted`·`inquiry_received`(운영진이 받는 새 제안·빌드·문의, 033 — 6-20). 운영자가 자기 것을 처리하면 알림을 만들지 않는다.
   - 알림은 `proposal_id` 또는 `build_id`로 연결되고, 알림 화면에서 누르면 내 제안·빌드 자세히로 간다. (027 전에는 `/me`의 해당 줄에 "새 알림"이 붙었음)
 - 승인된 문서 수정은 기록으로 남겨 운영자가 이전 버전으로 되돌릴 수 있게 한다.
 - **실수로 승인한 새 카운터는 "카운터 숨기기(승인 취소)"로 되돌린다.** 완전 삭제가 아니라 숨김(`counters.status = hidden`)이라 다시 공개할 수 있다.
@@ -436,6 +436,8 @@
   | `post_comment` · `doc_comment` | 말풍선 | DB 문장 ("내 글 「…」에 새 댓글 N개가 달렸습니다.") | 문서 댓글은 매치업 | 그 글 / 매치업 문서 `#comments` |
   | `post_hidden` · `comment_hidden` · `doc_comment_hidden` / `…_restored` | 눈 가림 / 눈 | DB 문장의 " 메모: " 앞 | 메모 | 그 글·문서 (숨긴 글 `post_hidden`과 숨긴 카운터는 이동 없음) |
   | `inquiry_answered` | 말풍선 | 문의에 답변이 도착했습니다 | 분류: 오류 신고 | `/inquiries` |
+  | `proposal_submitted` · `build_submitted` (운영진만, 033) | 깃발 | DB 문장 (「새 카운터 제안이 들어왔습니다.」 등) | [종류] 매치업 | `/admin/proposals/:id` · `/admin/builds/:id` |
+  | `inquiry_received` (운영진만, 033) | 말풍선 | DB 문장 (「새 문의가 들어왔습니다. (분류: 오류 신고)」) | — | `/admin/inquiries` |
   | `level_up` · `level_down` | 오르는 선 | DB 문장 | — | `/me` |
   | `title_earned` · `title_revoked` | 그 칭호 색 훈장 | DB 문장 | — | `/me` |
   제안·빌드 알림은 DB에 메모만 저장돼 있어 제목은 화면이 만든다. 매치업 이름은 알림을 읽을 때 제안·빌드·카운터·글을 같이 읽어 만든다(RLS로 내 것만).
@@ -455,7 +457,7 @@
   | 신고 보기·처리 | O (신고자 보임) | O (신고자 안 보임, 처리할 수 있는 대상만 — `open_reports_for_moderator`) |
   | 글·댓글·문서 댓글 숨김 | O | 일반 회원의 것만 (본인·운영진의 것, 숨긴 카운터의 문서 댓글은 불가) |
   | 숨김 해제 | O | 감독관이 숨긴 것만 (운영자가 숨긴 것은 불가) |
-  | 새 카운터 제안 승인·거절 (메모 필수) | O | 다른 일반 회원의 제안만. 고쳐서 승인 불가, 본인·운영진 제안은 거절도 불가 |
+  | 새 카운터 제안 승인·거절 (메모 필수) | O | 다른 일반 회원의 제안만. 본인·운영진 제안은 거절도 불가. **고쳐서 승인은 033부터 가능** (6-20) |
   | 문의 답변 (6-19) | O (전체) | "계정·탈퇴" 분류만 불가 (그 문의는 보이지도 않음), 본인 문의 불가 |
   | 지정·해제, 계정 삭제, 문의 분류 옮기기, 아이템 가격, 빌드 처리, 카운터 숨김·삭제, 문서 수정 제안, 재검토 요청, 순서 변경, 되돌리기, 비주류 픽, 사진 용량 | O | X |
 - **검사 위치**: DB 함수와 RLS (`is_admin()`은 그대로 운영자만이라 기본 거부, 새 `is_moderator()`·`is_staff()`). 화면은 버튼만 맞춰 보여 줄 뿐이다. 클라이언트에 service_role·secret 키를 쓰지 않는다. `/admin`은 감독관에게 허용된 구역만 보이고 다른 구역 데이터는 불러오지 않는다.
@@ -481,6 +483,25 @@
 - **테스트 데이터 비우기**: `inquiries`·`inquiry_quota`도 비운다(`reset_test_data.sql`, 미리 보기에도 한 줄).
 - **확인 조회**: `supabase/scripts/check_inquiries.sql` (032 실행 전·후 한 번씩, 18줄 표).
 
+### 6-20. 관리자 편의: 운영진 알림 · 처리 대기 건수 · 감독관도 고쳐서 승인 · 안내 문구 (2026-11-08, 033)
+- **운영진 알림** (기존 `notifications` 재사용, 새 종류 3개): 새 제안 `proposal_submitted`, 새 빌드 `build_submitted`, 새 문의 `inquiry_received`. 만드는 곳은 **표 트리거**(`edit_proposals`·`builds`·`inquiries`)라서 화면이든 함수든 들어오는 길과 상관없이 빠지지 않고, 화면은 알림을 만들지 않는다. 알림 문장은 DB가 완성 문장으로 만든다(「새 카운터 제안이 들어왔습니다.」「문서 수정 제안이 들어왔습니다.」「새 빌드 제안이 들어왔습니다.」「새 문의가 들어왔습니다. (분류: 오류 신고)」) — 옛 화면은 모르는 종류를 문장 그대로 보여 주므로 안 깨진다. 운영자와 감독관을 구분하지 않는 문구 원칙(6-18) 그대로.
+  | 무엇이 | 운영자 | 감독관 |
+  |---|---|---|
+  | 새 카운터 제안 | O | 제안자가 **일반 회원**이고 숨긴 카운터 재검토가 아닐 때만 (감독관이 처리할 수 있는 제안과 같은 규칙) |
+  | 문서 수정 제안 · 숨긴 카운터 재검토 제안 · 운영진이 낸 제안 | O | X |
+  | 새 빌드 제안 | O | X (빌드 처리는 운영자만) |
+  | 새 문의 | O (전부) | **"계정·탈퇴"가 아닌 것만** (032의 읽기 규칙과 같다). 운영자가 "계정·탈퇴"를 다른 분류로 옮겨 감독관에게 보이게 되면(답변 전) 그때 감독관에게 알림. 반대로 옮기는 것은 알리지 않는다 |
+  - 보낸 사람 본인에게는 가지 않는다. 재검토 요청 뒤 제안자가 **고쳐서 다시 내면**(제안·빌드) 「재검토 후 다시 낸 제안/빌드가 들어왔습니다.」 한 번. 재검토 요청 취소(원래대로 대기)와 제안자의 대기 중 수정은 알리지 않는다.
+  - 알림은 90일 뒤 지워진다(6-17). 알림을 눌렀을 때 이미 처리된 제안이면 그 처리 결과 화면이 열린다.
+- **처리 대기 건수**: ☰ 메뉴 [관리] 옆 숫자(없으면 숫자 없음, 99 넘으면 99+). 메뉴를 **열 때마다** 새로 센다. 마우스를 올리면 「제안 2 · 빌드 1 · 문의 3」. DB 함수 `admin_pending_counts()`(`require_staff`)가 **역할에 맞게** 센다 — 운영자: 승인 대기 제안 + 승인 대기 빌드 + 답변 대기 문의(내가 보낸 것 제외) / 감독관: 다른 일반 회원의 새 카운터 제안 + 빌드 0 + "계정·탈퇴"가 아닌 답변 대기 문의. 일반 회원·비로그인은 부를 수 없다. 못 불러오면(033 실행 전 등) 숫자 없이 [관리]만 보인다. 재검토 기다리는 제안·숨긴 항목·신고는 세지 않는다(승인·답변을 기다리는 것만).
+- **감독관도 고쳐서 승인**: 030의 「감독관은 내용을 고쳐서 승인할 수 없습니다」 제한을 풀었다. 운영자와 같은 편집기(`ApproveEditor`)를 쓰고 [자세히]·목록 줄의 [내용 고치기]가 감독관에게도 보인다. 범위는 그대로 **감독관이 처리할 수 있는 제안**(다른 일반 회원의 새 카운터, `require_review_allowed`)뿐이다. 고치지 않은 칸은 null로 보내 그대로 공개, 고치면 원래 제안은 `content`·`build`에, 고친 내용은 `approved_content`·`approved_build`에 남고 제안자는 6-18 문구대로 「운영자가 고쳐서 승인했습니다」를 본다. 처리자는 감독관이 해도 `reviewed_by`에 남기지 않는 규칙(6-18)도 그대로.
+- **누가 무엇을 고쳤는지**: 고쳐서 승인하면 같은 처리 안에서 `moderation_log`에 `edit_proposal` 한 줄(처리자·역할, 제안 번호, 메모 「고친 곳: 한 줄 요약, 6·12레벨 딜교법, 특이사항, 룬, 핵심 템트리」)을 승인 기록(`approve_proposal`)과 별도로 남긴다. 고친 칸 이름만 남기고 내용 전체는 제안 표(`content` ↔ `approved_content`)가 가지고 있다. 안 고치면(정리했더니 원래와 같으면) 남기지 않는다. 승인이 실패해 되돌려지면 기록도 함께 사라진다. 운영자 처리도 똑같이 남고, 감독관은 처리 기록을 못 읽는다(운영자만, 6-18). 처리 기록 화면 이름은 「제안 내용 수정」.
+- **검토 잠금(031)과 함께**: 고치는 사람도 [자세히]를 열면 "검토 중" 표시를 남긴다(막지 않고 경고만, 그대로). 편집기를 오래 열어 두면 10분 만료로 표시가 끊기므로 [자세히]가 열려 있는 동안 **4분마다 표시를 다시 남긴다**(`ReviewPresence`). 고친 내용을 덮어쓰지 않는 장치는 그대로 DB가 한다: 제안자가 먼저 고쳤으면 `version`이 달라 「제안자가 방금 고쳤어요. 다시 확인해 주세요.」로 거부, 다른 분이 먼저 처리했으면 `TL409`. 이 경우 고치던 내용은 화면 이동과 함께 사라진다(목록으로 안내 후 이동).
+- **안내 문구**: 제안·고쳐서 승인 편집기의 "레벨별 딜교법" 칸(`DocFields`) 제목 바로 아래에 「상대의 스킬별, 상황별로 어떻게 대처해야 하는지 적어 주세요.」 (새 카운터 제안·문서 수정 제안·다시 보내기·운영진 편집기 모두 같은 컴포넌트).
+- **하위 호환**: 있던 표 모양은 그대로, 알림·처리 기록 종류 목록만 넓힌다. 033을 실행하고 새 코드를 아직 push하지 않아도 옛 화면은 정상(새 알림은 문장 그대로 보임, 처리 기록의 새 종류는 영문 그대로 보임). 새 코드를 먼저 push하고 033을 늦게 실행해도 건수만 안 보일 뿐이다. 순서: 033 실행 → `check_admin_convenience.sql` 확인 → push.
+- **테스트 데이터 비우기**: 새 표가 없어 스크립트는 그대로(알림·처리 기록은 이미 비운다).
+- **확인 조회**: `supabase/scripts/check_admin_convenience.sql` (033 실행 전·후 한 번씩, 17줄 표).
+
 ## 7. 데이터 구조 (Supabase 초안)
 
 챔피언·아이템·룬·소환사 주문은 Data Dragon의 ID(예: 챔피언 `"Darius"`, 아이템 `3078`)로 참조한다.
@@ -502,7 +523,7 @@
 - **post_votes**: 글 추천 (`post_id`, `user_id`) — 본인 것만 읽기
 - **reports**: 신고 — `reporter_id`, `post_id`·`comment_id`·`doc_comment_id` 중 하나, `reason`, `detail`, `status`(open/resolved/dismissed), `handled_by`·`handled_at`·`handled_note`. (신고자, 대상) 고유, 운영자만 읽기. `reason`: abuse/hate/spam/privacy/obscene/other (hate는 021, obscene은 023 — 글·댓글만)
 - **hide_log** (021): `author_id`(탈퇴하면 같이 삭제), `kind`(post/comment/doc_comment), `target_id`(대상과 연결 안 함 — 지워져도 남음), `hidden_at`, `unhidden_at`. 트리거만 쓰고 아무도 직접 못 읽음 — 운영자 함수 `hide_counts`로만
-- **moderation_log** (030): 운영진 처리 기록 — `actor_id`(사용자 표와 연결 안 함, 탈퇴해도 남음)·`actor_nickname`·`actor_role`, `action`(hide/restore/dismiss_reports/approve_proposal/reject_proposal/grant_moderator/revoke_moderator/answer_inquiry/move_inquiry), `target_kind`(post/comment/doc_comment/proposal/user/inquiry)·`target_id`·`target_nickname`, `note`, `created_at`. 운영자만 읽고, 아무도 직접 못 쓴다 (DB 함수만)
+- **moderation_log** (030): 운영진 처리 기록 — `actor_id`(사용자 표와 연결 안 함, 탈퇴해도 남음)·`actor_nickname`·`actor_role`, `action`(hide/restore/dismiss_reports/approve_proposal/reject_proposal/grant_moderator/revoke_moderator/answer_inquiry/move_inquiry/edit_proposal), `target_kind`(post/comment/doc_comment/proposal/user/inquiry)·`target_id`·`target_nickname`, `note`, `created_at`. 운영자만 읽고, 아무도 직접 못 쓴다 (DB 함수만)
 - **proposal_reviewing** (031): 제안 [자세히]를 열고 있는 운영진 "검토 중" 표시 — `proposal_id`(제안을 지우면 같이 지움), `user_id`, `started_at`, `expires_at`(열고 10분 뒤). 아무도 직접 못 읽고 못 씀 (정책 없음 + 권한 회수), `start_proposal_review`·`end_proposal_review`·`proposal_reviewers`(운영진 전용)로만. 제안이 대기 상태를 벗어나면 트리거가 지움. 테스트 데이터 비우기가 함께 비움
 - **inquiries** (032): 문의하기 — `id`, `user_id`(프로필 삭제 시 함께 삭제), `category`(bug/idea/account/other), `body`, `created_at`, `answer`·`answered_at`(답변 1개). 읽기 RLS: 본인 / 운영자 전부 / 감독관은 account 빼고. 직접 쓰기 권한 없음 (`create_inquiry`·`answer_inquiry`·`set_inquiry_category`·`delete_my_inquiry`·`purge_old_inquiries`). 마지막 활동 뒤 `xp_rules.inquiry_keep_days`(180)일에 지움
 - **inquiry_quota** (032): 하루 문의 개수 — `user_id`(프로필 삭제 시 함께 삭제), `day`(한국 날짜), `sent`. 정책 없음·권한 회수 — `create_inquiry`만

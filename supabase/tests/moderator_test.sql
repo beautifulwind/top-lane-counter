@@ -230,9 +230,7 @@ select t.fails('문서 수정 제안 승인 불가', format('select approve_prop
 select t.fails('문서 수정 제안 반려 불가', format('select reject_proposal(%s, %L, t.pv(%s))', :de, '메모', :de), '처리할 수 없는 제안');
 select t.fails('승인 메모 필수', format('select approve_proposal(%s, %L, null, null, t.pv(%s))', :np, ' ', :np), '승인 메모');
 select t.fails('반려 사유 필수', format('select reject_proposal(%s, %L, t.pv(%s))', :np_reject, ' ', :np_reject), '거절 사유');
-select t.fails('내용을 고쳐서 승인 불가', format('select approve_proposal(%s, %L, %L::jsonb, null, t.pv(%s))', :np_edit, '메모',
-  '{"summary":"감독관이 바꾼 글","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"},"lane_cautions":""}', :np_edit), '고쳐서 승인할 수 없습니다');
-select t.fails('빌드를 고쳐서 승인 불가', format('select approve_proposal(%s, %L, null, %L::jsonb, t.pv(%s))', :np_edit, '메모', t.build(array['6631','3047','3071']), :np_edit), '고쳐서 승인할 수 없습니다');
+-- 고쳐서 승인: 033부터 감독관도 가능하다 (admin_convenience_test.sql)
 select t.fails('재검토 요청은 운영자만', format('select request_proposal_revision(%s, %L, t.pv(%s))', :np_rev, '메모', :np_rev), '운영자만');
 select t.ok('읽기: 대기 중인 새 카운터는 보임', exists (select 1 from edit_proposals where id = :np));
 select t.ok('읽기: 문서 수정 제안은 안 보임', not exists (select 1 from edit_proposals where id = :de));

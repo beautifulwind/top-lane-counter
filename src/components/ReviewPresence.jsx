@@ -15,8 +15,11 @@ export function ReviewersWarning({ reviewers, detail = false }) {
   );
 }
 
+// DB 표시는 10분 뒤 사라진다. 내용을 고치느라 오래 열어 두어도 표시가 끊기지 않게 그보다 짧은 간격으로 다시 남긴다 (033)
+export const REVIEW_REFRESH_MS = 4 * 60 * 1000;
+
 /**
- * [자세히]를 여는 동안 "검토 중" 표시를 남긴다 (DB가 10분 뒤 저절로 지움).
+ * [자세히]를 여는 동안 "검토 중" 표시를 남긴다 (DB가 10분 뒤 저절로 지움 — 열어 두는 동안은 4분마다 다시 남긴다).
  * 화면을 닫거나 다른 곳으로 가면 바로 지우고, 탭을 닫을 때도 지우려고 한다.
  * 처리(승인·거절 …)하면 DB 트리거가 지운다. 표시를 남기지 못해도 화면은 그대로 쓴다.
  */
@@ -24,14 +27,17 @@ export default function ReviewPresence({ proposalId }) {
   const [others, setOthers] = useState([]);
   useEffect(() => {
     let alive = true;
-    startProposalReview(proposalId).then(
+    const mark = () => startProposalReview(proposalId).then(
       (list) => alive && setOthers(Array.isArray(list) ? list : []),
       () => {},
     );
+    mark();
+    const timer = setInterval(mark, REVIEW_REFRESH_MS);
     const onLeave = () => endProposalReviewOnLeave(proposalId);
     window.addEventListener('pagehide', onLeave);
     return () => {
       alive = false;
+      clearInterval(timer);
       window.removeEventListener('pagehide', onLeave);
       endProposalReview(proposalId).catch(() => {});
     };

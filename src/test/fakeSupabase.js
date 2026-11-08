@@ -99,7 +99,7 @@ export const EMPTY_USAGE = () => ({
 // 테스트가 바꾸는 상태. setupTests.js가 테스트마다 초기화한다.
 export const fakeState = {
   error: null, session: null, initError: null, oauthCalls: [], linkCalls: [], linkError: null, listeners: new Set(),
-  inserts: [], insertError: null, rpcCalls: [], rpcError: null, rpcErrorCode: null, reviewCalls: [], reviewers: {}, boardError: null,
+  inserts: [], insertError: null, pendingCounts: null, pendingCountsAsked: 0, rpcCalls: [], rpcError: null, rpcErrorCode: null, reviewCalls: [], reviewers: {}, boardError: null,
   functionCalls: [], functionError: null, // Edge Function 호출 (017 delete-account)
   anonCalls: [], anonError: null, anonDelay: null, hideCounts: {}, signOutCalls: [], touched: 0, // 비회원 (020)
   uploads: [], uploadError: null, mediaProblem: null, mediaUsage: EMPTY_USAGE(), // 사진 (023, mediaUsage = media_usage 결과)
@@ -140,6 +140,8 @@ export function resetFake() {
   fakeState.insertError = null;
   fakeState.rpcCalls = [];
   fakeState.rpcError = null;
+  fakeState.pendingCounts = null;
+  fakeState.pendingCountsAsked = 0;
   fakeState.rpcErrorCode = null;
   fakeState.reviewCalls = [];
   fakeState.reviewers = {};
@@ -371,6 +373,13 @@ async function rpc(name, args) {
       return { data: Object.fromEntries(args.p_ids.filter((id) => fakeState.reviewers[id]?.length).map((id) => [String(id), fakeState.reviewers[id]])), error: null };
     }
     return { data: null, error: null };
+  }
+  if (name === 'admin_pending_counts') {
+    // 033: 메뉴가 열릴 때 알아서 부르는 것이라 rpcCalls에는 넣지 않는다. fakeState.pendingCounts = { proposals, builds, inquiries } (없으면 0)
+    if (!isStaffNow()) return { data: null, error: { message: '운영진만 할 수 있습니다.', code: '42501' } };
+    fakeState.pendingCountsAsked += 1;
+    if (fakeState.pendingCounts === 'error') return { data: null, error: { message: 'function admin_pending_counts() does not exist', code: '42883' } };
+    return { data: { proposals: 0, builds: 0, inquiries: 0, ...fakeState.pendingCounts }, error: null };
   }
   if (name === 'media_upload_problem') return { data: fakeState.mediaProblem, error: null }; // 화면이 알아서 묻는 것
   if (name === 'media_usage') {

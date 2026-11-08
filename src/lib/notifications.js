@@ -15,6 +15,12 @@ const DECISION = {
   revision_request: { icon: 'flag', title: '재검토 요청을 받았습니다', memo: '운영자 메모' },
   revision_cancelled: { icon: 'flag', title: '재검토 요청이 취소됐습니다', memo: '보낸 내용 그대로 승인 대기 중입니다. 메모' },
 };
+// 운영진에게 가는 "새로 들어왔습니다" 알림 (033): DB 문장이 곧 제목. 누르면 그 처리 화면으로
+const STAFF_NEW = {
+  proposal_submitted: { icon: 'flag', to: (n) => (n.proposal_id ? `/admin/proposals/${n.proposal_id}` : '/admin') },
+  build_submitted: { icon: 'flag', to: (n) => (n.build_id ? `/admin/builds/${n.build_id}` : '/admin') },
+  inquiry_received: { icon: 'comment', to: () => '/admin/inquiries' },
+};
 // 게시판·문서 댓글 알림: 아이콘 ("… 메모: …"는 메모를 둘째 줄로)
 const BOARD_ICON = {
   post_comment: 'comment', doc_comment: 'comment',
@@ -47,6 +53,18 @@ export function describeNotification(n, name = (id) => id) {
       subject: own ? `[${label}] ${matchup(own)}` : null,
       detail: n.message ? `${d.memo}: ${n.message}` : null,
       to: n.proposal_id ? `/me/proposals/${n.proposal_id}` : n.build_id ? `/me/builds/${n.build_id}` : null,
+    };
+  }
+  const s = STAFF_NEW[n.kind];
+  if (s) {
+    const own = n.proposal_id ? n.proposal : n.build?.counter;
+    const label = n.proposal_id ? (TYPE_LABEL[n.proposal?.type] ?? '제안') : '빌드';
+    return {
+      icon: s.icon,
+      title: n.message,
+      subject: own ? `[${label}] ${matchup(own)}` : null,
+      detail: null,
+      to: s.to(n),
     };
   }
   if (n.kind === 'level_up' || n.kind === 'level_down') return { icon: 'level', title: n.message, to: '/me' };

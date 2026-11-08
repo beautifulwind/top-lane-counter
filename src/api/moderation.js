@@ -32,6 +32,20 @@ export async function setModerator(userId, on, note) {
   }
 }
 
+/**
+ * 관리 메뉴의 처리 대기 건수 (033): { proposals, builds, inquiries }. 운영진만 부를 수 있고, 건수는 역할에 맞게 DB가 센다
+ * (감독관은 자기가 처리할 수 있는 것만). 못 불러오면(아직 033 전이거나 네트워크) null — 메뉴는 숫자 없이 그대로 보여 준다
+ */
+export async function getPendingCounts() {
+  try {
+    const { data, error } = await db().rpc('admin_pending_counts');
+    if (error || !data) return null;
+    return { proposals: Number(data.proposals) || 0, builds: Number(data.builds) || 0, inquiries: Number(data.inquiries) || 0 };
+  } catch {
+    return null;
+  }
+}
+
 /** 운영진 처리 기록 (최근 순). 운영자만 읽을 수 있다 */
 export const getModerationLog = (limit = 50) =>
   run(

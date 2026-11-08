@@ -339,7 +339,7 @@ function PendingRow({ proposal: p, name, game, onDone, onReload }) {
             onDone(`${p.resubmitted ? '승인하고 다시 공개' : '승인'}했습니다: [${label}] ${title}`);
           }))}
         >
-          {isOperator && <Link to={`/admin/proposals/${p.id}?approve=1`} className="edit-link op-link">내용 고치기 (고쳐서 승인)</Link>}
+          <Link to={`/admin/proposals/${p.id}?approve=1`} className="edit-link op-link">내용 고치기 (고쳐서 승인)</Link>
         </NoteForm>
       )}
       {open === 'revision' && (

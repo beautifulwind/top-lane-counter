@@ -71,13 +71,14 @@ test('감독관 /admin: 메뉴에 [관리], 새 카운터 대기와 자유게시
   expect(within(rows[0]).getByRole('button', { name: '거절' })).toBeDefined();
 });
 
-test('감독관 제안 화면: 고치기 없이 메모만 써서 승인, 재검토 요청 없음', async () => {
+test('감독관 제안 화면: 안 고치고 메모만 써서 승인할 수 있다 (고친 칸은 null), 재검토 요청 없음', async () => {
   asMod();
   TABLES.edit_proposals.push(newCounter(1));
   start('/admin/proposals/1');
   fireEvent.click(await screen.findByRole('button', { name: '승인' }));
   expect(screen.queryByRole('button', { name: '재검토 요청' })).toBeNull();
-  expect(screen.queryByText('한 줄 요약 (필수)')).toBeNull(); // 고쳐서 승인 편집기가 없다
+  expect(await screen.findByText('한 줄 요약 (필수)')).toBeDefined(); // 033: 감독관도 고쳐서 승인 편집기
+  expect(screen.queryByRole('button', { name: '고친 내용으로 승인 확정' })).toBeNull(); // 아직 안 고쳤다
   const ok = screen.getByRole('button', { name: '승인 확정' });
   expect(ok.disabled).toBe(true);
   fireEvent.change(screen.getByLabelText('승인 메모 (필수, 제안자에게 보입니다)'), { target: { value: '좋아요' } });
@@ -88,6 +89,30 @@ test('감독관 제안 화면: 고치기 없이 메모만 써서 승인, 재검�
   expect(args.p_note).toBe('좋아요');
   expect(args.p_content ?? null).toBeNull();
   expect(args.p_build ?? null).toBeNull();
+});
+
+test('감독관 제안 화면: 글을 고치면 고친 글을 보내 승인한다 (033)', async () => {
+  asMod();
+  TABLES.edit_proposals.push(newCounter(1));
+  start('/admin/proposals/1');
+  fireEvent.click(await screen.findByRole('button', { name: '승인' }));
+  const summary = await screen.findByLabelText('한 줄 요약 (필수)');
+  fireEvent.change(summary, { target: { value: '감독관이 다듬은 요약' } });
+  fireEvent.change(screen.getByLabelText('승인 메모 (필수, 제안자에게 보입니다)'), { target: { value: '요약을 다듬었습니다' } });
+  fireEvent.click(screen.getByRole('button', { name: '고친 내용으로 승인 확정' }));
+  await vi.waitFor(() => expect(rpcs('approve_proposal').length).toBe(1));
+  const args = rpcs('approve_proposal')[0];
+  expect(args.p_content.summary).toBe('감독관이 다듬은 요약');
+  expect(args.p_note).toBe('요약을 다듬었습니다');
+});
+
+test('감독관 목록 줄: [내용 고치기] 링크가 보인다 (033)', async () => {
+  asMod();
+  TABLES.edit_proposals.push(newCounter(1));
+  start('/admin');
+  fireEvent.click(await screen.findByRole('button', { name: '승인' })); // 줄의 [승인]을 열면 메모 칸 아래에 링크
+  const link = await screen.findByRole('link', { name: /내용 고치기/ });
+  expect(link.getAttribute('href')).toBe('/admin/proposals/1?approve=1');
 });
 
 test.each([

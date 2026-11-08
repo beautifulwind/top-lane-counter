@@ -8,7 +8,8 @@ import UserName from './UserName';
 
 const ACTION_LABEL = {
   hide: '숨김', restore: '다시 공개', dismiss_reports: '신고 기각',
-  approve_proposal: '제안 승인', reject_proposal: '제안 거절',
+  approve_proposal: '제안 승인', reject_proposal: '제안 거절', edit_proposal: '제안 내용 수정',
+  answer_inquiry: '문의 답변', move_inquiry: '문의 분류 변경',
   grant_moderator: '감독관 지정', revoke_moderator: '감독관 해제',
 };
 const KIND_LABEL = { post: '글', comment: '댓글', doc_comment: '문서 댓글', proposal: '제안' };
@@ -32,7 +33,7 @@ export default function ModeratorAdmin() {
   if (error) return <ErrorBox error={error} onRetry={retry} />;
   return (
     <>
-      <p className="hint">감독관은 신고 처리, 글·댓글 숨김과 다시 공개, 새 카운터 제안 승인·거절을 합니다. 화면에는 운영자와 똑같이 (운)으로 보입니다.</p>
+      <p className="hint">감독관은 신고 처리, 글·댓글 숨김과 다시 공개, 새 카운터 제안 승인(내용 고쳐서 승인 포함)·거절을 합니다. 화면에는 운영자와 똑같이 (운)으로 보입니다.</p>
       {message && <p className="notice" role="status">{message}</p>}
       {data.moderators.length === 0 ? (
         <p className="empty">감독관이 없습니다.</p>

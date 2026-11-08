@@ -115,7 +115,7 @@ select t.ok('승인: 공개 + 메모(공백 정리) + 처리자',
 select t.ok('승인 기록', (select count(*) = 1 from build_status_log where build_id = (select v from ids where k = 'b1') and action = 'approve' and reason = '깔끔한 빌드입니다' and actor = auth.uid()));
 select t.fails('두 번 승인 불가', format($$select approve_build(%s, '또', null, t.bv(%1$s))$$, (select v from ids where k = 'b1')), '이미 처리된');
 select t.fails('승인한 빌드 거절 불가', format($$select reject_build(%s, '취소', t.bv(%1$s))$$, (select v from ids where k = 'b1')), '이미 처리된');
-select t.ok('운영자는 남의 알림을 못 봄', (select count(*) = 0 from notifications));
+select t.ok('운영자는 남의 알림을 못 봄 (033: 운영진 자신의 알림은 본인 것이라 보임)', (select count(*) = 0 from notifications where user_id <> auth.uid()));
 
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.ok('작성자: 승인 알림 1개 (빌드 연결, 메모)',
@@ -225,10 +225,10 @@ insert into edit_proposals (type, counter_id, proposer_id, content)
 values ('doc_edit', :quinn, auth.uid(), :'doc');
 select approve_proposal((select id from edit_proposals where proposer_id = auth.uid()), '내 수정', null, null, t.pv((select id from edit_proposals where proposer_id = auth.uid())));
 reset role;
-select t.ok('운영자가 자기 제안을 승인하면 알림 없음', (select count(*) = 0 from notifications where user_id = '00000000-0000-0000-0000-00000000000a'));
+select t.ok('운영자가 자기 제안을 승인하면 알림 없음', (select count(*) = 0 from notifications where user_id = '00000000-0000-0000-0000-00000000000a' and kind in ('proposal_approved', 'proposal_rejected')));
 select t.ok('알림 종류 검사', (select count(*) = 0 from notifications where kind not in
   ('revision_request','proposal_approved','proposal_rejected','build_approved','build_rejected','build_hidden','build_restored',
-   'level_up','level_down','title_earned','title_revoked')));
+   'level_up','level_down','title_earned','title_revoked','proposal_submitted','build_submitted','inquiry_received')));
 
 -- ===== 10. 탈퇴(계정 삭제) =====
 -- 유저(b): 공개 빌드 b1(추천 2), 거절 b2·b3 / 유저2(d): b1에 추천

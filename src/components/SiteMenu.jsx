@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
 import { signOut } from '../api/auth';
+import { getPendingCounts } from '../api/moderation';
 import { getUnreadCount, onNotificationsChanged } from '../api/notifications';
 import { isGuest, useAuth } from '../lib/auth';
 import { isCurrentNav, navItemsFor } from '../lib/navItems';
@@ -22,6 +23,10 @@ export function accountKind(auth) {
   if (auth.isOperator) return 'operator';
   return auth.isModerator ? 'moderator' : 'member';
 }
+
+/** 처리 대기 건수 풍선 설명: "제안 2 · 빌드 1 · 문의 3" (0인 것은 뺀다) */
+const pendingTitle = (c) =>
+  [['제안', c.proposals], ['빌드', c.builds], ['문의', c.inquiries]].filter(([, n]) => n > 0).map(([l, n]) => `${l} ${n}`).join(' · ');
 
 export const logout = () => signOut().catch((e) => alert(e.message));
 
@@ -47,6 +52,25 @@ function useUnreadCount(userId, pathname) {
   return userId ? count : 0;
 }
 
+/**
+ * 관리 메뉴의 처리 대기 건수 (운영진만, 033). 메뉴를 열 때마다 새로 센다 — 처리하고 돌아오면 줄어 있도록.
+ * 돌려주는 값: null(안 보임/못 불러옴) | { proposals, builds, inquiries, total }
+ */
+function usePendingCounts(enabled, open) {
+  const [counts, setCounts] = useState(null);
+  useEffect(() => {
+    if (!enabled) {
+      setCounts(null);
+      return undefined;
+    }
+    if (!open) return undefined;
+    let alive = true;
+    getPendingCounts().then((c) => alive && setCounts(c && { ...c, total: c.proposals + c.builds + c.inquiries }));
+    return () => { alive = false; };
+  }, [enabled, open]);
+  return counts;
+}
+
 const FOCUSABLE = 'a[href], button:not([disabled]), input, select, textarea, [tabindex]:not([tabindex="-1"])';
 
 /**
@@ -66,6 +90,7 @@ export default function SiteMenu() {
   const installKindNow = useInstallKind(); // 'prompt'(안드로이드) | 'ios' | 숨김
   const [showIosGuide, setShowIosGuide] = useState(false);
   const [open, setOpen] = useState(false);
+  const pending = usePendingCounts(kind === 'moderator' || kind === 'operator', open);
   const opener = useRef(null);
   const panel = useRef(null);
 
@@ -143,17 +168,21 @@ export default function SiteMenu() {
                   const Icon = ICONS[it.icon];
                   const here = isCurrentNav(it, pathname);
                   const dot = it.dot === 'unread' && unread > 0;
+                  const waiting = it.count === 'pending' && pending?.total > 0 ? pending : null;
                   return (
                     <li key={it.key}>
                       <Link
                         to={it.to} onClick={go}
                         className={['menu-item', it.tone === 'op' && 'op-link', here && 'on'].filter(Boolean).join(' ')}
                         aria-current={here ? 'page' : undefined}
-                        aria-label={dot ? `${it.label}, 새 알림 ${unread}개` : undefined}
+                        aria-label={dot ? `${it.label}, 새 알림 ${unread}개` : waiting ? `${it.label}, 처리 대기 ${waiting.total}건` : undefined}
                       >
                         {Icon && <Icon size={20} className="menu-icon" />}
                         <span className="menu-label">{it.label}</span>
                         {dot && <span className="alert-dot" aria-hidden="true" title={`새 알림 ${unread}개`} />}
+                        {waiting && (
+                          <span className="menu-count" aria-hidden="true" title={pendingTitle(waiting)}>{waiting.total > 99 ? '99+' : waiting.total}</span>
+                        )}
                       </Link>
                     </li>
                   );

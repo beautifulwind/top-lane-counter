@@ -70,7 +70,7 @@ select t.ok('되돌리기: 기록(revert)에 메모(공백 정리)',
 -- ===== 5. 알림: 재검토 요청하면 생기고, 본인만 보고, 본인만 읽음 처리 =====
 select hide_counter(:garen, '다시 확인');
 select request_revision(:garen, '9레벨을 고쳐 주세요');
-select t.ok('운영자는 남의 알림을 못 봄', (select count(*) = 0 from notifications));
+select t.ok('운영자는 남의 알림을 못 봄', (select count(*) = 0 from notifications where user_id <> auth.uid()));
 select t.fails('운영자도 알림 직접 만들기 불가',
   $$insert into notifications (user_id, kind) values ('00000000-0000-0000-0000-00000000000b', 'revision_request')$$, 'permission denied');
 reset role;

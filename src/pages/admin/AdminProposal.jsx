@@ -176,19 +176,7 @@ function Review() {
               거절
             </button>
           </div>
-          {/* 감독관은 고쳐서 승인할 수 없다 (DB도 막는다): 메모만 쓰고 그대로 승인 */}
-          {open === 'approve' && !cannotApprove && !isOperator && (
-            <NoteForm
-              id="approve-note"
-              label="승인 메모 (필수, 제안자에게 보입니다)"
-              hint="제안 그대로 승인합니다."
-              confirmLabel="승인 확정"
-              busyLabel="승인 중…"
-              onCancel={() => setOpen(null)}
-              onSubmit={(note) => approve({ note })}
-            />
-          )}
-          {open === 'approve' && !cannotApprove && isOperator && (
+          {open === 'approve' && !cannotApprove && (
             <ApproveEditor
               doc={p.content}
               build={isNew ? p.build : null}
