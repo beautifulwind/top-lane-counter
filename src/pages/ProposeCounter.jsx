@@ -81,10 +81,10 @@ function ProposeCounterForm() {
       <section className="section">
         <SectionHead icon={SparklesIcon} num={1}>카운터 고르기</SectionHead>
         {counter ? (
-          <p className="picked picked-card">
+          <div className="picked-card">
             <img src={counter.icon} alt="" width="48" height="48" /> <span className="picked-text"><small>고른 카운터</small><strong>{counter.name}</strong></span>
             <button type="button" className="btn btn-small" onClick={() => setPicked(null)}>다시 고르기</button>
-          </p>
+          </div>
         ) : (
           <>
             <div className="search">

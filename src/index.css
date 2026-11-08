@@ -366,11 +366,10 @@ a.btn { display: inline-flex; align-items: center; text-decoration: none; }
 .btn-small { min-height: 40px; padding: 0 12px; font-size: var(--fs-sm); }
 button.champ-cell { font: inherit; font-size: var(--fs-xs); font-weight: 600; color: var(--text); cursor: pointer; width: 100%; }
 button.champ-cell:disabled { opacity: .4; cursor: default; }
-.picked { display: flex; align-items: center; gap: 10px; }
-.picked img { border-radius: var(--radius-sm); }
-/* 고른 카운터 (2단계): 주황 테두리 카드 */
-.picked-card { margin: 0; padding: 12px 14px; border: 1px solid var(--soft-line); border-radius: var(--radius); background: var(--paper); box-shadow: var(--shadow-card); }
-.picked-card img { border: 2px solid var(--brand); }
+/* 고른 카운터 (2단계): 주황 테두리 카드. 아래 .picked(고른 아이템 목록)와 클래스를 나눠 서로 덮어쓰지 않게 한다 */
+.picked-card { display: flex; align-items: center; gap: 12px; margin: 0; padding: 12px 14px; border: 1px solid var(--soft-line); border-radius: var(--radius); background: var(--paper); box-shadow: var(--shadow-card); }
+.picked-card img { flex: none; border-radius: var(--radius-sm); border: 2px solid var(--brand); }
+.picked-card .btn { flex: none; }
 .picked-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .picked-text small { color: var(--brand-dark); font-size: var(--fs-xs); font-weight: 900; }
 .picked-text strong { font-weight: 900; font-size: var(--fs-md); }
@@ -382,7 +381,7 @@ button.champ-cell:disabled { opacity: .4; cursor: default; }
   border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--field);
 }
 .doc-form select { width: auto; }
-.doc-form fieldset { border: 0; padding: 0; margin: 12px 0 0; display: flex; flex-direction: column; gap: 12px; }
+.doc-form fieldset:not(.pick-group) { border: 0; padding: 0; margin: 12px 0 0; display: flex; flex-direction: column; gap: 12px; }
 .doc-level { display: flex; flex-direction: column; gap: 4px; }
 .doc-level .btn { align-self: flex-start; }
 .doc-add-level { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
