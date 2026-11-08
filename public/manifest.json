@@ -1,25 +1,18 @@
 {
-  "short_name": "탑신병자",
+  "id": "/",
   "name": "탑신병자 - 롤 탑 카운터",
-  "icons": [
-    {
-      "src": "favicon.ico",
-      "sizes": "64x64 32x32 24x24 16x16",
-      "type": "image/x-icon"
-    },
-    {
-      "src": "logo192.png",
-      "type": "image/png",
-      "sizes": "192x192"
-    },
-    {
-      "src": "logo512.png",
-      "type": "image/png",
-      "sizes": "512x512"
-    }
-  ],
-  "start_url": ".",
+  "short_name": "탑신병자",
+  "description": "롤 탑 카운터 챔피언과 라인전 공략을 모은 참여형 위키",
+  "lang": "ko",
+  "start_url": "/",
+  "scope": "/",
   "display": "standalone",
-  "theme_color": "#121317",
-  "background_color": "#0e0f12"
+  "theme_color": "#0a0a0a",
+  "background_color": "#0a0a0a",
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
 }
