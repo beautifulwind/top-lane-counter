@@ -536,7 +536,7 @@ RLS 원칙:
 `/privacy`, `/terms`에 **지금 있는 기능만** 적었다 (법률 검토 아님). 구글 OAuth 동의 화면에 두 주소가 등록돼 있다.
 - **공개 전 체크리스트** (공개 직전에 모두 한다)
   - `src/lib/legal.js`의 운영자 이메일·Supabase 서버 지역·**시행일**: 시행일은 지금 임시값(2026-11-01)이고, 그 뒤 015·016에서 방침 내용이 바뀌었고 018에서 "노가리방"으로, 024에서 "자유게시판"으로 이름이 바뀌었으므로 **공개하는 날로 바꾼다**. 비어 있으면 페이지에 노란 "【채워 주세요: …】"가 보인다.
-  - `README.md`: 지금은 Codespaces 기본 안내문 → 이 프로젝트 소개·실행 방법(`npm start`, `.env`, `supabase/tests/run.sh`)으로 바꾼다
+  - ~~`README.md`~~ (2026-11-08 완료): 프로젝트 소개·주요 기능·로컬 실행(`npm start`·`npm test`·`supabase/tests/run.sh`)·환경 변수 이름만(`VITE_SUPABASE_URL`·`VITE_SUPABASE_PUBLISHABLE_KEY`·`VITE_TURNSTILE_SITE_KEY`, 값은 쓰지 않음)·배포(Cloudflare Pages)·폴더 구조. 기능이나 환경 변수를 바꾸면 README도 함께 고친다
   - ~~빌드 파일 크기 경고~~ (2026-11-08 해결): 운영자·감독관 `/admin`, 제안·빌드 작성, 방침·약관은 `React.lazy`로 처음 들어갈 때만 불러온다(`App.jsx`의 `lazyPage`, 불러오는 동안 "불러오는 중…"). 처음 자바스크립트 약 739 → 138 kB, 가장 큰 덩어리 약 228 kB(Supabase)라 경고 없음. 새 버전 배포 뒤 옛 조각 파일을 못 받으면 한 번만 자동 새로고침(`sessionStorage` `tlc:chunk-reloaded`), 또 실패하면 오류 화면. 경고 한도 숫자는 올리지 않았다.
   - Google Analytics / MS Clarity 넣기 + 방침 1번(수집 항목)·6번(위탁·국외 이전: Google·Microsoft)·7번(분석 쿠키와 거부 방법) 고치기
   - 카카오 비즈 앱 동의항목 설명(이메일 수집 목적)이 방침의 수집 항목·목적과 맞는지 확인
