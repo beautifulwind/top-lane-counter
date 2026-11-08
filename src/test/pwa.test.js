@@ -21,4 +21,17 @@ describe('PWA 설치 정보', () => {
     expect(manifest.icons.some((i) => i.purpose === 'maskable')).toBe(true);
     for (const i of manifest.icons) expect(existsSync(join(process.cwd(), 'public', i.src))).toBe(true);
   });
+  it('오프라인 화면 색이 tokens.css와 같다', () => {
+    const tokens = read('src/styles/tokens.css');
+    const pick = (name) => new RegExp(`--${name}:\\s*(#[0-9a-fA-F]{6})`).exec(tokens)[1].toLowerCase();
+    const offline = read('public/offline.html').toLowerCase();
+    for (const name of ['bg', 'text', 'muted', 'brand', 'on-brand']) expect(offline, name).toContain(pick(name));
+  });
+  it('서비스 워커·진입 파일은 오래 저장되지 않게 하는 배포 설정이 있다', () => {
+    const headers = read('public/_headers');
+    for (const path of ['/sw.js', '/index.html', '/offline.html', '/manifest.json']) {
+      expect(headers).toMatch(new RegExp(`${path.replace('.', '\\.')}\\n\\s+Cache-Control: no-cache`));
+    }
+    expect(headers).toMatch(/\/assets\/\*\n\s+Cache-Control: .*immutable/);
+  });
 });

@@ -1,0 +1,15 @@
+# Cloudflare Pages 응답 헤더
+# 서비스 워커·진입 파일은 오래 저장되지 않게 (새 버전을 바로 알아채도록 매번 재확인)
+/sw.js
+  Cache-Control: no-cache
+/index.html
+  Cache-Control: no-cache
+/offline.html
+  Cache-Control: no-cache
+/manifest.json
+  Cache-Control: no-cache
+# 파일 이름에 해시가 붙은 화면 파일은 오래 저장
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+/icons/*
+  Cache-Control: public, max-age=86400
