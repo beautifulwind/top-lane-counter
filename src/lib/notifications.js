@@ -14,6 +14,8 @@ const DECISION = {
   build_restored: { icon: 'shown', title: '숨겨졌던 내 빌드가 다시 공개됐습니다', memo: '메모' },
   revision_request: { icon: 'flag', title: '재검토 요청을 받았습니다', memo: '운영자 메모' },
   revision_cancelled: { icon: 'flag', title: '재검토 요청이 취소됐습니다', memo: '보낸 내용 그대로 승인 대기 중입니다. 메모' },
+  // 034: 숨긴 카운터를 운영자가 [다시 공개] → 그 카운터를 만든 내 제안이 다시 승인됨 (진행 중이던 재검토 요청도 끝남)
+  counter_restored: { icon: 'shown', title: '숨겨졌던 내 카운터가 다시 공개됐습니다', memo: '메모' },
 };
 // 운영진에게 가는 "새로 들어왔습니다" 알림 (033): DB 문장이 곧 제목. 누르면 그 처리 화면으로
 const STAFF_NEW = {

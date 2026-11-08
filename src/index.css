@@ -861,6 +861,7 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
 .me-hero .lv-big { margin: 0; flex: none; }
 .me-level-bar { flex: 1; min-width: 0; }
 .me-op-hint { margin: 0; padding-top: var(--gap-lg); border-top: 1px solid var(--line-soft); }
+.operator-mode-state { margin: 0 0 4px; }
 .me-card .sub-head { margin-top: 0; }
 .sub-head h2 { display: flex; align-items: center; gap: 6px; margin: 0; font-family: var(--font-display); font-weight: 400; font-size: var(--fs-lg); }
 .new-count { min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--alert); color: var(--on-alert); font-size: var(--fs-xs); font-weight: 800; line-height: 20px; text-align: center; font-variant-numeric: tabular-nums; }

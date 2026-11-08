@@ -78,8 +78,11 @@ function ProfileCard({ auth, rewards, loading }) {
           <Link to="/inquiries" className="btn btn-small me-settings-btn"><HelpIcon size={16} /> 문의 내역</Link>
         </div>
       </div>
-      {auth.isOperator ? (
-        <p className="hint me-op-hint">운영자는 경험치·레벨·칭호가 없습니다 (항상 Lv.0).</p>
+      {auth.isOperatorAccount ? (
+        <p className="hint me-op-hint">
+          운영자는 경험치·레벨·칭호가 없습니다 (항상 Lv.0).
+          {!auth.isOperator && <> 지금은 <strong>운영자 모드가 꺼져 있어</strong> 일반 회원 화면으로 보입니다. <Link to="/me/settings">계정 설정</Link>에서 다시 켭니다.</>}
+        </p>
       ) : rewards ? (
         <LevelBar rewards={rewards} />
       ) : (
@@ -110,7 +113,7 @@ function GuestUpgrade() {
 
 function MyActivity({ auth }) {
   const userId = auth.user.id;
-  const operator = auth.isOperator;
+  const operator = auth.isOperatorAccount; // 운영자 모드를 꺼도 운영자 계정은 경험치·칭호가 없다 (DB 그대로)
   const { data, error, loading, retry } = useAsync(async () => {
     const [champs, proposals, builds, items, runes, spells, latest, rewards] = await Promise.all([
       getChampionMap(), getMyProposals(userId), getMyBuilds(userId),

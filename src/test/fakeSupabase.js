@@ -180,9 +180,13 @@ const withCounter = (c) => {
   const k = TABLES.counters.find((x) => x.id === c.counter_id);
   return { ...c, counter: k ? { id: k.id, target_champion: k.target_champion, counter_champion: k.counter_champion, status: k.status } : null };
 };
-const roleNow = () => TABLES.profiles.find((p) => p.id === fakeState.session?.user.id)?.role;
-const isAdminNow = () => roleNow() === 'admin';
-const isStaffNow = () => roleNow() === 'admin' || roleNow() === 'moderator';
+const meNow = () => TABLES.profiles.find((p) => p.id === fakeState.session?.user.id);
+const roleNow = () => meNow()?.role;
+// 034: DB의 is_admin·is_staff처럼 운영자 모드를 끈 운영자는 운영진이 아니다 (operator_mode가 없으면 켜짐)
+const isAdminNow = () => roleNow() === 'admin' && meNow()?.operator_mode !== false;
+const isStaffNow = () => isAdminNow() || roleNow() === 'moderator';
+const STAFF_NOTICE_KINDS = ['proposal_submitted', 'build_submitted', 'inquiry_received'];
+const operatorModeOffNow = () => roleNow() === 'admin' && meNow()?.operator_mode === false;
 /** RLS 흉내: 숨긴 글·댓글(숨긴 글의 댓글 포함)은 운영자에게만 */
 function visibleRows(table) {
   const rows = TABLES[table] ?? [];
@@ -201,7 +205,8 @@ function visibleRows(table) {
       const k = TABLES.counters.find((x) => x.id === id);
       return k ? { target_champion: k.target_champion, counter_champion: k.counter_champion, status: k.status } : null;
     };
-    return rows.map((n) => {
+    // RLS 흉내 (034): 운영자 모드를 끈 동안 운영진 알림은 안 보인다
+    return rows.filter((n) => !(operatorModeOffNow() && STAFF_NOTICE_KINDS.includes(n.kind))).map((n) => {
       const p = n.proposal_id != null ? TABLES.edit_proposals?.find((x) => x.id === n.proposal_id) : null;
       const b = n.build_id != null ? TABLES.builds.find((x) => x.id === n.build_id) : null;
       const post = n.post_id != null ? TABLES.posts.find((x) => x.id === n.post_id && (x.status === 'visible' || isStaffNow())) : null;
@@ -393,10 +398,12 @@ async function rpc(name, args) {
   fakeState.rpcCalls.push({ name, args });
   if (fakeState.rpcError) return { data: null, error: { message: fakeState.rpcError, code: fakeState.rpcErrorCode ?? '42501' } };
   if (name === 'mark_all_notifications_read') {
-    // DB 함수처럼 내 것 중 p_upto 번호까지 한 번에, 처리한 시각을 돌려준다
+    // DB 함수처럼 내 것 중 p_upto 번호까지 한 번에, 처리한 시각을 돌려준다 (운영자 모드를 끈 동안 운영진 알림은 그대로, 034)
     const me = fakeState.session?.user.id;
     const t = new Date().toISOString();
-    TABLES.notifications.filter((n) => n.user_id === me && !n.read_at && n.id <= args.p_upto).forEach((n) => { n.read_at = t; });
+    TABLES.notifications
+      .filter((n) => n.user_id === me && !n.read_at && n.id <= args.p_upto && !(operatorModeOffNow() && STAFF_NOTICE_KINDS.includes(n.kind)))
+      .forEach((n) => { n.read_at = t; });
     return { data: t, error: null };
   }
   if (name === 'mark_notifications_read') {
@@ -405,6 +412,13 @@ async function rpc(name, args) {
     const mine = TABLES.notifications.filter((n) => args.p_ids.includes(n.id) && n.user_id === me && !n.read_at);
     mine.forEach((n) => { n.read_at = new Date().toISOString(); });
     return { data: mine.length, error: null };
+  }
+  if (name === 'set_operator_mode') {
+    // 034: 운영자 본인만 (모드를 꺼도 role은 그대로라 다시 켤 수 있다)
+    const me = meNow();
+    if (me?.role !== 'admin') return { data: null, error: { message: '운영자 계정만 운영자 모드를 바꿀 수 있습니다.', code: '42501' } };
+    me.operator_mode = args.p_on;
+    return { data: args.p_on, error: null };
   }
   if (name === 'set_moderator') {
     if (!isAdminNow()) return { data: null, error: { message: '운영자만 할 수 있습니다.', code: '42501' } };

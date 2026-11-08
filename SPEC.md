@@ -433,6 +433,7 @@
   | `proposal_approved` / `proposal_rejected` | 체크 / 금지 | 제안이 승인됐습니다 / 거절됐습니다 | [문서 수정·새 카운터] 매치업 · 승인 메모 / 거절 사유 | `/me/proposals/:id` |
   | `build_approved` / `build_rejected` / `build_hidden` / `build_restored` | 체크 / 금지 / 눈 가림 / 눈 | 빌드가 공개됐습니다 / 거절됐습니다 / 운영자가 내 빌드를 숨겼습니다 / 숨겨졌던 내 빌드가 다시 공개됐습니다 | [빌드] 매치업 · 메모·사유 | `/me/builds/:id` |
   | `revision_request` / `revision_cancelled` | 깃발 | 재검토 요청을 받았습니다 / 재검토 요청이 취소됐습니다 | 매치업 · 운영자 메모 / "보낸 내용 그대로 승인 대기 중입니다. 메모: …" | 내 제안·빌드 자세히 |
+  | `counter_restored` (034) | 눈 | 숨겨졌던 내 카운터가 다시 공개됐습니다 | [새 카운터] 매치업 · 메모 | `/me/proposals/:id` |
   | `post_comment` · `doc_comment` | 말풍선 | DB 문장 ("내 글 「…」에 새 댓글 N개가 달렸습니다.") | 문서 댓글은 매치업 | 그 글 / 매치업 문서 `#comments` |
   | `post_hidden` · `comment_hidden` · `doc_comment_hidden` / `…_restored` | 눈 가림 / 눈 | DB 문장의 " 메모: " 앞 | 메모 | 그 글·문서 (숨긴 글 `post_hidden`과 숨긴 카운터는 이동 없음) |
   | `inquiry_answered` | 말풍선 | 문의에 답변이 도착했습니다 | 분류: 오류 신고 | `/inquiries` |
@@ -502,11 +503,33 @@
 - **테스트 데이터 비우기**: 새 표가 없어 스크립트는 그대로(알림·처리 기록은 이미 비운다).
 - **확인 조회**: `supabase/scripts/check_admin_convenience.sql` (033 실행 전·후 한 번씩, 17줄 표).
 
+### 6-21. 제안자 알림 보강 · 운영자 모드 켜기/끄기 (2026-11-08, 034)
+- **제안자(일반 회원)에게 가는 알림 — 조사 결과** (033까지). 모두 DB 함수가 `notify()` 도우미로 보내고, `notify()`는 **처리한 본인에게는 보내지 않는다**.
+  | 경우 | 알림 | 034 전 | 034 |
+  |---|---|---|---|
+  | 제안 승인 (그대로·고쳐서, 숨긴 카운터 재검토 뒤 다시 낸 제안 포함) | `proposal_approved` | 있음 | 그대로 |
+  | 제안 반려 (재검토 요청 중인 것 포함) | `proposal_rejected` | 있음 | 그대로 |
+  | 승인 대기 제안에 재검토 요청 / 요청 취소 | `revision_request` / `revision_cancelled` | 있음 | 그대로 |
+  | 숨긴 카운터에 재검토 요청 (`request_revision`) | `revision_request` | 있음, 단 `notify()`를 거치지 않아 **운영자가 자기 제안에 요청하면 본인에게도 감** | `notify()`로 바꿈 (문장·종류 그대로, 본인 제외) |
+  | 숨긴 카운터 [다시 공개] (`restore_counter`) — 그 카운터를 만든 제안이 다시 "승인됨"이 되고 진행 중이던 재검토 요청이 끝남 | — | **없음** | 새 종류 `counter_restored` 「숨겨졌던 내 카운터가 다시 공개됐습니다」 + 메모, 누르면 `/me/proposals/:id` (제안 없이 생긴 카운터는 보낼 사람이 없어 안 보냄) |
+  | 빌드 승인·거절·숨김·다시 공개·재검토 요청·요청 취소 | `build_*` · `revision_*` | 있음 | 그대로 |
+  카운터 숨기기(제안이 "승인 취소"됨)는 예전부터 알림이 없다 — 이번에도 그대로(이번 범위는 승인·반려·재검토).
+- **운영자 모드**: `profiles.operator_mode`(기본 켜짐). **운영자(role `admin`) 본인만** [계정 설정](`/me/settings`) 맨 위 "운영자 모드" 칸에서 [운영자 모드 끄기]/[켜기] — DB 함수 `set_operator_mode(켜기/끄기)`가 `auth.uid()` 본인 행만 바꾸고, 운영자가 아니면 「운영자 계정만 운영자 모드를 바꿀 수 있습니다.」로 거부한다. 이 칸은 직접 고치기 권한이 없어(`grant update`는 닉네임·대표 칭호만) 함수로만 바뀐다. 모드를 꺼도 role은 그대로라 **같은 자리에서 다시 켤 수 있다**. 감독관·일반 회원에게는 칸이 보이지 않는다.
+  - **DB 판정**: `is_admin()` = role `admin` **그리고** 모드 켜짐, `is_staff()` = 감독관 또는 (운영자 + 모드 켜짐). RLS·`require_operator`·`require_staff`·운영자 전용 함수·`admin_pending_counts`가 모두 이 두 함수를 쓰므로, 끄면 **DB가** 일반 회원과 같은 길로 처리한다: 남의 대기 제안·숨긴 글·처리 기록·문의 목록을 못 읽고, 승인·반려·숨기기·감독관 지정 등은 「운영자만 할 수 있습니다.」. 운영자가 아닌 사람은 칸 값이 무엇이든 권한이 없다.
+  - **화면**: `isOperator` = 운영자 계정 + 모드 켜짐, `isStaff`도 같은 기준 → ☰ [관리]·처리 대기 건수·문서/챔피언 화면의 운영자 버튼·`/admin`이 사라지고 일반 회원 화면이 된다. 모드와 관계없는 것은 `isOperatorAccount`(운영자 계정): 운영자 모드 칸, 마이페이지 Lv.0 안내(끄면 「지금은 운영자 모드가 꺼져 있어 일반 회원 화면으로 보입니다. 계정 설정에서 다시 켭니다.」를 덧붙임), 탈퇴 불가.
+  - **운영진 알림**: 끈 동안 `proposal_submitted`·`build_submitted`·`inquiry_received`는 알림 읽기 정책(RLS)에서 빠져 목록·빨간 점 개수에 안 보이고, `mark_all_notifications_read`도 건드리지 않는다. 알림은 계속 쌓이므로 다시 켜면 안 읽은 알림으로 보인다. 다른 알림(내 제안 결과·댓글 등)은 그대로.
+  - **제안·문의**: 끈 채로 낸 제안은 일반 회원처럼 승인 대기로 들어가고 [내 제안]에 보인다. 운영자의 제안이라 감독관은 처리할 수 없으므로(6-18) 다시 켜고 직접 처리한다 — 이때 본인에게는 승인·반려 알림이 가지 않는다. 문의도 일반 회원처럼 [문의 내역]에 내 것만 보이고, 운영진 알림은 운영자 본인을 뺀 운영진에게 간다.
+  - **그대로인 것 (일반 회원 경험과 다른 점)**: 닉네임 (운) 표시(다른 사람 화면에서도), Lv.0·경험치·칭호 없음(경험치 지급은 role로 판정 — 끈 동안의 제안·추천·글도 경험치가 쌓이지 않는다), 탈퇴 불가, 감독관이 운영자의 글·댓글·제안을 처리할 수 없음(role로 판정), 운영자는 1명 규칙. `profiles`는 누구나 읽으므로 운영자 모드가 꺼져 있다는 사실 자체는 공개 값이다.
+  - **034 전 DB**: 화면은 `operator_mode` 칸이 없으면(오류 42703) 옛 칸만 다시 읽고 "켜짐"으로 본다 → 새 코드를 먼저 push해도 운영자 화면 그대로(모드 칸을 누르면 오류 안내).
+- **하위 호환**: 있던 표·함수의 모양(인자·반환)은 그대로, 새 칸은 기본 켜짐이라 실행 직후 동작이 같다. 034를 실행하고 새 코드를 아직 push하지 않으면 옛 화면은 `counter_restored`를 모르는 종류로 보고 메모 문장만 보여 준다(깨지지 않음). 순서: 034 실행 → `check_operator_mode.sql` 확인 → push.
+- **테스트 데이터 비우기**: 새 표가 없어 스크립트는 그대로(알림은 이미 비우고, 프로필은 남긴다 — 운영자 모드 값도 그대로 남으니 공개 전 [계정 설정]에서 켜져 있는지 본다).
+- **확인 조회**: `supabase/scripts/check_operator_mode.sql` (034 실행 전·후 한 번씩, 18줄 표, 마지막이 조회문이라 SQL Editor에 결과 표가 나온다).
+
 ## 7. 데이터 구조 (Supabase 초안)
 
 챔피언·아이템·룬·소환사 주문은 Data Dragon의 ID(예: 챔피언 `"Darius"`, 아이템 `3078`)로 참조한다.
 
-- **profiles**: `id`(auth 유저), `nickname`(고유, 대소문자 무시 / 첫 로그인 직후에는 비어 있음 / 30일에 한 번 바꿈, 6-8), `role`(`user` / `admin` = 운영자), `xp`, `level`(운영자는 0), `main_title`(내가 가진 칭호 중에서만, 비워둘 수 있음), `is_guest`(비회원, `auth.users.is_anonymous`를 트리거로 따라감 — 020), `last_seen_at`(마지막 접속, 하루 한 번 — 비회원 정리 기준), `created_at`
+- **profiles**: `id`(auth 유저), `nickname`(고유, 대소문자 무시 / 첫 로그인 직후에는 비어 있음 / 30일에 한 번 바꿈, 6-8), `role`(`user` / `admin` = 운영자), `xp`, `level`(운영자는 0), `main_title`(내가 가진 칭호 중에서만, 비워둘 수 있음), `is_guest`(비회원, `auth.users.is_anonymous`를 트리거로 따라감 — 020), `last_seen_at`(마지막 접속, 하루 한 번 — 비회원 정리 기준), `operator_mode`(운영자 모드, 기본 켜짐 — 운영자 본인이 `set_operator_mode`로만 바꿈, 034), `created_at`
 - **nickname_changes** (017): `user_id`, `old_nickname`, `new_nickname`, `changed_at` — 트리거 `keep_nickname`만 넣는다. 본인·운영자만 읽기. DB 함수 `delete_my_account(확인)`(로그인한 본인), `kakao_unlinked(카카오 번호)`(service_role만), `josa(낱말, '을/를')`
 - **item_prices** (018): `id`(아이템 번호), `gold`, `patch`, `updated_at` — 누구나 읽기, 바꾸기는 운영자 함수 `set_item_prices`만. 시작템 합계 검사용
 - **counters**: `id`, `target_champion`(지는 쪽), `counter_champion`(이기는 쪽), `sort_order`, `status`, `proposed_by`, `created_at` — (`target_champion`, `counter_champion`) 고유
@@ -545,6 +568,7 @@ RLS 원칙:
 - `status` 변경, `sort_order` 변경, 경험치·칭호 지급은 운영자 또는 DB 함수만
 - `role`을 직접 바꾸는 것은 앱에서 불가능. 감독관 지정·해제만 운영자가 DB 함수 `set_moderator`로 한다. 운영자 지정·교체는 Supabase SQL Editor에서만 한다.
 - `role = admin`(운영자)은 DB에서 **1명만** 허용한다.
+- 운영자 권한 판정(`is_admin()`·`is_staff()`)은 role과 운영자 모드(`operator_mode`)를 함께 본다 (034, 6-21). 모드는 운영자 본인만 바꾸고, 운영자가 아닌 사람에게는 권한을 주지 않는다.
 
 ## 8. 개발 단계
 
@@ -658,6 +682,8 @@ RLS 원칙:
 30. `supabase/migrations/030_moderator.sql` (감독관 역할·권한·처리 기록·문구 "운영진"·자유게시판 목록 작성자 role. 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행하고, 확인 뒤 새 코드 push. 확인 조회: `supabase/scripts/check_moderators.sql`)
 31. `supabase/migrations/031_proposal_review_lock.sql` ("이미 다른 분이 처리했습니다" 전용 오류 TL409 + 제안 "검토 중" 표시 표·함수·트리거. 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행하고, 확인 뒤 새 코드 push. 확인 조회: `supabase/scripts/check_proposal_review.sql` — 실행 전·후 한 번씩)
 32. `supabase/migrations/032_inquiries.sql` (문의하기 — 표 `inquiries`·`inquiry_quota`·RLS·함수·알림/처리 기록 종류·설정값. 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행하고, 확인 뒤 새 코드 push. 확인 조회: `supabase/scripts/check_inquiries.sql` — 실행 전·후 한 번씩. **실행 뒤 파일 맨 아래 pg_cron 일정 등록 SQL을 따로 한 번**: `select cron.schedule('purge-old-inquiries', '10 19 * * *', $$select public.purge_old_inquiries()$$);`)
+33. `supabase/migrations/033_admin_convenience.sql` (운영진 새 제안·빌드·문의 알림 · 처리 대기 건수 · 감독관도 고쳐서 승인. 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행하고, 확인 뒤 새 코드 push. 확인 조회: `supabase/scripts/check_admin_convenience.sql` — 실행 전·후 한 번씩)
+34. `supabase/migrations/034_operator_mode_notify.sql` (제안자 알림 보강 — 숨긴 카운터 재검토 요청은 본인 제외, [다시 공개] 알림 `counter_restored` · 운영자 모드 `profiles.operator_mode`·`set_operator_mode`·`is_admin`/`is_staff` 판정·운영진 알림 숨김. 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행하고, 확인 뒤 새 코드 push. 확인 조회: `supabase/scripts/check_operator_mode.sql` — 실행 전·후 한 번씩)
 - **테스트 데이터 비우기** (마이그레이션 아님, 정식 공개 직전 등 필요할 때): `supabase/scripts/reset_test_data_preview.sql`(읽기만 — 지울·남을 개수)로 확인 → `supabase/scripts/reset_test_data.sql`. 계정·프로필·설정값과 트린다미어 상대 말파이트 카운터(지금 문서·공개 빌드·처음 제안)만 남기고, 말파 문서의 수정 기록은 지금 내용 1줄로 정리, 경험치·레벨·칭호는 알림 없이 다시 계산한다. SQL Editor가 RLS를 물으면 **"Run without RLS"**로 실행 ("Run and enable RLS"는 임시 표 `reset_keep` 때문에 에러).
 - 합쳐서 한 번에 돌리지 않는다: 파일마다 `begin … commit`이라 중간에 실패하면 앞부분만 반영되고, 다시 돌리면 "already exists"가 난다.
 - 새 마이그레이션(010 …)을 만들면 이 목록에 추가한다. `supabase/tests/run.sh`가 빈 DB에 같은 순서로 실행한 뒤 검사용 데이터(`tests/fixtures.sql`)를 넣고 검사한다 (`supabase/tests`는 실제 프로젝트에서 실행하지 않음).

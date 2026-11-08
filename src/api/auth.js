@@ -242,13 +242,35 @@ export function onAuthChange(cb) {
 
 const RESERVED_NICKNAME_MESSAGE = '닉네임에는 (운)·(감)을 쓸 수 없습니다.';
 
-const PROFILE_COLUMNS = 'id, nickname, role, xp, level, main_title, is_guest';
+const PROFILE_COLUMNS_OLD = 'id, nickname, role, xp, level, main_title, is_guest';
+// operator_mode = 운영자 모드 (034). 034 실행 전 DB에는 이 칸이 없으므로 그때는 옛 칸만 읽는다 (모드 = 켜짐으로 본다)
+const PROFILE_COLUMNS = `${PROFILE_COLUMNS_OLD}, operator_mode`;
+const missingModeColumn = (error) => error?.code === '42703' || /operator_mode/.test(error?.message ?? '');
+
+/** 프로필 칸을 골라 읽는 요청(run(칸 목록))을 보낸다. operator_mode 칸이 아직 없으면 옛 칸으로 한 번 더 */
+async function withProfileColumns(run) {
+  const res = await run(PROFILE_COLUMNS);
+  return missingModeColumn(res.error) ? run(PROFILE_COLUMNS_OLD) : res;
+}
 
 /** 내 프로필 (첫 로그인 시 DB 트리거가 만든다. nickname이 null이면 닉네임 설정 전) */
 export async function getProfile(userId) {
-  const { data, error } = await db().from('profiles').select(PROFILE_COLUMNS).eq('id', userId).maybeSingle();
+  const { data, error } = await withProfileColumns((cols) => db().from('profiles').select(cols).eq('id', userId).maybeSingle());
   if (error) throw new Error(`프로필을 불러오지 못했습니다. (${error.message})`);
   return data;
+}
+
+/**
+ * 운영자 모드 켜기/끄기 (034). 운영자 본인만 — 운영자가 아니면 DB가 거부한다.
+ * 돌려주는 값: 바뀐 내 프로필 (화면 전체가 이 값으로 운영자/일반 회원 화면을 고른다)
+ */
+export async function setOperatorMode(userId, on) {
+  const { error } = await db().rpc('set_operator_mode', { p_on: on });
+  if (error) {
+    if (/[가-힣]/.test(error.message ?? '')) throw new Error(error.message);
+    throw new Error(`운영자 모드를 바꾸지 못했습니다. (${error.message})`);
+  }
+  return getProfile(userId);
 }
 
 /** 닉네임 앞뒤 공백 제거 + 규칙 검사. 문제가 있으면 안내 문구, 없으면 null */
@@ -263,12 +285,12 @@ export function nicknameProblem(raw) {
 export async function saveNickname(userId, raw) {
   const problem = nicknameProblem(raw);
   if (problem) throw new Error(problem);
-  const { data, error } = await db()
+  const { data, error } = await withProfileColumns((cols) => db()
     .from('profiles')
     .update({ nickname: raw.trim() })
     .eq('id', userId)
-    .select(PROFILE_COLUMNS)
-    .maybeSingle();
+    .select(cols)
+    .maybeSingle());
   if (error) {
     if (error.code === '23505') throw new Error('이미 사용 중인 닉네임입니다. 다른 닉네임을 정해 주세요.');
     if (error.code === 'P0001') throw new Error(error.message); // 30일에 한 번 (DB 문구에 다음 날짜가 들어 있다)

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { NICKNAME_MAX, deleteMyAccount, getNicknameRule, nicknameProblem, saveNickname } from '../api/auth';
+import { NICKNAME_MAX, deleteMyAccount, getNicknameRule, nicknameProblem, saveNickname, setOperatorMode } from '../api/auth';
 import { useAsync } from '../lib/useAsync';
 import { fmtDateTime } from '../lib/format';
 import { josaOf } from '../lib/josa';
@@ -8,15 +8,60 @@ import { CharCount } from './BoardParts';
 import { ErrorBox, Loading } from './Status';
 import { isGuest } from '../lib/guest';
 import SectionHead from './SectionHead';
-import { PencilIcon, TrashIcon } from './Icons';
+import { PencilIcon, ShieldIcon, TrashIcon } from './Icons';
 
-/** /me 아래쪽 "계정": 닉네임 바꾸기(30일에 한 번) · 회원 탈퇴 (SPEC 6-8) */
+/** /me/settings "계정": 운영자 모드(운영자 계정만, 034) · 닉네임 바꾸기(30일에 한 번) · 회원 탈퇴 (SPEC 6-8) */
 export default function AccountSettings({ auth }) {
   return (
     <>
+      {auth.isOperatorAccount && <OperatorMode auth={auth} />}
       <NicknameChange auth={auth} />
       <DeleteAccount auth={auth} />
     </>
+  );
+}
+
+/**
+ * 운영자 모드 켜기/끄기 (034, SPEC 6-21). 끄면 일반 회원과 같은 화면·같은 처리 길로 동작한다
+ * (관리 메뉴·운영진 알림이 안 보이고, 운영자 권한이 필요한 일은 DB가 거부). 이 칸은 모드와 관계없이 항상 보여서
+ * 같은 자리에서 다시 켤 수 있다. 바꾸면 프로필을 다시 읽어 화면 전체에 바로 반영한다.
+ */
+function OperatorMode({ auth }) {
+  const on = auth.isOperator;
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState(null);
+
+  const toggle = async () => {
+    if (busy) return;
+    setBusy(true);
+    setError(null);
+    try {
+      auth.setProfile(await setOperatorMode(auth.user.id, !on));
+    } catch (e) {
+      setError(e.message);
+    }
+    setBusy(false);
+  };
+
+  return (
+    <section className="me-section" aria-labelledby="operator-mode">
+      <SectionHead icon={ShieldIcon} id="operator-mode">운영자 모드</SectionHead>
+      <p className="operator-mode-state" role="status">
+        지금 <strong>{on ? '켜짐' : '꺼짐'}</strong>
+      </p>
+      {on ? (
+        <p className="hint">켜져 있으면 관리 메뉴와 운영진 알림이 보이고, 제안·빌드·문의를 운영자로 처리합니다.</p>
+      ) : (
+        <p className="hint">
+          꺼져 있는 동안은 일반 회원과 같은 화면으로 보이고, 제안·문의도 일반 회원처럼 승인 대기로 들어갑니다.
+          관리 메뉴와 운영진 알림은 숨겨지고(알림은 다시 켜면 그대로 보입니다), 닉네임의 (운) 표시와 Lv.0은 그대로입니다.
+        </p>
+      )}
+      <button type="button" className={`btn btn-small${on ? '' : ' btn-op'}`} onClick={toggle} disabled={busy} aria-pressed={on}>
+        {busy ? '바꾸는 중…' : on ? '운영자 모드 끄기' : '운영자 모드 켜기'}
+      </button>
+      {error && <p className="form-error" role="alert">{error}</p>}
+    </section>
   );
 }
 
@@ -127,7 +172,7 @@ export function DeleteAccount({ auth }) {
   return (
     <section className="me-section" aria-labelledby="delete-account">
       <SectionHead icon={TrashIcon} id="delete-account">{guest ? '비회원 기록 지우기' : '회원 탈퇴'}</SectionHead>
-      {auth.isOperator ? (
+      {auth.isOperatorAccount ? (
         <p className="hint">운영자 계정은 탈퇴할 수 없습니다.</p>
       ) : (
         <>

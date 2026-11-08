@@ -94,7 +94,9 @@ select t.fails('제안자도 알림 직접 삭제 불가', $$delete from notific
 select t.ok('008: 가렌 승인 알림도 받음 (메모 포함)',
   (select count(*) = 1 from notifications where kind = 'proposal_approved' and message = '좋은 공략입니다'
      and proposal_id = (select v from ids where k = 'garen_p')));
-select t.ok('/me에서 확인 → 2개 읽음 처리 (승인 + 재검토 요청)', (select mark_notifications_read(array(select id from notifications where kind not in ('level_up', 'level_down', 'title_earned', 'title_revoked'))) = 2));
+select t.ok('034: [다시 공개] 알림도 받음 (메모 포함)',
+  exists (select 1 from notifications where kind = 'counter_restored' and message = '확인했습니다'));
+select t.ok('/me에서 확인 → 3개 읽음 처리 (승인 + 다시 공개(034) + 재검토 요청)', (select mark_notifications_read(array(select id from notifications where kind not in ('level_up', 'level_down', 'title_earned', 'title_revoked'))) = 3));
 select mark_notifications_read(array(select id from notifications));  -- 경험치·칭호 알림(014)도 확인
 select t.ok('빨간 점 조건이 꺼짐', (select count(*) = 0 from notifications where read_at is null));
 select t.ok('다시 확인해도 0개', (select mark_notifications_read(array(select id from notifications)) = 0));

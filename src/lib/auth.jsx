@@ -9,7 +9,10 @@ import { isStaffPerson } from './nickname';
  * profile: 로그인했을 때 내 프로필 (불러오는 중이면 undefined)
  */
 const AuthContext = createContext(null);
-const SIGNED_OUT = { status: 'signedOut', session: null, user: null, profile: null, isOperator: false, isModerator: false, isStaff: false, setProfile: () => {}, loginError: null, clearLoginError: () => {}, notice: null, clearNotice: () => {}, cameBack: false, clearCameBack: () => {} };
+const SIGNED_OUT = { status: 'signedOut', session: null, user: null, profile: null, isOperatorAccount: false, isOperator: false, isModerator: false, isStaff: false, setProfile: () => {}, loginError: null, clearLoginError: () => {}, notice: null, clearNotice: () => {}, cameBack: false, clearCameBack: () => {} };
+
+/** 운영자 모드가 켜진 운영자인가 (034: profiles.operator_mode, 없으면 켜짐) */
+const operatorOn = (profile) => profile?.role === 'admin' && profile?.operator_mode !== false;
 
 export function AuthProvider({ children }) {
   const [session, setSession] = useState(undefined); // undefined = 아직 확인 중
@@ -68,11 +71,14 @@ export function AuthProvider({ children }) {
       user: session.user,
       profile,
       profileError: loaded.userId === userId ? loaded.error : null,
-      // 운영자 = role 'admin'인 유일한 계정 (모든 권한). 실제 권한 검사는 DB(RLS)가 한다.
-      isOperator: profile?.role === 'admin',
+      // 운영자 계정 = role 'admin'인 유일한 계정. 운영자 모드(034)를 꺼도 그대로 — 모드 스위치·Lv.0·탈퇴 불가에만 쓴다
+      isOperatorAccount: profile?.role === 'admin',
+      // 운영자 (모든 권한) = 운영자 계정 + 운영자 모드 켜짐. 끄면 화면 전체가 일반 회원과 같은 길로 간다.
+      // (034 전 DB처럼 operator_mode가 없으면 켜짐으로 본다.) 실제 권한 검사는 DB(is_admin·RLS)가 같은 기준으로 한다.
+      isOperator: operatorOn(profile),
       // 감독관 (030): 운영자가 지정. 화면은 허용된 것만 보여 주고, 실제 권한 검사는 DB가 한다.
       isModerator: profile?.role === 'moderator',
-      isStaff: profile?.role === 'admin' || profile?.role === 'moderator',
+      isStaff: operatorOn(profile) || profile?.role === 'moderator',
       setProfile,
       loginError, // 로그인한 채로 계정 연결에 실패했을 때
       clearLoginError,
