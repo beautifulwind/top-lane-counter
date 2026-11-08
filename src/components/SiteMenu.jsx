@@ -5,7 +5,8 @@ import { signOut } from '../api/auth';
 import { getUnreadCount, onNotificationsChanged } from '../api/notifications';
 import { isGuest, useAuth } from '../lib/auth';
 import { isCurrentNav, navItemsFor } from '../lib/navItems';
-import { BellIcon, HelpIcon, MenuIcon, MessageIcon, ShieldIcon, UserIcon, XIcon } from './Icons';
+import { promptInstall, useInstallKind } from '../lib/install';
+import { BellIcon, DownloadIcon, HelpIcon, MenuIcon, MessageIcon, ShieldIcon, UserIcon, XIcon } from './Icons';
 import UserName from './UserName';
 
 /**
@@ -62,6 +63,8 @@ export default function SiteMenu() {
   const kind = accountKind(auth);
   const signedIn = !['loading', 'signedOut'].includes(kind);
   const unread = useUnreadCount(signedIn ? auth.user?.id : null, pathname);
+  const installKindNow = useInstallKind(); // 'prompt'(안드로이드) | 'ios' | 숨김
+  const [showIosGuide, setShowIosGuide] = useState(false);
   const [open, setOpen] = useState(false);
   const opener = useRef(null);
   const panel = useRef(null);
@@ -157,11 +160,35 @@ export default function SiteMenu() {
                 })}
               </ul>
             </nav>
-            {canLogout && (
+            {(canLogout || installKindNow === 'prompt' || installKindNow === 'ios') && (
               <div className="menu-foot">
-                <button type="button" className="menu-item menu-logout" onClick={() => { close(); logout(); }}>
-                  로그아웃
-                </button>
+                {installKindNow === 'prompt' && (
+                  <button type="button" className="menu-item" onClick={() => { close(false); promptInstall(); }}>
+                    <DownloadIcon size={20} className="menu-icon" />
+                    <span className="menu-label">앱 설치</span>
+                  </button>
+                )}
+                {installKindNow === 'ios' && (
+                  <>
+                    <button
+                      type="button" className="menu-item" aria-expanded={showIosGuide} aria-controls="ios-install-guide"
+                      onClick={() => setShowIosGuide((v) => !v)}
+                    >
+                      <DownloadIcon size={20} className="menu-icon" />
+                      <span className="menu-label">앱 설치</span>
+                    </button>
+                    {showIosGuide && (
+                      <p className="menu-install-guide" id="ios-install-guide">
+                        Safari 아래의 공유 버튼을 누른 뒤 <b>홈 화면에 추가</b>를 선택해 주세요.
+                      </p>
+                    )}
+                  </>
+                )}
+                {canLogout && (
+                  <button type="button" className="menu-item menu-logout" onClick={() => { close(); logout(); }}>
+                    로그아웃
+                  </button>
+                )}
               </div>
             )}
           </div>
