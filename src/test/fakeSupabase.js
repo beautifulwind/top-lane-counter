@@ -54,6 +54,8 @@ export const TABLES = {
   post_votes: [],
   reports: [],
   doc_comments: [],
+  // 032 문의하기 (user = select가 붙여 주는 보낸 사람 관계)
+  inquiries: [],
   // 017 닉네임 변경 기록 (본인 것만 넣는다)
   nickname_changes: [],
   // 018 아이템 가격표 (DB 기준 패치만 화면에 쓴다)
@@ -129,6 +131,7 @@ export function resetFake() {
   TABLES.moderation_log = [];
   TABLES.doc_comments = [];
   TABLES.nickname_changes = [];
+  TABLES.inquiries = [];
   TABLES.item_prices = [{ id: '1055', gold: 450, patch: '99.1.1' }, { id: '2003', gold: 50, patch: '99.1.1' }];
   TABLES.builds = INITIAL_BUILDS();
   fakeState.functionCalls = [];
@@ -216,6 +219,13 @@ function visibleRows(table) {
     return isStaffNow() ? all : all.filter((c) => c.status === 'visible' && c.counter?.status === 'approved');
   }
   if (table === 'moderation_log') return isAdminNow() ? rows : [];
+  if (table === 'inquiries') {
+    // 032 RLS 흉내: 본인 것 / 운영자는 전부 / 감독관은 계정·탈퇴(account) 빼고. user = 보낸 사람 관계
+    const mine = fakeState.session?.user.id;
+    return rows
+      .filter((r) => r.user_id === mine || isAdminNow() || (roleNow() === 'moderator' && r.category !== 'account'))
+      .map((r) => ({ answer: null, answered_at: null, user: r.user ?? person(r.user_id), ...r }));
+  }
   if (isStaffNow()) return rows;
   if (table === 'posts') return rows.filter((p) => p.status === 'visible');
   if (table === 'post_comments') {
@@ -408,6 +418,29 @@ async function rpc(name, args) {
   }
   if (name === 'remove_offmeta') {
     TABLES.offmeta_champions = TABLES.offmeta_champions.filter((o) => o.champion_id !== args.p_champion);
+    return { data: null, error: null };
+  }
+  if (name === 'create_inquiry') {
+    // DB 검사(하루 3건·글자 수)는 inquiry_test.sql에서 — 여기서는 화면 흐름만. 오류는 fakeState.rpcError
+    const id = 1000 + TABLES.inquiries.length;
+    TABLES.inquiries.push({ id, user_id: fakeState.session.user.id, category: args.p_category, body: args.p_body.trim(), created_at: new Date().toISOString() });
+    return { data: id, error: null };
+  }
+  if (name === 'delete_my_inquiry') {
+    TABLES.inquiries = TABLES.inquiries.filter((r) => !(r.id === args.p_id && r.user_id === fakeState.session?.user.id));
+    return { data: null, error: null };
+  }
+  if (name === 'answer_inquiry' || name === 'set_inquiry_category') {
+    const row = TABLES.inquiries.find((r) => r.id === args.p_id);
+    if (!isStaffNow()) return { data: null, error: { message: '운영자만 할 수 있습니다.', code: '42501' } };
+    if (name === 'set_inquiry_category' && !isAdminNow()) return { data: null, error: { message: '운영자만 할 수 있습니다.', code: '42501' } };
+    if (name === 'answer_inquiry') {
+      if (row.answer) return { data: null, error: { message: '이미 다른 분이 처리했습니다.', code: 'TL409' } };
+      if (row.category === 'account' && !isAdminNow()) return { data: null, error: { message: '"계정·탈퇴" 문의는 운영자만 답변할 수 있습니다.', code: '42501' } };
+      Object.assign(row, { answer: args.p_answer, answered_at: new Date().toISOString() });
+    } else {
+      row.category = args.p_category;
+    }
     return { data: null, error: null };
   }
   const board = boardRpc(name, args);

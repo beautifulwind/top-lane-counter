@@ -53,6 +53,7 @@ rows (ord, what, to_delete, to_keep, note) as (
   union all select 16, 'proposal_reviewing (검토 중 표시)', (select count(*) from public.proposal_reviewing), 0, '임시 표시라 모두 비움'
   union all select 17, 'board_last_write (도배 방지 시각)', (select count(*) from public.board_last_write), 0, null
   union all select 18, 'notifications (알림)', (select count(*) from public.notifications), 0, null
+  union all select 18, 'inquiries (문의하기 문의·답변)', (select count(*) from public.inquiries), 0, '모두 비움 (하루 개수 표 inquiry_quota도)'
   union all select 19, 'xp_events (경험치 기록)', (select count(*) from public.xp_events), 0, '남은 데이터로 다시 계산해 새로 쌓음'
   union all select 20, 'user_titles (칭호)', 0, (select count(*) from public.user_titles), '지우지 않고 다시 계산 — 조건이 깨진 칭호만 회수 (알림 없음)'
   union all select 21, 'profiles (계정·닉네임·운영자)', 0, (select count(*) from public.profiles), '그대로. 경험치·레벨만 다시 계산'

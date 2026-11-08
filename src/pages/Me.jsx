@@ -21,7 +21,7 @@ import { matchupTitle } from '../lib/josa';
 import VoteTally from '../components/VoteTally';
 import SectionHead from '../components/SectionHead';
 import { displayNickname } from '../lib/nickname';
-import { BellIcon, GearIcon, LayersIcon, LinkIcon, SendIcon, UserIcon } from '../components/Icons';
+import { BellIcon, GearIcon, HelpIcon, LayersIcon, LinkIcon, SendIcon, UserIcon } from '../components/Icons';
 
 /**
  * 마이페이지 (/me): 맨 위 프로필 카드(닉네임·칭호 태그·Lv·경험치 막대 + [알림 보기]·[계정 설정]), 칭호판,
@@ -75,6 +75,7 @@ function ProfileCard({ auth, rewards, loading }) {
         <div className="me-hero-actions">
           <NotificationsLink userId={auth.user.id} />
           <Link to="/me/settings" className="btn btn-small me-settings-btn"><GearIcon size={16} /> 계정 설정</Link>
+          <Link to="/inquiries" className="btn btn-small me-settings-btn"><HelpIcon size={16} /> 문의 내역</Link>
         </div>
       </div>
       {auth.isOperator ? (

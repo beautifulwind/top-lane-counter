@@ -5,7 +5,7 @@ import { signOut } from '../api/auth';
 import { getUnreadCount, onNotificationsChanged } from '../api/notifications';
 import { isGuest, useAuth } from '../lib/auth';
 import { isCurrentNav, navItemsFor } from '../lib/navItems';
-import { BellIcon, MenuIcon, MessageIcon, ShieldIcon, UserIcon, XIcon } from './Icons';
+import { BellIcon, HelpIcon, MenuIcon, MessageIcon, ShieldIcon, UserIcon, XIcon } from './Icons';
 import UserName from './UserName';
 
 /**
@@ -24,7 +24,7 @@ export function accountKind(auth) {
 
 export const logout = () => signOut().catch((e) => alert(e.message));
 
-const ICONS = { user: UserIcon, message: MessageIcon, shield: ShieldIcon, bell: BellIcon };
+const ICONS = { user: UserIcon, message: MessageIcon, shield: ShieldIcon, bell: BellIcon, help: HelpIcon };
 
 /**
  * 안 읽은 알림 개수 (빨간 점). 페이지를 옮길 때와 읽음 처리했을 때 다시 센다.

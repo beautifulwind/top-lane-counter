@@ -25,6 +25,12 @@ const BOARD_ICON = {
 /** 칭호 알림 문장("칭호 '장군'을 얻었습니다…")에서 칭호 키 */
 const titleKeyIn = (message) => Object.keys(TITLES).find((k) => message?.includes(`'${TITLES[k]}'`)) ?? null;
 
+/** 문의 답변 알림 문장("\"오류 신고\" 문의에 답변이…")에서 분류 이름 */
+const inquiryCategoryIn = (message) => {
+  const m = /^"([^"]+)" 문의/.exec(message ?? '');
+  return m ? `분류: ${m[1]}` : null;
+};
+
 /**
  * n = getNotifications()의 한 줄, name = 챔피언 id → 이름.
  * 돌려주는 값: { icon, title, subject(매치업 등, 없으면 null), detail(메모 등), to(없으면 null), titleKey(칭호 훈장) }
@@ -47,6 +53,7 @@ export function describeNotification(n, name = (id) => id) {
   if (n.kind === 'title_earned' || n.kind === 'title_revoked') {
     return { icon: 'medal', title: n.message, to: '/me', titleKey: titleKeyIn(n.message) };
   }
+  if (n.kind === 'inquiry_answered') return { icon: 'comment', title: '문의에 답변이 도착했습니다', subject: null, detail: inquiryCategoryIn(n.message), to: '/inquiries' };
   if (n.kind === 'moderator_granted' || n.kind === 'moderator_revoked') {
     const [title, memo] = (n.message ?? '').split(' 메모: ');
     return { icon: 'flag', title, subject: null, detail: memo ? `메모: ${memo}` : null, to: n.kind === 'moderator_granted' ? '/admin' : null };

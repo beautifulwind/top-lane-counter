@@ -915,3 +915,15 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
 .review-warn { margin: 8px 0; }
 .review-warn p { margin: 0; font-weight: 600; }
 .review-warn small { display: block; margin-top: 4px; font-weight: 400; }
+
+/* 문의하기 (032, SPEC 6-19): 내 문의 /inquiries · 운영진 /admin/inquiries */
+.inquiry-list { list-style: none; margin: 12px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.inquiry-row { padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); box-shadow: var(--shadow-card); }
+.inquiry-head { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+.inquiry-state { padding: 0 8px; border: 1px solid var(--line-hover); border-radius: var(--radius-tag); background: var(--raised); font-size: var(--fs-xs); font-weight: 700; line-height: 20px; color: var(--muted); }
+.inquiry-state.answered { border-color: var(--brand); color: var(--brand); }
+.inquiry-body { margin: 6px 0 0; white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
+.inquiry-answer { margin-top: 10px; padding: 10px 12px; border-left: 3px solid var(--brand); border-radius: var(--radius-sm); background: var(--field); }
+.inquiry-answer-head { margin: 0; font-size: var(--fs-sm); }
+.inquiry-answer .inquiry-body { margin-top: 4px; }
+.inquiry-section-link { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }

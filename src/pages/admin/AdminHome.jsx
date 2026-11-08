@@ -25,13 +25,14 @@ import { useAlreadyHandled } from '../../components/AlreadyHandled';
 import { ReviewersWarning } from '../../components/ReviewPresence';
 import OffmetaPicks from '../../components/OffmetaPicks';
 import BoardAdmin from '../../components/BoardAdmin';
+import InquiryAdmin from '../../components/InquiryAdmin';
 import ItemPrices from '../../components/ItemPrices';
 import MediaUsage from '../../components/MediaUsage';
 import { matchupTitle } from '../../lib/josa';
 import VoteTally from '../../components/VoteTally';
 import SectionHead from '../../components/SectionHead';
 import {
-  ClockIcon, CoinsIcon, DiceIcon, EyeOffIcon, ImageIcon, LayersIcon, MessageIcon, SendIcon, ShieldIcon, TrashIcon,
+  ClockIcon, CoinsIcon, DiceIcon, EyeOffIcon, HelpIcon, ImageIcon, LayersIcon, MessageIcon, SendIcon, ShieldIcon, TrashIcon,
 } from '../../components/Icons';
 
 /**
@@ -89,6 +90,10 @@ function ModeratorHome() {
       <section className="section">
         <SectionHead icon={MessageIcon}>자유게시판·댓글</SectionHead>
         <BoardAdmin />
+      </section>
+      <section className="section">
+        <SectionHead icon={HelpIcon}>문의</SectionHead>
+        <InquiryAdmin />
       </section>
     </article>
   );
@@ -212,6 +217,10 @@ function PendingList() {
       <section className="section">
         <SectionHead icon={MessageIcon}>자유게시판·댓글</SectionHead>
         <BoardAdmin />
+      </section>
+      <section className="section">
+        <SectionHead icon={HelpIcon}>문의</SectionHead>
+        <InquiryAdmin />
       </section>
 
       <section className="section">

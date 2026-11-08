@@ -22,6 +22,8 @@ import AdminPreview from './pages/admin/AdminPreview';
 import AdminDelete from './pages/admin/AdminDelete';
 import AdminBuild from './pages/admin/AdminBuild';
 import AdminReports from './pages/admin/AdminReports';
+import AdminInquiries from './pages/admin/AdminInquiries';
+import Inquiries from './pages/Inquiries';
 import Board from './pages/Board';
 import BoardPost from './pages/BoardPost';
 import BoardWrite from './pages/BoardWrite';
@@ -68,6 +70,7 @@ export function AppRoutes() {
           <Route path="me" element={<Me />} />
           <Route path="me/settings" element={<MySettings />} />
           <Route path="notifications" element={<Notifications />} />
+          <Route path="inquiries" element={<Inquiries />} />
           <Route path="me/proposals/:id" element={<MyProposal />} />
           <Route path="me/proposals/:id/edit" element={<Resubmit />} />
           <Route path="me/builds/:id" element={<MyBuild />} />
@@ -83,6 +86,7 @@ export function AppRoutes() {
           <Route path="admin/delete/:targetId/:counterId" element={<AdminDelete />} />
           <Route path="admin/builds/:id" element={<AdminBuild />} />
           <Route path="admin/reports" element={<AdminReports />} />
+          <Route path="admin/inquiries" element={<AdminInquiries />} />
           <Route path="board" element={<Board />} />
           <Route path="board/new" element={<BoardWrite />} />
           <Route path="board/:id" element={<BoardPost />} />

@@ -9,6 +9,8 @@ export const NAV_ITEMS = [
   // 새 알림 빨간 점은 [알림] 옆 (☰에도). 로그인한 사람 모두 (비회원·닉네임 전·운영자 포함)
   { key: 'notifications', to: '/notifications', label: '알림', icon: 'bell', needs: 'signedIn', menu: true, tab: true, bar: false, dot: 'unread' },
   { key: 'board', to: '/board', label: '자유게시판', icon: 'message', needs: 'any', menu: true, tab: true, bar: false },
+  // 문의하기 (032): 로그인한 사람 모두 (비회원·닉네임 전 포함). 답변은 알림과 이 화면으로
+  { key: 'inquiries', to: '/inquiries', label: '문의하기', icon: 'help', needs: 'signedIn', menu: true, tab: false, bar: false },
   { key: 'admin', to: '/admin', label: '관리', icon: 'shield', needs: 'staff', menu: true, tab: false, bar: false, tone: 'op' },
 ];
 

@@ -112,7 +112,7 @@ export default function Terms() {
         <h2>제9조 (탈퇴)</h2>
         <p>
           이용자는 언제든지 [마이페이지] → [계정 설정](<Link to="/me/settings">/me/settings</Link>)의 &ldquo;회원 탈퇴&rdquo;에서 직접 탈퇴할 수 있습니다 (운영자 계정 제외).
-          직접 할 수 없으면 가입한 이메일로 운영자 이메일({email})에 요청할 수 있으며, 자세한 절차와 탈퇴 후 처리는
+          직접 할 수 없으면 사이트의 <Link to="/inquiries">[문의하기]</Link>에서 &ldquo;계정·탈퇴&rdquo;를 골라 요청하거나, 로그인이 안 될 때는 가입한 이메일로 운영자 이메일({email})에 요청할 수 있으며, 자세한 절차와 탈퇴 후 처리는
           <Link to="/privacy">개인정보처리방침</Link>을 따릅니다.
           비회원은 [마이페이지](닉네임 전이면 닉네임 정하기 화면)의 &ldquo;비회원 기록 지우기&rdquo;로 직접 지울 수 있습니다.
         </p>
@@ -143,7 +143,8 @@ export default function Terms() {
 
       <section>
         <h2>문의</h2>
-        <p>운영자 이메일: {email}</p>
+        <p>문의: 로그인 후 ☰ 메뉴의 <Link to="/inquiries">[문의하기]</Link> (오류 신고·건의·계정·탈퇴·기타)</p>
+        <p>로그인이 안 되는 등 문의를 보낼 수 없을 때: 운영자 이메일 {email}</p>
         <p>시행일: <LegalFill value={LEGAL.effectiveDate} label="시행일" /></p>
       </section>
     </article>
