@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { Suspense, lazy, useEffect } from 'react';
 import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -11,29 +11,63 @@ import Welcome from './pages/Welcome';
 import Me from './pages/Me';
 import MySettings from './pages/MySettings';
 import Notifications from './pages/Notifications';
-import ProposeCounter from './pages/ProposeCounter';
-import ProposeEdit from './pages/ProposeEdit';
-import ProposeBuild from './pages/ProposeBuild';
-import AdminHome from './pages/admin/AdminHome';
-import AdminProposal from './pages/admin/AdminProposal';
-import AdminOrder from './pages/admin/AdminOrder';
-import AdminHistory from './pages/admin/AdminHistory';
-import AdminPreview from './pages/admin/AdminPreview';
-import AdminDelete from './pages/admin/AdminDelete';
-import AdminBuild from './pages/admin/AdminBuild';
-import AdminReports from './pages/admin/AdminReports';
-import AdminInquiries from './pages/admin/AdminInquiries';
 import Inquiries from './pages/Inquiries';
 import Board from './pages/Board';
 import BoardPost from './pages/BoardPost';
 import BoardWrite from './pages/BoardWrite';
-import Resubmit from './pages/Resubmit';
-import ResubmitBuild from './pages/ResubmitBuild';
 import MyProposal from './pages/MyProposal';
 import MyBuild from './pages/MyBuild';
-import Privacy from './pages/Privacy';
-import Terms from './pages/Terms';
 import { AuthProvider } from './lib/auth';
+import { Loading } from './components/Status';
+
+const RELOAD_KEY = 'tlc:chunk-reloaded';
+
+/**
+ * 자주 안 쓰는 화면(운영자·감독관 /admin, 제안·빌드 작성, 방침·약관)은 처음 들어갈 때만 불러온다
+ * — 첫 화면(홈·챔피언·매치업·로그인·마이페이지·자유게시판)의 자바스크립트가 작아진다. 불러오는 동안은 "불러오는 중…".
+ */
+function lazyPage(load) {
+  // 새 버전을 배포한 뒤에는 옛 화면 조각 파일이 사라져 불러오기가 실패할 수 있다 → 한 번만 새로고침해서 새 버전을 받는다
+  const Page = lazy(() => load().then(
+    (module) => {
+      try { sessionStorage.removeItem(RELOAD_KEY); } catch { /* 저장소를 못 써도 화면은 그대로 */ }
+      return module;
+    },
+    (error) => {
+      try {
+        if (!sessionStorage.getItem(RELOAD_KEY)) {
+          sessionStorage.setItem(RELOAD_KEY, '1');
+          window.location.reload();
+          return new Promise(() => {}); // 새로고침되는 동안 "불러오는 중…"
+        }
+      } catch { /* 저장소를 못 쓰면 아래에서 그냥 오류 */ }
+      throw error; // 이미 한 번 새로고침했으면 오류 화면(ErrorBoundary)
+    },
+  ));
+  return function LazyPage(props) {
+    return (
+      <Suspense fallback={<Loading />}>
+        <Page {...props} />
+      </Suspense>
+    );
+  };
+}
+const ProposeCounter = lazyPage(() => import('./pages/ProposeCounter'));
+const ProposeEdit = lazyPage(() => import('./pages/ProposeEdit'));
+const ProposeBuild = lazyPage(() => import('./pages/ProposeBuild'));
+const AdminHome = lazyPage(() => import('./pages/admin/AdminHome'));
+const AdminProposal = lazyPage(() => import('./pages/admin/AdminProposal'));
+const AdminOrder = lazyPage(() => import('./pages/admin/AdminOrder'));
+const AdminHistory = lazyPage(() => import('./pages/admin/AdminHistory'));
+const AdminPreview = lazyPage(() => import('./pages/admin/AdminPreview'));
+const AdminDelete = lazyPage(() => import('./pages/admin/AdminDelete'));
+const AdminBuild = lazyPage(() => import('./pages/admin/AdminBuild'));
+const AdminReports = lazyPage(() => import('./pages/admin/AdminReports'));
+const AdminInquiries = lazyPage(() => import('./pages/admin/AdminInquiries'));
+const Resubmit = lazyPage(() => import('./pages/Resubmit'));
+const ResubmitBuild = lazyPage(() => import('./pages/ResubmitBuild'));
+const Privacy = lazyPage(() => import('./pages/Privacy'));
+const Terms = lazyPage(() => import('./pages/Terms'));
 
 function ScrollToTop() {
   const { pathname } = useLocation();
