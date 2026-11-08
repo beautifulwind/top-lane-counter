@@ -427,7 +427,8 @@ button.champ-cell:disabled { opacity: .4; cursor: default; }
 .order-row { display: flex; align-items: center; gap: var(--gap-md); padding: var(--gap-sm) var(--pad-box); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--paper); }
 .order-row.dragging { position: relative; z-index: 1; box-shadow: 0 4px 12px var(--shadow); }
 .order-row img { border-radius: var(--radius-sm); }
-.order-name { flex: 1; font-weight: 600; }
+.order-name { flex: 1; min-width: 0; font-weight: 600; overflow-wrap: anywhere; }
+.order-moves { display: flex; gap: var(--gap-sm); flex: none; }
 .drag-handle { min-width: 44px; min-height: 44px; border: 0; background: none; font-size: var(--fs-xl); cursor: grab; touch-action: none; color: var(--muted); }
 
 /* 카운터 숨기기 / 다시 공개 */
@@ -949,3 +950,13 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
 }
 .update-banner span { min-width: 0; overflow-wrap: anywhere; }
 .update-banner .btn { flex: none; }
+
+/* /admin 폰 폭(360~400px) 점검: 긴 닉네임·메모·주소가 칸을 밀어내지 않고 줄바꿈, 순서 변경 줄은 버튼이 아래 줄로 */
+.proposal-row, .revision, .note-form, .approve-editor { min-width: 0; }
+.proposal-main, .proposal-meta, .reject-reason, .block-reason, .hidden-state, .approve-note, .revision-note p, .log-list, .hint-list,
+.diff-tag, .edit-link { overflow-wrap: anywhere; }
+.view-switch .btn { min-width: 0; }
+@media (max-width: 420px) {
+  .order-row { flex-wrap: wrap; row-gap: var(--gap-xs); }
+  .order-moves { flex-basis: 100%; justify-content: flex-end; }
+}

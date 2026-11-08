@@ -141,8 +141,10 @@ function OrderRow({ id, rank, champ, fallback, onUp, onDown, first, last }) {
       <span className="rank">{rank}</span>
       {champ && <img src={champ.icon} alt="" width="36" height="36" />}
       <span className="order-name">{name}</span>
-      <button type="button" className="btn btn-small btn-op" onClick={onUp} disabled={first} aria-label={`${name} 위로`}>▲</button>
-      <button type="button" className="btn btn-small btn-op" onClick={onDown} disabled={last} aria-label={`${name} 아래로`}>▼</button>
+      <span className="order-moves">
+        <button type="button" className="btn btn-small btn-op" onClick={onUp} disabled={first} aria-label={`${name} 위로`}>▲</button>
+        <button type="button" className="btn btn-small btn-op" onClick={onDown} disabled={last} aria-label={`${name} 아래로`}>▼</button>
+      </span>
     </li>
   );
 }
