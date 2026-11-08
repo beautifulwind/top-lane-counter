@@ -29,3 +29,6 @@ export function db() {
   client ??= createClient(url, key, { auth: { flowType: 'pkce' } });
   return client;
 }
+
+/** 화면을 닫는 순간 keepalive 요청을 직접 보낼 때만 쓴다 (주소와 공개 키) */
+export const restConfig = () => ({ url, key });

@@ -910,3 +910,8 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
   .btn:active, .vote:active, .pick:active, .icon-btn:active, .medal:active, .champ-cell:active,
   .champ-cell:hover img, .counter-row:hover img { transform: none !important; }
 }
+
+/* 031: 다른 운영진이 같은 제안을 보고 있다는 경고 (막지 않고 알리기만) */
+.review-warn { margin: 8px 0; }
+.review-warn p { margin: 0; font-weight: 600; }
+.review-warn small { display: block; margin-top: 4px; font-weight: 400; }

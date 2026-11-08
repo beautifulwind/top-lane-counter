@@ -18,6 +18,8 @@ import NoteForm from '../../components/NoteForm';
 import BuildCard from '../../components/BuildCard';
 import ApproveEditor from '../../components/ApproveEditor';
 import { EditedBadge, useAuthorChanged } from '../../components/AuthorChanged';
+import { useAlreadyHandled } from '../../components/AlreadyHandled';
+import ReviewPresence from '../../components/ReviewPresence';
 import { proposalBuildBlock, sameBuild } from '../../lib/buildContent';
 import { matchupTitle } from '../../lib/josa';
 
@@ -44,6 +46,8 @@ function Review() {
   // 'approve'(고쳐서 승인 편집기) | 'revision' | 'reject' | 'cancel' | null — 목록 줄의 [내용 고치기]로 오면 [승인]이 열려 있다
   const [open, setOpen] = useState(search.get('approve') ? 'approve' : null);
   const { guard, notice } = useAuthorChanged(retry);
+  // 다른 운영진이 먼저 처리했으면 오류 화면 대신 안내하고 목록으로 (목록은 새로 불러옴)
+  const handled = useAlreadyHandled((message) => navigate('/admin', { state: { done: message } }));
 
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
@@ -64,11 +68,11 @@ function Review() {
   const cannotApprove = hidden || (p.type === 'new_counter' && exists) || noBuild;
   const done = (what) => navigate('/admin', { state: { done: `${what}: [${label}] ${title}` } });
   // 메모 입력이 확인 단계: 실패하면 NoteForm이 이유를 보여 주고 그대로 둔다
-  const approve = guard(async ({ note, content, build }) => {
+  const approve = guard(handled(async ({ note, content, build }) => {
     await approveProposal(p, note, { content, build, patch: data.game.latest });
     const how = content || build ? '고쳐서 ' : '';
     done(resubmitted ? `${how}승인하고 다시 공개했습니다` : `${how}승인했습니다`);
-  });
+  }));
   const toggle = (kind) => setOpen(open === kind ? null : kind);
 
   return (
@@ -81,6 +85,7 @@ function Review() {
         <span className={`status-badge ${p.status}`}>{STATUS_LABEL[p.status]}</span>
         <EditedBadge row={p} />
       </p>
+      {p.status === 'pending' && canReview && <ReviewPresence proposalId={p.id} />}
 
       {hidden && p.status === 'pending' && (
         <p className="warn" role="alert">
@@ -203,10 +208,10 @@ function Review() {
               confirmLabel="재검토 요청 확정"
               busyLabel="보내는 중…"
               onCancel={() => setOpen(null)}
-              onSubmit={guard(async (note) => {
+              onSubmit={guard(handled(async (note) => {
                 await requestProposalRevision(p, note);
                 done('재검토를 요청했습니다');
-              })}
+              }))}
             />
           )}
           {open === 'reject' && (
@@ -216,10 +221,10 @@ function Review() {
               confirmLabel="거절 확정"
               busyLabel="거절 중…"
               onCancel={() => setOpen(null)}
-              onSubmit={guard(async (note) => {
+              onSubmit={guard(handled(async (note) => {
                 await rejectProposal(p, note);
                 done('거절했습니다');
-              })}
+              }))}
             />
           )}
         </section>
@@ -247,10 +252,10 @@ function Review() {
                   confirmLabel="요청 취소 확정"
                   busyLabel="취소하는 중…"
                   onCancel={() => setOpen(null)}
-                  onSubmit={async (note) => {
+                  onSubmit={handled(async (note) => {
                     await cancelProposalRevision(p.id, note);
                     done('재검토 요청을 취소했습니다');
-                  }}
+                  })}
                 />
               )}
               {open === 'reject' && (
@@ -260,10 +265,10 @@ function Review() {
                   confirmLabel="거절 확정"
                   busyLabel="거절 중…"
                   onCancel={() => setOpen(null)}
-                  onSubmit={async (note) => {
+                  onSubmit={handled(async (note) => {
                     await rejectProposal(p, note);
                     done('거절했습니다');
-                  }}
+                  })}
                 />
               )}
             </>

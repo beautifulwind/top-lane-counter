@@ -21,6 +21,8 @@ import { isStaffPerson } from '../../lib/nickname';
 import UserName from '../../components/UserName';
 import NoteForm from '../../components/NoteForm';
 import { EditedBadge, useAuthorChanged } from '../../components/AuthorChanged';
+import { useAlreadyHandled } from '../../components/AlreadyHandled';
+import { ReviewersWarning } from '../../components/ReviewPresence';
 import OffmetaPicks from '../../components/OffmetaPicks';
 import BoardAdmin from '../../components/BoardAdmin';
 import ItemPrices from '../../components/ItemPrices';
@@ -277,6 +279,7 @@ function PendingRow({ proposal: p, name, game, onDone, onReload }) {
   const [open, setOpen] = useState(null); // 'approve' | 'revision' | 'reject' | null
   const { isOperator } = useAuth();
   const { guard, notice } = useAuthorChanged(onReload);
+  const handled = useAlreadyHandled(onDone); // 다른 운영진이 먼저 처리했으면 안내 + 목록 새로고침
   const title = `${matchupTitle(name(p.counter_champion), name(p.target_champion))}`;
   const label = p.resubmitted ? '재검토 후 다시 낸 제안' : TYPE_LABEL[p.type];
   const toggle = (kind) => setOpen(open === kind ? null : kind);
@@ -292,6 +295,7 @@ function PendingRow({ proposal: p, name, game, onDone, onReload }) {
         <EditedBadge row={p} />
       </div>
       {notice}
+      <ReviewersWarning reviewers={p.reviewers} />
       {p.block && <p className="block-reason">{p.block} 내용을 [자세히]에서 확인해 주세요.</p>}
       {p.type === 'new_counter' && p.build && (
         <details className="build-summary">
@@ -321,10 +325,10 @@ function PendingRow({ proposal: p, name, game, onDone, onReload }) {
           confirmLabel="승인 확정"
           busyLabel="승인 중…"
           onCancel={() => setOpen(null)}
-          onSubmit={guard(async (note) => {
+          onSubmit={guard(handled(async (note) => {
             await approveProposal(p, note);
             onDone(`${p.resubmitted ? '승인하고 다시 공개' : '승인'}했습니다: [${label}] ${title}`);
-          })}
+          }))}
         >
           {isOperator && <Link to={`/admin/proposals/${p.id}?approve=1`} className="edit-link op-link">내용 고치기 (고쳐서 승인)</Link>}
         </NoteForm>
@@ -337,10 +341,10 @@ function PendingRow({ proposal: p, name, game, onDone, onReload }) {
           confirmLabel="재검토 요청 확정"
           busyLabel="보내는 중…"
           onCancel={() => setOpen(null)}
-          onSubmit={guard(async (note) => {
+          onSubmit={guard(handled(async (note) => {
             await requestProposalRevision(p, note);
             onDone(`재검토를 요청했습니다: [${label}] ${title}`);
-          })}
+          }))}
         />
       )}
       {open === 'reject' && (
@@ -350,10 +354,10 @@ function PendingRow({ proposal: p, name, game, onDone, onReload }) {
           confirmLabel="거절 확정"
           busyLabel="거절 중…"
           onCancel={() => setOpen(null)}
-          onSubmit={guard(async (reason) => {
+          onSubmit={guard(handled(async (reason) => {
             await rejectProposal(p, reason);
             onDone(`거절했습니다: [${label}] ${title}`);
-          })}
+          }))}
         />
       )}
     </li>
@@ -597,6 +601,7 @@ function WaitingRow({ kind, item, name, game, onDone }) {
   const label = isBuild ? '빌드' : TYPE_LABEL[item.type];
   const who = isBuild ? displayNickname(item.author) : displayNickname(item.proposer);
   const detail = isBuild ? `/admin/builds/${item.id}` : `/admin/proposals/${item.id}`;
+  const handled = useAlreadyHandled(onDone);
   const toggle = (k) => setOpen(open === k ? null : k);
   const what = `[${label}] ${title} (${who})`;
 
@@ -630,10 +635,10 @@ function WaitingRow({ kind, item, name, game, onDone }) {
           confirmLabel="요청 취소 확정"
           busyLabel="취소하는 중…"
           onCancel={() => setOpen(null)}
-          onSubmit={async (note) => {
+          onSubmit={handled(async (note) => {
             await (isBuild ? cancelBuildRevision(item.id, note) : cancelProposalRevision(item.id, note));
             onDone(`재검토 요청을 취소했습니다: ${what}`);
-          }}
+          })}
         />
       )}
       {open === 'reject' && (
@@ -643,10 +648,10 @@ function WaitingRow({ kind, item, name, game, onDone }) {
           confirmLabel="거절 확정"
           busyLabel="거절 중…"
           onCancel={() => setOpen(null)}
-          onSubmit={async (reason) => {
+          onSubmit={handled(async (reason) => {
             await (isBuild ? rejectBuild(item, reason) : rejectProposal(item, reason));
             onDone(`거절했습니다: ${what}`);
-          }}
+          })}
         />
       )}
     </li>

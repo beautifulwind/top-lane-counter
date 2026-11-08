@@ -97,7 +97,7 @@ export const EMPTY_USAGE = () => ({
 // 테스트가 바꾸는 상태. setupTests.js가 테스트마다 초기화한다.
 export const fakeState = {
   error: null, session: null, initError: null, oauthCalls: [], linkCalls: [], linkError: null, listeners: new Set(),
-  inserts: [], insertError: null, rpcCalls: [], rpcError: null, boardError: null,
+  inserts: [], insertError: null, rpcCalls: [], rpcError: null, rpcErrorCode: null, reviewCalls: [], reviewers: {}, boardError: null,
   functionCalls: [], functionError: null, // Edge Function 호출 (017 delete-account)
   anonCalls: [], anonError: null, anonDelay: null, hideCounts: {}, signOutCalls: [], touched: 0, // 비회원 (020)
   uploads: [], uploadError: null, mediaProblem: null, mediaUsage: EMPTY_USAGE(), // 사진 (023, mediaUsage = media_usage 결과)
@@ -137,6 +137,9 @@ export function resetFake() {
   fakeState.insertError = null;
   fakeState.rpcCalls = [];
   fakeState.rpcError = null;
+  fakeState.rpcErrorCode = null;
+  fakeState.reviewCalls = [];
+  fakeState.reviewers = {};
   fakeState.boardError = null;
   fakeState.anonCalls = [];
   fakeState.anonError = null;
@@ -348,6 +351,17 @@ async function rpc(name, args) {
     fakeState.moderatorReportsAsked = true;
     return { data: visibleRows('reports').filter((r) => r.status === 'open').map((r) => ({ ...r, reporter_id: null, reporter: null })), error: null };
   }
+  if (['start_proposal_review', 'end_proposal_review', 'proposal_reviewers'].includes(name)) {
+    // 031 "검토 중" 표시: 화면이 알아서 부르는 것이라 rpcCalls에는 넣지 않고 reviewCalls에 남긴다.
+    // fakeState.reviewers = { 제안id: [{ nickname, role, started_at }] } (나 말고 검토 중인 사람)
+    if (!isStaffNow()) return { data: null, error: { message: '운영진만 할 수 있습니다.', code: '42501' } };
+    fakeState.reviewCalls.push({ name, args });
+    if (name === 'start_proposal_review') return { data: fakeState.reviewers[args.p_id] ?? [], error: null };
+    if (name === 'proposal_reviewers') {
+      return { data: Object.fromEntries(args.p_ids.filter((id) => fakeState.reviewers[id]?.length).map((id) => [String(id), fakeState.reviewers[id]])), error: null };
+    }
+    return { data: null, error: null };
+  }
   if (name === 'media_upload_problem') return { data: fakeState.mediaProblem, error: null }; // 화면이 알아서 묻는 것
   if (name === 'media_usage') {
     if (!isAdminNow()) return { data: null, error: { message: '운영자만 할 수 있습니다.', code: '42501' } };
@@ -358,7 +372,7 @@ async function rpc(name, args) {
     return { data: null, error: null };
   }
   fakeState.rpcCalls.push({ name, args });
-  if (fakeState.rpcError) return { data: null, error: { message: fakeState.rpcError, code: '42501' } };
+  if (fakeState.rpcError) return { data: null, error: { message: fakeState.rpcError, code: fakeState.rpcErrorCode ?? '42501' } };
   if (name === 'mark_all_notifications_read') {
     // DB 함수처럼 내 것 중 p_upto 번호까지 한 번에, 처리한 시각을 돌려준다
     const me = fakeState.session?.user.id;

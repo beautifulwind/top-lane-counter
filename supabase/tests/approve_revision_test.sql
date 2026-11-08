@@ -127,13 +127,13 @@ select t.fails('일반 유저는 재검토 요청 불가', format($$select reque
 
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select t.fails('재검토 요청: 메모 필수', format($$select request_proposal_revision(%s, ' ', t.pv(%1$s))$$, (select v from ids where k = 'edit2')), '재검토 요청 메모를 적어');
-select t.fails('처리된 제안은 재검토 요청 불가', format($$select request_proposal_revision(%s, '고쳐', t.pv(%1$s))$$, (select v from ids where k = 'edit1')), '승인 대기 중인 제안만');
+select t.fails('처리된 제안은 재검토 요청 불가', format($$select request_proposal_revision(%s, '고쳐', t.pv(%1$s))$$, (select v from ids where k = 'edit1')), '이미 다른 분이 처리했습니다');
 select request_proposal_revision((select v from ids where k = 'edit2'), ' 근거를 더 적어 주세요 ', t.pv((select v from ids where k = 'edit2')));
 select t.ok('재검토 요청: 상태·메모(공백 정리)·요청한 사람',
   (select status = 'revision_requested' and revision_note = '근거를 더 적어 주세요' and revision_requested_by = auth.uid()
    from edit_proposals where id = (select v from ids where k = 'edit2')));
 select t.fails('두 번 요청 불가', format($$select request_proposal_revision(%s, '또', t.pv(%1$s))$$, (select v from ids where k = 'edit2')), '이미 재검토를 요청');
-select t.fails('재검토 중에는 승인 불가', format($$select approve_proposal(%s, '메모', null, null, t.pv(%1$s))$$, (select v from ids where k = 'edit2')), '이미 처리된');
+select t.fails('재검토 중에는 승인 불가', format($$select approve_proposal(%s, '메모', null, null, t.pv(%1$s))$$, (select v from ids where k = 'edit2')), '이미 다른 분이 처리했습니다');
 
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.ok('제안자에게 재검토 알림 (메모)',
@@ -167,7 +167,7 @@ select cancel_proposal_revision((select v from ids where k = 'edit2'), '제가 �
 select t.ok('요청 취소: 원래대로 승인 대기, 재검토 칸 비움',
   (select status = 'pending' and revision_note is null and revision_requested_at is null and content ->> 'summary' = '가렌 요약 v4'
    from edit_proposals where id = (select v from ids where k = 'edit2')));
-select t.fails('대기 중이면 요청 취소 불가', format($$select cancel_proposal_revision(%s, '또')$$, (select v from ids where k = 'edit2')), '재검토 요청 중인 제안이 아닙니다');
+select t.fails('대기 중이면 요청 취소 불가', format($$select cancel_proposal_revision(%s, '또')$$, (select v from ids where k = 'edit2')), '이미 다른 분이 처리했습니다');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.ok('요청 취소: 재검토 알림은 읽음 + 취소 알림(메모)',
   (select bool_and(read_at is not null) from notifications where proposal_id = (select v from ids where k = 'edit2') and kind = 'revision_request')

@@ -1,6 +1,6 @@
 // 제안·승인 접근 계층. 화면 컴포넌트는 이 모듈만 호출한다.
 // 권한은 DB가 막는다: 제안 넣기는 RLS + 검사 트리거, 승인·거절·순서·되돌리기는 운영자 전용 함수(rpc).
-import { db } from './supabase';
+import { db, restConfig } from './supabase';
 import { cleanDoc } from '../lib/docContent';
 import { proposalBuildBlock, toProposalBuild } from '../lib/buildContent';
 
@@ -17,7 +17,7 @@ function friendly(error, fallback) {
   const msg = error?.message ?? '';
   if (/row-level security/i.test(msg)) return new Error('제안할 권한이 없습니다. 로그인하고 닉네임을 정했는지 확인해 주세요.');
   if (/permission denied/i.test(msg)) return new Error('권한이 없습니다. (운영자만 할 수 있는 작업입니다)');
-  if (/[가-힣]/.test(msg)) return new Error(msg);
+  if (/[가-힣]/.test(msg)) return Object.assign(new Error(msg), { code: error.code });
   return new Error(`${fallback} (${msg})`);
 }
 
@@ -93,6 +93,9 @@ export const resubmitProposal = (id, content, build, patch) =>
 export const editMyProposal = (id, content, build, patch) =>
   rpc('edit_my_proposal', { p_id: id, p_content: cleanDoc(content), p_build: build ? toProposalBuild(build, patch) : null }, '고치지 못했습니다.');
 
+/** 다른 운영진이 먼저 처리했나 (DB 전용 오류 코드 TL409 — 031) → 안내하고 목록을 새로고침한다 */
+export const isAlreadyHandled = (err) => err?.code === 'TL409';
+
 /** 운영자가 처리하려는 사이 제안자·작성자가 고쳐서 막혔나 → 새 내용을 다시 불러오게 한다 */
 export const isChangedByAuthor = (err) => /방금 고쳤습니다/.test(err?.message ?? '');
 
@@ -153,12 +156,13 @@ export async function getPendingProposals(game) {
       '카운터 목록을 확인하지 못했습니다.',
     ),
   ]);
+  const reviewers = await getProposalReviewers(pending.map((p) => p.id));
   return pending.map((p) => {
     const counter = p.type === 'doc_edit' || isResubmission(p)
       ? counters.find((c) => c.id === p.counter_id)
       : counters.find((c) => c.target_champion === p.target_champion && c.counter_champion === p.counter_champion);
     const flags = reviewFlags(p, counter ?? null);
-    return { ...p, resubmitted: flags.resubmitted, block: quickApproveBlock(p, flags, game) };
+    return { ...p, resubmitted: flags.resubmitted, block: quickApproveBlock(p, flags, game), reviewers: reviewers[p.id] ?? [] };
   });
 }
 
@@ -360,4 +364,52 @@ export function getDeletions() {
       .order('deleted_at', { ascending: false }),
     '삭제 기록을 불러오지 못했습니다.',
   );
+}
+
+
+// ---------------- "검토 중" 표시 (031) ----------------
+// 운영자·감독관만 (DB 함수가 확인). 막지 않고 경고만 한다. 10분 뒤 저절로 사라지고, 제안이 처리되면 DB가 지운다.
+
+// 열기·닫기가 네트워크에서 뒤바뀌지 않게 차례대로 보낸다 (닫았는데 뒤늦게 "열었다"가 도착하는 일 방지)
+let reviewQueue = Promise.resolve();
+const inOrder = (fn) => {
+  const next = reviewQueue.then(fn, fn);
+  reviewQueue = next.catch(() => {});
+  return next;
+};
+
+/** 제안 [자세히]를 열었다: 내 표시를 남기고, 지금 같이 보고 있는 다른 사람 목록 [{ nickname, role, … }]을 돌려준다 */
+export const startProposalReview = (id) =>
+  inOrder(() => rpc('start_proposal_review', { p_id: id }, '검토 중 표시를 남기지 못했습니다.'));
+
+/** 닫았다 / 처리했다: 내 표시를 지운다 */
+export const endProposalReview = (id) =>
+  inOrder(() => rpc('end_proposal_review', { p_id: id }, '검토 중 표시를 지우지 못했습니다.'));
+
+/** 브라우저 탭을 닫을 때: 화면이 사라진 뒤에도 요청이 나가도록 keepalive로 지운다 (못 지우면 10분 뒤 저절로 사라짐) */
+export async function endProposalReviewOnLeave(id) {
+  try {
+    const client = db();
+    const { data } = await client.auth.getSession();
+    const token = data?.session?.access_token;
+    const { url, key } = restConfig();
+    if (!token) return;
+    fetch(`${url}/rest/v1/rpc/end_proposal_review`, {
+      method: 'POST', keepalive: true,
+      headers: { apikey: key, Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ p_id: id }),
+    });
+  } catch {
+    // 못 지워도 10분 뒤 저절로 사라진다
+  }
+}
+
+/** 대기 목록용: { 제안 id: [나 말고 검토 중인 사람] }. 못 불러와도 목록은 그대로 보여 준다 */
+export async function getProposalReviewers(ids) {
+  if (!ids.length) return {};
+  try {
+    return (await rpc('proposal_reviewers', { p_ids: ids }, '검토 중인 사람을 불러오지 못했습니다.')) ?? {};
+  } catch {
+    return {};
+  }
 }

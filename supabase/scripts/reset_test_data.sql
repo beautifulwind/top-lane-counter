@@ -103,6 +103,7 @@ set constraints all immediate;
 delete from public.xp_events;
 delete from public.notifications;
 delete from public.hide_log;
+do $$ begin if to_regclass('public.proposal_reviewing') is not null then execute 'delete from public.proposal_reviewing'; end if; end $$; -- 031 "검토 중" 표시
 delete from public.moderation_log where action not in ('grant_moderator', 'revoke_moderator'); -- 감독관 지정·해제 기록은 계정 정보처럼 남긴다
 
 -- 018 백업 표 (지운 빌드의 예전 스킬 순서가 남아 있음): 있으면 비운다

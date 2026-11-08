@@ -128,8 +128,8 @@ select t.ok('새 카운터 승인: 문서 + 첫 기록(create) + 제안에 카�
           and r.approved_by = auth.uid() and p.status = 'approved' and p.counter_id = :garen and p.reviewed_at is not null
    from matchup_docs d join doc_revisions r on r.id = d.revision_id join edit_proposals p on p.id = r.proposal_id
    where d.counter_id = :garen));
-select t.fails('같은 제안 두 번 승인', format($$select approve_proposal(%s, '좋습니다', null, null, t.pv(%1$s))$$, (select v from ids where k='garen_p')), '이미 처리된');
-select t.fails('처리된 제안 거절', format($$select reject_proposal(%s, '사유', t.pv(%1$s))$$, (select v from ids where k='garen_p')), '이미 처리된');
+select t.fails('같은 제안 두 번 승인', format($$select approve_proposal(%s, '좋습니다', null, null, t.pv(%1$s))$$, (select v from ids where k='garen_p')), '이미 다른 분이 처리했습니다');
+select t.fails('처리된 제안 거절', format($$select reject_proposal(%s, '사유', t.pv(%1$s))$$, (select v from ids where k='garen_p')), '이미 다른 분이 처리했습니다');
 
 -- 거절
 reset role;
