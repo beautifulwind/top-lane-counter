@@ -49,8 +49,8 @@ test('예시 데이터는 다리우스 상대 퀸 하나뿐이다', async () => 
   expect([...rows].map((r) => r.querySelector('strong').textContent)).toEqual(['퀸']);
 });
 
-test.each(['Garen', 'Vayne', 'Teemo'])('예시가 없는 챔피언(%s)은 "아직 등록된 카운터가 없습니다."가 보인다', async (id) => {
+test.each(['Garen', 'Vayne', 'Teemo'])('예시가 없는 챔피언(%s)은 초대 문구 "아직 비어 있습니다. 첫 기여자가 되어 주세요."가 보인다', async (id) => {
   start(`/champion/${id}`);
-  expect(await screen.findByText("아직 등록된 카운터가 없습니다.")).toBeDefined();
+  expect(await screen.findByText('아직 비어 있습니다. 첫 기여자가 되어 주세요.')).toBeDefined();
   expect(document.querySelectorAll('.counter-row')).toHaveLength(0);
 });

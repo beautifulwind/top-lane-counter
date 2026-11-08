@@ -927,3 +927,9 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
 .inquiry-answer-head { margin: 0; font-size: var(--fs-sm); }
 .inquiry-answer .inquiry-body { margin-top: 4px; }
 .inquiry-section-link { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+
+/* 카운터가 하나도 없는 챔피언 페이지의 초대 카드 */
+.invite-card { padding: 16px; border: 1px dashed var(--brand); border-radius: var(--radius); background: var(--paper); }
+.invite-card p { margin: 0 0 8px; }
+.invite-title { font-family: var(--font-display); font-size: var(--fs-lg); color: var(--brand); }
+.invite-card .actions { margin-top: 12px; }

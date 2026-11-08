@@ -11,11 +11,11 @@ import EnemyCard from '../components/EnemyCard';
 import SectionHead from '../components/SectionHead';
 import { ChevronIcon, SparklesIcon } from '../components/Icons';
 import NotFound from './NotFound';
-import { matchupTitle } from '../lib/josa';
+import { josa, matchupTitle } from '../lib/josa';
 
 export default function Champion() {
   const { id } = useParams();
-  const { isOperator } = useAuth();
+  const { isOperator, status } = useAuth();
   const [hiding, setHiding] = useState(null); // 숨기기 사유 입력창을 연 카운터 id
   const location = useLocation();
   const [done, setDone] = useState(location.state?.done ?? null); // 숨긴 뒤 안내 (매치업 문서에서 숨기고 온 경우 포함)
@@ -32,6 +32,7 @@ export default function Champion() {
   const target = data.champs[id];
   if (!target) return <NotFound />;
   const shown = data.counters.filter((c) => data.champs[c.counter_champion]);
+  const signedIn = status === 'signedIn';
 
   return (
     <article>
@@ -48,7 +49,24 @@ export default function Champion() {
         <SectionHead icon={SparklesIcon} num={1} count={shown.length}>{target.name} 카운터</SectionHead>
 
         {shown.length === 0 ? (
-          <p className="empty">아직 등록된 카운터가 없습니다.</p>
+          <div className="invite-card">
+            <p className="invite-title">아직 비어 있습니다. 첫 기여자가 되어 주세요.</p>
+            <p>
+              {josa(target.name, '을/를')} 이기는 챔피언과 공략을 제안해 주세요. 운영자가 확인한 뒤 공개합니다.
+            </p>
+            {signedIn ? (
+              <div className="actions">
+                <Link to={`/champion/${id}/propose`} className="btn btn-primary">+ 카운터 등록</Link>
+              </div>
+            ) : (
+              <>
+                <p className="hint">카운터를 제안하려면 로그인해 주세요.</p>
+                <div className="actions">
+                  <Link to="/login" state={{ from: `/champion/${id}/propose` }} className="btn btn-primary">로그인하고 카운터 등록</Link>
+                </div>
+              </>
+            )}
+          </div>
         ) : (
           <ol className="counter-list cards">
             {shown.map((c, i) => {
@@ -101,7 +119,7 @@ export default function Champion() {
         )}
 
         <div className="actions">
-          <Link to={`/champion/${id}/propose`} className="btn">+ 카운터 등록</Link>
+          {shown.length > 0 && <Link to={`/champion/${id}/propose`} className="btn">+ 카운터 등록</Link>}
           {isOperator && <Link to={`/admin/order/${id}`} className="btn btn-op">순서 변경</Link>}
         </div>
       </section>
