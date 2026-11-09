@@ -463,7 +463,7 @@
   | 지정·해제, 계정 삭제, 문의 분류 옮기기, 아이템 가격, 빌드 처리, 카운터 숨김·삭제, 문서 수정 제안, 재검토 요청, 순서 변경, 되돌리기, 비주류 픽, 사진 용량 | O | X |
 - **검사 위치**: DB 함수와 RLS (`is_admin()`은 그대로 운영자만이라 기본 거부, 새 `is_moderator()`·`is_staff()`). 화면은 버튼만 맞춰 보여 줄 뿐이다. 클라이언트에 service_role·secret 키를 쓰지 않는다. `/admin`은 감독관에게 허용된 구역만 보이고 다른 구역 데이터는 불러오지 않는다.
 - **경험치**: 승인자는 경험치를 받지 않는다. 제안자의 +100은 누가 승인하든 같은 경로(`rewards_on_proposal` → `sync_rewards`)로 지급. 본인·운영진 제안은 감독관이 처리할 수 없어 스스로 지급할 수 없다. 숨김에 따른 회수(글 −5·댓글 −1)도 같다.
-- **처리 기록** `moderation_log` (7장): 운영자의 처리도 함께 남긴다. 탈퇴 후에도 남고(개인정보처리방침 4조), 운영자만 `/admin` "감독관 관리"에서 본다. 테스트 데이터 비우기는 지정·해제 기록만 남긴다.
+- **처리 기록** `moderation_log` (7장): 운영자의 처리도 함께 남긴다. 탈퇴 후에도 남고(개인정보처리방침 4조), 운영자만 `/admin` "감독관 관리"에서 본다. **처리한 날부터 1년(365일, `xp_rules.moderation_log_keep_days`)이 지나면 `purge_old_moderation_log()`가 매일 지운다**(035, 6-22). 테스트 데이터 비우기는 지정·해제 기록을 포함해 처리 기록을 전부 지운다.
 
 ### 6-19. 문의하기 (2026-11-08, 032)
 - **누가 보내나**: 로그인한 사람 누구나 — 비회원·닉네임을 정하기 전도 된다(계정·탈퇴 문제는 닉네임 전에도 생기므로 `NICKNAME_ROUTES`에 넣지 않았다). 로그인 전에는 `/inquiries`가 로그인 화면으로 보낸다. ☰ 메뉴 [문의하기]와 마이페이지 프로필 카드 [문의 내역]에서 들어온다.
@@ -524,6 +524,13 @@
 - **하위 호환**: 있던 표·함수의 모양(인자·반환)은 그대로, 새 칸은 기본 켜짐이라 실행 직후 동작이 같다. 034를 실행하고 새 코드를 아직 push하지 않으면 옛 화면은 `counter_restored`를 모르는 종류로 보고 메모 문장만 보여 준다(깨지지 않음). 순서: 034 실행 → `check_operator_mode.sql` 확인 → push.
 - **테스트 데이터 비우기**: 새 표가 없어 스크립트는 그대로(알림은 이미 비우고, 프로필은 남긴다 — 운영자 모드 값도 그대로 남으니 공개 전 [계정 설정]에서 켜져 있는지 본다).
 - **확인 조회**: `supabase/scripts/check_operator_mode.sql` (034 실행 전·후 한 번씩, 18줄 표, 마지막이 조회문이라 SQL Editor에 결과 표가 나온다).
+
+### 6-22. 처리 기록 1년 보관 · 시행일 (2026-11-09, 035)
+- **보관**: `moderation_log`는 처리한 날(`created_at`)부터 **365일**(`xp_rules.moderation_log_keep_days`)이 지나면 `purge_old_moderation_log()`(보안 정의자, 사람은 못 부름)가 지운 개수를 돌려주며 지운다. 지정·해제 기록도 같은 기준. pg_cron `purge-old-moderation-log` 매일 한국 시간 새벽 4시 20분(`20 19 * * *`) — 겹치지 않게: 알림 4:00 · 문의 4:10 · 처리 기록 4:20 · 비회원 정리 4:30 · 사진 정리 4:40. 일정 등록 SQL은 035 파일 맨 아래.
+- **방침 문구** (`Privacy.jsx` 4번, 기존 "~합니다" 말투): "운영진 처리 기록 … 처리한 날부터 1년이 지나면 자동으로 지웁니다", 문의 180일·알림 90일과 같은 형식의 "처리 기록" 문단 추가, 수집 항목 표의 처리 기록 줄에도 "1년 동안 보관" 한마디. 숨김 기록(`hide_log`, 반복 위반 판단용)은 이 기준과 별개로 기존 방침 그대로다. 약관에는 보관 기간 문구가 없고(숨긴 기록을 남긴다는 말만 있음) 다른 보관 기간(비회원 30/90일, 문의 180일, 알림 90일, 사진 하루)과 충돌하지 않는다.
+- **시행일**: `src/lib/legal.js` `effectiveDate` = `2026-11-09`.
+- **확인 조회**: `supabase/scripts/check_purge_moderation_log.sql` (035 실행 전·후, 일정 등록 뒤 한 번씩, 14줄 표, 마지막이 조회문). DB 검사: `supabase/tests/moderation_purge_test.sql`.
+- **테스트 데이터 비우기**: `reset_test_data.sql`·`_preview.sql`를 최신 구조에 맞춤 — 처리 기록 전부 비움, 운영자 계정·운영자 모드 보존 확인(`reset_admins`), 미리 보기에 운영자·모드·감독관·비회원 줄 추가, 번호가 겹치던 줄 정리.
 
 ## 7. 데이터 구조 (Supabase 초안)
 
@@ -588,7 +595,7 @@ RLS 원칙:
 ### 개인정보처리방침 · 이용약관 (작성 완료 — 기능을 바꾸면 함께 고칠 것)
 `/privacy`, `/terms`에 **지금 있는 기능만** 적었다 (법률 검토 아님). 구글 OAuth 동의 화면에 두 주소가 등록돼 있다.
 - **공개 전 체크리스트** (공개 직전에 모두 한다)
-  - `src/lib/legal.js`의 운영자 이메일·Supabase 서버 지역·**시행일**: 시행일은 지금 임시값(2026-11-01)이고, 그 뒤 015·016에서 방침 내용이 바뀌었고 018에서 "노가리방"으로, 024에서 "자유게시판"으로 이름이 바뀌었으므로 **공개하는 날로 바꾼다**. 비어 있으면 페이지에 노란 "【채워 주세요: …】"가 보인다.
+  - `src/lib/legal.js`의 운영자 이메일·Supabase 서버 지역·**시행일**: 시행일은 **2026-11-09**(2026-11-09 갱신, 처리 기록 1년 보관 문구 반영)이다. 공개 날짜가 달라지면 다시 바꾼다. 비어 있으면 페이지에 노란 "【채워 주세요: …】"가 보인다.
   - ~~`README.md`~~ (2026-11-08 완료): 프로젝트 소개·주요 기능·로컬 실행(`npm start`·`npm test`·`supabase/tests/run.sh`)·환경 변수 이름만(`VITE_SUPABASE_URL`·`VITE_SUPABASE_PUBLISHABLE_KEY`·`VITE_TURNSTILE_SITE_KEY`, 값은 쓰지 않음)·배포(Cloudflare Pages)·폴더 구조. 기능이나 환경 변수를 바꾸면 README도 함께 고친다
   - ~~빌드 파일 크기 경고~~ (2026-11-08 해결): 운영자·감독관 `/admin`, 제안·빌드 작성, 방침·약관은 `React.lazy`로 처음 들어갈 때만 불러온다(`App.jsx`의 `lazyPage`, 불러오는 동안 "불러오는 중…"). 처음 자바스크립트 약 739 → 138 kB, 가장 큰 덩어리 약 228 kB(Supabase)라 경고 없음. 새 버전 배포 뒤 옛 조각 파일을 못 받으면 한 번만 자동 새로고침(`sessionStorage` `tlc:chunk-reloaded`), 또 실패하면 오류 화면. 경고 한도 숫자는 올리지 않았다.
   - Google Analytics / MS Clarity 넣기 + 방침 1번(수집 항목)·6번(위탁·국외 이전: Google·Microsoft)·7번(분석 쿠키와 거부 방법) 고치기
@@ -684,7 +691,8 @@ RLS 원칙:
 32. `supabase/migrations/032_inquiries.sql` (문의하기 — 표 `inquiries`·`inquiry_quota`·RLS·함수·알림/처리 기록 종류·설정값. 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행하고, 확인 뒤 새 코드 push. 확인 조회: `supabase/scripts/check_inquiries.sql` — 실행 전·후 한 번씩. **실행 뒤 파일 맨 아래 pg_cron 일정 등록 SQL을 따로 한 번**: `select cron.schedule('purge-old-inquiries', '10 19 * * *', $$select public.purge_old_inquiries()$$);`)
 33. `supabase/migrations/033_admin_convenience.sql` (운영진 새 제안·빌드·문의 알림 · 처리 대기 건수 · 감독관도 고쳐서 승인. 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행하고, 확인 뒤 새 코드 push. 확인 조회: `supabase/scripts/check_admin_convenience.sql` — 실행 전·후 한 번씩)
 34. `supabase/migrations/034_operator_mode_notify.sql` (제안자 알림 보강 — 숨긴 카운터 재검토 요청은 본인 제외, [다시 공개] 알림 `counter_restored` · 운영자 모드 `profiles.operator_mode`·`set_operator_mode`·`is_admin`/`is_staff` 판정·운영진 알림 숨김. 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행하고, 확인 뒤 새 코드 push. 확인 조회: `supabase/scripts/check_operator_mode.sql` — 실행 전·후 한 번씩)
-- **테스트 데이터 비우기** (마이그레이션 아님, 정식 공개 직전 등 필요할 때): `supabase/scripts/reset_test_data_preview.sql`(읽기만 — 지울·남을 개수)로 확인 → `supabase/scripts/reset_test_data.sql`. 계정·프로필·설정값과 트린다미어 상대 말파이트 카운터(지금 문서·공개 빌드·처음 제안)만 남기고, 말파 문서의 수정 기록은 지금 내용 1줄로 정리, 경험치·레벨·칭호는 알림 없이 다시 계산한다. SQL Editor가 RLS를 물으면 **"Run without RLS"**로 실행 ("Run and enable RLS"는 임시 표 `reset_keep` 때문에 에러).
+35. `supabase/migrations/035_purge_moderation_log.sql` (처리 기록 1년 보관 삭제 함수 `purge_old_moderation_log()`·설정값. 아무것도 지우지 않고 더하기만 하므로 지금 화면과 그대로 동작. 실행 뒤 `supabase/scripts/check_purge_moderation_log.sql`로 확인하고, 파일 맨 아래 pg_cron 일정 등록 SQL을 따로 한 번)
+- **테스트 데이터 비우기** (마이그레이션 아님, 정식 공개 직전 등 필요할 때): `supabase/scripts/reset_test_data_preview.sql`(읽기만 — 지울·남을 개수)로 확인 → `supabase/scripts/reset_test_data.sql`. 계정(운영자 계정·운영자 모드 상태·테스트용 구글 계정 포함 — 계정은 하나도 지우지 않는다)·프로필·설정값과 트린다미어 상대 말파이트 카운터(지금 문서·공개 빌드·처음 제안)만 남기고, 문의·처리 기록(`moderation_log`, 감독관 지정·해제 기록 포함)·알림·`proposal_reviewing` 등은 모두 비우며, 말파 문서의 수정 기록은 지금 내용 1줄로 정리, 경험치·레벨·칭호는 알림 없이 다시 계산한다. SQL Editor가 RLS를 물으면 **"Run without RLS"**로 실행 ("Run and enable RLS"는 임시 표 `reset_keep`·`reset_admins` 때문에 에러). 운영자 계정이 없거나 끝에서 운영자 role·모드가 바뀌어 있으면 전부 되돌리고 멈춘다. 되돌릴 수 없으므로 순서는 ① 백업 확인 → ② preview → ③ reset → ④ 결과 표 확인.
 - 합쳐서 한 번에 돌리지 않는다: 파일마다 `begin … commit`이라 중간에 실패하면 앞부분만 반영되고, 다시 돌리면 "already exists"가 난다.
 - 새 마이그레이션(010 …)을 만들면 이 목록에 추가한다. `supabase/tests/run.sh`가 빈 DB에 같은 순서로 실행한 뒤 검사용 데이터(`tests/fixtures.sql`)를 넣고 검사한다 (`supabase/tests`는 실제 프로젝트에서 실행하지 않음).
 

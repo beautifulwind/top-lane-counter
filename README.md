@@ -67,7 +67,8 @@ GitHub Codespaces에서는 열면 개발 서버가 자동으로 3000번에서 �
 - DB 변경은 `supabase/schema.sql` → `supabase/migrations/*.sql`을 번호 순서대로 SQL Editor에서 **파일마다 한 번씩** 실행합니다.
 - 실행 뒤 확인용 조회는 `supabase/scripts/`에 있습니다.
 - Edge Functions(`supabase/functions/`)는 대시보드에서 배포하고, 비밀 값은 Supabase의 Secrets에만 둡니다.
-- 테스트 데이터 비우기 스크립트도 `supabase/scripts/`에 있습니다 (정식 공개 직전 등).
+- 테스트 데이터 비우기 스크립트도 `supabase/scripts/`에 있습니다 (정식 공개 직전 등). 되돌릴 수 없으니 백업 확인 → `reset_test_data_preview.sql`(지울 개수 확인) → `reset_test_data.sql` 순서로 실행합니다. 계정(운영자·운영자 모드 포함)은 지우지 않습니다.
+- 오래된 기록 자동 삭제(알림 90일·문의 180일·처리 기록 1년)는 pg_cron으로 매일 새벽에 돕니다. 035(처리 기록 1년)는 마이그레이션을 실행한 뒤 파일 맨 아래 일정 등록 SQL을 한 번 따로 실행해야 합니다.
 
 ## 배포
 
