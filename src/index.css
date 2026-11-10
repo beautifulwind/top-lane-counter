@@ -862,6 +862,14 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
 .me-level-bar { flex: 1; min-width: 0; }
 .me-op-hint { margin: 0; padding-top: var(--gap-lg); border-top: 1px solid var(--line-soft); }
 .operator-mode-state { margin: 0 0 4px; }
+/* 휴대폰 알림 (037) */
+.push-help { margin: 0 0 var(--gap-md); }
+.push-note { margin: var(--gap-sm) 0 0; }
+.push-kinds { border: 0; margin: var(--gap-lg) 0 0; padding: 0; min-width: 0; display: flex; flex-direction: column; gap: var(--gap-sm); }
+.push-kinds legend { font-weight: 600; font-size: var(--fs-sm); padding: 0; margin-bottom: var(--gap-xs); }
+.check-row { display: flex; align-items: flex-start; gap: var(--gap-sm); min-height: 32px; cursor: pointer; }
+.check-row input { width: 18px; height: 18px; margin: 2px 0 0; flex: none; }
+.check-row .hint { margin: 2px 0 0; }
 .me-card .sub-head { margin-top: 0; }
 .sub-head h2 { display: flex; align-items: center; gap: 6px; margin: 0; font-family: var(--font-display); font-weight: 400; font-size: var(--fs-lg); }
 .new-count { min-width: 20px; padding: 0 6px; border-radius: 999px; background: var(--alert); color: var(--on-alert); font-size: var(--fs-xs); font-weight: 800; line-height: 20px; text-align: center; font-variant-numeric: tabular-nums; }

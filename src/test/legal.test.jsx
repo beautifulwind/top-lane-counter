@@ -64,6 +64,16 @@ test('개인정보처리방침: 수집 항목·탈퇴 요청·만 14세 미만 �
   expect(screen.getByText(/만 14세 미만 아동의 회원 가입을 받지 않습니다/)).toBeDefined();
 });
 
+test('개인정보처리방침 (037): 휴대폰 알림 수집 항목·삭제 시점·전달 업체', async () => {
+  start('/privacy');
+  await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' });
+  const text = document.querySelector('article.legal').textContent;
+  expect(text).toContain('휴대폰 알림을 켠 경우: 기기(브라우저)마다 브라우저 푸시 서비스가 만든 알림 주소와 암호화 키');
+  expect(text).toContain('그 기기에서 알림을 끄거나 로그아웃하면 바로 지웁니다');
+  expect(text).toContain('휴대폰 알림 주소와 알림 종류 설정');
+  expect(text).toContain('브라우저 푸시 서비스: Google LLC');
+});
+
 test('이용약관 (021): 실존 인물·고인 비하, 혐오 표현, 신상 공개 금지 / 실존 인물 이름 닉네임은 허용', async () => {
   start('/terms');
   await screen.findByRole('heading', { level: 1, name: '이용약관' });

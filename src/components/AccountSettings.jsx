@@ -9,12 +9,14 @@ import { ErrorBox, Loading } from './Status';
 import { isGuest } from '../lib/guest';
 import SectionHead from './SectionHead';
 import { PencilIcon, ShieldIcon, TrashIcon } from './Icons';
+import PushSettings from './PushSettings';
 
-/** /me/settings "계정": 운영자 모드(운영자 계정만, 034) · 닉네임 바꾸기(30일에 한 번) · 회원 탈퇴 (SPEC 6-8) */
+/** /me/settings "계정": 운영자 모드(운영자 계정만, 034) · 휴대폰 알림(037) · 닉네임 바꾸기(30일에 한 번) · 회원 탈퇴 (SPEC 6-8) */
 export default function AccountSettings({ auth }) {
   return (
     <>
       {auth.isOperatorAccount && <OperatorMode auth={auth} />}
+      <PushSettings auth={auth} />
       <NicknameChange auth={auth} />
       <DeleteAccount auth={auth} />
     </>

@@ -1,5 +1,5 @@
-import { useRef } from 'react';
-import { Link, Navigate, Outlet, useLocation } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import ErrorBoundary from './ErrorBoundary';
 import { ShieldIcon } from './Icons';
 import SiteMenu from './SiteMenu';
@@ -8,6 +8,7 @@ import { needsNickname, needsNicknameFor, useAuth } from '../lib/auth';
 import { noticeText, startFresh } from '../api/auth';
 import { usePageTitle } from '../lib/pageTitle';
 import { SITE_NAME, SITE_TAGLINE } from '../lib/legal';
+import { onOpenPath } from '../lib/sw';
 
 export const RIOT_NOTICE =
   '이 사이트는 Riot Games가 보증하거나 후원하지 않으며, Riot Games 또는 League of Legends 제작·관리에 공식적으로 관여한 사람의 견해를 반영하지 않습니다. League of Legends 및 Riot Games는 Riot Games, Inc.의 상표 또는 등록 상표입니다.';
@@ -17,6 +18,12 @@ export default function Layout() {
   const siteNotice = typeof state?.siteNotice === 'string' ? state.siteNotice : null; // 예: 탈퇴한 뒤 홈에서 한 번
   const auth = useAuth();
   const mainRef = useRef(null);
+  const navigate = useNavigate();
+  // 잠금 화면 알림을 눌러 돌아오면 그 주소로 (037)
+  useEffect(() => {
+    const stop = onOpenPath((path) => navigate(path));
+    return stop;
+  }, [navigate]);
   usePageTitle(mainRef, pathname); // 탭 제목 = 본문 첫 h1 (SPEC 3장)
   // 로그인했는데 닉네임이 없으면: 읽기는 어디서나, 쓰기 화면·/me에 오면 닉네임 정하기로 (정하면 돌아온다).
   // 막 가입하고 돌아온 때도 한 번 보여 준다 ([나중에 정하기]로 건너뜀)

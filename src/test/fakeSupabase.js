@@ -58,6 +58,9 @@ export const TABLES = {
   inquiries: [],
   // 017 닉네임 변경 기록 (본인 것만 넣는다)
   nickname_changes: [],
+  // 037 웹 푸시: 기기 알림 주소·종류별 설정 (RLS 흉내: 본인 것만 보이고 지워진다)
+  push_subscriptions: [],
+  push_settings: [],
   // 018 아이템 가격표 (DB 기준 패치만 화면에 쓴다)
   item_prices: [{ id: '1055', gold: 450, patch: '99.1.1' }, { id: '2003', gold: 50, patch: '99.1.1' }],
   xp_levels: [[1, 0], [2, 100], [3, 300], [4, 600], [5, 1000], [6, 1500], [7, 2100], [8, 2800], [9, 3600], [10, 4500]]
@@ -132,6 +135,8 @@ export function resetFake() {
   TABLES.doc_comments = [];
   TABLES.nickname_changes = [];
   TABLES.inquiries = [];
+  TABLES.push_subscriptions = [];
+  TABLES.push_settings = [];
   TABLES.item_prices = [{ id: '1055', gold: 450, patch: '99.1.1' }, { id: '2003', gold: 50, patch: '99.1.1' }];
   TABLES.builds = INITIAL_BUILDS();
   fakeState.functionCalls = [];
@@ -230,6 +235,7 @@ function visibleRows(table) {
     return isStaffNow() ? all : all.filter((c) => c.status === 'visible' && c.counter?.status === 'approved');
   }
   if (table === 'moderation_log') return isAdminNow() ? rows : [];
+  if (table === 'push_subscriptions' || table === 'push_settings') return rows.filter((r) => r.user_id === fakeState.session?.user.id);
   if (table === 'inquiries') {
     // 032 RLS 흉내: 본인 것 / 운영자는 전부 / 감독관은 계정·탈퇴(account) 빼고. user = 보낸 사람 관계
     const mine = fakeState.session?.user.id;
@@ -250,9 +256,13 @@ function query(table) {
   let single = false;
   let patch = null;
   let inserted = null;
+  let upserted = null;
+  let removing = false;
   const q = {
     select: () => q,
     insert: (values) => { inserted = values; return q; },
+    upsert: (values, { onConflict } = {}) => { upserted = { values, key: onConflict }; return q; },
+    delete: () => { removing = true; return q; },
     update: (values) => { patch = values; return q; },
     eq: (col, v) => { rows = rows.filter((r) => r[col] === v); return q; },
     is: (col, v) => { rows = rows.filter((r) => (r[col] ?? null) === v); return q; },
@@ -273,6 +283,29 @@ function query(table) {
   };
   function run() {
     if (fakeState.error) return { data: null, error: { message: fakeState.error } };
+    const me = fakeState.session?.user.id;
+    if (removing) {
+      // RLS 흉내: 보이는(본인) 줄만 지워진다
+      TABLES[table] = TABLES[table].filter((r) => !rows.includes(r));
+      return { data: null, error: null };
+    }
+    if (upserted) {
+      const { values, key } = upserted;
+      if (values.user_id !== me) return { data: null, error: { code: '42501', message: 'new row violates row-level security policy' } };
+      const old = TABLES[table].find((r) => r[key] === values[key]);
+      if (old) Object.assign(old, values);
+      else TABLES[table].push({ ...values });
+      return { data: null, error: null };
+    }
+    if (inserted && table === 'push_subscriptions') {
+      if (inserted.user_id !== me) return { data: null, error: { code: '42501', message: 'new row violates row-level security policy' } };
+      if (TABLES.push_subscriptions.some((r) => r.endpoint === inserted.endpoint)) {
+        return { data: null, error: { code: '23505', message: 'duplicate key value violates unique constraint' } };
+      }
+      fakeState.inserts.push({ table, values: inserted });
+      TABLES.push_subscriptions.push({ id: TABLES.push_subscriptions.length + 1, ...inserted });
+      return { data: null, error: null };
+    }
     if (inserted) {
       // DB 트리거·RLS가 낸 오류 흉내 (예: '이미 등록된 카운터입니다.')
       if (fakeState.insertError) return { data: null, error: { message: fakeState.insertError } };
@@ -318,8 +351,9 @@ function query(table) {
 
 // Edge Function 흉내: delete-account는 탈퇴하면 세션을 끝낸다. 실패는 fakeState.functionError (DB 문구)
 const functions = {
-  invoke: async (name, { body } = {}) => {
-    fakeState.functionCalls.push({ name, body });
+  invoke: async (name, { body, method } = {}) => {
+    fakeState.functionCalls.push({ name, body, ...(method ? { method } : {}) });
+    if (name === 'web-push' && method === 'GET') return { data: { publicKey: 'BFAKE-test-public-key_only' }, error: null };
     if (fakeState.functionError) {
       const message = fakeState.functionError;
       return { data: null, error: { message: 'Edge Function returned a non-2xx status code', context: { json: async () => ({ error: message }) } } };

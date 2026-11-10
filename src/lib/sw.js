@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from 'react';
 import { CHUNK_RELOAD_KEY } from './reloadGuard';
+import { announceNotificationsChanged } from '../api/notifications';
 
 // 서비스 워커 등록과 새 버전 알림 (SPEC 2장 PWA). 개발 서버에서는 등록하지 않는다 (프로덕션 빌드에서만).
 // 새 버전이 설치되어 기다리는 중이면 화면에 "새 버전이 있습니다. [새로고침]" → applyUpdate()
@@ -34,11 +35,30 @@ export function registerServiceWorker() {
       setInterval(update, CHECK_EVERY);
     }).catch(() => { /* 등록하지 못해도 사이트는 그대로 */ });
   });
+  // 웹 푸시 (037): 서비스 워커가 보내는 신호 — 알림이 왔다(빨간 점 다시 세기) / 알림을 눌렀다(그 주소로 이동)
+  navigator.serviceWorker.addEventListener('message', (e) => handleWorkerMessage(e.data));
   // 새 워커가 일을 넘겨받으면(= [새로고침]을 눌러 교체됨) 새 화면으로
   navigator.serviceWorker.addEventListener('controllerchange', () => {
     if (!applying) return;
     window.location.reload();
   });
+}
+
+const OPEN_PATH = 'tlc:open-path';
+
+/** 서비스 워커 메시지 처리 (테스트에서도 부른다) */
+export function handleWorkerMessage(data) {
+  if (data?.type === 'PUSH_RECEIVED') announceNotificationsChanged();
+  if (data?.type === 'OPEN_PATH' && typeof data.path === 'string' && data.path.startsWith('/') && !data.path.startsWith('//')) {
+    window.dispatchEvent(new CustomEvent(OPEN_PATH, { detail: data.path }));
+  }
+}
+
+/** 알림을 눌러 이 화면으로 돌아왔을 때 cb(사이트 안 주소). 해제 함수를 돌려준다 (Layout이 react-router로 이동) */
+export function onOpenPath(cb) {
+  const h = (e) => cb(e.detail);
+  window.addEventListener(OPEN_PATH, h);
+  return () => window.removeEventListener(OPEN_PATH, h);
 }
 
 /** [새로고침]: 기다리는 새 버전으로 바꾸고 다시 불러온다 */

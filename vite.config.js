@@ -39,6 +39,8 @@ export default defineConfig({
     globals: true,
     environment: 'jsdom',
     setupFiles: ['./src/setupTests.js'],
+    // Edge Function(Deno)의 npm: 가져오기는 테스트에서 빈 모듈로 (함수 안의 순수 로직만 검사한다)
+    alias: [{ find: /^npm:.*/, replacement: join(import.meta.dirname, 'src/test/npmStub.js') }],
     exclude: ['**/node_modules/**', 'old-app-reference/**'],
   },
 })

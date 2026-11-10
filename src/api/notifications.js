@@ -15,6 +15,11 @@ export function onNotificationsChanged(cb) {
   return () => window.removeEventListener(NOTIFICATIONS_CHANGED, cb);
 }
 
+/** 알림이 새로 왔거나(웹 푸시) 읽음 처리됐다 → 빨간 점이 다시 센다 */
+export function announceNotificationsChanged() {
+  window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED));
+}
+
 /** 안 읽은 내 알림 개수 (빨간 점·마이페이지 [알림 보기]). RLS가 내 것만 돌려준다 */
 export async function getUnreadCount(userId) {
   const { data, error } = await db().from('notifications').select('id').eq('user_id', userId).is('read_at', null);
@@ -47,6 +52,6 @@ export async function getNotifications(userId, before = null) {
 export async function markAllNotificationsRead(upto) {
   const { data, error } = await db().rpc('mark_all_notifications_read', { p_upto: upto });
   if (error) throw friendly(error, '알림을 확인 처리하지 못했습니다.');
-  window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED));
+  announceNotificationsChanged();
   return data;
 }

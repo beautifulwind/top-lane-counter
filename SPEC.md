@@ -554,6 +554,33 @@
 - **테스트 데이터 비우기**: 새 표가 없어 `reset_test_data*.sql`은 그대로다(처리 기록은 이미 전부 비운다).
 - **확인 조회**: `supabase/scripts/check_member_info.sql` (036 실행 전·후 한 번씩, 14줄 표, 마지막이 조회문). DB 검사: `supabase/tests/member_info_test.sql`, 화면 검사: `src/test/memberAdmin.test.jsx`.
 
+### 6-24. 웹 푸시 알림 — 폰 잠금 화면 (2026-11-10, 037)
+- **목표**: 카카오톡 알림처럼 폰 잠금 화면에 알림. 기존 `notifications` 알림 줄이 생길 때 같이 푸시가 간다 (새 알림 체계를 따로 만들지 않음).
+- **푸시 대상** (`push_group(종류)`):
+  | 묶음 | 받는 사람 | 알림 종류 | 설정 칸 |
+  |---|---|---|---|
+  | 운영진 알림 `staff_new` | 운영자·감독관 | `proposal_submitted`(새 제안·재검토 뒤 다시 낸 제안) · `build_submitted`(새 빌드 제안) · `inquiry_received`(새 문의) | "운영진 알림: 새 제안·새 빌드·새 문의" |
+  | 내 제안 결과 `my_results` | 제안자 | `proposal_approved` · `proposal_rejected` · `build_approved` · `build_rejected` · `revision_request`(재검토 요청) · `counter_restored` · `build_restored`(다시 공개) | "내 제안 결과: 승인·거절·재검토 요청·다시 공개" |
+  그 밖의 종류(재검토 요청 취소, 빌드 숨김, 레벨·칭호, 댓글, 문의 답변, 감독관 지정 등)는 푸시하지 않는다 (사이트 알림에는 그대로 쌓임).
+- **기존 규칙 그대로**: 감독관에게 안 가는 알림(빌드·계정 문의·운영진 제안 등)과 처리한 본인 제외는 알림 줄을 만들 때(`notify`·`notify_staff`) 이미 걸러지므로, 푸시는 "생긴 줄"만 따라간다. **운영자 모드를 끈 운영자**에게는 운영진 알림을 푸시하지 않는다(받는 사람이 지금 감독관이거나 모드가 켜진 운영자일 때만 — `push_wanted`). 운영진 종류가 운영진이 아닌 사람에게 있으면(해제 뒤 등) 보내지 않는다.
+- **흐름**: `notifications` insert → 트리거 `notifications_push`(`push_on_notification`)가 `push_wanted(받는 사람, 종류)`(종류 묶음 + 지금 역할·운영자 모드 + 종류별 설정 + 기기가 있는가)를 보고, 대상이면 **pg_net**으로 Edge Function `web-push`에 `{ notification_id }`만 보낸다(헤더 `x-push-secret`). pg_net은 커밋 뒤에 나가므로 처리가 되돌려지면 푸시도 없다. 주소·비밀 값은 Vault(`push_function_url`·`push_webhook_secret`)에서 읽고, 없거나 실패해도 **알림 저장은 그대로**(경고만).
+  - Edge Function은 service_role로 `push_targets(번호)`를 불러 알림 내용과 받을 기기를 받는다(여기서 `push_wanted`를 다시 봐서 그 사이 끈 설정도 반영, 1시간 지난 알림은 보내지 않음). 기기마다 `web-push`(VAPID)로 보내고, 푸시 서버가 **404·410**이면 `push_forget(기기 번호들)`로 지운다. 로그에는 종류·개수만 남기고 기기 주소는 남기지 않는다.
+  - 잠금 화면 내용(`describePush`): 내 제안 결과 = 알림 목록과 같은 제목(예: 「제안이 승인됐습니다」) + 「승인 메모: …」(메모가 없으면 「눌러서 확인해 주세요.」), 운영진 = 「운영진 알림」 + DB 문장(「새 카운터 제안이 들어왔습니다.」 등). 120자에서 자름. 챔피언 이름은 넣지 않는다.
+  - 누르면 갈 곳 = 알림 목록의 이동 링크와 같다(`/me/proposals/:id`·`/me/builds/:id`·`/admin/proposals/:id`·`/admin/builds/:id`·`/admin/inquiries`, 모르면 `/notifications`). `src/test/push.test.jsx`가 `describeNotification`과 맞는지 검사한다.
+- **서비스 워커** (`public/sw.js`): `push` → `showNotification`(아이콘 `/icons/icon-192.png`, 같은 알림은 tag로 한 번), 열려 있는 화면에는 `PUSH_RECEIVED`를 보내 빨간 점을 다시 센다. `notificationclick` → 사이트 화면이 열려 있으면 앞으로 가져와 `OPEN_PATH`(Layout이 react-router로 이동), 없으면 새 창. 사이트 안 경로(`/`로 시작, `//` 아님)만 쓰고 그 밖은 `/notifications`. **캐시 규칙(`/assets`·`/icons`만 저장)은 그대로**.
+- **[계정 설정] "휴대폰 알림"** (`PushSettings.jsx`, 운영자 모드 칸 아래): 이 기기 「켜짐/꺼짐」 + [이 기기에서 알림 켜기/끄기]. 켜기 = 알림 허용 묻기 → Edge Function `web-push`(GET)에서 VAPID 공개 키 → 새 구독 → `push_subscriptions`에 저장. 이 기기에 예전 구독(다른 계정 것 포함)이 있으면 끊고 새로 만든다(남의 줄은 RLS로 못 지우고, 다음 푸시 때 410으로 지워짐). 아래 "받을 알림" 체크 칸(계정 하나에 한 번, 모든 기기에 적용): 내 제안 결과(모두), 운영진 알림(운영자 계정·감독관만, 모드를 끈 운영자에게는 「운영자 모드를 끈 동안에는 오지 않습니다.」).
+  - 켤 수 없을 때 안내(`src/lib/push.js` `pushSupport`): 아이폰·아이패드 Safari 탭(홈 화면 앱 아님) → 「홈 화면에 추가한 앱에서만 … (iOS 16.4 이상)」, 홈 화면 앱인데 푸시 없음 → iOS 업데이트 안내, 푸시 미지원 브라우저, 알림 차단됨 → 휴대폰·브라우저 설정 안내, 개발 서버(서비스 워커 없음) → 배포된 사이트에서. 안드로이드는 홈 화면 설치 없이 크롬에서 켤 수 있다.
+- **지우는 때**: 알림 끄기(이 기기 줄 삭제 + 구독 끊기), **로그아웃**(`signOut` 직전, 비회원의 [새 계정으로 시작하기]도 — 최대 3초, 실패해도 로그아웃은 진행), **탈퇴**(두 표 모두 프로필 on delete cascade, 화면은 브라우저 구독만 끊음), **만료**(404·410). 한 사람 최대 10대(넘으면 가장 오래된 것부터 지움, 트리거).
+- **DB** (`037_web_push.sql`): `push_subscriptions`(`user_id`, `endpoint` 고유·https, `p256dh`, `auth`, `created_at`) — RLS 본인 읽기·넣기·지우기, 고치기 권한 없음. `push_settings`(`user_id` PK, `staff_new`, `my_results`, 기본 켜짐, `updated_at`) — RLS 본인 읽기·넣기·고치기. `push_wanted`·`push_targets`·`push_forget`은 사람이 못 부름(`push_targets`·`push_forget`은 service_role만).
+- **비밀 값**: VAPID 키는 Edge Function Secrets에만(공개 키도 코드·환경변수에 넣지 않고 함수 GET으로 받음). 설정 방법은 11-11.
+- **개인정보처리방침**: 1번 수집 항목(기기별 알림 주소·암호화 키·켠 시각·종류 설정), 2번 수집 방법(켤 때 그 기기에서 만들어짐), 4번 탈퇴 삭제 목록 + "휴대폰 알림" 보관·삭제 문단(끄기·로그아웃 즉시, 만료 알림 시, 10대 초과 시, 탈퇴 시), 6번 처리 위탁에 브라우저 푸시 서비스(Google·Apple 등, 내용은 암호화되어 볼 수 없음). 시행일은 그대로.
+- **테스트 데이터 비우기**: 두 표는 계정 설정이라 남긴다(미리 보기·결과 표에 개수). 비우는 동안 `notifications_push` 트리거를 꺼서 휴대폰으로 알림이 나가지 않게 하고 끝에서 다시 켠다.
+- **확인 조회**: `supabase/scripts/check_web_push.sql` (037 실행 전·후, Vault 설정 뒤 한 번씩, 16줄 표, 마지막이 조회문). DB 검사: `supabase/tests/web_push_test.sql`(로컬 흉내 `net.http_post`·`vault.decrypted_secrets`는 `supabase_stub.sql`), 화면 검사: `src/test/push.test.jsx`, 서비스 워커: `src/test/sw.test.js`.
+- **직접 확인할 것** (037 실행 + 11-11 설정 + 새 코드 push 뒤, 화면 확인은 운영자가 직접)
+  - 안드로이드(크롬): 사이트 → 마이페이지 → [계정 설정] → "휴대폰 알림" [이 기기에서 알림 켜기] → 허용 → 「이 기기: 켜짐」. 다른 계정(또는 비회원)으로 제안을 내면 운영자 폰 잠금 화면에 「운영진 알림 / 새 카운터 제안이 들어왔습니다.」, 누르면 그 제안 처리 화면. 승인·거절하면 제안자 폰에 「제안이 승인됐습니다」 등, 누르면 내 제안 화면. 홈 화면에 설치한 앱에서도 같다.
+  - 아이폰(iOS 16.4+): Safari로 열면 [계정 설정]에 「홈 화면에 추가한 앱에서만…」 안내만 보인다 → 공유 → [홈 화면에 추가] → 홈 화면 아이콘으로 열어 로그인 → [이 기기에서 알림 켜기] → 허용 → 위와 같이 잠금 화면 알림·누르면 이동.
+  - 공통: "받을 알림"에서 끈 종류는 안 옴 / 운영자 모드를 끄면 운영진 알림이 안 옴 / 로그아웃하면 그 기기로 안 옴 / Edge Functions → web-push → Logs에 `{"event":"web_push",…,"sent":1}`.
+
 ## 7. 데이터 구조 (Supabase 초안)
 
 챔피언·아이템·룬·소환사 주문은 Data Dragon의 ID(예: 챔피언 `"Darius"`, 아이템 `3078`)로 참조한다.
@@ -588,6 +615,8 @@
 - **offmeta_champions**: 운영자가 지정한 비주류 픽 목록 (`add_offmeta`·`remove_offmeta`로만). 기여에는 승인할 때의 여부를 `edit_proposals.offmeta`·`builds.offmeta`로 고정
 - **build_vote_log.first_up**: 그 사람이 그 빌드에 처음 누른 추천인가 (추천 경험치 대상, 투표할 때 고정)
 - **notifications**: `user_id`, `kind`, `proposal_id`, `build_id`, `post_id`, `counter_id`(문서 댓글 알림), `message`, `created_at`, `read_at`(확인하면 채워짐) — 본인만 읽기, 만들기·읽음 처리는 DB 함수만. 색인 `(user_id, id desc)`(027), 만든 지 `xp_rules.notification_keep_days`(90)일 지나면 `purge_old_notifications()`가 지운다(pg_cron 매일)
+- **push_subscriptions** (037): 웹 푸시 기기 알림 주소 — `user_id`(프로필 삭제 시 함께 삭제), `endpoint`(고유, https), `p256dh`, `auth`, `created_at`. 본인만 읽기·넣기·지우기(고치기 없음), 한 사람 최대 10대. 만료(404·410)는 Edge Function이 `push_forget`(service_role)으로 지움
+- **push_settings** (037): 웹 푸시 종류별 켜기/끄기 — `user_id`(PK, 프로필 삭제 시 함께 삭제), `staff_new`, `my_results`(기본 켜짐), `updated_at`. 본인만 읽기·넣기·고치기. `notifications` insert 트리거 `notifications_push`가 `push_wanted`로 판단해 pg_net → Edge Function `web-push`
 - **counter_status_log**: 숨긴 카운터의 숨김·다시 공개·재검토 요청·다시 제출·거절 기록 (운영자만 읽기)
 - **counter_deletions**: 완전 삭제 기록 — 카운터와 연결하지 않아 카운터가 지워져도 남는다 (운영자만 읽기). 지운 개수(제안·수정 기록·빌드·추천·`comments_count` 문서 댓글)
 
@@ -625,6 +654,7 @@ RLS 원칙:
   - 호스팅을 Cloudflare가 아닌 곳으로 바꾸면 방침 6번(처리 위탁) 고치기
 - **기능을 추가할 때 방침도 고친다**
   - 문의하기(032): 위 6-19에 적은 대로 반영 완료
+  - 웹 푸시(037): 위 6-24에 적은 대로 1·2·4·6번 반영 완료 (시행일은 그대로)
   - Google Analytics / MS Clarity: 위 "공개 전 체크리스트"에 적어 둠 (방침 1·6·7번)
 - 수집 항목 메모 (방침에 반영됨)
   - 문의하기(032): 문의 분류·내용·시각, 운영진 답변·시각, 그날 보낸 개수 — 보낸 사람과 운영진만 열람(계정·탈퇴는 운영자만), 마지막 활동 뒤 180일에 삭제
@@ -715,6 +745,7 @@ RLS 원칙:
 34. `supabase/migrations/034_operator_mode_notify.sql` (제안자 알림 보강 — 숨긴 카운터 재검토 요청은 본인 제외, [다시 공개] 알림 `counter_restored` · 운영자 모드 `profiles.operator_mode`·`set_operator_mode`·`is_admin`/`is_staff` 판정·운영진 알림 숨김. 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행하고, 확인 뒤 새 코드 push. 확인 조회: `supabase/scripts/check_operator_mode.sql` — 실행 전·후 한 번씩)
 35. `supabase/migrations/035_purge_moderation_log.sql` (처리 기록 1년 보관 삭제 함수 `purge_old_moderation_log()`·설정값. 아무것도 지우지 않고 더하기만 하므로 지금 화면과 그대로 동작. 실행 뒤 `supabase/scripts/check_purge_moderation_log.sql`로 확인하고, 파일 맨 아래 pg_cron 일정 등록 SQL을 따로 한 번)
 36. `supabase/migrations/036_member_info_moderator_revision.sql` (운영자 전용 `admin_member_stats`·`admin_search_members`·`admin_member_info` · 감독관 재검토 요청 `request_proposal_revision` 권한 확대 · 처리 기록 종류 `request_revision`. 있던 함수의 이름·인자는 그대로라 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행하고, 확인 뒤 새 코드 push. 확인 조회: `supabase/scripts/check_member_info.sql` — 실행 전·후 한 번씩)
+37. `supabase/migrations/037_web_push.sql` (웹 푸시 — 표 `push_subscriptions`·`push_settings`·RLS, 알림 트리거 `notifications_push`, Edge Function용 `push_targets`·`push_forget`. 있던 표·함수는 바꾸지 않아 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행하고, `supabase/scripts/check_web_push.sql`로 확인(실행 전·후) → **11-11 설정** → 다시 확인(14·15번 true) → 새 코드 push)
 - **테스트 데이터 비우기** (마이그레이션 아님, 정식 공개 직전 등 필요할 때): `supabase/scripts/reset_test_data_preview.sql`(읽기만 — 지울·남을 개수)로 확인 → `supabase/scripts/reset_test_data.sql`. 계정(운영자 계정·운영자 모드 상태·테스트용 구글 계정 포함 — 계정은 하나도 지우지 않는다)·프로필·설정값과 트린다미어 상대 말파이트 카운터(지금 문서·공개 빌드·처음 제안)만 남기고, 문의·처리 기록(`moderation_log`, 감독관 지정·해제 기록 포함)·알림·`proposal_reviewing` 등은 모두 비우며, 말파 문서의 수정 기록은 지금 내용 1줄로 정리, 경험치·레벨·칭호는 알림 없이 다시 계산한다. SQL Editor가 RLS를 물으면 **"Run without RLS"**로 실행 ("Run and enable RLS"는 임시 표 `reset_keep`·`reset_admins` 때문에 에러). 운영자 계정이 없거나 끝에서 운영자 role·모드가 바뀌어 있으면 전부 되돌리고 멈춘다. 되돌릴 수 없으므로 순서는 ① 백업 확인 → ② preview → ③ reset → ④ 결과 표 확인.
 - 합쳐서 한 번에 돌리지 않는다: 파일마다 `begin … commit`이라 중간에 실패하면 앞부분만 반영되고, 다시 돌리면 "already exists"가 난다.
 - 새 마이그레이션(010 …)을 만들면 이 목록에 추가한다. `supabase/tests/run.sh`가 빈 DB에 같은 순서로 실행한 뒤 검사용 데이터(`tests/fixtures.sql`)를 넣고 검사한다 (`supabase/tests`는 실제 프로젝트에서 실행하지 않음).
@@ -803,3 +834,21 @@ RLS 원칙:
 7. 확인: Storage에 `board-media`(Private) 버킷. 사진 붙인 글을 올렸다 지운 뒤 `select * from storage_trash;`에 경로 → 다음 날 Edge Functions → media-cleanup → Logs에 `{"event":"media_cleanup","removed":…}`, 대기열이 비고 Storage에서 파일이 사라짐.
    바로 해 보려면 `select cron.schedule`의 안쪽 `select net.http_post(…)`만 한 번 실행 → `select * from net._http_response order by id desc limit 1;`이 200.
    기록: `select * from cron.job_run_details order by start_time desc limit 5;`. 끄기: `select cron.unschedule('media-cleanup');`
+
+### 11-11. 웹 푸시 알림 (037 실행 뒤)
+폰 잠금 화면 알림(6-24). DB 트리거가 pg_net으로 Edge Function `web-push`를 부르고, 함수가 VAPID 키로 브라우저 푸시 서버에 보낸다. **비밀 값은 저장소·`.env`·대화에 쓰지 않는다.**
+1. **VAPID 키 한 쌍 만들기** (내 컴퓨터 터미널, 한 번만): `npx web-push generate-vapid-keys` → Public Key·Private Key가 나온다. 이 키를 나중에 바꾸면 모든 기기에서 알림을 다시 켜야 한다.
+2. **웹훅 비밀 값 만들기**: 아무 긴 임의 문자열 (예: `openssl rand -hex 32`).
+3. **Edge Functions → Secrets** (이름 그대로):
+   - `VAPID_PUBLIC_KEY` = 1번 Public Key
+   - `VAPID_PRIVATE_KEY` = 1번 Private Key
+   - `VAPID_SUBJECT` = `mailto:운영자 이메일` (또는 `https://사이트 주소`) — 푸시 서버가 문제 있을 때 연락하는 곳. 아이폰(애플)은 이 값이 올바른 mailto/https여야 받는다
+   - `PUSH_WEBHOOK_SECRET` = 2번 값
+4. **Edge Functions → Deploy a new function → Via Editor**: 이름 `web-push` ← `supabase/functions/web-push/index.ts` 그대로, **Verify JWT 끔** (DB 트리거는 로그인 토큰 없이 부름 — 대신 `x-push-secret` 헤더를 비교. GET은 공개 키만 돌려줌).
+5. **Vault** (Integrations → Vault → Add new secret, 또는 Project Settings → Vault) — 비밀 값은 SQL Editor에 쓰지 않고 이 화면에서 넣는다:
+   - 이름 `push_function_url`, 값 `https://<프로젝트ID>.supabase.co/functions/v1/web-push`
+   - 이름 `push_webhook_secret`, 값 = 2번 값 (3번 `PUSH_WEBHOOK_SECRET`과 같은 값)
+6. `pg_net`은 11-10에서 켰다 (`check_web_push.sql` 13번이 true).
+7. 확인: `supabase/scripts/check_web_push.sql` → 14·15번 true. 브라우저에서 `https://<프로젝트ID>.supabase.co/functions/v1/web-push`를 열면 `{"publicKey":"…"}` (공개 키라 보여도 괜찮다). 사이트에서 알림을 켜고 알림이 생기게 한 뒤 Edge Functions → web-push → Logs에 `{"event":"web_push",…,"sent":1}`.
+   - 안 오면: `select id, status_code, left(content::text, 120) from net._http_response order by id desc limit 5;` — 401이면 `PUSH_WEBHOOK_SECRET`과 Vault 값이 다름, 404면 함수 이름·주소, 응답의 `failed`가 늘면 VAPID 세 값 확인.
+8. 끄기(잠깐 멈추기): Vault의 `push_function_url`을 지우면 알림 저장은 그대로이고 푸시만 안 간다.

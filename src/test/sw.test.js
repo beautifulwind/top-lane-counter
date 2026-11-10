@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from 'vitest';
 // public/sw.js를 가짜 환경에서 실행해, 어떤 요청을 가로채고(저장) 어떤 요청은 그냥 지나가는지 확인한다.
 const code = readFileSync(join(process.cwd(), 'public/sw.js'), 'utf8');
 
-function load() {
+function load(windows = []) {
   const handlers = {};
   const store = new Map();
   const cache = {
@@ -18,7 +18,8 @@ function load() {
   const self = {
     location: { origin: 'https://site.test' },
     addEventListener: (type, fn) => { handlers[type] = fn; },
-    clients: { claim: async () => {} },
+    clients: { claim: async () => {}, matchAll: vi.fn(async () => windows), openWindow: vi.fn(async () => {}) },
+    registration: { showNotification: vi.fn(async () => {}) },
     skipWaiting: vi.fn(),
   };
   const ctx = vm.createContext({
@@ -95,5 +96,64 @@ describe('서비스 워커 캐시 규칙', () => {
     expect(self.skipWaiting).not.toHaveBeenCalled();
     handlers.message({ data: { type: 'SKIP_WAITING' } });
     expect(self.skipWaiting).toHaveBeenCalled();
+  });
+});
+
+describe('웹 푸시 (037)', () => {
+  const pushEvent = (data) => {
+    let done;
+    return {
+      event: {
+        data: data == null ? null : { json: () => JSON.parse(data), text: () => data },
+        waitUntil: (p) => { done = p; },
+      },
+      done: () => done,
+    };
+  };
+  it('push: 받은 제목·내용으로 잠금 화면 알림을 띄우고, 누르면 갈 주소를 담는다', async () => {
+    const win = { url: 'https://site.test/', postMessage: vi.fn() };
+    const { handlers, self } = load([win]);
+    const p = pushEvent(JSON.stringify({ title: '제안이 승인됐습니다', body: '승인 메모: 좋습니다', url: '/me/proposals/7', tag: 'n-1' }));
+    handlers.push(p.event);
+    await p.done();
+    expect(self.registration.showNotification).toHaveBeenCalledWith('제안이 승인됐습니다', expect.objectContaining({
+      body: '승인 메모: 좋습니다', tag: 'n-1', icon: '/icons/icon-192.png', data: { url: '/me/proposals/7' },
+    }));
+    expect(win.postMessage).toHaveBeenCalledWith({ type: 'PUSH_RECEIVED' }); // 열린 화면은 빨간 점을 다시 센다
+  });
+  it('push: 다른 사이트 주소나 이상한 값이면 알림 화면으로, 내용이 없어도 알림은 뜬다', async () => {
+    const { handlers, self } = load();
+    for (const url of ['https://evil.test/x', '//evil.test/x', 'javascript:alert(1)', 3]) {
+      const p = pushEvent(JSON.stringify({ title: 'x', url }));
+      handlers.push(p.event);
+      await p.done();
+      expect(self.registration.showNotification).toHaveBeenLastCalledWith('x', expect.objectContaining({ data: { url: '/notifications' } }));
+    }
+    const empty = pushEvent(null);
+    handlers.push(empty.event);
+    await empty.done();
+    expect(self.registration.showNotification).toHaveBeenLastCalledWith('탑신병자', expect.anything());
+  });
+  it('알림을 누르면: 열린 화면이 있으면 앞으로 가져와 그 주소로, 없으면 새 창', async () => {
+    const win = { url: 'https://site.test/board', postMessage: vi.fn(), focus: vi.fn(async () => {}) };
+    const { handlers, self } = load([win]);
+    let done;
+    const notification = { close: vi.fn(), data: { url: '/admin/proposals/3' } };
+    handlers.notificationclick({ notification, waitUntil: (p) => { done = p; } });
+    await done;
+    expect(notification.close).toHaveBeenCalled();
+    expect(win.postMessage).toHaveBeenCalledWith({ type: 'OPEN_PATH', path: '/admin/proposals/3' });
+    expect(win.focus).toHaveBeenCalled();
+    expect(self.clients.openWindow).not.toHaveBeenCalled();
+
+    const fresh = load([]);
+    fresh.handlers.notificationclick({ notification: { close: () => {}, data: { url: '/me/builds/2' } }, waitUntil: (p) => { done = p; } });
+    await done;
+    expect(fresh.self.clients.openWindow).toHaveBeenCalledWith('/me/builds/2');
+  });
+  it('알림을 눌러도 캐시 규칙은 그대로 (/assets·/icons만 저장)', () => {
+    const { handlers } = load();
+    expect(run(handlers, 'https://site.test/me/proposals/7').handled).toBe(false);
+    expect(run(handlers, 'https://site.test/icons/icon-192.png').handled).toBe(true);
   });
 });

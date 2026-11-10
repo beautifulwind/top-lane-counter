@@ -57,3 +57,13 @@ begin
   if cond then raise notice 'PASS  %', label; else raise exception 'FAIL  %', label; end if;
 end $$;
 grant execute on all functions in schema t to anon, authenticated, service_role;
+-- pg_net·Vault 흉내 (037 웹 푸시): net.http_post는 부른 내용을 net.calls에 남기기만 한다
+create schema vault;
+create table vault.decrypted_secrets (name text primary key, decrypted_secret text);
+create schema net;
+create table net.calls (id bigserial primary key, url text, body jsonb, headers jsonb);
+create function net.http_post(url text, body jsonb default '{}'::jsonb, params jsonb default '{}'::jsonb,
+  headers jsonb default '{"Content-Type": "application/json"}'::jsonb, timeout_milliseconds integer default 5000)
+returns bigint language sql as $$
+  insert into net.calls (url, body, headers) values (url, body, headers) returning id
+$$;

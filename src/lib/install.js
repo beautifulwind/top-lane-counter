@@ -18,14 +18,16 @@ let installed = false;
 const listeners = new Set();
 let snapshot = 'none';
 
-const isStandalone = () => {
+/** 홈 화면에 추가한 앱으로 열렸는가 (웹 푸시 안내에도 쓴다) */
+export const isStandalone = () => {
   try {
     return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true;
   } catch {
     return false;
   }
 };
-const isIos = () => {
+/** 아이폰·아이패드인가 */
+export const isIos = () => {
   const ua = window.navigator.userAgent || '';
   // 아이패드는 맥으로 위장하므로 터치 지점 수로 구분
   return /iPhone|iPad|iPod/.test(ua) || (window.navigator.platform === 'MacIntel' && window.navigator.maxTouchPoints > 1);

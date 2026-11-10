@@ -1,6 +1,7 @@
 // 로그인·프로필 접근 계층. 화면 컴포넌트는 이 모듈만 호출한다.
 import { hasReservedMark } from '../lib/nickname';
 import { db } from './supabase';
+import { dropBrowserPush, forgetDevicePush } from './push';
 import { ALREADY_MEMBER_TEXT } from '../lib/guest';
 
 export const NICKNAME_MAX = 20;
@@ -79,6 +80,7 @@ export async function signInAsGuest(captchaToken) {
  * 비회원 계정은 다시 들어올 수 없다 (기록은 남고, 오래 안 쓴 비회원 정리 규칙을 따른다).
  */
 export async function startFresh(provider, returnTo = '/') {
+  await forgetDevicePush(); // 비회원 때 켠 알림이 다음 계정으로 가지 않게 (037)
   await db().auth.signOut({ scope: 'local' });
   await signIn(provider, returnTo);
 }
@@ -223,6 +225,7 @@ function loginError(error, providerError, providerCode, pending) {
 }
 
 export async function signOut() {
+  await forgetDevicePush(); // 이 기기의 알림 주소를 먼저 지운다 (로그인이 남아 있을 때만 지울 수 있음, 037)
   const { error } = await db().auth.signOut();
   if (error) throw new Error(`로그아웃하지 못했습니다. (${error.message})`);
 }
@@ -330,5 +333,6 @@ export async function deleteMyAccount(confirm) {
     } catch { /* 문구 없음 */ }
     throw new Error(message ?? `탈퇴하지 못했습니다. (${error.message})`);
   }
+  await dropBrowserPush(); // 알림 주소는 계정과 함께 DB에서 지워졌다 — 이 브라우저 구독만 끊는다 (037)
   await db().auth.signOut({ scope: 'local' }).catch(() => {});
 }

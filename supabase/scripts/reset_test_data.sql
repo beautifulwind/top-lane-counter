@@ -1,7 +1,7 @@
 -- =====================================================================
 -- 테스트 데이터 비우기 (정식 공개 직전에 다시 쓸 수 있음 — 마이그레이션이 아니라 필요할 때 손으로 돌리는 스크립트)
 --
--- 남김: 계정(auth.users)·프로필(닉네임·역할)·닉네임 변경 기록, 설정값(xp_rules·xp_levels·item_prices·offmeta_champions),
+-- 남김: 계정(auth.users)·프로필(닉네임·역할)·닉네임 변경 기록, 휴대폰 알림을 켠 기기·알림 종류 설정(037), 설정값(xp_rules·xp_levels·item_prices·offmeta_champions),
 --       트린다미어 상대 말파이트 카운터 1개 — 지금 문서, 공개 빌드, 그 카운터를 만든 처음 제안 1개.
 -- 지움: 그 밖의 카운터·문서·제안·빌드 전부, 빌드 추천·비추천과 그 기록, 자유게시판 글·댓글·추천, 문서 댓글, 신고, 알림, 문의하기 문의·답변(032),
 --       경험치 기록, 숨김 기록, 운영진 처리 기록(moderation_log, 감독관 지정·해제 기록 포함 전부), 빌드·카운터 상태 기록, 완전 삭제 기록, 도배 방지 시각, 018 백업 표의 내용,
@@ -15,6 +15,7 @@
 --   - 제안은 카운터를 만든 처음 제안만 남긴다 (카운터 제안자 경험치·칭호, 문서 댓글 알림 받는 사람, 첫 빌드 연결에 쓰임).
 --     문서 수정 제안·거절·대기 제안은 지운다. 공개 빌드 중 대기·거절·숨김 빌드도 지운다.
 -- 마지막에 모든 사람의 경험치·레벨·칭호를 남은 데이터로 다시 계산한다 (알림 없음, 원래 날짜로 다시 기록).
+-- 비우는 동안에는 웹 푸시 트리거(037 notifications_push)를 꺼 두어 휴대폰으로 알림이 나가지 않게 하고, 끝에서 다시 켠다.
 --
 -- 실행 전: reset_test_data_preview.sql로 개수를 확인한다. 실행: SQL Editor에 통째로 붙여넣어 한 번.
 -- SQL Editor가 "Run and enable RLS"를 물어보면 반드시 "Run without RLS"로 실행한다.
@@ -27,6 +28,9 @@
 -- =====================================================================
 
 begin;
+
+-- 비우는 동안 휴대폰 알림(웹 푸시)을 보내지 않는다 (037 실행 전이면 건너뜀). 맨 아래에서 다시 켠다
+do $$ begin if exists (select 1 from pg_trigger where tgname = 'notifications_push') then execute 'alter table public.notifications disable trigger notifications_push'; end if; end $$;
 
 -- ---------------------------------------------------------------------
 -- 0. 남길 카운터 찾기 (없거나 여러 개면 멈춤)
@@ -156,6 +160,8 @@ begin
 end;
 $$;
 
+do $$ begin if exists (select 1 from pg_trigger where tgname = 'notifications_push') then execute 'alter table public.notifications enable trigger notifications_push'; end if; end $$;
+
 -- ---------------------------------------------------------------------
 -- 9. 결과 (이 표가 보이면 끝까지 실행된 것)
 -- ---------------------------------------------------------------------
@@ -175,6 +181,8 @@ union all select '경험치 기록 (다시 계산)', count(*) from public.xp_eve
 union all select '칭호 (다시 계산)', count(*) from public.user_titles
 union all select '경험치가 있는 사람', count(*) from public.profiles where xp > 0
 union all select '처리 기록 (moderation_log)', count(*) from public.moderation_log
+union all select '휴대폰 알림을 켠 기기 (그대로, 037 실행 전이면 0)', case when to_regclass('public.push_subscriptions') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.push_subscriptions', false, true, '')))[1]::text::integer end
+union all select '웹 푸시 트리거 켜짐 (037 실행 전이면 0)', count(*) from pg_trigger where tgname = 'notifications_push' and tgenabled <> 'D'
 union all select '프로필 (그대로)', count(*) from public.profiles
 union all select '운영자 계정 (그대로)', count(*) from public.profiles where role = 'admin'
 union all select '운영자 모드 켜짐 (그대로)', count(*) from public.profiles where role = 'admin' and operator_mode;

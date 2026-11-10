@@ -65,6 +65,12 @@ rows (ord, what, to_delete, to_keep, note) as (
   union all select 21.3, 'profiles 중 감독관 (role = moderator)', 0, (select count(*) from public.profiles where role = 'moderator'), '지우지도 해제하지도 않음. 테스트 감독관이면 공개 전에 따로 해제'
   union all select 21.4, 'profiles 중 비회원 (is_guest)', 0, (select count(*) from public.profiles where is_guest), '그대로 (기존 비회원 정리 일정이 따로 지움)'
   union all select 22, 'nickname_changes (닉네임 변경 기록)', 0, (select count(*) from public.nickname_changes), '계정 정보라 그대로'
+  union all select 22.1, 'push_subscriptions (휴대폰 알림을 켠 기기, 037)', 0,
+         case when to_regclass('public.push_subscriptions') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.push_subscriptions', false, true, '')))[1]::text::bigint end,
+         '계정 설정이라 그대로 (037 실행 전이면 0). 비우는 동안에는 푸시를 보내지 않음'
+  union all select 22.2, 'push_settings (알림 종류 켜기/끄기, 037)', 0,
+         case when to_regclass('public.push_settings') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.push_settings', false, true, '')))[1]::text::bigint end,
+         '계정 설정이라 그대로'
   union all select 23, '설정값 (xp_rules · item_prices · offmeta_champions · xp_levels)', 0,
          (select count(*) from public.xp_rules) + (select count(*) from public.item_prices)
          + (select count(*) from public.offmeta_champions) + (select count(*) from public.xp_levels), '그대로'
