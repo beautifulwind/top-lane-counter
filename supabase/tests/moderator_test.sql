@@ -230,8 +230,7 @@ select t.fails('문서 수정 제안 승인 불가', format('select approve_prop
 select t.fails('문서 수정 제안 반려 불가', format('select reject_proposal(%s, %L, t.pv(%s))', :de, '메모', :de), '처리할 수 없는 제안');
 select t.fails('승인 메모 필수', format('select approve_proposal(%s, %L, null, null, t.pv(%s))', :np, ' ', :np), '승인 메모');
 select t.fails('반려 사유 필수', format('select reject_proposal(%s, %L, t.pv(%s))', :np_reject, ' ', :np_reject), '거절 사유');
--- 고쳐서 승인: 033부터 감독관도 가능하다 (admin_convenience_test.sql)
-select t.fails('재검토 요청은 운영자만', format('select request_proposal_revision(%s, %L, t.pv(%s))', :np_rev, '메모', :np_rev), '운영자만');
+-- 고쳐서 승인: 033부터, 재검토 요청: 036부터 감독관도 가능하다 (admin_convenience_test.sql, member_info_test.sql)
 select t.ok('읽기: 대기 중인 새 카운터는 보임', exists (select 1 from edit_proposals where id = :np));
 select t.ok('읽기: 문서 수정 제안은 안 보임', not exists (select 1 from edit_proposals where id = :de));
 select t.ok('읽기: 다른 감독관 제안은 안 보임', not exists (select 1 from edit_proposals where id = :np_m2));
@@ -269,6 +268,7 @@ set request.jwt.claim.sub = :'MOD';
 select t.ok('숨긴 카운터 재검토 제안은 안 보임', not exists (select 1 from edit_proposals where id = :np_rev));
 select t.fails('숨긴 카운터 재검토 제안 승인 불가', format('select approve_proposal(%s, %L, null, null, t.pv(%s))', :np_rev, '메모', :np_rev), '처리할 수 없는 제안');
 select t.fails('숨긴 카운터 재검토 제안 반려 불가', format('select reject_proposal(%s, %L, t.pv(%s))', :np_rev, '메모', :np_rev), '처리할 수 없는 제안');
+select t.fails('숨긴 카운터 재검토 제안 재검토 요청 불가', format('select request_proposal_revision(%s, %L, t.pv(%s))', :np_rev, '메모', :np_rev), '처리할 수 없는 제안');
 reset role;
 
 -- 숨긴 카운터의 문서 댓글은 운영자만

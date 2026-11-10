@@ -16,6 +16,7 @@ import { BUILD_STATUS_LABEL, TYPE_LABEL, fmtDateTime } from '../../lib/format';
 import { ErrorBox, Loading } from '../../components/Status';
 import { RequireStaff } from '../../components/RequireOperator';
 import ModeratorAdmin from '../../components/ModeratorAdmin';
+import MemberAdmin from '../../components/MemberAdmin';
 import { useAuth } from '../../lib/auth';
 import { isStaffPerson } from '../../lib/nickname';
 import UserName from '../../components/UserName';
@@ -32,7 +33,7 @@ import { matchupTitle } from '../../lib/josa';
 import VoteTally from '../../components/VoteTally';
 import SectionHead from '../../components/SectionHead';
 import {
-  ClockIcon, CoinsIcon, DiceIcon, EyeOffIcon, HelpIcon, ImageIcon, LayersIcon, MessageIcon, SendIcon, ShieldIcon, TrashIcon,
+  ClockIcon, CoinsIcon, DiceIcon, EyeOffIcon, HelpIcon, ImageIcon, LayersIcon, MessageIcon, SendIcon, ShieldIcon, TrashIcon, UsersIcon,
 } from '../../components/Icons';
 
 /**
@@ -224,6 +225,11 @@ function PendingList() {
       </section>
 
       <section className="section">
+        <SectionHead icon={UsersIcon}>회원</SectionHead>
+        <MemberAdmin />
+      </section>
+
+      <section className="section">
         <SectionHead icon={ShieldIcon}>감독관 관리</SectionHead>
         <ModeratorAdmin />
       </section>
@@ -286,7 +292,6 @@ function originState(origin) {
  */
 function PendingRow({ proposal: p, name, game, onDone, onReload }) {
   const [open, setOpen] = useState(null); // 'approve' | 'revision' | 'reject' | null
-  const { isOperator } = useAuth();
   const { guard, notice } = useAuthorChanged(onReload);
   const handled = useAlreadyHandled(onDone); // 다른 운영진이 먼저 처리했으면 안내 + 목록 새로고침
   const title = `${matchupTitle(name(p.counter_champion), name(p.target_champion))}`;
@@ -316,11 +321,9 @@ function PendingRow({ proposal: p, name, game, onDone, onReload }) {
         <button type="button" className="btn btn-small btn-op" onClick={() => toggle('approve')} disabled={!!p.block} aria-expanded={open === 'approve'}>
           승인
         </button>
-        {isOperator && (
-          <button type="button" className="btn btn-small btn-op" onClick={() => toggle('revision')} aria-expanded={open === 'revision'}>
-            재검토 요청
-          </button>
-        )}
+        <button type="button" className="btn btn-small btn-op" onClick={() => toggle('revision')} aria-expanded={open === 'revision'}>
+          재검토 요청
+        </button>
         <button type="button" className="btn btn-small btn-op" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>
           거절
         </button>

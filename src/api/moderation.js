@@ -54,3 +54,32 @@ export const getModerationLog = (limit = 50) =>
       .order('created_at', { ascending: false }).limit(limit),
     '처리 기록을 불러오지 못했습니다.',
   );
+
+const korean = (error, fallback) => {
+  const msg = error.message ?? '';
+  return new Error(/[가-힣]/.test(msg) ? msg : `${fallback} (${msg})`);
+};
+
+/**
+ * 가입자 현황 (036, 운영자 전용): { total, members, guests, google, kakao, both, new_7d, new_7d_members }.
+ * 숫자만 온다. 운영자가 아니거나 운영자 모드가 꺼져 있으면 DB가 거부한다
+ */
+export async function getMemberStats() {
+  const { data, error } = await db().rpc('admin_member_stats');
+  if (error) throw korean(error, '가입자 수를 불러오지 못했습니다.');
+  return data;
+}
+
+/** 닉네임 부분 일치 검색 (036, 운영자 전용): 최대 10명, 이메일·로그인 ID는 오지 않는다 */
+export async function findMembers(q) {
+  const { data, error } = await db().rpc('admin_search_members', { p_query: q });
+  if (error) throw korean(error, '회원을 찾지 못했습니다.');
+  return data ?? [];
+}
+
+/** 선택한 회원의 가입일·가입 방식·레벨·칭호·활동 수 (036, 운영자 전용). 이메일·로그인 ID는 오지 않는다 */
+export async function getMemberInfo(userId) {
+  const { data, error } = await db().rpc('admin_member_info', { p_user: userId });
+  if (error) throw korean(error, '회원 정보를 불러오지 못했습니다.');
+  return data;
+}

@@ -167,11 +167,9 @@ function Review() {
             <button type="button" className="btn btn-op" onClick={() => toggle('approve')} disabled={cannotApprove} aria-expanded={open === 'approve'}>
               승인
             </button>
-            {isOperator && (
-              <button type="button" className="btn btn-op" onClick={() => toggle('revision')} aria-expanded={open === 'revision'}>
-                재검토 요청
-              </button>
-            )}
+            <button type="button" className="btn btn-op" onClick={() => toggle('revision')} aria-expanded={open === 'revision'}>
+              재검토 요청
+            </button>
             <button type="button" className="btn btn-op" onClick={() => toggle('reject')} aria-expanded={open === 'reject'}>
               거절
             </button>

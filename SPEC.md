@@ -56,7 +56,7 @@
 | 알림 | `/notifications` | 로그인한 사람만(비회원·닉네임 전·운영자 포함, 로그인 전이면 로그인 화면으로). 내 알림 전부 최신순 한 줄씩(종류별 아이콘·짧은 제목·매치업/메모·시각), 누르면 관련 화면으로, 20개씩 [더 보기]. 열면 모두 읽음 처리 (6-17) |
 | 내 제안·빌드 자세히 | `/me/proposals/:id`, `/me/builds/:id` | 보낸 글·빌드 전체를 매치업 문서 모양(한 줄 요약 → 빌드 → 레벨별 딜교법 → 특이사항)으로. 상태·메모와 상태별 버튼: 승인 대기 [수정] / 재검토 요청 [고쳐서 다시 보내기] / 승인 [문서 보기] + "고칠 수 없습니다, [문서 수정 제안]으로" / 거절 [다시 쓰기](보낸 내용이 채워진 새 제안) / 승인 취소·숨김 버튼 없음. 운영자가 고쳐서 승인했으면 [보낸 내용] ↔ [공개된 내용] 바꿔 보기 |
 | 내 제안·빌드 고치기 | `/me/proposals/:id/edit`, `/me/builds/:id/edit` (옛 주소 `/me/resubmit/:id`, `/me/builds/:id/resubmit`는 여기로) | 승인 대기면 그대로 고치기, 재검토 요청이면 고쳐서 다시 제출 |
-| 운영자 페이지 | `/admin`, `/admin/proposals/:id`, `/admin/order/:championId`, `/admin/history/:targetId/:counterId`, `/admin/preview/…`, `/admin/delete/…`, `/admin/builds/:id` | 운영자만 접근 (감독관은 `/admin`, `/admin/reports`, `/admin/proposals/:id`, `/admin/inquiries`만, 6-18·6-19). 승인 대기 목록(줄에서 바로 승인/거절, 내용은 [자세히]), 빌드 승인 대기·숨긴 빌드 목록, 기존 내용과 바뀐 부분 비교, 승인/거절(메모·사유 필수), 카운터 순서 변경(드래그 또는 ▲▼), 문서 수정 기록과 예전 버전으로 되돌리기, 비주류 픽 목록(칭호 "비주류" 기준). 승인·거절·순서·되돌리기는 DB의 운영자 전용 함수로만 가능 (운영자도 표를 직접 못 고침). 같은 제안을 다른 운영진이 보고 있으면 줄·[자세히]에 "(운)닉네임 검토 중" 경고, 먼저 처리된 제안은 "이미 다른 분이 처리했습니다" 안내 (5장, 031). (관리자 지정 기능은 나중에 정함 — 만들지 않음) |
+| 운영자 페이지 | `/admin`, `/admin/proposals/:id`, `/admin/order/:championId`, `/admin/history/:targetId/:counterId`, `/admin/preview/…`, `/admin/delete/…`, `/admin/builds/:id` | 운영자만 접근 (감독관은 `/admin`, `/admin/reports`, `/admin/proposals/:id`, `/admin/inquiries`만, 6-18·6-19). 가입자 수·닉네임 검색·회원 정보 "회원" 칸은 운영자만 (6-23). 승인 대기 목록(줄에서 바로 승인/재검토 요청/거절, 내용은 [자세히]), 빌드 승인 대기·숨긴 빌드 목록, 기존 내용과 바뀐 부분 비교, 승인/거절(메모·사유 필수), 카운터 순서 변경(드래그 또는 ▲▼), 문서 수정 기록과 예전 버전으로 되돌리기, 비주류 픽 목록(칭호 "비주류" 기준). 승인·거절·순서·되돌리기는 DB의 운영자 전용 함수로만 가능 (운영자도 표를 직접 못 고침). 같은 제안을 다른 운영진이 보고 있으면 줄·[자세히]에 "(운)닉네임 검토 중" 경고, 먼저 처리된 제안은 "이미 다른 분이 처리했습니다" 안내 (5장, 031). (관리자 지정 기능은 나중에 정함 — 만들지 않음) |
 | 자유게시판 | `/board`(`?q=검색어&page=쪽`), `/board/:id`, `/board/new`, `/board/:id/edit` | 읽기는 누구나, 쓰기는 로그인 + 닉네임. 목록: 최신순 20개씩 쪽 번호, 제목·본문 검색, 댓글 수·추천 수, 삭제된 글은 "(삭제된 글)". 글 보기: 본문(글자만, 줄바꿈 유지), 수정됨 표시, 추천(내 글 제외), 내 글 [고치기][지우기], 남의 글 [신고], 댓글(내 댓글 고치기·지우기, 남의 댓글 신고). 운영자는 글·댓글 [숨기기]/[다시 공개] (자세히는 6-5) |
 | 운영자: 신고 | `/admin/reports` | 자유게시판 글·댓글과 문서 댓글 신고를 대상별로 묶어 보여 줌 → [숨기기](메모 필수) / [신고 기각](메모 선택) / [보러 가기]. `/admin`의 "자유게시판·댓글" 칸에 처리할 신고 수와 숨긴 글·댓글·문서 댓글([다시 공개]). 숨긴 카운터 미리보기에도 그 문서의 댓글이 보인다 |
 | 문의하기 | `/inquiries` | 로그인한 사람 누구나(비회원·닉네임 전 포함, 로그인 전이면 로그인 화면으로). 위에 보내기 칸(분류 고르기 + 내용, 제목 없음), 아래 **내 문의**(분류·보낸 시각·"답변 대기/답변 완료"·내용·"(운) 답변"·[지우기]). 하루 3건·글자 수·보관 180일은 6-19 |
@@ -458,9 +458,9 @@
   | 신고 보기·처리 | O (신고자 보임) | O (신고자 안 보임, 처리할 수 있는 대상만 — `open_reports_for_moderator`) |
   | 글·댓글·문서 댓글 숨김 | O | 일반 회원의 것만 (본인·운영진의 것, 숨긴 카운터의 문서 댓글은 불가) |
   | 숨김 해제 | O | 감독관이 숨긴 것만 (운영자가 숨긴 것은 불가) |
-  | 새 카운터 제안 승인·거절 (메모 필수) | O | 다른 일반 회원의 제안만. 본인·운영진 제안은 거절도 불가. **고쳐서 승인은 033부터 가능** (6-20) |
+  | 새 카운터 제안 승인·재검토 요청·거절 (메모 필수) | O | 다른 일반 회원의 대기 중 제안만. 본인·운영진 제안은 거절도 불가. **고쳐서 승인은 033부터, 재검토 요청은 036부터 가능** (6-20, 6-23) |
   | 문의 답변 (6-19) | O (전체) | "계정·탈퇴" 분류만 불가 (그 문의는 보이지도 않음), 본인 문의 불가 |
-  | 지정·해제, 계정 삭제, 문의 분류 옮기기, 아이템 가격, 빌드 처리, 카운터 숨김·삭제, 문서 수정 제안, 재검토 요청, 순서 변경, 되돌리기, 비주류 픽, 사진 용량 | O | X |
+  | 지정·해제, 계정 삭제, 문의 분류 옮기기, 아이템 가격, 빌드 처리, 카운터 숨김·삭제, 문서 수정 제안, 재검토 요청 취소·숨긴 카운터·빌드의 재검토 요청, 순서 변경, 되돌리기, 비주류 픽, 사진 용량, 회원 현황·검색(6-23) | O | X |
 - **검사 위치**: DB 함수와 RLS (`is_admin()`은 그대로 운영자만이라 기본 거부, 새 `is_moderator()`·`is_staff()`). 화면은 버튼만 맞춰 보여 줄 뿐이다. 클라이언트에 service_role·secret 키를 쓰지 않는다. `/admin`은 감독관에게 허용된 구역만 보이고 다른 구역 데이터는 불러오지 않는다.
 - **경험치**: 승인자는 경험치를 받지 않는다. 제안자의 +100은 누가 승인하든 같은 경로(`rewards_on_proposal` → `sync_rewards`)로 지급. 본인·운영진 제안은 감독관이 처리할 수 없어 스스로 지급할 수 없다. 숨김에 따른 회수(글 −5·댓글 −1)도 같다.
 - **처리 기록** `moderation_log` (7장): 운영자의 처리도 함께 남긴다. 탈퇴 후에도 남고(개인정보처리방침 4조), 운영자만 `/admin` "감독관 관리"에서 본다. **처리한 날부터 1년(365일, `xp_rules.moderation_log_keep_days`)이 지나면 `purge_old_moderation_log()`가 매일 지운다**(035, 6-22). 테스트 데이터 비우기는 지정·해제 기록을 포함해 처리 기록을 전부 지운다.
@@ -532,6 +532,28 @@
 - **확인 조회**: `supabase/scripts/check_purge_moderation_log.sql` (035 실행 전·후, 일정 등록 뒤 한 번씩, 14줄 표, 마지막이 조회문). DB 검사: `supabase/tests/moderation_purge_test.sql`.
 - **테스트 데이터 비우기**: `reset_test_data.sql`·`_preview.sql`를 최신 구조에 맞춤 — 처리 기록 전부 비움, 운영자 계정·운영자 모드 보존 확인(`reset_admins`), 미리 보기에 운영자·모드·감독관·비회원 줄 추가, 번호가 겹치던 줄 정리.
 
+### 6-23. 운영자 회원 현황·검색 · 감독관 재검토 요청 (2026-11-10, 036)
+- **가입자 수** (`/admin` "회원" 칸, `admin_member_stats()`): 총 가입자(프로필 수, 비회원 포함, 닉네임을 아직 안 정한 가입도 포함) · 정식 회원 · 비회원(`is_guest`) · 구글 연결 수 · 카카오 연결 수(둘 다 연결한 회원은 양쪽에 세고 "둘 다"를 따로 보여 줌) · 최근 7일 신규(전체 / 정식 회원). 가입 방식은 `auth.identities.provider`로 센다. 숫자만 돌려준다. 비회원이 구글·카카오를 연결해 정식 계정이 되면 가입 시각은 비회원 때 그대로다.
+- **닉네임 검색** (`admin_search_members(검색어)`): 앞뒤 공백을 뺀 1~20자, 부분 일치·대소문자 무시(`%`·`_`는 글자 그대로), **최대 10명**, 이어 불러오기 없음(대량 조회 방지). 닉네임을 아직 안 정한 계정은 나오지 않는다. 결과 줄: 아이디·닉네임·등급·레벨·대표 칭호·비회원 여부·가입 시각뿐.
+- **회원 정보** (`admin_member_info(회원)`, [정보 보기]): 가입일, 가입 방식(구글·카카오 이름만, 비회원은 "비회원"), 등급·레벨·대표 칭호·얻은 칭호, 활동 수 — 제안(상태 무관 전체) · 글(삭제된 글 제외) · 빌드(상태 무관 전체) · 댓글(자유게시판 + 문서 댓글). **이메일·로그인 ID(`provider_id`)·이름·프로필 사진·마지막 접속·IP는 읽지도 돌려주지도 않는다** (`auth.users`는 건드리지 않고 `auth.identities`에서는 `provider` 이름만).
+- **권한**: 세 함수 모두 `require_operator()` = `is_admin()` — 운영자만. 감독관·일반 회원은 "운영자만 할 수 있습니다.", 운영자 모드를 끈 운영자도 같다(6-21). 비로그인은 실행 권한이 없다. 화면은 감독관에게 "회원" 칸을 아예 보여 주지 않고 함수도 부르지 않는다. 조회 기록(누가 누구를 봤는지)은 남기지 않는다.
+- **개인정보처리방침**: 새로 모으는 항목은 없다(가입 방식·비회원 여부·가입 시각·레벨·칭호·활동은 이미 방침 1번에 있음). 다만 "운영자가 회원 정보를 조회·집계한다"는 이용 목적(3번)과 "운영자만, 이메일·로그인 ID 제외"라는 안전성 조치(11번) 문구는 방침에 없어 추가가 필요하다 — 문구 제안은 작업 보고에 있고, `Privacy.jsx`·시행일은 이 작업에서 건드리지 않았다.
+- **감독관이 지금 처리하는 것 (036 이전 → 이후)**:
+  | 일 | 036 이전 | 036 이후 |
+  |---|---|---|
+  | 새 카운터 제안 승인(고쳐서 승인 포함) | O (033~) | O |
+  | 새 카운터 제안 반려(거절) | O | O |
+  | 새 카운터 제안 재검토 요청 | X (`require_operator`) | **O** |
+  | 재검토 요청 취소 | X | X (재검토 중인 제안은 감독관이 읽지도 못함 — RLS가 대기 중만 보여 줌) |
+  | 본인·운영진 제안, 문서 수정 제안, 숨긴 카운터 재검토 제안 | X | X (승인·반려·재검토 요청 모두 `require_review_allowed`로 거부) |
+  | 빌드 승인·거절·재검토 요청, 숨긴 카운터·빌드 처리 | X | X |
+  | 문의 답변 | O ("계정·탈퇴" 분류 제외) | 그대로 |
+  | 글·댓글 숨김·다시 공개, 신고 처리 | O (6-18) | 그대로 |
+- **재검토 요청이 승인·반려와 똑같이 동작하는 곳**: `request_proposal_revision`(·`_unchecked`)이 `require_staff()` + `require_review_allowed(제안)`을 거친다(범위 검사는 같은 함수 하나). 감독관이 하면 제안 줄의 `revision_requested_by`를 비운다(승인·반려의 `reviewed_by`와 같은 방식 — 누가 했는지는 처리 기록에만). 제안자 알림은 기존 `notify()`·`revision_request`·같은 문장. 처리 기록에 새 종류 `request_revision`(처리 기록 화면 이름 「재검토 요청」)이 한 줄 남는데, **운영자가 요청해도 남는다**(이전에는 운영자의 재검토 요청은 기록되지 않았다). 검토 잠금(`proposal_reviewing`)은 제안이 대기를 벗어날 때 트리거가 지우므로 처리 함수 변경 없이 그대로 지워진다. 이미 처리된 제안은 `TL409`(031).
+- **화면**: 승인 대기 줄과 `/admin/proposals/:id`의 [재검토 요청] 버튼을 감독관에게도 보인다(전에는 `isOperator`만). 감독관이 처리할 수 없는 제안은 이전처럼 버튼 없이 안내만.
+- **테스트 데이터 비우기**: 새 표가 없어 `reset_test_data*.sql`은 그대로다(처리 기록은 이미 전부 비운다).
+- **확인 조회**: `supabase/scripts/check_member_info.sql` (036 실행 전·후 한 번씩, 14줄 표, 마지막이 조회문). DB 검사: `supabase/tests/member_info_test.sql`, 화면 검사: `src/test/memberAdmin.test.jsx`.
+
 ## 7. 데이터 구조 (Supabase 초안)
 
 챔피언·아이템·룬·소환사 주문은 Data Dragon의 ID(예: 챔피언 `"Darius"`, 아이템 `3078`)로 참조한다.
@@ -553,7 +575,7 @@
 - **post_votes**: 글 추천 (`post_id`, `user_id`) — 본인 것만 읽기
 - **reports**: 신고 — `reporter_id`, `post_id`·`comment_id`·`doc_comment_id` 중 하나, `reason`, `detail`, `status`(open/resolved/dismissed), `handled_by`·`handled_at`·`handled_note`. (신고자, 대상) 고유, 운영자만 읽기. `reason`: abuse/hate/spam/privacy/obscene/other (hate는 021, obscene은 023 — 글·댓글만)
 - **hide_log** (021): `author_id`(탈퇴하면 같이 삭제), `kind`(post/comment/doc_comment), `target_id`(대상과 연결 안 함 — 지워져도 남음), `hidden_at`, `unhidden_at`. 트리거만 쓰고 아무도 직접 못 읽음 — 운영자 함수 `hide_counts`로만
-- **moderation_log** (030): 운영진 처리 기록 — `actor_id`(사용자 표와 연결 안 함, 탈퇴해도 남음)·`actor_nickname`·`actor_role`, `action`(hide/restore/dismiss_reports/approve_proposal/reject_proposal/grant_moderator/revoke_moderator/answer_inquiry/move_inquiry/edit_proposal), `target_kind`(post/comment/doc_comment/proposal/user/inquiry)·`target_id`·`target_nickname`, `note`, `created_at`. 운영자만 읽고, 아무도 직접 못 쓴다 (DB 함수만)
+- **moderation_log** (030): 운영진 처리 기록 — `actor_id`(사용자 표와 연결 안 함, 탈퇴해도 남음)·`actor_nickname`·`actor_role`, `action`(hide/restore/dismiss_reports/approve_proposal/reject_proposal/request_revision/grant_moderator/revoke_moderator/answer_inquiry/move_inquiry/edit_proposal), `target_kind`(post/comment/doc_comment/proposal/user/inquiry)·`target_id`·`target_nickname`, `note`, `created_at`. 운영자만 읽고, 아무도 직접 못 쓴다 (DB 함수만)
 - **proposal_reviewing** (031): 제안 [자세히]를 열고 있는 운영진 "검토 중" 표시 — `proposal_id`(제안을 지우면 같이 지움), `user_id`, `started_at`, `expires_at`(열고 10분 뒤). 아무도 직접 못 읽고 못 씀 (정책 없음 + 권한 회수), `start_proposal_review`·`end_proposal_review`·`proposal_reviewers`(운영진 전용)로만. 제안이 대기 상태를 벗어나면 트리거가 지움. 테스트 데이터 비우기가 함께 비움
 - **inquiries** (032): 문의하기 — `id`, `user_id`(프로필 삭제 시 함께 삭제), `category`(bug/idea/account/other), `body`, `created_at`, `answer`·`answered_at`(답변 1개). 읽기 RLS: 본인 / 운영자 전부 / 감독관은 account 빼고. 직접 쓰기 권한 없음 (`create_inquiry`·`answer_inquiry`·`set_inquiry_category`·`delete_my_inquiry`·`purge_old_inquiries`). 마지막 활동 뒤 `xp_rules.inquiry_keep_days`(180)일에 지움
 - **inquiry_quota** (032): 하루 문의 개수 — `user_id`(프로필 삭제 시 함께 삭제), `day`(한국 날짜), `sent`. 정책 없음·권한 회수 — `create_inquiry`만
@@ -692,6 +714,7 @@ RLS 원칙:
 33. `supabase/migrations/033_admin_convenience.sql` (운영진 새 제안·빌드·문의 알림 · 처리 대기 건수 · 감독관도 고쳐서 승인. 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행하고, 확인 뒤 새 코드 push. 확인 조회: `supabase/scripts/check_admin_convenience.sql` — 실행 전·후 한 번씩)
 34. `supabase/migrations/034_operator_mode_notify.sql` (제안자 알림 보강 — 숨긴 카운터 재검토 요청은 본인 제외, [다시 공개] 알림 `counter_restored` · 운영자 모드 `profiles.operator_mode`·`set_operator_mode`·`is_admin`/`is_staff` 판정·운영진 알림 숨김. 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행하고, 확인 뒤 새 코드 push. 확인 조회: `supabase/scripts/check_operator_mode.sql` — 실행 전·후 한 번씩)
 35. `supabase/migrations/035_purge_moderation_log.sql` (처리 기록 1년 보관 삭제 함수 `purge_old_moderation_log()`·설정값. 아무것도 지우지 않고 더하기만 하므로 지금 화면과 그대로 동작. 실행 뒤 `supabase/scripts/check_purge_moderation_log.sql`로 확인하고, 파일 맨 아래 pg_cron 일정 등록 SQL을 따로 한 번)
+36. `supabase/migrations/036_member_info_moderator_revision.sql` (운영자 전용 `admin_member_stats`·`admin_search_members`·`admin_member_info` · 감독관 재검토 요청 `request_proposal_revision` 권한 확대 · 처리 기록 종류 `request_revision`. 있던 함수의 이름·인자는 그대로라 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행하고, 확인 뒤 새 코드 push. 확인 조회: `supabase/scripts/check_member_info.sql` — 실행 전·후 한 번씩)
 - **테스트 데이터 비우기** (마이그레이션 아님, 정식 공개 직전 등 필요할 때): `supabase/scripts/reset_test_data_preview.sql`(읽기만 — 지울·남을 개수)로 확인 → `supabase/scripts/reset_test_data.sql`. 계정(운영자 계정·운영자 모드 상태·테스트용 구글 계정 포함 — 계정은 하나도 지우지 않는다)·프로필·설정값과 트린다미어 상대 말파이트 카운터(지금 문서·공개 빌드·처음 제안)만 남기고, 문의·처리 기록(`moderation_log`, 감독관 지정·해제 기록 포함)·알림·`proposal_reviewing` 등은 모두 비우며, 말파 문서의 수정 기록은 지금 내용 1줄로 정리, 경험치·레벨·칭호는 알림 없이 다시 계산한다. SQL Editor가 RLS를 물으면 **"Run without RLS"**로 실행 ("Run and enable RLS"는 임시 표 `reset_keep`·`reset_admins` 때문에 에러). 운영자 계정이 없거나 끝에서 운영자 role·모드가 바뀌어 있으면 전부 되돌리고 멈춘다. 되돌릴 수 없으므로 순서는 ① 백업 확인 → ② preview → ③ reset → ④ 결과 표 확인.
 - 합쳐서 한 번에 돌리지 않는다: 파일마다 `begin … commit`이라 중간에 실패하면 앞부분만 반영되고, 다시 돌리면 "already exists"가 난다.
 - 새 마이그레이션(010 …)을 만들면 이 목록에 추가한다. `supabase/tests/run.sh`가 빈 DB에 같은 순서로 실행한 뒤 검사용 데이터(`tests/fixtures.sql`)를 넣고 검사한다 (`supabase/tests`는 실제 프로젝트에서 실행하지 않음).

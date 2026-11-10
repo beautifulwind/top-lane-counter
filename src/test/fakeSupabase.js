@@ -99,7 +99,7 @@ export const EMPTY_USAGE = () => ({
 // 테스트가 바꾸는 상태. setupTests.js가 테스트마다 초기화한다.
 export const fakeState = {
   error: null, session: null, initError: null, oauthCalls: [], linkCalls: [], linkError: null, listeners: new Set(),
-  inserts: [], insertError: null, pendingCounts: null, pendingCountsAsked: 0, rpcCalls: [], rpcError: null, rpcErrorCode: null, reviewCalls: [], reviewers: {}, boardError: null,
+  inserts: [], insertError: null, pendingCounts: null, pendingCountsAsked: 0, rpcCalls: [], memberCalls: [], memberStats: { total: 0, members: 0, guests: 0, google: 0, kakao: 0, both: 0, new_7d: 0, new_7d_members: 0 }, members: [], memberInfo: {}, rpcError: null, rpcErrorCode: null, reviewCalls: [], reviewers: {}, boardError: null,
   functionCalls: [], functionError: null, // Edge Function 호출 (017 delete-account)
   anonCalls: [], anonError: null, anonDelay: null, hideCounts: {}, signOutCalls: [], touched: 0, // 비회원 (020)
   uploads: [], uploadError: null, mediaProblem: null, mediaUsage: EMPTY_USAGE(), // 사진 (023, mediaUsage = media_usage 결과)
@@ -139,6 +139,10 @@ export function resetFake() {
   fakeState.inserts = [];
   fakeState.insertError = null;
   fakeState.rpcCalls = [];
+  fakeState.memberCalls = [];
+  fakeState.memberStats = { total: 0, members: 0, guests: 0, google: 0, kakao: 0, both: 0, new_7d: 0, new_7d_members: 0 };
+  fakeState.members = [];
+  fakeState.memberInfo = {};
   fakeState.rpcError = null;
   fakeState.pendingCounts = null;
   fakeState.pendingCountsAsked = 0;
@@ -385,6 +389,18 @@ async function rpc(name, args) {
     fakeState.pendingCountsAsked += 1;
     if (fakeState.pendingCounts === 'error') return { data: null, error: { message: 'function admin_pending_counts() does not exist', code: '42883' } };
     return { data: { proposals: 0, builds: 0, inquiries: 0, ...fakeState.pendingCounts }, error: null };
+  }
+  if (['admin_member_stats', 'admin_search_members', 'admin_member_info'].includes(name)) {
+    // 036: 운영자 전용 (감독관·일반 회원·운영자 모드 끈 운영자는 거부). 화면이 알아서 부르는 것이라 rpcCalls에는 넣지 않는다.
+    // fakeState.memberStats = 숫자들, fakeState.members = 프로필 줄들 (검색은 부분 일치, 최대 10명), fakeState.memberInfo = { id: 정보 }
+    if (!isAdminNow()) return { data: null, error: { message: '운영자만 할 수 있습니다.', code: '42501' } };
+    fakeState.memberCalls.push({ name, args });
+    if (name === 'admin_member_stats') return { data: fakeState.memberStats, error: null };
+    if (name === 'admin_search_members') {
+      const q = args.p_query.trim().toLowerCase();
+      return { data: fakeState.members.filter((m) => m.nickname.toLowerCase().includes(q)).slice(0, 10), error: null };
+    }
+    return { data: fakeState.memberInfo[args.p_user], error: null };
   }
   if (name === 'media_upload_problem') return { data: fakeState.mediaProblem, error: null }; // 화면이 알아서 묻는 것
   if (name === 'media_usage') {

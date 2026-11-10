@@ -80,6 +80,7 @@ export const LayersIcon = (p) => (
   <Line {...p}><path d="M12 2l10 5-10 5L2 7z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" /></Line>
 );
 /** 꺾쇠 (목록 줄 끝 "들어가기") */
+export const UsersIcon = (p) => <Line {...p}><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20c0-3.6 2.9-6 6.5-6s6.5 2.4 6.5 6" /><path d="M16 4.6a3.5 3.5 0 0 1 0 6.8" /><path d="M18 14.3c2 .8 3.5 2.6 3.5 5.7" /></Line>;
 export const HelpIcon = (p) => <Line {...p}><circle cx="12" cy="12" r="9" /><path d="M9.5 9.5a2.5 2.5 0 1 1 3.6 2.3c-.7.4-1.1 1-1.1 1.7" /><path d="M12 17h.01" /></Line>;
 
 export const ChevronIcon = (p) => <Line {...p}><path d="M9 18l6-6-6-6" /></Line>;

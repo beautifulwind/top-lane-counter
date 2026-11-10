@@ -67,16 +67,15 @@ test('감독관 /admin: 메뉴에 [관리], 새 카운터 대기와 자유게시
     expect(list.length).toBe(1); // 다른 회원의 새 카운터만
     return list;
   });
-  expect(within(rows[0]).queryByRole('button', { name: '재검토 요청' })).toBeNull();
+  expect(within(rows[0]).getByRole('button', { name: '재검토 요청' })).toBeDefined(); // 036
   expect(within(rows[0]).getByRole('button', { name: '거절' })).toBeDefined();
 });
 
-test('감독관 제안 화면: 안 고치고 메모만 써서 승인할 수 있다 (고친 칸은 null), 재검토 요청 없음', async () => {
+test('감독관 제안 화면: 안 고치고 메모만 써서 승인할 수 있다 (고친 칸은 null)', async () => {
   asMod();
   TABLES.edit_proposals.push(newCounter(1));
   start('/admin/proposals/1');
   fireEvent.click(await screen.findByRole('button', { name: '승인' }));
-  expect(screen.queryByRole('button', { name: '재검토 요청' })).toBeNull();
   expect(await screen.findByText('한 줄 요약 (필수)')).toBeDefined(); // 033: 감독관도 고쳐서 승인 편집기
   expect(screen.queryByRole('button', { name: '고친 내용으로 승인 확정' })).toBeNull(); // 아직 안 고쳤다
   const ok = screen.getByRole('button', { name: '승인 확정' });
@@ -225,4 +224,25 @@ test('감독관 알림: 지정은 탈퇴 후 기록 안내 + 메모, 해제는 �
   const r = describeNotification({ kind: 'moderator_revoked', message: '감독관에서 해제됐습니다. 메모: 끝' });
   expect(r.title).toBe('감독관에서 해제됐습니다.');
   expect(r.to).toBeNull();
+});
+
+test('감독관 목록 줄: [재검토 요청]은 메모를 써야 확정되고 request_proposal_revision을 부른다 (036)', async () => {
+  asMod();
+  TABLES.edit_proposals.push(newCounter(1));
+  start('/admin');
+  fireEvent.click(await screen.findByRole('button', { name: '재검토 요청' }));
+  const ok = screen.getByRole('button', { name: '재검토 요청 확정' });
+  expect(ok.disabled).toBe(true);
+  fireEvent.change(screen.getByLabelText('재검토 요청 메모 (필수, 제안자에게 보입니다)'), { target: { value: '9레벨을 고쳐 주세요' } });
+  fireEvent.click(ok);
+  await vi.waitFor(() => expect(rpcs('request_proposal_revision').length).toBe(1));
+  expect(rpcs('request_proposal_revision')[0]).toMatchObject({ p_id: 1, p_note: '9레벨을 고쳐 주세요' });
+});
+
+test('감독관 제안 화면: [재검토 요청]·[거절] 둘 다 보인다 (036)', async () => {
+  asMod();
+  TABLES.edit_proposals.push(newCounter(1));
+  start('/admin/proposals/1');
+  expect(await screen.findByRole('button', { name: '재검토 요청' })).toBeDefined();
+  expect(screen.getByRole('button', { name: '거절' })).toBeDefined();
 });
