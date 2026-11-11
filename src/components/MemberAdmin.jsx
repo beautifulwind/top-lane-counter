@@ -1,30 +1,94 @@
-import { useState } from 'react';
-import { findMembers, getMemberInfo, getMemberStats } from '../api/moderation';
+import { useEffect, useState } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
+import { getMemberList, getMemberStats } from '../api/moderation';
 import { fmtDateTime } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
-import { titleName } from '../lib/titles';
 import { ErrorBox, Loading } from './Status';
+import { ModerationLog, ModeratorToggle, ROLE_LABEL } from './ModeratorAdmin';
 import UserName from './UserName';
 
-const PROVIDER_LABEL = { google: '구글', kakao: '카카오' };
-const ROLE_LABEL = { admin: '운영자', moderator: '감독관', user: '일반 회원' };
-
-/** 가입 방식 한 마디: 비회원이면 "비회원", 아니면 "구글, 카카오" (연결한 로그인 방식 이름만 — 이메일·로그인 ID는 화면에 오지 않는다) */
-const joinedWith = (m) => {
-  const names = (m.providers ?? []).map((p) => PROVIDER_LABEL[p] ?? p);
-  if (m.is_guest) return '비회원 (구글·카카오 연결 전)';
-  return names.length ? names.join(', ') : '알 수 없음';
-};
+const PAGE_SIZE = 20;
+const ROLES = ['moderator', 'admin', 'user'];
 
 /**
- * 운영자: 가입자 수 + 닉네임으로 회원 찾기 (036, /admin). 감독관에게는 이 칸이 없고, DB도 운영자만 허용한다.
- * 이메일·로그인 ID 같은 민감한 정보는 DB가 애초에 돌려주지 않는다.
+ * 운영자: 회원 관리 (042, /admin/members). 예전 "회원"(036)과 "감독관 관리"(030)를 한 화면으로 합쳤다.
+ * 가입자 수 · 최근 가입 순 목록 · 닉네임 검색 · 감독관 지정·해제 · 처리 기록. 회원을 누르면 회원 정보 페이지로 간다.
+ * 이메일·로그인 ID는 DB가 애초에 돌려주지 않는다. 감독관·일반 회원에게는 이 화면이 없고, DB도 운영자만 허용한다.
  */
 export default function MemberAdmin() {
+  const [params, setParams] = useSearchParams();
+  const roleParam = params.get('role');
+  const role = ROLES.includes(roleParam) ? roleParam : '';
+  const [input, setInput] = useState('');
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
+  const [message, setMessage] = useState(null);
+  const [logKey, setLogKey] = useState(0);
+  const { data, error, loading, retry } = useAsync(() => getMemberList({ query, role, page, size: PAGE_SIZE }), [query, role, page]);
+  useEffect(() => { setPage(1); }, [query, role]);
+  const search = (e) => {
+    e.preventDefault();
+    setQuery(input.trim());
+  };
+  const pickRole = (value) => {
+    const next = new URLSearchParams(params);
+    if (value) next.set('role', value); else next.delete('role');
+    setParams(next, { replace: true });
+  };
+  const finished = (text) => {
+    setMessage(text);
+    setLogKey((k) => k + 1);
+    retry();
+  };
+  const pages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
   return (
     <>
       <MemberStats />
-      <MemberLookup />
+      <p className="hint">
+        감독관은 신고 처리, 글·댓글 숨김과 다시 공개, 새 상대법 승인·재검토 요청·거절을 합니다. 화면에는 운영자와 똑같이 (운)으로 보입니다.
+        이메일·로그인 ID는 볼 수 없습니다.
+      </p>
+      {message && <p className="notice" role="status">{message}</p>}
+      <form className="row-actions" onSubmit={search}>
+        <label htmlFor="member-search" className="sr-only">닉네임으로 회원 검색</label>
+        <input id="member-search" type="search" value={input} placeholder="닉네임으로 회원 검색" maxLength={20} onChange={(e) => setInput(e.target.value)} />
+        <button type="submit" className="btn btn-small btn-op">검색</button>
+        <label htmlFor="member-role" className="sr-only">등급으로 거르기</label>
+        <select id="member-role" value={role} onChange={(e) => pickRole(e.target.value)}>
+          <option value="">모든 등급</option>
+          {ROLES.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
+        </select>
+      </form>
+      {loading && !data && <Loading />}
+      {error && <ErrorBox error={error} onRetry={retry} />}
+      {data && (
+        <>
+          <p className="hint">{query || role ? `찾은 회원 ${data.total}명` : `전체 회원 ${data.total}명`} · 최근 가입 순</p>
+          {data.members.length === 0 ? (
+            <p className="empty">찾은 회원이 없습니다.</p>
+          ) : (
+            <ul className="proposal-list" aria-label="회원 목록">
+              {data.members.map((m) => (
+                <li key={m.id} className="proposal-row" aria-label={m.nickname}>
+                  <div className="proposal-meta">
+                    <Link to={`/admin/members/${m.id}`} className="op-link" aria-label={`${m.nickname} 회원 정보`}><UserName profile={m} /></Link>
+                    {' '}<small className="hint">{ROLE_LABEL[m.role] ?? m.role} · 가입 {fmtDateTime(m.created_at)}</small>
+                  </div>
+                  <ModeratorToggle member={m} onDone={finished} />
+                </li>
+              ))}
+            </ul>
+          )}
+          {pages > 1 && (
+            <nav className="row-actions" aria-label="쪽 이동">
+              <button type="button" className="btn btn-small" disabled={page <= 1} onClick={() => setPage(page - 1)}>이전</button>
+              <span className="hint">{page} / {pages}쪽</span>
+              <button type="button" className="btn btn-small" disabled={page >= pages} onClick={() => setPage(page + 1)}>다음</button>
+            </nav>
+          )}
+        </>
+      )}
+      <ModerationLog refreshKey={logKey} />
     </>
   );
 }
@@ -39,71 +103,6 @@ function MemberStats() {
       <li>총 가입자 {data.total}명 (정식 회원 {data.members}명 · 비회원 {data.guests}명)</li>
       <li>가입 방식: 구글 {data.google}명 · 카카오 {data.kakao}명 (둘 다 연결한 회원 {data.both}명은 양쪽에 포함)</li>
       <li>최근 7일 신규 가입 {data.new_7d}명 (정식 회원 {data.new_7d_members}명)</li>
-    </ul>
-  );
-}
-
-function MemberLookup() {
-  const [query, setQuery] = useState('');
-  const [found, setFound] = useState(null);
-  const [fail, setFail] = useState(null);
-  const [picked, setPicked] = useState(null);
-  const search = async (e) => {
-    e.preventDefault();
-    setFail(null);
-    setPicked(null);
-    if (!query.trim()) return;
-    try {
-      setFound(await findMembers(query));
-    } catch (err) {
-      setFound(null);
-      setFail(err.message);
-    }
-  };
-  return (
-    <>
-      <form className="row-actions" onSubmit={search}>
-        <label htmlFor="member-search" className="sr-only">닉네임으로 회원 검색</label>
-        <input id="member-search" type="search" value={query} placeholder="닉네임으로 회원 검색" maxLength={20} onChange={(e) => setQuery(e.target.value)} />
-        <button type="submit" className="btn btn-small btn-op">검색</button>
-      </form>
-      <p className="hint">닉네임 일부만 적어도 됩니다. 결과는 최대 10명까지 보입니다. 이메일·로그인 ID는 볼 수 없습니다.</p>
-      {fail && <p className="form-error" role="alert">{fail}</p>}
-      {found && found.length === 0 && <p className="empty">찾은 회원이 없습니다.</p>}
-      {found && found.length > 0 && (
-        <ul className="proposal-list" aria-label="검색 결과">
-          {found.map((u) => (
-            <li key={u.id} className="proposal-row" aria-label={u.nickname}>
-              <div className="proposal-meta"><UserName profile={u} /></div>
-              <div className="row-actions">
-                <button type="button" className="btn btn-small btn-op" aria-expanded={picked === u.id} onClick={() => setPicked(picked === u.id ? null : u.id)}>
-                  정보 보기
-                </button>
-              </div>
-              {picked === u.id && <MemberInfo userId={u.id} />}
-            </li>
-          ))}
-        </ul>
-      )}
-    </>
-  );
-}
-
-function MemberInfo({ userId }) {
-  const { data, error, loading, retry } = useAsync(() => getMemberInfo(userId), [userId]);
-  if (loading) return <Loading />;
-  if (error) return <ErrorBox error={error} onRetry={retry} />;
-  const titles = (data.titles ?? []).map(titleName);
-  return (
-    <ul className="log-list" aria-label={`${data.nickname} 회원 정보`}>
-      <li>가입일 {fmtDateTime(data.created_at)}</li>
-      <li>가입 방식 {joinedWith(data)}</li>
-      <li>등급 {ROLE_LABEL[data.role] ?? data.role} · 레벨 {data.level}{data.main_title ? ` · 대표 칭호 ${titleName(data.main_title)}` : ''}</li>
-      <li>얻은 칭호 {titles.length ? titles.join(', ') : '없음'}</li>
-      <li>활동 제안 {data.proposals}개 · 글 {data.posts}개 · 빌드 {data.builds}개 · 댓글 {data.comments}개</li>
-      {(data.deleted_posts > 0 || data.deleted_comments > 0) && (
-        <li>지운 글 {data.deleted_posts}개 · 지운 댓글 {data.deleted_comments}개 <small className="hint">(1년 보관, 운영자만)</small></li>
-      )}
     </ul>
   );
 }

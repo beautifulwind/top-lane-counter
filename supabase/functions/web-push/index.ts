@@ -23,6 +23,8 @@ export type PushNotice = {
   id: number; kind: string; message: string | null; proposal_id: number | null; build_id: number | null;
   // 038 push_targets가 더 준다 (새 상대법·새 빌드 알림이 그 상대법으로 가도록). 옛 DB면 없다
   counter_id?: number | null; target_champion?: string | null; counter_champion?: string | null;
+  // 042 push_targets가 더 준다 (새 글 알림이 그 글로 가도록). 옛 DB면 없다
+  post_id?: number | null;
 };
 export type PushTarget = { id: number; endpoint: string; p256dh: string; auth: string };
 export type PushDeps = {
@@ -57,6 +59,8 @@ const STAFF: Record<string, (n: PushNotice) => string> = {
   // 038: 승인 없이 바로 공개된 새 상대법·새 빌드 → 그 상대법 화면, 그 빌드를 고른 채로 (상대법 정보가 없으면 알림 목록)
   matchup_created: (n) => matchupUrl(n),
   build_created: (n) => matchupUrl(n),
+  // 042: 자유게시판 새 글 → 그 글 (글 번호가 없으면 알림 목록)
+  post_created: (n) => (n.post_id ? `/board/${n.post_id}` : '/notifications'),
 };
 function matchupUrl(n: PushNotice): string {
   if (!n.target_champion || !n.counter_champion) return '/notifications';

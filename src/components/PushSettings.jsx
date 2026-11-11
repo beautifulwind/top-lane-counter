@@ -101,7 +101,7 @@ function PushKinds({ userId, staffAccount, operatorOff }) {
         <label className="check-row">
           <input type="checkbox" checked={settings.staff_new} onChange={(e) => change('staff_new', e.target.checked)} />
           <span>
-            {APPROVAL_ENABLED ? '운영진 알림: 새 제안·새 빌드·새 문의' : '운영진 알림: 새 상대법·새 빌드·새 문의'}
+            {APPROVAL_ENABLED ? '운영진 알림: 새 제안·새 빌드·새 문의·새 글' : '운영진 알림: 새 상대법·새 빌드·새 문의·새 글'}
             {operatorOff && <small className="hint">운영자 모드를 끈 동안에는 오지 않습니다.</small>}
           </span>
         </label>

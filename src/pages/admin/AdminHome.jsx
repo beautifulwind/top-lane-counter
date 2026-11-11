@@ -15,8 +15,6 @@ import { useAsync } from '../../lib/useAsync';
 import { BUILD_STATUS_LABEL, TYPE_LABEL, fmtDateTime } from '../../lib/format';
 import { ErrorBox, Loading } from '../../components/Status';
 import { RequireStaff } from '../../components/RequireOperator';
-import ModeratorAdmin from '../../components/ModeratorAdmin';
-import MemberAdmin from '../../components/MemberAdmin';
 import { useAuth } from '../../lib/auth';
 import { isStaffPerson } from '../../lib/nickname';
 import UserName from '../../components/UserName';
@@ -239,13 +237,11 @@ function PendingList() {
       </section>
 
       <section className="section">
-        <SectionHead icon={UsersIcon}>회원</SectionHead>
-        <MemberAdmin />
-      </section>
-
-      <section className="section">
-        <SectionHead icon={ShieldIcon}>감독관 관리</SectionHead>
-        <ModeratorAdmin />
+        <SectionHead icon={UsersIcon}>회원 관리</SectionHead>
+        <p className="hint">가입자 수, 회원 목록·검색, 회원 정보, 감독관 지정·해제, 처리 기록을 한 화면에서 합니다.</p>
+        <div className="row-actions">
+          <Link to="/admin/members" className="btn btn-small btn-op">회원 관리 열기</Link>
+        </div>
       </section>
 
       <section className="section">

@@ -559,7 +559,7 @@
 - **푸시 대상** (`push_group(종류)`):
   | 묶음 | 받는 사람 | 알림 종류 | 설정 칸 |
   |---|---|---|---|
-  | 운영진 알림 `staff_new` | 운영자·감독관 | `proposal_submitted`(새 제안·재검토 뒤 다시 낸 제안) · `build_submitted`(새 빌드 제안) · `inquiry_received`(새 문의) | "운영진 알림: 새 제안·새 빌드·새 문의" |
+  | 운영진 알림 `staff_new` | 운영자·감독관 | `proposal_submitted`(새 제안·재검토 뒤 다시 낸 제안) · `build_submitted`(새 빌드 제안) · `inquiry_received`(새 문의) | "운영진 알림: 새 제안·새 빌드·새 문의·새 글" (승인 제도를 끈 지금은 "새 상대법·새 빌드·새 문의·새 글") |
   | 내 제안 결과 `my_results` | 제안자 | `proposal_approved` · `proposal_rejected` · `build_approved` · `build_rejected` · `revision_request`(재검토 요청) · `counter_restored` · `build_restored`(다시 공개) | "내 제안 결과: 승인·거절·재검토 요청·다시 공개" |
   그 밖의 종류(재검토 요청 취소, 빌드 숨김, 레벨·칭호, 댓글, 문의 답변, 감독관 지정 등)는 푸시하지 않는다 (사이트 알림에는 그대로 쌓임).
 - **기존 규칙 그대로**: 감독관에게 안 가는 알림(빌드·계정 문의·운영진 제안 등)과 처리한 본인 제외는 알림 줄을 만들 때(`notify`·`notify_staff`) 이미 걸러지므로, 푸시는 "생긴 줄"만 따라간다. **운영자 모드를 끈 운영자**에게는 운영진 알림을 푸시하지 않는다(받는 사람이 지금 감독관이거나 모드가 켜진 운영자일 때만 — `push_wanted`). 운영진 종류가 운영진이 아닌 사람에게 있으면(해제 뒤 등) 보내지 않는다.
@@ -923,6 +923,8 @@ RLS 원칙:
 - **구조**: 두 함수 모두 안쪽 `…_unchecked`(아무도 직접 못 부름) + `require_operator()`를 먼저 하는 바깥 함수(013과 같은 방식). 감독관 지정·해제는 있던 `set_moderator`(030, 운영자만) 그대로.
 - **새 글 알림** `post_created`: 자유게시판 새 글이 공개로 올라오면(`posts_notify_admins` 트리거) 운영자에게 알림. 글쓴이 본인 제외, 댓글은 없음. 운영자 모드를 끄면 읽기 정책·모두 읽음·푸시(`push_wanted`)가 034·038과 같은 규칙으로 가린다. 푸시 묶음 `staff_new`(설정 화면 "운영진 알림" 하나로 켜고 끔). `push_targets`에 `post_id`를 더해 Edge Function이 `/board/<글 번호>`로 보낼 수 있게 함.
 - **새 표 없음** → `reset_test_data*.sql`은 그대로(알림은 이미 비움).
+- **2단계 화면**: `/admin/members` 회원 관리(가입자 수·최근 가입 순 목록·닉네임 검색·등급 거르기·쪽 나누기·감독관 지정/해제·처리 기록) 한 화면 — 예전 /admin의 "회원"·"감독관 관리" 칸은 "회원 관리 열기" 링크 하나로 바뀌었다. `/admin/members/:id` 회원 정보(기본 정보·활동 수·쓴 글·댓글·고친 빌드·처리 이력, 지운 글·댓글은 열었을 때만 불러옴). 탈퇴했거나 없는 회원은 "탈퇴한 이용자". 예전 주소 연결: `/admin/moderators` → `/admin/members?role=moderator`. 운영자 전용(RequireOperator + DB). 새 글 알림 `post_created`는 알림 목록·푸시 모두 `/board/<글 번호>`. 푸시 설정 문구 "…·새 글". Edge Function `web-push`는 `post_id`를 받아 같은 주소로 보낸다(042 뒤 재배포, 순서 바뀌어도 안 깨짐).
+- **방침**: 시행일은 그대로 두고 회원 정보 조회 문구에 쓴 글·댓글 내용, 고친 빌드, 처리 이력, 지운 글·댓글 열람(운영자만, 감독관 불가)을 넣었다.
 - **순서**: 042 실행 → `supabase/scripts/check_member_admin.sql` → (2단계) web-push Edge Function 재배포 → 새 화면 push. 옛 화면은 모르는 알림 종류를 종 모양 + 문장으로 보여 주므로 042만 먼저 실행해도 안 깨진다.
 - **개인정보처리방침**: 현재 "회원 정보 조회" 문구(Privacy.jsx 109·284·286줄)에 쓴 글·댓글 내용, 고친 빌드, 처리 이력 조회가 빠져 있다 → 2단계에서 문안 제시(시행일은 건드리지 않음).
 - **DB 검사**: `supabase/tests/member_admin_test.sql`.

@@ -62,7 +62,7 @@ test('감독관 /admin: 메뉴에 [관리], 새 카운터 대기와 자유게시
   expect(await screen.findByRole('heading', { name: /새 카운터 승인 대기/ })).toBeDefined();
   expect((await openMenu()).getByRole('link', { name: '관리' })).toBeDefined();
   expect(await screen.findByRole('heading', { name: /자유게시판·댓글/ })).toBeDefined();
-  for (const name of ['감독관 관리', '사진 저장 공간', '비주류 픽', '아이템 가격', '숨긴 상대법', '삭제 기록']) {
+  for (const name of ['회원 관리', '사진 저장 공간', '비주류 픽', '아이템 가격', '숨긴 상대법', '삭제 기록']) {
     expect(screen.queryByRole('heading', { name: new RegExp(name) })).toBeNull();
   }
   const rows = await vi.waitFor(() => {
@@ -185,22 +185,18 @@ test('신고 목록: 감독관은 전용 DB 함수로 받고 신고자가 안 �
   expect(opList.textContent).toContain('탈퇴');
 });
 
-test('운영자 /admin 감독관 관리: 찾아서 메모 쓰고 지정, 처리 기록, [해제]', async () => {
+test('운영자 /admin/members 회원 관리: 찾아서 메모 쓰고 감독관 지정, 처리 기록, [해제]', async () => {
   asOp();
   TABLES.profiles.push({ id: 'u-new', nickname: '새감독', role: 'user', xp: 0, level: 2, main_title: null });
   TABLES.profiles.push({ id: 'u-g', nickname: '비회원손님', role: 'user', xp: 0, level: 1, main_title: null, is_guest: true });
-  start('/admin');
-  expect(await screen.findByRole('heading', { name: /감독관 관리/ })).toBeDefined();
-  expect(await screen.findByText('감독관이 없습니다.')).toBeDefined();
-  fireEvent.change(screen.getByLabelText('닉네임으로 회원 찾기'), { target: { value: '영자' } });
-  fireEvent.click(screen.getByRole('button', { name: '찾기' }));
-  expect(await screen.findByText('지정할 수 있는 회원을 찾지 못했습니다.')).toBeDefined(); // 운영자 본인은 후보 아님
-  fireEvent.change(screen.getByLabelText('닉네임으로 회원 찾기'), { target: { value: '손님' } });
-  fireEvent.click(screen.getByRole('button', { name: '찾기' }));
-  expect(await screen.findByText('비회원은 감독관으로 지정할 수 없습니다.')).toBeDefined();
-  fireEvent.change(screen.getByLabelText('닉네임으로 회원 찾기'), { target: { value: '새감' } });
-  fireEvent.click(screen.getByRole('button', { name: '찾기' }));
-  fireEvent.click(within(await screen.findByRole('listitem', { name: '새감독' })).getByRole('button', { name: '지정' }));
+  start('/admin/members');
+  expect(await screen.findByRole('heading', { name: /회원 관리/ })).toBeDefined();
+  const list = await screen.findByRole('list', { name: '회원 목록' });
+  expect(within(list).queryByRole('button', { name: /영자 감독관/ })).toBeNull(); // 운영자 본인은 지정 대상 아님
+  expect(within(within(list).getByRole('listitem', { name: '비회원손님' })).getByText('비회원은 감독관으로 지정할 수 없습니다.')).toBeDefined();
+  fireEvent.change(screen.getByLabelText('닉네임으로 회원 검색'), { target: { value: '새감' } });
+  fireEvent.click(screen.getByRole('button', { name: '검색' }));
+  fireEvent.click(await screen.findByRole('button', { name: '새감독 감독관 지정' }));
   expect(screen.getByText(/처리 기록은 탈퇴 후에도 남습니다/)).toBeDefined();
   const ok = screen.getByRole('button', { name: '지정 확정' });
   expect(ok.disabled).toBe(true);
@@ -208,13 +204,23 @@ test('운영자 /admin 감독관 관리: 찾아서 메모 쓰고 지정, 처리 
   fireEvent.click(ok);
   expect(await screen.findByText('새감독: 감독관 지정했습니다.')).toBeDefined();
   expect(rpcs('set_moderator')).toEqual([{ p_user: 'u-new', p_on: true, p_note: '신고 처리 부탁' }]);
-  const mods = await screen.findByRole('list', { name: '감독관 목록' });
   expect((await screen.findByRole('list', { name: '처리 기록' })).textContent).toContain('감독관 지정');
-  fireEvent.click(within(mods).getByRole('button', { name: '해제' }));
+  fireEvent.click(await screen.findByRole('button', { name: '새감독 감독관 해제' }));
   fireEvent.change(screen.getByLabelText('해제 메모 (필수, 그 사람에게 보입니다)'), { target: { value: '활동 종료' } });
   fireEvent.click(screen.getByRole('button', { name: '해제 확정' }));
   expect(await screen.findByText('새감독: 감독관 해제했습니다.')).toBeDefined();
   expect(TABLES.profiles.find((p) => p.id === 'u-new').role).toBe('user');
+});
+
+test('운영자: 예전 /admin/moderators 주소는 감독관만 거른 회원 관리로 간다', async () => {
+  asOp();
+  TABLES.profiles.push({ id: 'u-m2', nickname: '기존감독', role: 'moderator', xp: 0, level: 2, main_title: null });
+  TABLES.profiles.push({ id: 'u-new', nickname: '그냥회원', role: 'user', xp: 0, level: 2, main_title: null });
+  start('/admin/moderators');
+  const list = await screen.findByRole('list', { name: '회원 목록' });
+  expect(within(list).getAllByRole('listitem').length).toBe(1);
+  expect(within(list).getByText(/기존감독/)).toBeDefined();
+  expect(screen.getByLabelText('등급으로 거르기').value).toBe('moderator');
 });
 
 test('감독관 알림: 지정은 탈퇴 후 기록 안내 + 메모, 해제는 메모', () => {

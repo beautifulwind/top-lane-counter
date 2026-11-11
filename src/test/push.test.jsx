@@ -156,7 +156,7 @@ test('로그아웃하면 이 기기 알림 주소를 지우고 구독을 끊는�
 test('운영자·감독관: 운영진 알림 칸이 보이고, 바꾸면 내 설정으로 저장된다', async () => {
   fakeLogin('u-mod', { nickname: '감독', role: 'moderator' });
   start('/me/settings');
-  const staff = await screen.findByRole('checkbox', { name: /운영진 알림: 새 상대법·새 빌드·새 문의/ });
+  const staff = await screen.findByRole('checkbox', { name: /운영진 알림: 새 상대법·새 빌드·새 문의·새 글/ });
   expect(staff).toBeChecked();
   fireEvent.click(staff);
   await waitFor(() => expect(TABLES.push_settings).toEqual([expect.objectContaining({ user_id: 'u-mod', staff_new: false, my_results: true })]));
@@ -227,6 +227,14 @@ describe('describePush: 잠금 화면 내용이 알림 목록과 같은 곳으�
     expect(describeNotification({ ...n, counter, build: { counter } }).to).toBe(push.url);
     // 상대법 정보가 없으면(옛 DB) 알림 목록으로
     expect(describePush({ id: 3, kind, message: null, proposal_id: null, build_id: 12 }).url).toBe('/notifications');
+  });
+  test('post_created (042): 새 글로 — 알림 목록과 같은 곳, 글 번호가 없으면 알림 목록', () => {
+    const n = { id: 4, kind: 'post_created', message: '새 글이 올라왔습니다. 「탑 라인 질문」', proposal_id: null, build_id: null, post_id: 31 };
+    const push = describePush(n);
+    expect(push).toMatchObject({ title: '운영진 알림', body: '새 글이 올라왔습니다. 「탑 라인 질문」', url: '/board/31', tag: 'n-4' });
+    expect(describeNotification({ ...n, counter: null }).to).toBe(push.url);
+    expect(describeNotification({ ...n, counter: null }).title).toBe(n.message);
+    expect(describePush({ ...n, post_id: null }).url).toBe('/notifications');
   });
   test('긴 메모는 잘라서 보낸다, 메모가 없으면 안내 문구', () => {
     expect([...describePush({ id: 1, kind: 'proposal_rejected', message: '가'.repeat(300) }).body].length).toBe(120);

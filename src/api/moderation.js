@@ -83,3 +83,32 @@ export async function getMemberInfo(userId) {
   if (error) throw korean(error, '회원 정보를 불러오지 못했습니다.');
   return data;
 }
+
+const withCode = (error, fallback) => Object.assign(korean(error, fallback), { code: error.code });
+
+/**
+ * 회원 목록 (042, 운영자 전용): { total, page, size, members: [{ id, nickname, role, level, main_title, is_guest, created_at }] }.
+ * 최근 가입 순. query = 닉네임 일부(비우면 전체), role = 'user' | 'moderator' | 'admin' | 없음. 이메일·로그인 ID는 오지 않는다
+ */
+export async function getMemberList({ query = '', role = null, page = 1, size = 20 } = {}) {
+  const { data, error } = await db().rpc('admin_member_list', { p_query: query.trim() || null, p_role: role || null, p_page: page, p_size: size });
+  if (error) throw korean(error, '회원 목록을 불러오지 못했습니다.');
+  return data;
+}
+
+/**
+ * 회원 정보 페이지 (042, 운영자 전용): { info, posts, comments, edited_builds, moderation }.
+ * 탈퇴했거나 없는 회원이면 code가 'P0002'인 오류 — 화면은 "탈퇴한 이용자"로 보여 준다
+ */
+export async function getMemberDetail(userId) {
+  const { data, error } = await db().rpc('admin_member_detail', { p_user: userId, p_limit: 50 });
+  if (error) throw withCode(error, '회원 정보를 불러오지 못했습니다.');
+  return data;
+}
+
+/** 그 회원이 지운 글·댓글과 내용 (040, 운영자 전용, 1년 보관): { keep_days, posts, comments, doc_comments } */
+export async function getDeletedWritings(userId) {
+  const { data, error } = await db().rpc('admin_deleted_writings', { p_user: userId });
+  if (error) throw korean(error, '지운 글·댓글을 불러오지 못했습니다.');
+  return data;
+}

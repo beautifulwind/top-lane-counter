@@ -86,6 +86,8 @@ const AdminDelete = lazyPage(() => import('./pages/admin/AdminDelete'));
 const AdminBuild = lazyPage(() => import('./pages/admin/AdminBuild'));
 const AdminReports = lazyPage(() => import('./pages/admin/AdminReports'));
 const AdminInquiries = lazyPage(() => import('./pages/admin/AdminInquiries'));
+const AdminMembers = lazyPage(() => import('./pages/admin/AdminMembers'));
+const AdminMember = lazyPage(() => import('./pages/admin/AdminMember'));
 const Resubmit = lazyPage(() => import('./pages/Resubmit'));
 const ResubmitBuild = lazyPage(() => import('./pages/ResubmitBuild'));
 const Privacy = lazyPage(() => import('./pages/Privacy'));
@@ -145,6 +147,10 @@ export function AppRoutes() {
           <Route path="admin/builds/:id" element={<AdminBuild />} />
           <Route path="admin/reports" element={<AdminReports />} />
           <Route path="admin/inquiries" element={<AdminInquiries />} />
+          {/* 042: 회원 관리 한 화면 (예전 /admin의 "회원"·"감독관 관리" 칸). 감독관 관리 자리는 감독관만 거른 회원 관리로 */}
+          <Route path="admin/members" element={<AdminMembers />} />
+          <Route path="admin/members/:id" element={<AdminMember />} />
+          <Route path="admin/moderators" element={<Navigate to="/admin/members?role=moderator" replace />} />
           <Route path="board" element={<Board />} />
           <Route path="board/new" element={<BoardWrite />} />
           <Route path="board/:id" element={<BoardPost />} />

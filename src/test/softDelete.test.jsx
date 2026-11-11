@@ -123,19 +123,19 @@ test('운영진 삭제 알림: 글은 링크 없음, 댓글은 그 글로, 문�
   expect(doc.to).toBe('/champion/Darius/counter/Quinn#comments');
 });
 
-test('운영자 회원 정보: 지운 글·댓글 개수를 따로 보여 준다', async () => {
+test('운영자 회원 정보(042): 지운 글·댓글 개수를 따로 보여 준다', async () => {
   fakeState.members = [{ id: 'u-1', nickname: '탑고수', role: 'user', level: 5, main_title: null, is_guest: false, created_at: '2026-11-01T00:00:00Z' }];
-  fakeState.memberInfo = {
+  fakeState.memberDetail = {
     'u-1': {
-      id: 'u-1', nickname: '탑고수', role: 'user', level: 5, main_title: null, is_guest: false, created_at: '2026-11-01T03:00:00Z',
-      providers: ['google'], titles: [], proposals: 0, posts: 3, builds: 0, comments: 11, deleted_posts: 2, deleted_comments: 4,
+      info: {
+        id: 'u-1', nickname: '탑고수', role: 'user', level: 5, main_title: null, is_guest: false, created_at: '2026-11-01T03:00:00Z',
+        providers: ['google'], titles: [], proposals: 0, posts: 3, builds: 0, comments: 11, matchups: 0, xp: 0, deleted_posts: 2, deleted_comments: 4,
+      },
+      posts: [], comments: [], edited_builds: [], moderation: [],
     },
   };
   asOp();
-  start('/admin');
-  fireEvent.change(await screen.findByLabelText('닉네임으로 회원 검색'), { target: { value: '탑' } });
-  fireEvent.click(screen.getByRole('button', { name: '검색' }));
-  fireEvent.click(within(await screen.findByRole('listitem', { name: '탑고수' })).getByRole('button', { name: '정보 보기' }));
+  start('/admin/members/u-1');
   const info = await screen.findByRole('list', { name: '탑고수 회원 정보' });
   expect(info.textContent).toContain('지운 글 2개 · 지운 댓글 4개');
 });

@@ -25,6 +25,8 @@ const STAFF_NEW = {
   // 038: 승인 없이 바로 공개된 새 상대법·새 빌드 (운영자만) → 그 상대법 화면, 그 빌드를 고른 채로
   matchup_created: { icon: 'flag', label: '상대법', to: (n) => wikiPath(n) },
   build_created: { icon: 'flag', label: '빌드', to: (n) => wikiPath(n) },
+  // 042: 자유게시판 새 글 (운영자만) → 그 글로
+  post_created: { icon: 'comment', to: (n) => (n.post_id ? `/board/${n.post_id}` : null) },
 };
 const wikiPath = (n) => {
   const c = n.counter ?? n.build?.counter;
