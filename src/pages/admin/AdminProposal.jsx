@@ -15,6 +15,7 @@ import { isStaffPerson } from '../../lib/nickname';
 import DiffView from '../../components/DiffView';
 import UserName from '../../components/UserName';
 import NoteForm from '../../components/NoteForm';
+import { APPROVAL_ENABLED } from '../../lib/features';
 import BuildCard from '../../components/BuildCard';
 import ApproveEditor from '../../components/ApproveEditor';
 import { EditedBadge, useAuthorChanged } from '../../components/AuthorChanged';
@@ -63,7 +64,8 @@ function Review() {
   const label = resubmitted ? '재검토 후 다시 낸 제안' : TYPE_LABEL[p.type];
 
   // 감독관은 다른 회원의 새 카운터 제안만 처리한다 (실제 검사는 DB의 require_review_allowed)
-  const canReview = isOperator || (isNew && p.counter_id == null && p.proposer_id !== user?.id && !isStaffPerson(p.proposer));
+  // 승인 제도를 끄면(lib/features.js) 기록만 본다 (039가 남은 대기를 0으로 만든 뒤 끈다)
+  const canReview = APPROVAL_ENABLED && (isOperator || (isNew && p.counter_id == null && p.proposer_id !== user?.id && !isStaffPerson(p.proposer)));
   const hiddenFlow = isHiddenCounterFlow(p);
   const cannotApprove = hidden || (p.type === 'new_counter' && exists) || noBuild;
   const done = (what) => navigate('/admin', { state: { done: `${what}: [${label}] ${title}` } });
@@ -158,7 +160,11 @@ function Review() {
       {approvedWithEdits(p) && <EditedByOperator p={p} card={card} />}
 
       {!canReview && ['pending', 'revision_requested'].includes(p.status) && (
-        <p className="hint">운영자가 처리하는 제안입니다. 감독관은 다른 회원의 새 카운터 제안만 처리합니다.</p>
+        <p className="hint">
+          {APPROVAL_ENABLED
+            ? '운영자가 처리하는 제안입니다. 감독관은 다른 회원의 새 카운터 제안만 처리합니다.'
+            : '승인 제도가 꺼져 있어 처리할 수 없습니다. 기록만 볼 수 있습니다.'}
+        </p>
       )}
       {p.status === 'pending' && canReview && (
         <section className="section">
@@ -216,7 +222,7 @@ function Review() {
         </section>
       )}
 
-      {p.status === 'revision_requested' && isOperator && (
+      {p.status === 'revision_requested' && isOperator && APPROVAL_ENABLED && (
         <section className="section">
           <div className="revision-note" role="note">
             <p><strong>재검토 요청 중</strong> — 제안자가 고쳐서 다시 내기를 기다리고 있습니다.{p.revision_requested_at && <small> ({fmtDateTime(p.revision_requested_at)})</small>}</p>

@@ -1,6 +1,8 @@
 // 운영자 전용 버튼·링크는 운영자 색(btn-op / top-btn op / op-link, 색은 src/styles/tokens.css의 --op)
 // 일반 사용자 화면에는 운영자 색이 하나도 없어야 한다.
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+// 승인 제도 화면은 지금 꺼 두었다(lib/features.js). 이 파일의 승인 검사는 켠 채로 한다 — 끈 상태는 approvalOff.test.jsx
+vi.mock('../lib/features', async (importOriginal) => ({ ...(await importOriginal()), APPROVAL_ENABLED: true }));
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { readFileSync } from 'node:fs';
 import { MemoryRouter } from 'react-router-dom';

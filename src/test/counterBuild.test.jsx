@@ -1,5 +1,7 @@
 // 009: 새 카운터 제안 = 글 + 빌드. 다시 제출·운영자 검토·마지막 공개 빌드 잠금
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+// 승인 제도 화면은 지금 꺼 두었다(lib/features.js). 코드는 남아 있으므로 켠 채로 검사한다 — 끈 상태는 approvalOff.test.jsx
+vi.mock('../lib/features', async (importOriginal) => ({ ...(await importOriginal()), APPROVAL_ENABLED: true }));
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { AppRoutes } from '../App';

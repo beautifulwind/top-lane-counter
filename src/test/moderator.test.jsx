@@ -1,5 +1,7 @@
 // 감독관(030, SPEC 6-18): (운) 표시, /admin에 허용된 구역만, 숨기기·다시 공개 조건, 제안은 메모만 쓰고 그대로 승인, 신고자 숨김, 운영자의 지정·해제
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+// 승인 제도 화면은 지금 꺼 두었다(lib/features.js). 코드는 남아 있으므로 켠 채로 검사한다 — 끈 상태는 approvalOff.test.jsx
+vi.mock('../lib/features', async (importOriginal) => ({ ...(await importOriginal()), APPROVAL_ENABLED: true }));
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AppRoutes } from '../App';

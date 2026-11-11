@@ -1,5 +1,7 @@
 // 묶음 C (018): 시작 아이템 500골드 상한, 선마 하나, 카운터 순위·문구, 자유게시판, 부제, 운영자 아이템 가격표
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+// 승인 제도 화면은 지금 꺼 두었다(lib/features.js). 이 파일의 승인 검사는 켠 채로 한다 — 끈 상태는 approvalOff.test.jsx
+vi.mock('../lib/features', async (importOriginal) => ({ ...(await importOriginal()), APPROVAL_ENABLED: true }));
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AppRoutes } from '../App';

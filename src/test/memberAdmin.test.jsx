@@ -73,7 +73,7 @@ test('운영자: 없는 닉네임은 안내만', async () => {
 test('감독관: 회원 칸이 없고 회원 함수를 부르지도 않는다', async () => {
   fakeLogin('u-mod', { nickname: '감독', role: 'moderator', level: 3, main_title: null });
   start();
-  await screen.findByRole('heading', { name: /새 카운터 승인 대기/ });
+  await screen.findByRole('heading', { name: /자유게시판·댓글/ });
   expect(screen.queryByRole('heading', { name: /^회원$/ })).toBeNull();
   expect(screen.queryByLabelText('닉네임으로 회원 검색')).toBeNull();
   expect(fakeState.memberCalls.length).toBe(0);

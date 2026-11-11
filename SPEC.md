@@ -582,7 +582,7 @@
   - 공통: "받을 알림"에서 끈 종류는 안 옴 / 운영자 모드를 끄면 운영진 알림이 안 옴 / 로그아웃하면 그 기기로 안 옴 / Edge Functions → web-push → Logs에 `{"event":"web_push",…,"sent":1}`.
 
 ### 6-25. 상대법 = 빌드 묶음 · 위키 방식(무승인) — 1단계 DB (2026-11-11, 038)
-> 화면(2단계)·승인 끄기(039)·글·댓글 삭제 방식(3단계, 040)은 아직이다. 038은 DB만 준비하고 **승인 제도는 켜진 채**라 지금 화면이 그대로 동작한다.
+> 038은 DB만 준비하고 승인 제도는 켜진 채였다. 화면은 2a(cdff501), 승인 끄기는 2b·039(아래 6-26), 글·댓글 삭제 방식(3단계, 040)은 아직이다.
 - **구조**: 상대법(`counters`, 플레이할 챔피언 `counter_champion` vs 상대 `target_champion`) 안에 빌드 여러 개. 빌드 하나 = 이름(선택, 1~20자, 비면 "빌드 {seq}") · 한 줄 요약 · 룬 · 스펠 · 시작 아이템 · 핵심 템트리 · 선마 · 레벨별 딜교법 · 특이사항. 검사는 예전 빌드 검사(`clean_build`·핵심 템트리·강타·시작 골드·똑같은 공개 빌드 금지)와 예전 문서 검사(`clean_doc_content` — 요약 필수, 1/2/3/6레벨 필수)를 그대로 쓴다(`clean_wiki_build`).
   - `seq`는 공개될 때 상대법 안에서 1, 2, 3… 으로 정해지고 바뀌지 않는다(추천 순서와 별개). `counters.first_build_id` = 상대법과 함께 등록된 첫 빌드(+30 따로 없음).
   - **시초** = 빌드 작성자(`builds.author_id`), 상대법 시초 = `counters.proposed_by`.
@@ -603,6 +603,19 @@
   - 038 ~ 039 사이 옛 길: 빌드가 공개되면 번호·문서 내용을 채우고(`builds_wiki_fill`), 문서가 바뀌면 아직 문서와 같은 내용인 빌드에도 반영(`matchup_docs_to_builds`, `migrate` 기록·기여자).
 - **테스트 데이터 비우기**: 수정 기록·기여자·간격을 비우고 남는 말파 공개 빌드마다 `migrate` 1줄을 새로 남긴다.
 - **확인 조회**: `supabase/scripts/check_wiki_builds.sql` (038 실행 전·후, 일정 등록 뒤 한 번씩, 22줄 표, 마지막이 조회문). DB 검사: `supabase/tests/wiki_builds_test.sql`.
+
+### 6-26. 상대법 = 빌드 묶음 2b단계 — 승인 제도 끄기 (2026-11-11, 039)
+> 2a(화면: 빌드 탭·새 상대법·새 빌드·빌드 수정·⋮ 메뉴·수정 기록 팝업)는 cdff501. 2b는 승인 화면 끄기·푸시 이동 주소·약관·방침·039.
+- **039** (`supabase/migrations/039_approval_off.sql`): `xp_rules.approval_on` = 0 → 옛 길(새 카운터 제안·문서 수정 제안·승인 대기 빌드 등록)을 DB가 거부(038 `check_new_proposal`·`check_new_build`). `wiki_backfill_matchups()` 한 번 더(038 ~ 039 사이 옛 화면으로 승인된 것), `proposal_reviewing` 비우기. 표·함수·예전 기록은 지우지 않는다.
+  - **실행 조건**: 승인 대기·재검토 중인 제안과 빌드가 0건. 남아 있으면 「승인 대기·재검토 중인 제안 N건, 빌드 N건이 남아 있습니다. …(아무것도 바뀌지 않았습니다)」로 멈춘다. 확인하는 동안 `edit_proposals`·`builds`를 잠근다(share row exclusive). 다시 실행해도 같은 결과. 따로 등록할 pg_cron 일정 없음.
+  - 확인 조회 `supabase/scripts/check_approval_off.sql` (실행 전·후, 10줄 표). DB 검사 `supabase/tests/approval_off_test.sql` — `tests/fixtures.sql`이 039 값을 `t.approval_after_039`에 남기고 예전 승인 검사를 위해 1로 다시 켠다.
+- **화면 끄기 (지우지 않음)**: `src/lib/features.js` `APPROVAL_ENABLED = false`. 다시 켜려면 이 값을 true + DB `approval_on` = 1.
+  - 예전 주소 `/champion/:t/counter/:c/edit`(문서 수정 제안) → 그 상대법, `/me/proposals/:id/edit`·`/me/builds/:id/edit`(고쳐서 다시 보내기) → 그 기록 보기. 모두 「이제 승인 없이 바로 등록·수정합니다. 빌드는 상대법 화면의 [빌드 수정]에서, 새 빌드는 [+ 새 빌드]에서 올려 주세요.」 안내. 화면 파일(`ProposeEdit`·`Resubmit`·`ResubmitBuild`)은 남김.
+  - 운영자 `/admin`: 승인 대기·재검토 기다리는 중·빌드 승인 대기 구역을 불러오지도 보이지도 않고 「승인 제도는 꺼져 있습니다. …」 안내. 숨긴 카운터·숨긴 빌드는 그대로. 감독관 화면의 새 카운터 승인 대기도 없음. 제안·빌드 [자세히]는 기록 보기만(「승인 제도가 꺼져 있어 처리할 수 없습니다. 기록만 볼 수 있습니다.」).
+  - `/me`: 대기·재검토 중이어도 [수정]·[고쳐서 다시 보내기] 없음. 「내 제안」은 보낸 제안이 있을 때만(「예전 승인 제도 때 보낸 제안 기록입니다. …」). 내 빌드 [문서 보기] → `상대법?build=id`, 공개 빌드 자세히에 [빌드 수정].
+  - 휴대폰 알림 설정: 운영진 「새 상대법·새 빌드·새 문의」, 내 알림 「내 상대법·빌드 다시 공개」(`my_results` 칸은 다시 공개 알림에 계속 쓰이므로 숨기지 않고 이름만 바꿈).
+- **Edge Function `web-push`**: `matchup_created`·`build_created`를 누르면 `/champion/{상대}/counter/{플레이할}?build={빌드 id}` (038 `push_targets`의 `target_champion`·`counter_champion`·`build_id`), 모자라면 `/notifications`. **고친 뒤 대시보드에서 다시 배포**(Edge Functions → web-push → 코드 붙여넣기, Verify JWT 끔 그대로).
+- **약관·방침**(시행일 그대로, 개정 안내 공지는 따로): 약관 제2·3·5·6·7조 — 승인 없이 바로 공개, 비회원은 등록·내 빌드 수정까지, 반복 등록·훼손 금지, 숨기기·되돌리기·수정 기록, 작성자도 상대법·빌드를 못 지움, 감독관의 승인 문구 삭제. 방침 1·3·4·11번 — 상대법·빌드 등록 정보, 빌드 수정 기록(1년 자동 삭제, 운영자만 열람)·기여자 목록(빌드가 있는 동안)·등록·수정 간격 시각, 예전 승인 기록, 탈퇴 시 기여자 이름·간격 시각 삭제·수정 기록은 표시만 지움. 글·댓글 삭제 보관 문구는 3단계(040).
 
 ## 7. 데이터 구조 (Supabase 초안)
 
@@ -774,6 +787,7 @@ RLS 원칙:
 36. `supabase/migrations/036_member_info_moderator_revision.sql` (운영자 전용 `admin_member_stats`·`admin_search_members`·`admin_member_info` · 감독관 재검토 요청 `request_proposal_revision` 권한 확대 · 처리 기록 종류 `request_revision`. 있던 함수의 이름·인자는 그대로라 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행하고, 확인 뒤 새 코드 push. 확인 조회: `supabase/scripts/check_member_info.sql` — 실행 전·후 한 번씩)
 37. `supabase/migrations/037_web_push.sql` (웹 푸시 — 표 `push_subscriptions`·`push_settings`·RLS, 알림 트리거 `notifications_push`, Edge Function용 `push_targets`·`push_forget`. 있던 표·함수는 바꾸지 않아 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행하고, `supabase/scripts/check_web_push.sql`로 확인(실행 전·후) → **11-11 설정** → 다시 확인(14·15번 true) → 새 코드 push)
 38. `supabase/migrations/038_wiki_builds.sql` (상대법 = 빌드 묶음·위키 방식 DB 준비 — 빌드 공략 칸·수정 기록·기여자·`create_matchup`·`create_build`·`edit_build`·`build_contributors`·경험치·칭호·알림 종류·기존 데이터 이전. 승인 제도는 켜진 채라 지금 배포된 화면과 그대로 동작하므로 이 SQL을 먼저 실행하고, 확인 뒤 새 코드 push. 확인 조회: `supabase/scripts/check_wiki_builds.sql` — 실행 전·후 한 번씩. **실행 뒤 파일 맨 아래 pg_cron 일정 등록 SQL을 따로 한 번**: `select cron.schedule('purge-old-build-revisions', '55 19 * * *', $$select public.purge_old_build_revisions()$$);`)
+39. `supabase/migrations/039_approval_off.sql` (승인 제도 끄기 — `approval_on` = 0, 기존 데이터 이전 한 번 더, 검토 중 표시 비우기. **먼저 운영자 페이지에서 승인 대기·재검토 중인 제안·빌드를 0건으로**(남아 있으면 아무것도 바꾸지 않고 멈춤). **2b 화면 push보다 먼저** 실행(2b 화면은 승인 대기 목록을 보여 주지 않으므로, 먼저 push하면 그 사이 들어온 대기 건을 화면에서 처리할 수 없다). 확인 조회: `supabase/scripts/check_approval_off.sql` — 실행 전·후 한 번씩. 따로 실행할 SQL 없음. Edge Function `web-push`도 다시 배포)
 - **테스트 데이터 비우기** (마이그레이션 아님, 정식 공개 직전 등 필요할 때): `supabase/scripts/reset_test_data_preview.sql`(읽기만 — 지울·남을 개수)로 확인 → `supabase/scripts/reset_test_data.sql`. 계정(운영자 계정·운영자 모드 상태·테스트용 구글 계정 포함 — 계정은 하나도 지우지 않는다)·프로필·설정값과 트린다미어 상대 말파이트 카운터(지금 문서·공개 빌드·처음 제안)만 남기고, 문의·처리 기록(`moderation_log`, 감독관 지정·해제 기록 포함)·알림·`proposal_reviewing` 등은 모두 비우며, 말파 문서의 수정 기록은 지금 내용 1줄로 정리, 경험치·레벨·칭호는 알림 없이 다시 계산한다. SQL Editor가 RLS를 물으면 **"Run without RLS"**로 실행 ("Run and enable RLS"는 임시 표 `reset_keep`·`reset_admins` 때문에 에러). 운영자 계정이 없거나 끝에서 운영자 role·모드가 바뀌어 있으면 전부 되돌리고 멈춘다. 되돌릴 수 없으므로 순서는 ① 백업 확인 → ② preview → ③ reset → ④ 결과 표 확인.
 - 합쳐서 한 번에 돌리지 않는다: 파일마다 `begin … commit`이라 중간에 실패하면 앞부분만 반영되고, 다시 돌리면 "already exists"가 난다.
 - 새 마이그레이션(010 …)을 만들면 이 목록에 추가한다. `supabase/tests/run.sh`가 빈 DB에 같은 순서로 실행한 뒤 검사용 데이터(`tests/fixtures.sql`)를 넣고 검사한다 (`supabase/tests`는 실제 프로젝트에서 실행하지 않음).

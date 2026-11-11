@@ -1,6 +1,8 @@
 // 033 관리자 편의: 제안 입력칸 안내 문구, 운영진 새 제안·빌드·문의 알림 표시, 관리 메뉴 처리 대기 건수, 검토 중 표시 갱신
 import { act, cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+// 승인 제도 화면은 지금 꺼 두었다(lib/features.js). 코드는 남아 있으므로 켠 채로 검사한다 — 끈 상태는 approvalOff.test.jsx
+vi.mock('../lib/features', async (importOriginal) => ({ ...(await importOriginal()), APPROVAL_ENABLED: true }));
 import { MemoryRouter } from 'react-router-dom';
 import { AppRoutes } from '../App';
 import { REVIEW_REFRESH_MS } from '../components/ReviewPresence';

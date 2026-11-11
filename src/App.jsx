@@ -5,6 +5,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Home from './pages/Home';
 import Champion from './pages/Champion';
 import Matchup from './pages/Matchup';
+import { APPROVAL_ENABLED, APPROVAL_OFF_NOTICE } from './lib/features';
 import NotFound from './pages/NotFound';
 import Login from './pages/Login';
 import Welcome from './pages/Welcome';
@@ -58,6 +59,15 @@ const ProposeEdit = lazyPage(() => import('./pages/ProposeEdit'));
 const BuildNew = lazyPage(() => import('./pages/BuildNew'));
 const BuildEdit = lazyPage(() => import('./pages/BuildEdit'));
 
+/**
+ * 승인 제도를 끈 동안(lib/features.js) 승인용 화면(문서 수정 제안, 제안·빌드 고쳐서 다시 보내기) 주소로 오면
+ * 그 내용을 보는 화면으로 보내고 안내를 띄운다 (예전 알림·북마크 링크). 화면 코드는 지우지 않는다.
+ */
+function ApprovalOff({ to }) {
+  const params = useParams();
+  return <Navigate to={to(params)} replace state={{ done: APPROVAL_OFF_NOTICE, sent: APPROVAL_OFF_NOTICE }} />;
+}
+
 /** 예전 주소 (승인 제도 때 새 카운터 제안) /champion/:id/propose?counter=X[&from=제안 id] → 새 상대법 등록 /matchup/new?target=:id&mine=X[&from=] */
 function ProposeRedirect() {
   const { id } = useParams();
@@ -108,7 +118,7 @@ export function AppRoutes() {
           <Route path="champion/:id/propose" element={<ProposeRedirect />} />
           <Route path="matchup/new" element={<MatchupNew />} />
           <Route path="champion/:targetId/counter/:counterId" element={<Matchup />} />
-          <Route path="champion/:targetId/counter/:counterId/edit" element={<ProposeEdit />} />
+          <Route path="champion/:targetId/counter/:counterId/edit" element={APPROVAL_ENABLED ? <ProposeEdit /> : <ApprovalOff to={(p) => `/champion/${p.targetId}/counter/${p.counterId}`} />} />
           <Route path="champion/:targetId/counter/:counterId/build/new" element={<BuildNew />} />
           <Route path="champion/:targetId/counter/:counterId/build/:buildId/edit" element={<BuildEdit />} />
           <Route path="login" element={<Login />} />
@@ -120,9 +130,9 @@ export function AppRoutes() {
           <Route path="notifications" element={<Notifications />} />
           <Route path="inquiries" element={<Inquiries />} />
           <Route path="me/proposals/:id" element={<MyProposal />} />
-          <Route path="me/proposals/:id/edit" element={<Resubmit />} />
+          <Route path="me/proposals/:id/edit" element={APPROVAL_ENABLED ? <Resubmit /> : <ApprovalOff to={(p) => `/me/proposals/${p.id}`} />} />
           <Route path="me/builds/:id" element={<MyBuild />} />
-          <Route path="me/builds/:id/edit" element={<ResubmitBuild />} />
+          <Route path="me/builds/:id/edit" element={APPROVAL_ENABLED ? <ResubmitBuild /> : <ApprovalOff to={(p) => `/me/builds/${p.id}`} />} />
           {/* 옛 주소 (알림·북마크) → 새 주소 */}
           <Route path="me/resubmit/:id" element={<OldPath to={(id) => `/me/proposals/${id}/edit`} />} />
           <Route path="me/builds/:id/resubmit" element={<OldPath to={(id) => `/me/builds/${id}/edit`} />} />

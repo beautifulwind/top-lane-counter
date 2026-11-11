@@ -12,6 +12,7 @@ import { ErrorBox, Loading } from '../../components/Status';
 import RequireOperator from '../../components/RequireOperator';
 import UserName from '../../components/UserName';
 import NoteForm from '../../components/NoteForm';
+import { APPROVAL_ENABLED } from '../../lib/features';
 import BuildCard, { BuildAuthor } from '../../components/BuildCard';
 import ApproveEditor from '../../components/ApproveEditor';
 import { EditedBadge, useAuthorChanged } from '../../components/AuthorChanged';
@@ -101,7 +102,7 @@ function Review() {
       <section className="section">
         <h2 className="section-title">처리</h2>
         {notice}
-        {b.status === 'pending' && (
+        {b.status === 'pending' && APPROVAL_ENABLED && (
           <div className="row-actions">
             <button type="button" className="btn btn-small btn-op" onClick={() => toggle('approve')} disabled={cannotApprove} aria-expanded={open === 'approve'}>
               승인
@@ -114,7 +115,7 @@ function Review() {
             </button>
           </div>
         )}
-        {b.status === 'revision_requested' && (
+        {b.status === 'revision_requested' && APPROVAL_ENABLED && (
           <>
             <div className="revision-note" role="note">
               <p><strong>재검토 요청 중</strong> — 작성자가 고쳐서 다시 내기를 기다리고 있습니다.{b.revision_requested_at && <small> ({fmtDateTime(b.revision_requested_at)})</small>}</p>
@@ -141,6 +142,9 @@ function Review() {
               <button type="button" className="btn btn-small btn-op" onClick={() => toggle('restore')} aria-expanded={open === 'restore'}>다시 공개</button>
             </div>
           </>
+        )}
+        {!APPROVAL_ENABLED && ['pending', 'revision_requested'].includes(b.status) && (
+          <p className="hint">승인 제도가 꺼져 있어 처리할 수 없습니다. 기록만 볼 수 있습니다.</p>
         )}
         {b.status === 'rejected' && <p className="reject-reason">거절 사유: {b.reject_reason}</p>}
         {b.status === 'approved' && b.approve_note && <p className="approve-note">승인 메모: {b.approve_note}</p>}

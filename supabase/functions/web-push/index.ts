@@ -19,7 +19,11 @@ import webpush from 'npm:web-push@3.6.7';
 type Env = { get(key: string): string | undefined };
 type Result<T> = Promise<{ data: T | null; error: { message: string } | null }>;
 
-export type PushNotice = { id: number; kind: string; message: string | null; proposal_id: number | null; build_id: number | null };
+export type PushNotice = {
+  id: number; kind: string; message: string | null; proposal_id: number | null; build_id: number | null;
+  // 038 push_targets가 더 준다 (새 상대법·새 빌드 알림이 그 상대법으로 가도록). 옛 DB면 없다
+  counter_id?: number | null; target_champion?: string | null; counter_champion?: string | null;
+};
 export type PushTarget = { id: number; endpoint: string; p256dh: string; auth: string };
 export type PushDeps = {
   targets(notificationId: number): Result<{ notification: PushNotice | null; subscriptions: PushTarget[] }>;
@@ -50,7 +54,15 @@ const STAFF: Record<string, (n: PushNotice) => string> = {
   proposal_submitted: (n) => (n.proposal_id ? `/admin/proposals/${n.proposal_id}` : '/admin'),
   build_submitted: (n) => (n.build_id ? `/admin/builds/${n.build_id}` : '/admin'),
   inquiry_received: () => '/admin/inquiries',
+  // 038: 승인 없이 바로 공개된 새 상대법·새 빌드 → 그 상대법 화면, 그 빌드를 고른 채로 (상대법 정보가 없으면 알림 목록)
+  matchup_created: (n) => matchupUrl(n),
+  build_created: (n) => matchupUrl(n),
 };
+function matchupUrl(n: PushNotice): string {
+  if (!n.target_champion || !n.counter_champion) return '/notifications';
+  const path = `/champion/${encodeURIComponent(n.target_champion)}/counter/${encodeURIComponent(n.counter_champion)}`;
+  return n.build_id ? `${path}?build=${n.build_id}` : path;
+}
 const BODY_MAX = 120;
 const cut = (s: string) => ([...s].length > BODY_MAX ? `${[...s].slice(0, BODY_MAX - 1).join('')}…` : s);
 

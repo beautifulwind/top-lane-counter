@@ -5,6 +5,7 @@ import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells
 import { approvedWithEdits, getMyProposals } from '../api/proposals';
 import { getUnreadCount } from '../api/notifications';
 import { getMyBuilds } from '../api/builds';
+import { APPROVAL_ENABLED } from '../lib/features';
 import { getMyRewards } from '../api/rewards';
 import { BUILD_STATUS_LABEL, STATUS_LABEL, TYPE_LABEL, fmtDateTime } from '../lib/format';
 import { isGuest, useAuth } from '../lib/auth';
@@ -41,7 +42,7 @@ export default function Me() {
       {isGuest(auth) && <GuestUpgrade />}
       {sent && (
         <p className="notice" role="status">
-          {sent} 운영진이 승인하면 반영됩니다.
+          {sent}{APPROVAL_ENABLED ? ' 운영진이 승인하면 반영됩니다.' : ''}
         </p>
       )}
       <MyActivity auth={auth} />
@@ -131,7 +132,7 @@ function MyActivity({ auth }) {
       {data && (
         <>
           {data.rewards && <MyTitles rewards={data.rewards} />}
-          <MyProposals data={data} />
+          {(APPROVAL_ENABLED || data.proposals.length > 0) && <MyProposals data={data} />}
           <MyBuilds data={data} />
         </>
       )}
@@ -181,6 +182,7 @@ function MyProposals({ data }) {
   return (
     <section className="me-section" aria-labelledby="my-proposals">
       <SectionHead icon={SendIcon} id="my-proposals" count={data.proposals.length}>내 제안</SectionHead>
+      {!APPROVAL_ENABLED && <p className="hint">예전 승인 제도 때 보낸 제안 기록입니다. 이제 상대법·빌드는 승인 없이 바로 올라갑니다.</p>}
       {data && data.proposals.length === 0 && <p className="empty">아직 보낸 제안이 없습니다.</p>}
       {data && data.proposals.length > 0 && (
         <ul className="proposal-list">
@@ -213,7 +215,7 @@ function MyProposals({ data }) {
                     {p.revoked_at && <> ({fmtDateTime(p.revoked_at)})</>}
                   </p>
                 )}
-                {p.status === 'revision_requested' && (
+                {p.status === 'revision_requested' && APPROVAL_ENABLED && (
                   <div className="revision-note">
                     <p>
                       <strong>재검토 요청</strong>
@@ -231,7 +233,7 @@ function MyProposals({ data }) {
                 )}
                 <div className="row-actions">
                   <Link to={`/me/proposals/${p.id}`} className="btn btn-small">자세히</Link>
-                  {p.status === 'pending' && <Link to={`/me/proposals/${p.id}/edit`} className="btn btn-small">수정</Link>}
+                  {p.status === 'pending' && APPROVAL_ENABLED && <Link to={`/me/proposals/${p.id}/edit`} className="btn btn-small">수정</Link>}
                   {live && <Link to={`/champion/${p.target_champion}/counter/${p.counter_champion}`} className="btn btn-small">문서 보기</Link>}
                 </div>
               </li>
@@ -250,7 +252,7 @@ function MyBuilds({ data }) {
   return (
     <section className="me-section" aria-labelledby="my-builds">
       <SectionHead icon={LayersIcon} id="my-builds" count={data.builds.length}>내 빌드</SectionHead>
-      {data.builds.length === 0 && <p className="empty">아직 보낸 빌드가 없습니다. 매치업 문서의 [+ 빌드 등록]에서 보낼 수 있습니다.</p>}
+      {data.builds.length === 0 && <p className="empty">아직 올린 빌드가 없습니다. 상대법 화면의 [+ 새 빌드]에서 올릴 수 있습니다.</p>}
       {data.builds.length > 0 && (
         <ul className="proposal-list">
           {data.builds.map((b) => {
@@ -275,7 +277,7 @@ function MyBuilds({ data }) {
                 {b.original_build && ['approved', 'hidden'].includes(b.status) && (
                   <EditedCompare beforeBuild={b.original_build} afterBuild={b} author={b.author} game={data.game} />
                 )}
-                {b.status === 'revision_requested' && (
+                {b.status === 'revision_requested' && APPROVAL_ENABLED && (
                   <div className="revision-note">
                     <p>
                       <strong>재검토 요청</strong>
@@ -298,8 +300,8 @@ function MyBuilds({ data }) {
                 </details>
                 <div className="row-actions">
                   <Link to={`/me/builds/${b.id}`} className="btn btn-small">자세히</Link>
-                  {open && b.status === 'pending' && <Link to={`/me/builds/${b.id}/edit`} className="btn btn-small">수정</Link>}
-                  {open && b.status === 'approved' && <Link to={`${path}#builds`} className="btn btn-small">문서 보기</Link>}
+                  {open && b.status === 'pending' && APPROVAL_ENABLED && <Link to={`/me/builds/${b.id}/edit`} className="btn btn-small">수정</Link>}
+                  {open && b.status === 'approved' && <Link to={`${path}?build=${b.id}`} className="btn btn-small">문서 보기</Link>}
                   {open && <Link to={`${path}/build/new?from=${b.id}`} className="btn btn-small">이 빌드로 다시 쓰기</Link>}
                 </div>
               </li>

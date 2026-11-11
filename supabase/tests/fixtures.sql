@@ -71,3 +71,9 @@ create function t.bv(p_id bigint) returns integer language sql stable security d
   select version from public.builds where id = p_id;
 $$;
 grant execute on function t.pv(bigint), t.bv(bigint) to anon, authenticated;
+
+-- 039가 승인 제도를 끈다. 예전 승인 기능 검사(*_test.sql)는 켠 채로 하고, 끈 상태는 approval_off_test.sql이 다시 끄고 본다.
+-- (039가 실제로 0으로 바꿨는지는 바꾸기 전 값을 남겨 두고 approval_off_test.sql에서 확인)
+create table t.approval_after_039 as select value from public.xp_rules where key = 'approval_on';
+grant select on t.approval_after_039 to anon, authenticated;
+update public.xp_rules set value = 1 where key = 'approval_on';

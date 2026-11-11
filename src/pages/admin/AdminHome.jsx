@@ -32,6 +32,7 @@ import MediaUsage from '../../components/MediaUsage';
 import { matchupTitle } from '../../lib/josa';
 import VoteTally from '../../components/VoteTally';
 import SectionHead from '../../components/SectionHead';
+import { APPROVAL_ENABLED } from '../../lib/features';
 import {
   ClockIcon, CoinsIcon, DiceIcon, EyeOffIcon, HelpIcon, ImageIcon, LayersIcon, MessageIcon, SendIcon, ShieldIcon, TrashIcon, UsersIcon,
 } from '../../components/Icons';
@@ -60,6 +61,7 @@ function ModeratorHome() {
   const location = useLocation();
   const [done, setDone] = useState(location.state?.done ?? null);
   const { data, error, loading, retry } = useAsync(async () => {
+    if (!APPROVAL_ENABLED) return { champs: {}, pending: [], game: null }; // 승인 제도를 끄면 감독관이 처리할 승인 대기도 없다
     const game = await getBuildGame();
     const [champs, pending] = await Promise.all([getChampionMap(), getPendingProposals(game)]);
     // RLS가 본인 제안도 돌려주므로, 처리할 수 있는 것(다른 회원의 새 카운터 제안)만 남긴다
@@ -75,7 +77,7 @@ function ModeratorHome() {
     <article>
       <h1 className="doc-title page-title"><ShieldIcon size={26} className="title-icon op" /> 운영자 페이지</h1>
       {done && <p className="notice" role="status">{done}</p>}
-      <section className="section">
+      {APPROVAL_ENABLED && <section className="section">
         <SectionHead icon={SendIcon} count={data?.pending.length}>새 카운터 승인 대기</SectionHead>
         {loading && <Loading />}
         {error && <ErrorBox error={error} onRetry={retry} />}
@@ -87,7 +89,7 @@ function ModeratorHome() {
             ))}
           </ul>
         )}
-      </section>
+      </section>}
       <section className="section">
         <SectionHead icon={MessageIcon}>자유게시판·댓글</SectionHead>
         <BoardAdmin />
@@ -105,9 +107,12 @@ function PendingList() {
   const [done, setDone] = useState(location.state?.done ?? null);
   const { data, error, loading, retry } = useAsync(async () => {
     const game = await getBuildGame();
+    // 승인 제도를 끄면(lib/features.js) 승인 대기·재검토 목록은 불러오지도 않는다
+    const none = { pending: [], approved: [] };
     const [champs, pending, hidden, deletions, builds, hiddenBuilds, revisionProposals, revisionBuilds] = await Promise.all([
-      getChampionMap(), getPendingProposals(game), getHiddenCounters(), getDeletions(), getPendingBuilds(), getHiddenBuilds(),
-      getRevisionProposals(), getRevisionBuilds(),
+      getChampionMap(), APPROVAL_ENABLED ? getPendingProposals(game) : [], getHiddenCounters(), getDeletions(),
+      APPROVAL_ENABLED ? getPendingBuilds() : none, getHiddenBuilds(),
+      APPROVAL_ENABLED ? getRevisionProposals() : [], APPROVAL_ENABLED ? getRevisionBuilds() : [],
     ]);
     const pendingBuilds = builds.pending.map((b) => ({
       ...b, block: quickBuildBlock(buildReviewFlags(b, game, builds.approved), b, game.latest),
@@ -129,9 +134,16 @@ function PendingList() {
     <article>
       <h1 className="doc-title page-title"><ShieldIcon size={26} className="title-icon op" /> 운영자 페이지</h1>
       {done && <p className="notice" role="status">{done}</p>}
-      <p className="hint">카운터 순서 변경은 각 챔피언 문서의 [순서 변경], 문서 되돌리기는 매치업 문서의 [수정 기록]에서 합니다.</p>
+      {APPROVAL_ENABLED ? (
+        <p className="hint">카운터 순서 변경은 각 챔피언 문서의 [순서 변경], 문서 되돌리기는 매치업 문서의 [수정 기록]에서 합니다.</p>
+      ) : (
+        <p className="hint">
+          승인 제도는 꺼져 있습니다. 새 상대법·새 빌드는 바로 공개되고 [알림]으로 옵니다. 상대법·빌드 숨기기는 상대법 화면의 ⋮ 메뉴,
+          카운터 순서 변경은 각 챔피언 문서의 [순서 변경]에서 합니다.
+        </p>
+      )}
 
-      <section className="section">
+      {APPROVAL_ENABLED && <section className="section">
         <SectionHead icon={SendIcon} count={data?.pending.length}>승인 대기</SectionHead>
         {loading && <Loading />}
         {error && <ErrorBox error={error} onRetry={retry} />}
@@ -143,9 +155,11 @@ function PendingList() {
             ))}
           </ul>
         )}
-      </section>
+      </section>}
+      {!APPROVAL_ENABLED && loading && <Loading />}
+      {!APPROVAL_ENABLED && error && <ErrorBox error={error} onRetry={retry} />}
 
-      {data && (
+      {data && APPROVAL_ENABLED && (
         <section className="section">
           <SectionHead icon={ClockIcon} count={data.waiting.length}>재검토 기다리는 중</SectionHead>
           {data.waiting.length === 0 ? (
@@ -178,7 +192,7 @@ function PendingList() {
         </section>
       )}
 
-      {data && (
+      {data && APPROVAL_ENABLED && (
         <section className="section">
           <SectionHead icon={LayersIcon} count={data.pendingBuilds.length}>빌드 승인 대기</SectionHead>
           {data.pendingBuilds.length === 0 ? (

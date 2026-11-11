@@ -77,13 +77,13 @@ describe('pushSupport', () => {
 
 // ---------------- [계정 설정] 휴대폰 알림 ----------------
 
-test('알림을 지원하지 않는 브라우저: 안내만, 받을 알림 종류는 보인다 (일반 회원은 "내 제안 결과"만)', async () => {
+test('알림을 지원하지 않는 브라우저: 안내만, 받을 알림 종류는 보인다 (일반 회원은 "내 상대법·빌드 다시 공개"만)', async () => {
   fakeLogin('u-1', { nickname: '탑고수' });
   start('/me/settings');
   const box = await section();
   expect(box.textContent).toContain(PUSH_HELP.unsupported);
   expect(screen.queryByRole('button', { name: /이 기기에서 알림/ })).toBeNull();
-  expect(await screen.findByRole('checkbox', { name: /내 제안 결과/ })).toBeChecked();
+  expect(await screen.findByRole('checkbox', { name: /내 상대법·빌드 다시 공개/ })).toBeChecked();
   expect(screen.queryByRole('checkbox', { name: /운영진 알림/ })).toBeNull();
 });
 
@@ -156,12 +156,12 @@ test('로그아웃하면 이 기기 알림 주소를 지우고 구독을 끊는�
 test('운영자·감독관: 운영진 알림 칸이 보이고, 바꾸면 내 설정으로 저장된다', async () => {
   fakeLogin('u-mod', { nickname: '감독', role: 'moderator' });
   start('/me/settings');
-  const staff = await screen.findByRole('checkbox', { name: /운영진 알림: 새 제안·새 빌드·새 문의/ });
+  const staff = await screen.findByRole('checkbox', { name: /운영진 알림: 새 상대법·새 빌드·새 문의/ });
   expect(staff).toBeChecked();
   fireEvent.click(staff);
   await waitFor(() => expect(TABLES.push_settings).toEqual([expect.objectContaining({ user_id: 'u-mod', staff_new: false, my_results: true })]));
   expect(screen.getByRole('checkbox', { name: /운영진 알림/ })).not.toBeChecked();
-  fireEvent.click(screen.getByRole('checkbox', { name: /내 제안 결과/ }));
+  fireEvent.click(screen.getByRole('checkbox', { name: /내 상대법·빌드 다시 공개/ }));
   await waitFor(() => expect(TABLES.push_settings[0]).toEqual(expect.objectContaining({ staff_new: false, my_results: false })));
 });
 
@@ -175,7 +175,7 @@ test('저장된 설정을 읽어 보여 준다', async () => {
   TABLES.push_settings.push({ user_id: 'u-1', staff_new: true, my_results: false });
   fakeLogin('u-1', { nickname: '탑고수' });
   start('/me/settings');
-  expect(await screen.findByRole('checkbox', { name: /내 제안 결과/ })).not.toBeChecked();
+  expect(await screen.findByRole('checkbox', { name: /내 상대법·빌드 다시 공개/ })).not.toBeChecked();
 });
 
 // ---------------- 알림을 누르면 이동 ----------------
@@ -218,6 +218,15 @@ describe('describePush: 잠금 화면 내용이 알림 목록과 같은 곳으�
       expect(push.body).toBe('메모 내용');
     }
     expect(push.tag).toBe('n-1');
+  });
+  test.each(['matchup_created', 'build_created'])('%s (038): 그 상대법으로, 빌드를 고른 채로 — 알림 목록과 같은 곳', (kind) => {
+    const n = { id: 3, kind, message: '새 상대법이 등록됐습니다.', proposal_id: null, build_id: 12, counter_id: 4, target_champion: 'Darius', counter_champion: 'Quinn' };
+    const push = describePush(n);
+    expect(push).toMatchObject({ title: '운영진 알림', body: '새 상대법이 등록됐습니다.', url: '/champion/Darius/counter/Quinn?build=12' });
+    const counter = { target_champion: 'Darius', counter_champion: 'Quinn' };
+    expect(describeNotification({ ...n, counter, build: { counter } }).to).toBe(push.url);
+    // 상대법 정보가 없으면(옛 DB) 알림 목록으로
+    expect(describePush({ id: 3, kind, message: null, proposal_id: null, build_id: 12 }).url).toBe('/notifications');
   });
   test('긴 메모는 잘라서 보낸다, 메모가 없으면 안내 문구', () => {
     expect([...describePush({ id: 1, kind: 'proposal_rejected', message: '가'.repeat(300) }).body].length).toBe(120);

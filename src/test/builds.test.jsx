@@ -1,4 +1,6 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
+// 승인 제도 화면은 지금 꺼 두었다(lib/features.js). 코드는 남아 있으므로 켠 채로 검사한다 — 끈 상태는 approvalOff.test.jsx
+vi.mock('../lib/features', async (importOriginal) => ({ ...(await importOriginal()), APPROVAL_ENABLED: true }));
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { AppRoutes } from '../App';
@@ -295,7 +297,7 @@ test('/me 내 빌드: 상태별 메모 (알림은 /notifications — "새 알림
   expect(within(approved).getByText('승인 메모: 깔끔합니다')).toBeDefined();
   expect(within(approved).queryByText('새 알림')).toBeNull();
   expect(within(approved).getByRole('link', { name: '퀸으로 다리우스 이기는 법' }).getAttribute('href')).toBe('/me/builds/111');
-  expect(within(approved).getByRole('link', { name: '문서 보기' }).getAttribute('href')).toBe(`${MATCHUP}#builds`);
+  expect(within(approved).getByRole('link', { name: '문서 보기' }).getAttribute('href')).toBe(`${MATCHUP}?build=111`);
   expect(within(rejected).queryByRole('link', { name: '문서 보기' })).toBeNull();
   expect(TABLES.notifications[0].read_at).toBeNull();
 });

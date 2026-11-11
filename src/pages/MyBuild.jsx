@@ -8,6 +8,7 @@ import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
 import { RequireLogin } from '../components/RequireOperator';
 import DocView from '../components/DocView';
+import { APPROVAL_ENABLED } from '../lib/features';
 import { matchupTitle } from '../lib/josa';
 import VoteTally from '../components/VoteTally';
 
@@ -79,13 +80,13 @@ function BuildView({ b, data, crumbs, sent }) {
         {['approved', 'hidden'].includes(b.status) && <VoteTally up={b.up} down={b.down} />}
       </div>
 
-      {b.status === 'pending' && (
+      {b.status === 'pending' && APPROVAL_ENABLED && (
         <div className="status-box">
           <p>승인 대기 중입니다. 운영자가 처리하기 전까지는 직접 고칠 수 있습니다. 고쳐도 대기 순서는 그대로입니다.</p>
           {open && <div className="actions"><Link to={`/me/builds/${b.id}/edit`} className="btn">수정</Link></div>}
         </div>
       )}
-      {b.status === 'revision_requested' && (
+      {b.status === 'revision_requested' && APPROVAL_ENABLED && (
         <div className="revision-note">
           <p>
             <strong>재검토 요청</strong>
@@ -98,10 +99,15 @@ function BuildView({ b, data, crumbs, sent }) {
       {b.status === 'approved' && (
         <div className="status-box">
           {b.approve_note && <p className="approve-note">승인 메모: {b.approve_note}</p>}
-          <p className="hint">공개된 빌드는 고칠 수 없습니다. 바꾸고 싶으면 [이 빌드로 다시 쓰기]로 새 빌드를 보내 주세요.</p>
+          <p className="hint">
+            {APPROVAL_ENABLED
+              ? '공개된 빌드는 고칠 수 없습니다. 바꾸고 싶으면 [이 빌드로 다시 쓰기]로 새 빌드를 보내 주세요.'
+              : '공개된 빌드는 상대법 화면의 [빌드 수정]에서 바로 고칠 수 있습니다. 비슷한 빌드를 따로 올리려면 [이 빌드로 다시 쓰기]를 눌러 주세요.'}
+          </p>
           {open && (
             <div className="actions">
-              <Link to={`${path}#builds`} className="btn">문서 보기</Link>
+              <Link to={`${path}?build=${b.id}`} className="btn">문서 보기</Link>
+              {!APPROVAL_ENABLED && <Link to={`${path}/build/${b.id}/edit`} className="btn">빌드 수정</Link>}
               <Link to={`${path}/build/new?from=${b.id}`} className="btn">이 빌드로 다시 쓰기</Link>
             </div>
           )}

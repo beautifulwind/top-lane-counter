@@ -120,7 +120,7 @@ test('운영자 페이지(/admin)에도 관리자 지정 기능은 없다 (SPEC:
   fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
   start('/admin');
   expect(await screen.findByRole('heading', { name: '운영자 페이지' })).toBeDefined();
-  await screen.findByText('대기 중인 제안이 없습니다.');
+  await screen.findByRole('heading', { name: /숨긴 카운터/ });
   expect(screen.queryByText(/관리자 지정|권한 변경|관리자로/)).toBeNull();
 });
 

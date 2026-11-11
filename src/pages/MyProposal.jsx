@@ -9,6 +9,7 @@ import { ErrorBox, Loading } from '../components/Status';
 import { RequireLogin } from '../components/RequireOperator';
 import DocView from '../components/DocView';
 import DiffView from '../components/DiffView';
+import { APPROVAL_ENABLED } from '../lib/features';
 import { matchupTitle } from '../lib/josa';
 
 /**
@@ -79,13 +80,13 @@ function ProposalView({ p, data, crumbs, sent }) {
         {p.reviewed_at && <span>처리 {fmtDateTime(p.reviewed_at)}</span>}
       </div>
 
-      {p.status === 'pending' && (
+      {p.status === 'pending' && APPROVAL_ENABLED && (
         <div className="status-box">
           <p>승인 대기 중입니다. 운영진이 처리하기 전까지는 직접 고칠 수 있습니다. 고쳐도 대기 순서는 그대로입니다.</p>
           <div className="actions"><Link to={`/me/proposals/${p.id}/edit`} className="btn">수정</Link></div>
         </div>
       )}
-      {p.status === 'revision_requested' && (
+      {p.status === 'revision_requested' && APPROVAL_ENABLED && (
         <div className="revision-note">
           <p>
             <strong>재검토 요청</strong>
@@ -98,7 +99,11 @@ function ProposalView({ p, data, crumbs, sent }) {
       {p.status === 'approved' && (
         <div className="status-box">
           {p.approve_note && <p className="approve-note">승인 메모: {p.approve_note}</p>}
-          <p className="hint">승인된 제안은 고칠 수 없습니다. 내용을 바꾸려면 문서에서 [문서 수정 제안]을 보내 주세요.</p>
+          <p className="hint">
+            {APPROVAL_ENABLED
+              ? '승인된 제안은 고칠 수 없습니다. 내용을 바꾸려면 문서에서 [문서 수정 제안]을 보내 주세요.'
+              : '예전 승인 제도 때 보낸 제안 기록입니다. 이제 내용은 상대법 화면의 [빌드 수정]에서 바로 고칩니다.'}
+          </p>
           <div className="actions"><Link to={docPath} className="btn">문서 보기</Link></div>
         </div>
       )}
