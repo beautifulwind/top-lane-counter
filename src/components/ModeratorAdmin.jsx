@@ -13,8 +13,11 @@ export const ACTION_LABEL = {
   approve_proposal: '제안 승인', reject_proposal: '제안 거절', request_revision: '재검토 요청', edit_proposal: '제안 내용 수정',
   answer_inquiry: '문의 답변', move_inquiry: '문의 분류 변경',
   grant_moderator: '감독관 지정', revoke_moderator: '감독관 해제',
+  revert: '빌드 되돌리기', resolve_report: '오류 신고 처리', dismiss_report: '오류 신고 기각', // 043
 };
-export const KIND_LABEL = { post: '글', comment: '댓글', doc_comment: '문서 댓글', proposal: '제안' };
+export const KIND_LABEL = {
+  post: '글', comment: '댓글', doc_comment: '문서 댓글', proposal: '제안', inquiry: '문의', build: '빌드', wiki_report: '오류 신고',
+};
 export const ROLE_LABEL = { admin: '운영자', moderator: '감독관', user: '일반 회원' };
 
 /** 처리 대상 한 마디: 지정·해제는 닉네임, 나머지는 "글 #12" */

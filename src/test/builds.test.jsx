@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
+import { moreNames } from './moreMenu';
 import { TABLES, fakeBuild, fakeLogin, fakeState } from './fakeSupabase';
 import { buildProblem, compareBuilds, emptyBuild, isOutdated } from '../lib/buildContent';
 import { WIKI_PAYLOAD, fillWikiBuild, pick } from './buildHelpers';
@@ -143,11 +144,14 @@ test('운영자: ⋮ → [빌드 숨기기] → 사유(= 확인 단계)를 써�
   expect(screen.queryByRole('tab', { name: /^빌드 3/ })).toBeNull();
 });
 
-test('일반 유저에게는 ⋮ 메뉴(빌드·상대법 숨기기)가 없다', async () => {
+test('일반 유저: ⋮ 메뉴에는 "오류 신고"(043)만 있고 빌드·상대법 숨기기는 없다', async () => {
   asUser();
   start(MATCHUP);
   await screen.findByText(/퀸으로 다리우스 이기는 법/);
-  expect(screen.queryByRole('button', { name: /더보기$/ })).toBeNull();
+  expect(moreNames(screen, '상대법 더보기')).toEqual(['오류 신고']);
+  for (const btn of screen.getAllByRole('button', { name: /빌드.*더보기$|더보기$/ }).filter((b) => b.getAttribute('aria-label') !== '상대법 더보기')) {
+    expect(moreNames(within(btn.parentElement), btn.getAttribute('aria-label'))).toEqual(['오류 신고']);
+  }
   expect(screen.queryByRole('button', { name: '빌드 숨기기' })).toBeNull();
 });
 

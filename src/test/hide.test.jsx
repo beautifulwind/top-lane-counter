@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
+import { moreNames } from './moreMenu';
 import { TABLES, fakeLogin, fakeProposal, fakeState } from './fakeSupabase';
 
 const COUNTERS = TABLES.counters.map((c) => ({ ...c }));
@@ -41,7 +42,8 @@ test('일반 유저: 상대법 화면의 ⋮(상대법 숨기기)와 챔피언 �
   fakeLogin('u-old');
   start('/champion/Darius/counter/Quinn');
   await screen.findByRole('link', { name: '빌드 수정' });
-  expect(screen.queryByRole('button', { name: '상대법 더보기' })).toBeNull();
+  // ⋮에는 누구나 쓰는 "오류 신고"(043)만 — 숨기기는 없다
+  expect(moreNames(screen, '상대법 더보기')).toEqual(['오류 신고']);
   expect(screen.queryByRole('button', { name: /숨기기/ })).toBeNull();
   cleanup();
   start('/champion/Darius');

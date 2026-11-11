@@ -60,6 +60,8 @@ export const TABLES = {
   post_comments: [],
   post_votes: [],
   reports: [],
+  // 043 오류 신고 (화면은 함수로만 읽고 쓴다)
+  wiki_reports: [],
   doc_comments: [],
   // 032 문의하기 (user = select가 붙여 주는 보낸 사람 관계)
   inquiries: [],
@@ -139,6 +141,7 @@ export function resetFake() {
   TABLES.post_comments = [];
   TABLES.post_votes = [];
   TABLES.reports = [];
+  TABLES.wiki_reports = [];
   TABLES.moderation_log = [];
   TABLES.doc_comments = [];
   TABLES.nickname_changes = [];
@@ -206,7 +209,7 @@ const roleNow = () => meNow()?.role;
 // 034: DB의 is_admin·is_staff처럼 운영자 모드를 끈 운영자는 운영진이 아니다 (operator_mode가 없으면 켜짐)
 const isAdminNow = () => roleNow() === 'admin' && meNow()?.operator_mode !== false;
 const isStaffNow = () => isAdminNow() || roleNow() === 'moderator';
-const STAFF_NOTICE_KINDS = ['proposal_submitted', 'build_submitted', 'inquiry_received', 'matchup_created', 'build_created'];
+const STAFF_NOTICE_KINDS = ['proposal_submitted', 'build_submitted', 'inquiry_received', 'matchup_created', 'build_created', 'error_reported'];
 const operatorModeOffNow = () => roleNow() === 'admin' && meNow()?.operator_mode === false;
 /** RLS 흉내: 숨긴 글·댓글(숨긴 글의 댓글 포함)은 운영자에게만 */
 function visibleRows(table) {
@@ -436,7 +439,7 @@ async function rpc(name, args) {
     if (!isStaffNow()) return { data: null, error: { message: '운영진만 할 수 있습니다.', code: '42501' } };
     fakeState.pendingCountsAsked += 1;
     if (fakeState.pendingCounts === 'error') return { data: null, error: { message: 'function admin_pending_counts() does not exist', code: '42883' } };
-    return { data: { proposals: 0, builds: 0, inquiries: 0, ...fakeState.pendingCounts }, error: null };
+    return { data: { proposals: 0, builds: 0, inquiries: 0, wiki_reports: 0, ...fakeState.pendingCounts }, error: null };
   }
   if (['admin_member_stats', 'admin_search_members', 'admin_member_info', 'admin_member_list', 'admin_member_detail', 'admin_deleted_writings'].includes(name)) {
     // 036: 운영자 전용 (감독관·일반 회원·운영자 모드 끈 운영자는 거부). 화면이 알아서 부르는 것이라 rpcCalls에는 넣지 않는다.
@@ -478,6 +481,8 @@ async function rpc(name, args) {
     fakeState.touched += 1; // 화면이 알아서 부르는 것이라 rpcCalls에는 넣지 않는다
     return { data: null, error: null };
   }
+  // 043: 목록은 화면이 알아서 부르는 것이라 rpcCalls에 넣지 않는다 (보내기·처리만 남긴다)
+  if (['report_wiki', 'staff_wiki_reports', 'handle_wiki_report'].includes(name)) return wikiReportRpc(name, args);
   fakeState.rpcCalls.push({ name, args });
   if (fakeState.rpcError) return { data: null, error: { message: fakeState.rpcError, code: fakeState.rpcErrorCode ?? '42501' } };
   if (name === 'mark_all_notifications_read') {
@@ -654,6 +659,74 @@ export function fakeComment(id, postId, extra = {}) {
 }
 
 /** 붙인 사진 경로 → 붙은 사진 줄 (올린 파일의 형식·크기를 쓴다) */
+/**
+ * 043 오류 신고: DB 함수와 같은 규칙만 흉내 낸다 — 정식 회원만, 같은 대상 처리 전 중복 막기, 운영진만 목록·처리,
+ * 감독관은 자기 신고 처리 불가, 처리하면 신고자에게 error_report_handled 알림. 신고자는 운영자에게만 보인다.
+ * 테스트가 TABLES.wiki_reports에 줄을 직접 넣을 때는 counter_id·build_id·reason·status·reporter_id·created_at만 있으면 된다.
+ */
+function wikiReportRpc(name, args) {
+  const now = new Date().toISOString();
+  if (name !== 'staff_wiki_reports') fakeState.rpcCalls.push({ name, args });
+  if (name !== 'staff_wiki_reports' && fakeState.rpcError) return { data: null, error: { message: fakeState.rpcError, code: fakeState.rpcErrorCode ?? '42501' } };
+  if (name === 'report_wiki') {
+    const p = meNow();
+    if (!p) return fail('로그인이 필요합니다.');
+    if (p.is_guest) return fail('오류 신고는 구글·카카오로 로그인한 회원만 할 수 있습니다.');
+    const dup = TABLES.wiki_reports.some((r) => r.status === 'open' && r.reporter_id === p.id
+      && r.counter_id === args.p_counter && (r.build_id ?? null) === (args.p_build ?? null));
+    if (dup) return fail('이미 신고한 내용입니다. 운영진이 확인할 때까지 기다려 주세요.');
+    const id = 900 + TABLES.wiki_reports.length;
+    TABLES.wiki_reports.push({
+      id, counter_id: args.p_counter, build_id: args.p_build ?? null, reporter_id: p.id, reason: args.p_reason, memo: args.p_memo ?? null,
+      status: 'open', created_at: now, handled_by: null, handled_at: null, handled_note: null,
+    });
+    return ok(id);
+  }
+  if (!isStaffNow()) return fail('운영진만 할 수 있습니다.');
+  const op = isAdminNow();
+  const sameTarget = (a, b) => a.counter_id === b.counter_id && (a.build_id ?? null) === (b.build_id ?? null);
+  if (name === 'staff_wiki_reports') {
+    const open = args.p_status === 'open';
+    const rows = TABLES.wiki_reports.filter((r) => (r.status === 'open') === open)
+      .sort((a, b) => (open ? String(a.created_at).localeCompare(String(b.created_at)) : String(b.handled_at).localeCompare(String(a.handled_at))));
+    const size = Math.min(args.p_size ?? 20, 50);
+    const page = args.p_page ?? 1;
+    const reports = rows.slice((page - 1) * size, page * size).map((r) => {
+      const k = TABLES.counters.find((c) => c.id === r.counter_id) ?? {};
+      const b = r.build_id ? TABLES.builds.find((x) => x.id === r.build_id) ?? {} : {};
+      const prof = (id) => TABLES.profiles.find((x) => x.id === id);
+      const h = prof(r.handled_by);
+      const rp = prof(r.reporter_id);
+      return {
+        ...r, target_champion: k.target_champion, counter_champion: k.counter_champion, counter_status: k.status,
+        build_seq: b.seq ?? null, build_name: b.name ?? null, build_status: b.status ?? null,
+        handler: r.status === 'open' ? null : h ? { id: h.id, nickname: h.nickname, role: h.role, withdrawn: false } : { withdrawn: true },
+        reporter: !op ? null : rp ? { id: rp.id, nickname: rp.nickname, role: rp.role, is_guest: !!rp.is_guest, withdrawn: false } : { withdrawn: true },
+        mine: r.reporter_id === me(),
+        same_open: TABLES.wiki_reports.filter((o) => o.status === 'open' && sameTarget(o, r)).length,
+      };
+    });
+    return ok({ total: rows.length, page, size, reports });
+  }
+  // handle_wiki_report
+  const r = TABLES.wiki_reports.find((x) => x.id === args.p_id);
+  if (!r || r.status !== 'open') return fail('이미 처리된 신고입니다.');
+  if (!op && r.reporter_id === me()) return fail('내가 낸 신고는 다른 운영진이 처리해야 합니다.');
+  if (!args.p_note?.trim()) return fail('처리 메모를 적어 주세요.');
+  const targets = args.p_same_target ? TABLES.wiki_reports.filter((x) => x.status === 'open' && sameTarget(x, r)) : [r];
+  targets.forEach((x) => {
+    Object.assign(x, { status: args.p_status, handled_by: me(), handled_at: now, handled_note: args.p_note });
+    if (x.reporter_id) {
+      TABLES.notifications.push({
+        id: 5000 + TABLES.notifications.length, user_id: x.reporter_id, kind: 'error_report_handled', created_at: now, read_at: null,
+        message: args.p_status === 'resolved' ? '보내 주신 오류 신고를 처리했습니다. 고맙습니다.' : '보내 주신 오류 신고를 검토했지만 고칠 내용이 없어 기각했습니다.',
+        counter_id: x.counter_id, build_id: x.build_id, proposal_id: null, post_id: null,
+      });
+    }
+  });
+  return ok(targets.length);
+}
+
 function mediaRows(paths = []) {
   return (paths ?? []).map((path, position) => {
     const up = fakeState.uploads.find((u) => u.path === path);

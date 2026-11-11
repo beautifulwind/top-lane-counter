@@ -12,6 +12,7 @@ import BuildCard from '../components/BuildCard';
 import NoteForm from '../components/NoteForm';
 import MoreMenu from '../components/MoreMenu';
 import ContributorsDialog from '../components/ContributorsDialog';
+import WikiReportBox from '../components/WikiReport';
 import { hideCounter } from '../api/proposals';
 import { LevelList, SummaryBox } from '../components/DocView';
 import SectionHead from '../components/SectionHead';
@@ -38,6 +39,7 @@ export default function Matchup() {
   const location = useLocation();
   const [search, setSearch] = useSearchParams();
   const [hiding, setHiding] = useState(null); // 'matchup' | 빌드 id
+  const [reporting, setReporting] = useState(null); // 오류 신고 칸: 'matchup' | 빌드 id (043)
   const [notice, setNotice] = useState(location.state?.done ?? null);
   const { data, error, loading, retry } = useAsync(
     async () => {
@@ -93,12 +95,32 @@ export default function Matchup() {
       return next;
     }, { replace: true });
     setHiding(null);
+    setReporting(null);
   };
 
-  const matchupMenu = isOperator ? [
-    { label: '상대법 숨기기', op: true, onSelect: () => setHiding('matchup') },
-    { label: '예전 문서 수정 기록', op: true, to: `/admin/history/${targetId}/${counterId}` },
-  ] : [];
+  // ⋮ "오류 신고" (043): 누구에게나 보인다. 로그인 전이면 로그인으로, 비회원은 연결 안내, 정식 회원은 신고 칸
+  const reportItem = (target) => ({
+    label: '오류 신고',
+    onSelect: () => {
+      if (!user) {
+        navigate('/login', { state: { from: `${location.pathname}${location.search}` } });
+        return;
+      }
+      setHiding(null);
+      setReporting(target);
+    },
+  });
+  const reported = (message) => {
+    setNotice(message);
+    setReporting(null);
+  };
+  const matchupMenu = [
+    reportItem('matchup'),
+    ...(isOperator ? [
+      { label: '상대법 숨기기', op: true, onSelect: () => { setReporting(null); setHiding('matchup'); } },
+      { label: '예전 문서 수정 기록', op: true, to: `/admin/history/${targetId}/${counterId}` },
+    ] : []),
+  ];
 
   return (
     <article>
@@ -121,6 +143,16 @@ export default function Matchup() {
         <MoreMenu items={matchupMenu} label="상대법 더보기" />
       </div>
       {notice && <p className="notice" role="status">{notice}</p>}
+      {reporting === 'matchup' && (
+        <WikiReportBox
+          id="report-matchup"
+          auth={auth}
+          counterId={data.matchup.counter.id}
+          what="상대법"
+          onCancel={() => setReporting(null)}
+          onDone={reported}
+        />
+      )}
       {hiding === 'matchup' && (
         <NoteForm
           id="hide-reason"
@@ -161,7 +193,19 @@ export default function Matchup() {
           isOperator={isOperator}
           lastOne={builds.length === 1}
           hiding={hiding === selected.id}
-          setHiding={setHiding}
+          setHiding={(v) => { setReporting(null); setHiding(v); }}
+          reportItem={reportItem(selected.id)}
+          reportBox={reporting === selected.id && (
+            <WikiReportBox
+              id={`report-build-${selected.id}`}
+              auth={auth}
+              counterId={data.matchup.counter.id}
+              buildId={selected.id}
+              what={buildLabel(selected, index)}
+              onCancel={() => setReporting(null)}
+              onDone={reported}
+            />
+          )}
           onHidden={(message) => {
             setNotice(message);
             setHiding(null);
@@ -232,7 +276,7 @@ function BuildTabs({ builds, selected, onSelect, newTo }) {
 }
 
 /** 고른 빌드 한 벌: 이름·패치·최근 수정 → 한 줄 결론 → 룬·주문·아이템·선마·추천 → 레벨별 딜교법 → 특이사항 → [빌드 수정]·[수정 기록] */
-function BuildPanel({ build, index, doc, data, path, isOperator, lastOne, hiding, setHiding, onHidden }) {
+function BuildPanel({ build, index, doc, data, path, isOperator, lastOne, hiding, setHiding, onHidden, reportItem, reportBox }) {
   const [showPeople, setShowPeople] = useState(false);
   const peopleBtn = useRef(null);
   const label = buildLabel(build, index);
@@ -242,10 +286,13 @@ function BuildPanel({ build, index, doc, data, path, isOperator, lastOne, hiding
   const cautions = build.lane_cautions ?? doc?.lane_cautions ?? '';
   const updated = day(build.updated_at ?? build.edited_at ?? build.created_at);
 
-  const menu = isOperator ? [{
-    label: '빌드 숨기기', op: true, disabled: lastOne, onSelect: () => setHiding(build.id),
-    hint: lastOne ? '마지막 공개 빌드라 숨길 수 없습니다. 상대법을 숨겨 주세요.' : null,
-  }] : [];
+  const menu = [
+    reportItem,
+    isOperator && {
+      label: '빌드 숨기기', op: true, disabled: lastOne, onSelect: () => setHiding(build.id),
+      hint: lastOne ? '마지막 공개 빌드라 숨길 수 없습니다. 상대법을 숨겨 주세요.' : null,
+    },
+  ];
 
   return (
     <div id="build-panel" role="tabpanel" aria-labelledby={`build-tab-${build.id}`} className="build-panel">
@@ -257,6 +304,7 @@ function BuildPanel({ build, index, doc, data, path, isOperator, lastOne, hiding
         {build.patch && <>패치 {patchMinor(build.patch)}</>}
         {updated && <>{build.patch ? ' · ' : ''}최근 수정 {updated}</>}
       </p>
+      {reportBox}
       {hiding && (
         <NoteForm
           id={`hide-build-${build.id}`}

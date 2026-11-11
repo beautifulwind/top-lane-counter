@@ -27,6 +27,8 @@ const STAFF_NEW = {
   build_created: { icon: 'flag', label: '빌드', to: (n) => wikiPath(n) },
   // 042: 자유게시판 새 글 (운영자만) → 그 글로
   post_created: { icon: 'comment', to: (n) => (n.post_id ? `/board/${n.post_id}` : null) },
+  // 043: 상대법·빌드 오류 신고 (운영진, 같은 대상의 첫 신고만) → 신고 화면 "오류 신고" 탭
+  error_reported: { icon: 'flag', label: (n) => (n.build_id ? '빌드' : '상대법'), to: () => '/admin/reports?tab=wiki' },
 };
 const wikiPath = (n) => {
   const c = n.counter ?? n.build?.counter;
@@ -72,7 +74,7 @@ export function describeNotification(n, name = (id) => id) {
   const s = STAFF_NEW[n.kind];
   if (s) {
     const own = n.proposal_id ? n.proposal : (n.build?.counter ?? n.counter);
-    const label = s.label ?? (n.proposal_id ? (TYPE_LABEL[n.proposal?.type] ?? '제안') : '빌드');
+    const label = (typeof s.label === 'function' ? s.label(n) : s.label) ?? (n.proposal_id ? (TYPE_LABEL[n.proposal?.type] ?? '제안') : '빌드');
     return {
       icon: s.icon,
       title: n.message,
@@ -86,6 +88,17 @@ export function describeNotification(n, name = (id) => id) {
     return { icon: 'medal', title: n.message, to: '/me', titleKey: titleKeyIn(n.message) };
   }
   if (n.kind === 'inquiry_answered') return { icon: 'comment', title: '문의에 답변이 도착했습니다', subject: null, detail: inquiryCategoryIn(n.message), to: '/inquiries' };
+  if (n.kind === 'error_report_handled') {
+    // 043: 내가 보낸 오류 신고의 처리 결과 (휴대폰 알림 없음). 숨긴 상대법은 열 수 없어 링크 없음
+    const c = n.counter ?? n.build?.counter;
+    return {
+      icon: n.message?.includes('기각') ? 'ban' : 'check',
+      title: n.message,
+      subject: c ? `[${n.build_id ? '빌드' : '상대법'}] ${matchup(c)}` : null,
+      detail: null,
+      to: !n.counter || n.counter.status === 'approved' ? wikiPath(n) : null,
+    };
+  }
   if (n.kind === 'moderator_granted' || n.kind === 'moderator_revoked') {
     const [title, memo] = (n.message ?? '').split(' 메모: ');
     return { icon: 'flag', title, subject: null, detail: memo ? `메모: ${memo}` : null, to: n.kind === 'moderator_granted' ? '/admin' : null };

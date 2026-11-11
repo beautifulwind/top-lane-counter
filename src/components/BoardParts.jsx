@@ -53,9 +53,14 @@ export function ConfirmInline({ question, confirmLabel, onConfirm, onCancel }) {
 /**
  * 신고 폼: 이유 고르기(기타는 내용 필수) → [신고하기]. 같은 사람이 같은 글·댓글은 한 번만 (DB가 막는다)
  * onSubmit(reason, detail): 실패하면 던진다
+ * photos=false: 사진을 붙일 수 없는 곳(문서 댓글)이라 사진 신고 사유를 뺀다
+ * 상대법·빌드 오류 신고(043)도 같은 폼: reasons(키 → 이름)·hints·max(내용 글자 수)·legend·label·note를 바꿔 쓴다
  */
-/** photos=false: 사진을 붙일 수 없는 곳(문서 댓글)이라 사진 신고 사유를 뺀다 */
-export function ReportForm({ id, what, photos = true, onSubmit, onCancel }) {
+export function ReportForm({
+  id, what, photos = true, onSubmit, onCancel,
+  reasons = null, hints = REPORT_REASON_HINTS, max = 500, legend = null, label = '내용', note = '신고 내용은 운영진만 봅니다.',
+}) {
+  const choices = reasons ?? Object.fromEntries(Object.entries(REPORT_REASONS).filter(([key]) => photos || !PHOTO_REPORT_REASONS.includes(key)));
   const [reason, setReason] = useState(null);
   const [detail, setDetail] = useState('');
   const [busy, setBusy] = useState(false);
@@ -78,18 +83,18 @@ export function ReportForm({ id, what, photos = true, onSubmit, onCancel }) {
   return (
     <form className="report-form" onSubmit={submit} onKeyDown={(e) => e.key === 'Escape' && !busy && onCancel()}>
       <fieldset>
-        <legend>{what} 신고 — 이유를 골라 주세요</legend>
-        {Object.entries(REPORT_REASONS).filter(([key]) => photos || !PHOTO_REPORT_REASONS.includes(key)).map(([key, label]) => (
+        <legend>{legend ?? `${what} 신고 — 이유를 골라 주세요`}</legend>
+        {Object.entries(choices).map(([key, name]) => (
           <label key={key} className="report-reason">
             <input type="radio" name={`${id}-reason`} value={key} checked={reason === key} onChange={() => setReason(key)} />
-            {label}
-            {REPORT_REASON_HINTS[key] && <small className="hint"> ({REPORT_REASON_HINTS[key]})</small>}
+            {name}
+            {hints?.[key] && <small className="hint"> ({hints[key]})</small>}
           </label>
         ))}
       </fieldset>
-      <label htmlFor={`${id}-detail`}>{reason === 'other' ? '내용 (필수)' : '내용 (선택)'}</label>
-      <textarea id={`${id}-detail`} rows={2} maxLength={500} value={detail} onChange={(e) => setDetail(e.target.value)} />
-      <small className="hint">신고 내용은 운영진만 봅니다.</small>
+      <label htmlFor={`${id}-detail`}>{reason === 'other' ? `${label} (필수)` : `${label} (선택)`}</label>
+      <textarea id={`${id}-detail`} rows={2} maxLength={max} value={detail} onChange={(e) => setDetail(e.target.value)} />
+      <small className="hint">{note}</small>
       <div className="note-form-actions">
         <button type="submit" className="btn btn-small btn-danger" disabled={!ready || busy}>{busy ? '보내는 중…' : '신고 보내기'}</button>
         <button type="button" className="btn btn-small" onClick={onCancel} disabled={busy}>취소</button>

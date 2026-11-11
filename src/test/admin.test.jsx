@@ -5,6 +5,7 @@ import { cleanup, fireEvent, render, screen, within } from '@testing-library/rea
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
+import { moreNames } from './moreMenu';
 import { TABLES, fakeLogin, fakeProposal, fakeState } from './fakeSupabase';
 import { clickMenu, openMenu } from './menu';
 
@@ -29,7 +30,7 @@ test('일반 유저: /admin은 "운영자만 볼 수 있습니다", 상단 [관�
   start('/champion/Darius/counter/Quinn');
   await screen.findByRole('link', { name: '빌드 수정' });
   expect(screen.queryByRole('link', { name: /수정 기록/ })).toBeNull(); // [수정 기록](기여자)은 누구나 보는 버튼, 예전 문서 기록은 운영자 ⋮ 메뉴
-  expect(screen.queryByRole('button', { name: /더보기$/ })).toBeNull();
+  expect(moreNames(screen, '상대법 더보기')).toEqual(['오류 신고']); // ⋮에는 누구나 쓰는 "오류 신고"(043)만
   cleanup();
   start('/champion/Darius');
   await screen.findByRole('link', { name: '+ 상대법 등록' });

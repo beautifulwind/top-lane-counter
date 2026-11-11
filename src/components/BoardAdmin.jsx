@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getHiddenBoard, getOpenReports, restoreComment, restoreDocComment, restorePost } from '../api/board';
 import { getChampionMap } from '../api/ddragon';
+import { getPendingCounts } from '../api/moderation';
 import { canRestore, useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
 import { fmtDateTime } from '../lib/format';
@@ -10,13 +11,13 @@ import UserName from './UserName';
 import NoteForm from './NoteForm';
 import { matchupTitle } from '../lib/josa';
 
-/** 운영자 페이지의 "자유게시판·댓글" 칸: 처리할 신고 수 → /admin/reports, 숨긴 글·댓글·문서 댓글 + [다시 공개] */
+/** 운영자 페이지의 "자유게시판·댓글" 칸: 처리할 신고 수 → /admin/reports, 처리할 오류 신고 수(043) → /admin/reports?tab=wiki, 숨긴 글·댓글·문서 댓글 + [다시 공개] */
 export default function BoardAdmin() {
   const auth = useAuth();
   const [done, setDone] = useState(null);
   const { data, error, loading, retry } = useAsync(async () => {
-    const [reports, hidden, champs] = await Promise.all([getOpenReports(auth.isModerator), getHiddenBoard(), getChampionMap()]);
-    return { reports, hidden, champs };
+    const [reports, hidden, champs, pending] = await Promise.all([getOpenReports(auth.isModerator), getHiddenBoard(), getChampionMap(), getPendingCounts()]);
+    return { reports, hidden, champs, wikiReports: pending?.wiki_reports ?? null };
   }, []);
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
@@ -33,9 +34,12 @@ export default function BoardAdmin() {
   return (
     <>
       {done && <p className="notice" role="status">{done}</p>}
-      <p>
+      <p className="row-actions">
         <Link to="/admin/reports" className="btn btn-op">
           처리할 신고 {data.reports.length}건
+        </Link>
+        <Link to="/admin/reports?tab=wiki" className="btn btn-op">
+          처리할 오류 신고{data.wikiReports != null && ` ${data.wikiReports}건`}
         </Link>
       </p>
       <div className="sub-head">

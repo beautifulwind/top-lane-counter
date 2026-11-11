@@ -1,6 +1,6 @@
 import { displayNickname } from '../../lib/nickname';
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { REPORT_REASONS, dismissReports, getOpenReports, hideComment, hideDocComment, hidePost } from '../../api/board';
 import { getChampionMap } from '../../api/ddragon';
 import { useAsync } from '../../lib/useAsync';
@@ -12,17 +12,46 @@ import UserName from '../../components/UserName';
 import NoteForm from '../../components/NoteForm';
 import { matchupTitle } from '../../lib/josa';
 import { FlagIcon } from '../../components/Icons';
+import WikiReportList from '../../components/WikiReportAdmin';
 
 /**
- * 운영자: 자유게시판·문서 댓글 신고 (/admin/reports). 같은 글·댓글의 신고는 한 줄로 묶는다.
+ * 운영진: 신고 (/admin/reports). 탭 두 개 — "글·댓글 신고"(기본) / "오류 신고"(?tab=wiki, 043 상대법·빌드 내용 오류).
+ * 글·댓글 신고: 자유게시판·문서 댓글. 같은 글·댓글의 신고는 한 줄로 묶는다.
  * [숨기기] = 메모 필수, 작성자에게 알림, 그 대상의 신고는 "처리됨" / [신고 기각] = 메모 선택, 글·댓글은 그대로
  * 자동 숨김은 없다 (운영자가 보고 정한다)
  */
 export default function AdminReports() {
   return (
     <RequireStaff>
-      <ReportList />
+      <ReportsPage />
     </RequireStaff>
+  );
+}
+
+function ReportsPage() {
+  const [params, setParams] = useSearchParams();
+  const wiki = params.get('tab') === 'wiki';
+  const tab = (key, label) => {
+    const on = (key === 'wiki') === wiki;
+    return (
+      <button
+        type="button" role="tab" aria-selected={on} className={`build-tab${on ? ' on' : ''}`}
+        onClick={() => setParams(key === 'wiki' ? { tab: 'wiki' } : {}, { replace: true })}
+      >
+        <span className="build-tab-name">{label}</span>
+      </button>
+    );
+  };
+  return (
+    <article>
+      <nav className="crumbs"><Link to="/admin" className="op-link">← 운영자 페이지</Link></nav>
+      <h1 className="doc-title page-title"><FlagIcon size={26} className="title-icon op" /> 신고</h1>
+      <div className="build-tabs" role="tablist" aria-label="신고 종류">
+        {tab('board', '글·댓글 신고')}
+        {tab('wiki', '오류 신고')}
+      </div>
+      {wiki ? <WikiReportList /> : <ReportList />}
+    </article>
   );
 }
 
@@ -38,12 +67,8 @@ function ReportList() {
     retry();
   };
   return (
-    <article>
-      <nav className="crumbs"><Link to="/admin" className="op-link">← 운영자 페이지</Link></nav>
-      <div className="page-head">
-        <h1 className="doc-title page-title"><FlagIcon size={26} className="title-icon op" /> 신고</h1>
-        {data && <span className="count-badge">{data.groups.length}개</span>}
-      </div>
+    <section aria-label="글·댓글 신고">
+      {data && <p><span className="count-badge">{data.groups.length}개</span></p>}
       {done && <p className="notice" role="status">{done}</p>}
       <p className="hint">같은 글·댓글의 신고는 한 줄로 묶었습니다. 숨기면 작성자에게 메모와 함께 알림이 갑니다. 기각하면 그대로 두고 신고만 닫습니다.</p>
       {loading && <Loading />}
@@ -54,7 +79,7 @@ function ReportList() {
           {data.groups.map((g) => <ReportGroup key={g.key} group={g} champs={data.champs} onDone={finished} />)}
         </ul>
       )}
-    </article>
+    </section>
   );
 }
 
