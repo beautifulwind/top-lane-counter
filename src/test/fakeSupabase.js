@@ -3,12 +3,20 @@
 import { hasReservedMark } from '../lib/nickname';
 const runes = (keystone) => ({ primaryPath: 8000, keystone, primary: [9111, 9104, 8014], secondaryPath: 8100, secondary: [8143, 8106], shards: [5005, 5008, 5011] });
 const QUINN = { id: 1, target_champion: 'Darius', counter_champion: 'Quinn', status: 'approved' };
+const QUINN_DOC = {
+  summary: '사거리로 일방적인 견제',
+  level_notes: { 1: '1렙 내용', 2: '2렙', 3: '3렙', 4: '4렙 추가', 6: '6렙', 9: '9렙', 11: '11렙' },
+  lane_cautions: 'E 사거리 주의',
+};
 const build = (id, author, extra = {}) => ({
   id, counter_id: 1, author, author_id: author ? `u-${id}` : null, proposal_id: null, status: 'approved', runes: runes(8005),
   summoner_spells: ['SummonerFlash', 'SummonerTeleport'], starting_items: ['1055', '2003'],
   core_items: ['6672', '3006', '3031'], max_skill: 'Q', patch: '99.1.1',
   up_count: 0, down_count: 0, created_at: `2026-11-0${id - 100}T00:00:00Z`, counter: QUINN, logs: [],
-  approve_note: null, reject_reason: null, hide_reason: null, hidden_at: null, reviewed_at: null, version: 1, edited_at: null, ...extra,
+  approve_note: null, reject_reason: null, hide_reason: null, hidden_at: null, reviewed_at: null, version: 1, edited_at: null,
+  // 038: 빌드 = 공략 한 벌. 038 이전으로 예전 문서 내용이 공개 빌드마다 채워진 모양 (이름 없음 → "빌드 N")
+  name: null, seq: id - 100, summary: QUINN_DOC.summary, level_notes: { ...QUINN_DOC.level_notes }, lane_cautions: QUINN_DOC.lane_cautions,
+  updated_at: `2026-11-0${id - 100}T00:00:00Z`, ...extra,
 });
 /** 테스트에서 쓰는 빌드 한 줄 (기본: 퀸 매치업에 공개된 빌드) */
 export const fakeBuild = (id, author, extra) => build(id, author, extra);
@@ -27,9 +35,8 @@ export const TABLES = {
     {
       id: 1, target_champion: 'Darius', counter_champion: 'Quinn', sort_order: 1, status: 'approved',
       matchup_docs: {
-        counter_id: 1, summary: '사거리로 일방적인 견제',
-        level_notes: { 1: '1렙 내용', 2: '2렙', 3: '3렙', 4: '4렙 추가', 6: '6렙', 9: '9렙', 11: '11렙' },
-        lane_cautions: 'E 사거리 주의', updated_at: '2026-11-01T09:00:00+00:00', revision_id: 7,
+        counter_id: 1, summary: QUINN_DOC.summary, level_notes: { ...QUINN_DOC.level_notes },
+        lane_cautions: QUINN_DOC.lane_cautions, updated_at: '2026-11-01T09:00:00+00:00', revision_id: 7,
       },
     },
     { id: 2, target_champion: 'Darius', counter_champion: 'Vayne', sort_order: 0, status: 'pending', matchup_docs: null },
@@ -108,6 +115,7 @@ export const fakeState = {
   uploads: [], uploadError: null, mediaProblem: null, mediaUsage: EMPTY_USAGE(), // 사진 (023, mediaUsage = media_usage 결과)
 };
 const INITIAL_PROFILES = TABLES.profiles.map((p) => ({ ...p }));
+const INITIAL_COUNTERS = TABLES.counters.map((c) => structuredClone(c));
 
 export function resetFake() {
   fakeState.error = null;
@@ -139,11 +147,13 @@ export function resetFake() {
   TABLES.push_settings = [];
   TABLES.item_prices = [{ id: '1055', gold: 450, patch: '99.1.1' }, { id: '2003', gold: 50, patch: '99.1.1' }];
   TABLES.builds = INITIAL_BUILDS();
+  TABLES.counters = INITIAL_COUNTERS.map((c) => structuredClone(c)); // 038: 새 상대법 등록이 counters에 줄을 더한다
   fakeState.functionCalls = [];
   fakeState.functionError = null;
   fakeState.inserts = [];
   fakeState.insertError = null;
   fakeState.rpcCalls = [];
+  fakeState.contributors = {};
   fakeState.memberCalls = [];
   fakeState.memberStats = { total: 0, members: 0, guests: 0, google: 0, kakao: 0, both: 0, new_7d: 0, new_7d_members: 0 };
   fakeState.members = [];
@@ -194,7 +204,7 @@ const roleNow = () => meNow()?.role;
 // 034: DB의 is_admin·is_staff처럼 운영자 모드를 끈 운영자는 운영진이 아니다 (operator_mode가 없으면 켜짐)
 const isAdminNow = () => roleNow() === 'admin' && meNow()?.operator_mode !== false;
 const isStaffNow = () => isAdminNow() || roleNow() === 'moderator';
-const STAFF_NOTICE_KINDS = ['proposal_submitted', 'build_submitted', 'inquiry_received'];
+const STAFF_NOTICE_KINDS = ['proposal_submitted', 'build_submitted', 'inquiry_received', 'matchup_created', 'build_created'];
 const operatorModeOffNow = () => roleNow() === 'admin' && meNow()?.operator_mode === false;
 /** RLS 흉내: 숨긴 글·댓글(숨긴 글의 댓글 포함)은 운영자에게만 */
 function visibleRows(table) {
@@ -235,6 +245,8 @@ function visibleRows(table) {
     return isStaffNow() ? all : all.filter((c) => c.status === 'visible' && c.counter?.status === 'approved');
   }
   if (table === 'moderation_log') return isAdminNow() ? rows : [];
+  // 038: 챔피언 목록이 counters → builds(요약·추천)를 같이 읽는다 (RLS: 공개 빌드는 누구나)
+  if (table === 'counters') return rows.map((c) => ({ ...c, builds: TABLES.builds.filter((b) => b.counter_id === c.id) }));
   if (table === 'push_subscriptions' || table === 'push_settings') return rows.filter((r) => r.user_id === fakeState.session?.user.id);
   if (table === 'inquiries') {
     // 032 RLS 흉내: 본인 것 / 운영자는 전부 / 감독관은 계정·탈퇴(account) 빼고. user = 보낸 사람 관계
@@ -518,6 +530,8 @@ async function rpc(name, args) {
   }
   const board = boardRpc(name, args);
   if (board) return board;
+  const wiki = wikiRpc(name, args);
+  if (wiki) return wiki;
   if (name === 'vote_build') {
     // DB 함수처럼: 한 사람 한 표, null = 취소, 추천 수 다시 세기
     const me = fakeState.session?.user.id;
@@ -532,6 +546,58 @@ async function rpc(name, args) {
     return { data: { up: b.up_count, down: b.down_count, mine: args.p_value }, error: null };
   }
   return { data: null, error: null };
+}
+
+// ---------------- 038 상대법 = 빌드 묶음 (위키) ----------------
+// DB 함수처럼: 바로 공개, 남의 빌드 수정은 정식 회원만, 버전이 다르면 TL412. fakeState.contributors = { 빌드id: [기여자] }
+const BUILD_KEYS = ['runes', 'summoner_spells', 'starting_items', 'core_items', 'max_skill', 'patch', 'name', 'summary', 'level_notes', 'lane_cautions'];
+const pickBuild = (p) => Object.fromEntries(BUILD_KEYS.map((k) => [k, p[k] ?? null]));
+function newWikiBuild(counterId, payload) {
+  const mine = meNow();
+  const seq = Math.max(0, ...TABLES.builds.filter((b) => b.counter_id === counterId).map((b) => b.seq ?? 0)) + 1;
+  const id = 900 + TABLES.builds.length;
+  const k = TABLES.counters.find((c) => c.id === counterId);
+  TABLES.builds.push(build(101, mine && { nickname: mine.nickname, role: mine.role, level: mine.level, main_title: mine.main_title, is_guest: !!mine.is_guest }, {
+    ...pickBuild(payload), id, counter_id: counterId, author_id: mine?.id ?? null, seq, status: 'approved',
+    created_at: new Date().toISOString(), updated_at: new Date().toISOString(),
+    counter: k ? { id: k.id, target_champion: k.target_champion, counter_champion: k.counter_champion, status: k.status } : null,
+  }));
+  return id;
+}
+function wikiRpc(name, args) {
+  if (name === 'create_matchup') {
+    if (args.p_target === args.p_mine) return fail('같은 챔피언끼리는 상대법을 만들 수 없습니다.');
+    const old = TABLES.counters.find((c) => c.target_champion === args.p_target && c.counter_champion === args.p_mine);
+    if (old?.status === 'approved') return { data: null, error: { message: '이미 있는 상대법입니다. 그 상대법에 새 빌드를 더해 주세요.', code: '23505' } };
+    const id = 500 + TABLES.counters.length;
+    const b = args.p_build;
+    TABLES.counters.push({
+      id, target_champion: args.p_target, counter_champion: args.p_mine, sort_order: 99, status: 'approved',
+      matchup_docs: { counter_id: id, summary: b.summary, level_notes: b.level_notes, lane_cautions: b.lane_cautions, updated_at: new Date().toISOString(), revision_id: null },
+    });
+    return ok({ counter_id: id, build_id: newWikiBuild(id, b) });
+  }
+  if (name === 'create_build') {
+    if (!TABLES.counters.some((c) => c.id === args.p_counter && c.status === 'approved')) return fail('빌드를 등록할 상대법을 찾지 못했습니다.');
+    return ok(newWikiBuild(args.p_counter, args.p_build));
+  }
+  if (name === 'edit_build') {
+    const b = TABLES.builds.find((x) => x.id === args.p_id);
+    if (!b || b.status !== 'approved') return fail('공개된 빌드만 수정할 수 있습니다.');
+    if (meNow()?.is_guest && b.author_id !== me()) {
+      return { data: null, error: { code: '42501', message: '다른 분의 빌드는 구글·카카오로 로그인한 회원만 수정할 수 있습니다. 비회원은 새 빌드를 등록하거나 내 빌드를 수정할 수 있습니다.' } };
+    }
+    if (args.p_version !== b.version) return { data: null, error: { code: 'TL412', message: '다른 분이 먼저 수정했습니다. 최신 내용을 확인해 주세요.' } };
+    Object.assign(b, pickBuild(args.p_build), { version: b.version + 1, updated_at: new Date().toISOString() });
+    return ok(b.version);
+  }
+  if (name === 'build_contributors') {
+    const b = TABLES.builds.find((x) => x.id === args.p_build);
+    const listed = fakeState.contributors?.[args.p_build];
+    if (listed) return ok(listed);
+    return ok(b?.author ? [{ user_id: b.author_id, level: 1, main_title: null, is_guest: false, role: 'user', ...b.author, is_origin: true }] : []);
+  }
+  return null;
 }
 
 const me = () => fakeState.session?.user.id;

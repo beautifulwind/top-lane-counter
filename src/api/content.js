@@ -1,6 +1,7 @@
 // 위키 콘텐츠 접근 계층. 화면 컴포넌트는 이 모듈만 호출한다.
 // 2단계: Supabase에서 읽는다. 공개 여부(승인된 것만)는 RLS가 보장하고, 여기서도 한 번 더 거른다.
 import { db } from './supabase';
+import { compareBuilds } from '../lib/buildContent';
 
 async function run(query) {
   const { data, error } = await query;
@@ -12,18 +13,24 @@ async function run(query) {
 const one = (v) => (Array.isArray(v) ? v[0] ?? null : v ?? null);
 const day = (ts) => (ts ? String(ts).slice(0, 10) : null);
 
+function topBuild(builds) {
+  const open = (builds ?? []).filter((b) => b.status === 'approved').map((b) => ({ ...b, up: b.up_count, down: b.down_count }));
+  return open.sort(compareBuilds)[0] ?? null;
+}
+
 /** 이 챔피언을 이기는 카운터 목록 (운영자가 정한 순서) */
 export async function getCountersFor(targetId) {
   const rows = await run(
     db()
       .from('counters')
-      .select('id, target_champion, counter_champion, sort_order, matchup_docs(summary)')
+      .select('id, target_champion, counter_champion, sort_order, matchup_docs(summary), builds(summary, status, up_count, down_count, created_at)')
       .eq('target_champion', targetId)
       .eq('status', 'approved')
       .order('sort_order', { ascending: true })
       .order('id', { ascending: true }),
   );
-  return rows.map(({ matchup_docs, ...c }) => ({ ...c, summary: one(matchup_docs)?.summary ?? '' }));
+  // 한 줄 요약 = 맨 앞 빌드(추천 → 점수 → 최신)의 요약 (038). 빌드에 요약이 없으면 예전 문서 요약
+  return rows.map(({ matchup_docs, builds, ...c }) => ({ ...c, summary: topBuild(builds)?.summary || one(matchup_docs)?.summary || '' }));
 }
 
 /** 매치업 문서 (없으면 null) */

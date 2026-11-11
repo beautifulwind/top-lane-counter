@@ -1,8 +1,8 @@
-import { useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
+import { useEffect, useRef, useState } from 'react';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../api/ddragon';
 import { getMatchup } from '../api/content';
-import { getBuilds } from '../api/builds';
+import { getBuilds, hideBuild } from '../api/builds';
 import { DOC_COMMENT_OPS, getDocComments, getEditRules } from '../api/board';
 import CommentThread from '../components/CommentThread';
 import { useAsync } from '../lib/useAsync';
@@ -10,22 +10,35 @@ import { useAuth } from '../lib/auth';
 import { ErrorBox, Loading } from '../components/Status';
 import BuildCard from '../components/BuildCard';
 import NoteForm from '../components/NoteForm';
+import MoreMenu from '../components/MoreMenu';
+import ContributorsDialog from '../components/ContributorsDialog';
 import { hideCounter } from '../api/proposals';
 import { LevelList, SummaryBox } from '../components/DocView';
 import SectionHead from '../components/SectionHead';
-import { AlertIcon, LayersIcon, MessageIcon, TrendingUpIcon } from '../components/Icons';
+import { AlertIcon, LayersIcon, ThumbIcon, TrendingUpIcon } from '../components/Icons';
 import NotFound from './NotFound';
 import { matchupTitle } from '../lib/josa';
+import { patchMinor } from '../lib/buildContent';
+import { buildLabel } from '../lib/wikiBuild';
+import { displayNickname } from '../lib/nickname';
 
+const day = (ts) => (ts ? String(ts).slice(0, 10) : null);
 
+/**
+ * 상대법 화면 (038): 플레이할 챔피언 vs 상대 챔피언. 빌드(공략 한 벌)가 여러 개 → 가로로 넘기는 탭으로 고른다.
+ * 처음에는 추천 → 점수 → 최신 순으로 맨 앞 빌드. ?build=빌드 id로 고른 빌드를 주소에 남긴다 (공유·뒤로 가기).
+ * 댓글은 빌드가 아니라 상대법에 단다.
+ */
 export default function Matchup() {
   const { targetId, counterId } = useParams();
   const auth = useAuth();
   const { isOperator, user } = auth;
   const userId = user?.id ?? null;
   const navigate = useNavigate();
-  const [hiding, setHiding] = useState(false);
-  const [buildNotice, setBuildNotice] = useState(null);
+  const location = useLocation();
+  const [search, setSearch] = useSearchParams();
+  const [hiding, setHiding] = useState(null); // 'matchup' | 빌드 id
+  const [notice, setNotice] = useState(location.state?.done ?? null);
   const { data, error, loading, retry } = useAsync(
     async () => {
       const [champs, matchup] = await Promise.all([getChampionMap(), getMatchup(targetId, counterId)]);
@@ -46,6 +59,8 @@ export default function Matchup() {
   const target = data.champs[targetId];
   const counter = data.champs[counterId];
   if (!target || !counter) return <NotFound />;
+  const title = matchupTitle(counter.name, target.name);
+  const path = `/champion/${targetId}/counter/${counterId}`;
 
   const crumbs = (
     <nav className="crumbs">
@@ -57,18 +72,33 @@ export default function Matchup() {
     return (
       <article>
         {crumbs}
-        <h1 className="doc-title">
-          {matchupTitle(counter.name, target.name)}
-        </h1>
-        <p className="empty">아직 등록되지 않은 카운터입니다. 새 카운터로 제안할 수 있습니다.</p>
+        <h1 className="doc-title">{title}</h1>
+        <p className="empty">아직 등록되지 않은 카운터입니다. 지금 등록하면 바로 공개됩니다.</p>
         <div className="actions">
-          <Link to={`/champion/${targetId}/propose?counter=${counterId}`} className="btn">+ 카운터 등록</Link>
+          <Link to={`/matchup/new?target=${targetId}&mine=${counterId}`} className="btn">+ 카운터 등록</Link>
         </div>
       </article>
     );
   }
 
+  const { builds } = data;
   const doc = data.matchup.doc;
+  const wanted = Number(search.get('build')) || null;
+  const index = Math.max(0, builds.findIndex((b) => b.id === wanted));
+  const selected = builds[index] ?? null;
+  const select = (id) => {
+    setSearch((prev) => {
+      const next = new URLSearchParams(prev);
+      next.set('build', String(id));
+      return next;
+    }, { replace: true });
+    setHiding(null);
+  };
+
+  const matchupMenu = isOperator ? [
+    { label: '상대법 숨기기', op: true, onSelect: () => setHiding('matchup') },
+    { label: '예전 문서 수정 기록', op: true, to: `/admin/history/${targetId}/${counterId}` },
+  ] : [];
 
   return (
     <article>
@@ -76,7 +106,7 @@ export default function Matchup() {
       <header className="vs-card">
         <div className="vs-side mine">
           <img src={counter.icon} alt="" width="64" height="64" />
-          <span className="vs-role">카운터</span>
+          <span className="vs-role">플레이할 챔피언</span>
           <strong>{counter.name}</strong>
         </div>
         <span className="vs" aria-hidden="true">VS</span>
@@ -86,11 +116,162 @@ export default function Matchup() {
           <strong>{target.name}</strong>
         </div>
       </header>
-      <h1 className="doc-title">
-        {matchupTitle(counter.name, target.name)}
-      </h1>
-      {doc?.updated_at && <p className="doc-sub">최근 수정: {doc.updated_at}</p>}
-      {doc?.summary && <SummaryBox summary={doc.summary} />}
+      <div className="title-row">
+        <h1 className="doc-title">{title}</h1>
+        <MoreMenu items={matchupMenu} label="상대법 더보기" />
+      </div>
+      {notice && <p className="notice" role="status">{notice}</p>}
+      {hiding === 'matchup' && (
+        <NoteForm
+          id="hide-reason"
+          label="숨기는 사유 (필수, 등록한 분에게 보입니다)"
+          hint="숨기면 다른 사람에게 이 상대법과 모든 빌드·댓글이 안 보입니다. 운영자 페이지에서 다시 공개할 수 있습니다."
+          confirmLabel="숨기기 확정"
+          busyLabel="숨기는 중…"
+          onCancel={() => setHiding(null)}
+          onSubmit={async (reason) => {
+            await hideCounter(data.matchup.counter.id, reason);
+            navigate(`/champion/${targetId}`, { state: { done: `숨겼습니다: ${title}` } });
+          }}
+        />
+      )}
+
+      <section className="section" id="builds">
+        <SectionHead icon={LayersIcon} num={1} count={builds.length}>빌드</SectionHead>
+        {builds.length === 0 ? (
+          <>
+            <p className="empty">공개된 빌드가 없습니다.</p>
+            <div className="actions">
+              <Link to={`${path}/build/new`} className="btn btn-primary">+ 새 빌드</Link>
+            </div>
+          </>
+        ) : (
+          <BuildTabs builds={builds} selected={selected} onSelect={select} newTo={`${path}/build/new?from=${selected.id}`} />
+        )}
+      </section>
+
+      {selected && (
+        <BuildPanel
+          key={selected.id}
+          build={selected}
+          index={index}
+          doc={doc}
+          data={data}
+          path={path}
+          isOperator={isOperator}
+          lastOne={builds.length === 1}
+          hiding={hiding === selected.id}
+          setHiding={setHiding}
+          onHidden={(message) => {
+            setNotice(message);
+            setHiding(null);
+            setSearch({}, { replace: true });
+            retry();
+          }}
+        />
+      )}
+
+      <DocComments counterRowId={data.matchup.counter.id} auth={auth} live num={4} />
+    </article>
+  );
+}
+
+/**
+ * 빌드 탭: 가로로 넘긴다 (폰). 이름(없으면 "빌드 N") + 추천 수. ←→·Home·End로 옮기면 바로 그 빌드가 보인다.
+ */
+function BuildTabs({ builds, selected, onSelect, newTo }) {
+  const refs = useRef({});
+  const moved = useRef(false);
+  useEffect(() => {
+    const el = refs.current[selected.id];
+    el?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
+    if (moved.current) el?.focus();
+    moved.current = false;
+  }, [selected.id]);
+
+  const onKeyDown = (e) => {
+    const at = builds.findIndex((b) => b.id === selected.id);
+    const to = { ArrowRight: at + 1, ArrowLeft: at - 1, Home: 0, End: builds.length - 1 }[e.key];
+    if (to === undefined) return;
+    e.preventDefault();
+    const next = builds[(to + builds.length) % builds.length];
+    moved.current = true;
+    if (next.id === selected.id) refs.current[next.id]?.focus();
+    else onSelect(next.id);
+  };
+
+  return (
+    <div className="build-tabs-row">
+      <div className="build-tabs" role="tablist" aria-label="빌드 고르기" onKeyDown={onKeyDown}>
+        {builds.map((b, i) => {
+          const on = b.id === selected.id;
+          return (
+            <button
+              key={b.id}
+              ref={(el) => { refs.current[b.id] = el; }}
+              type="button"
+              role="tab"
+              id={`build-tab-${b.id}`}
+              aria-selected={on}
+              aria-controls="build-panel"
+              tabIndex={on ? 0 : -1}
+              className={on ? 'build-tab on' : 'build-tab'}
+              onClick={() => onSelect(b.id)}
+            >
+              <span className="build-tab-name">{buildLabel(b, i)}</span>{' '}
+              <span className="build-tab-ups">
+                <ThumbIcon size={14} /><span className="sr-only">추천 </span>{b.up}
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      <Link to={newTo} className="btn btn-small new-build">+ 새 빌드</Link>
+    </div>
+  );
+}
+
+/** 고른 빌드 한 벌: 이름·패치·최근 수정 → 한 줄 결론 → 룬·주문·아이템·선마·추천 → 레벨별 딜교법 → 특이사항 → [빌드 수정]·[수정 기록] */
+function BuildPanel({ build, index, doc, data, path, isOperator, lastOne, hiding, setHiding, onHidden }) {
+  const [showPeople, setShowPeople] = useState(false);
+  const peopleBtn = useRef(null);
+  const label = buildLabel(build, index);
+  // 038 뒤 공개된 빌드는 글이 다 채워져 있다. 혹시 비어 있으면 예전 문서 내용으로
+  const summary = build.summary ?? doc?.summary ?? null;
+  const notes = build.level_notes ?? doc?.level_notes ?? null;
+  const cautions = build.lane_cautions ?? doc?.lane_cautions ?? '';
+  const updated = day(build.updated_at ?? build.edited_at ?? build.created_at);
+
+  const menu = isOperator ? [{
+    label: '빌드 숨기기', op: true, disabled: lastOne, onSelect: () => setHiding(build.id),
+    hint: lastOne ? '마지막 공개 빌드라 숨길 수 없습니다. 상대법을 숨겨 주세요.' : null,
+  }] : [];
+
+  return (
+    <div id="build-panel" role="tabpanel" aria-labelledby={`build-tab-${build.id}`} className="build-panel">
+      <div className="title-row">
+        <h3 className="build-name">{label}</h3>
+        <MoreMenu items={menu} label={`${label} 더보기`} />
+      </div>
+      <p className="doc-sub">
+        {build.patch && <>패치 {patchMinor(build.patch)}</>}
+        {updated && <>{build.patch ? ' · ' : ''}최근 수정 {updated}</>}
+      </p>
+      {hiding && (
+        <NoteForm
+          id={`hide-build-${build.id}`}
+          label="숨기는 사유 (필수, 처음 만든 분에게 보입니다)"
+          hint="숨기면 다른 사람에게 이 빌드가 안 보입니다. 추천 수는 그대로 남고, 운영자 페이지에서 다시 공개할 수 있습니다."
+          confirmLabel="숨기기 확정"
+          busyLabel="숨기는 중…"
+          onCancel={() => setHiding(null)}
+          onSubmit={async (reason) => {
+            await hideBuild(build.id, reason);
+            onHidden(`빌드를 숨겼습니다. (${label} · ${displayNickname(build.author, '(탈퇴한 유저)')})`);
+          }}
+        />
+      )}
+      {summary && <SummaryBox summary={summary} />}
 
       <nav className="toc" aria-label="목차">
         <strong>목차</strong>
@@ -102,71 +283,37 @@ export default function Matchup() {
         </ol>
       </nav>
 
-      <section className="section" id="builds">
-        <SectionHead icon={LayersIcon} num={1} count={data.builds.length}>빌드</SectionHead>
-        <p className="hint">점수(추천 − 비추천)가 높은 순서입니다. 점수가 같으면 투표가 많은 빌드, 그다음 최근 빌드가 먼저입니다.</p>
-        {buildNotice && <p className="notice" role="status">{buildNotice}</p>}
-        {data.builds.length === 0 ? (
-          <p className="empty">아직 등록된 빌드가 없습니다.</p>
-        ) : (
-          data.builds.map((b) => (
-            <BuildCard
-              key={b.id}
-              build={b}
-              {...data}
-              interactive
-              lastOne={data.builds.length === 1}
-              onHidden={(message) => {
-                setBuildNotice(message);
-                retry();
-              }}
-            />
-          ))
-        )}
-        <div className="actions">
-          <Link to={`/champion/${targetId}/counter/${counterId}/build/new`} className="btn">+ 빌드 등록</Link>
-        </div>
-      </section>
+      <BuildCard build={build} {...data} interactive origin />
 
       <section className="section" id="levels">
         <SectionHead icon={TrendingUpIcon} num={2}>레벨별 딜교법</SectionHead>
-        <LevelList doc={doc} />
+        <LevelList doc={notes ? { level_notes: notes } : null} />
       </section>
 
       <section className="section" id="cautions">
         <SectionHead icon={AlertIcon} num={3}>특이사항</SectionHead>
-        {doc?.lane_cautions ? (
-          <div className="prose caution-box">{doc.lane_cautions}</div>
+        {cautions ? (
+          <div className="prose caution-box">{cautions}</div>
         ) : (
           <p className="empty">아직 작성된 내용이 없습니다.</p>
         )}
         <div className="actions">
-          <Link to={`/champion/${targetId}/counter/${counterId}/edit`} className="btn">문서 수정 제안</Link>
-          {isOperator && <Link to={`/admin/history/${targetId}/${counterId}`} className="btn btn-op">수정 기록</Link>}
-          {isOperator && (
-            <button type="button" className="btn btn-op" onClick={() => setHiding((v) => !v)} aria-expanded={hiding}>
-              카운터 숨기기
-            </button>
-          )}
+          <Link to={`${path}/build/${build.id}/edit`} className="btn">빌드 수정</Link>
+          <button
+            ref={peopleBtn}
+            type="button"
+            className="btn"
+            aria-haspopup="dialog"
+            onClick={() => setShowPeople(true)}
+          >
+            수정 기록
+          </button>
         </div>
-        {hiding && (
-          <NoteForm
-            id="hide-reason"
-            label="숨기는 사유 (필수, 제안자에게 보입니다)"
-            hint="숨기면 다른 사람에게 이 카운터·문서·빌드가 안 보입니다. 이 카운터를 만든 제안은 승인 취소가 됩니다. 운영자 페이지에서 다시 공개할 수 있습니다."
-            confirmLabel="숨기기 확정"
-            busyLabel="숨기는 중…"
-            onCancel={() => setHiding(false)}
-            onSubmit={async (reason) => {
-              await hideCounter(data.matchup.counter.id, reason);
-              navigate(`/champion/${targetId}`, { state: { done: `숨겼습니다: ${matchupTitle(counter.name, target.name)}` } });
-            }}
-          />
-        )}
       </section>
-
-      <DocComments counterRowId={data.matchup.counter.id} auth={auth} live num={4} />
-    </article>
+      {showPeople && (
+        <ContributorsDialog build={build} title={label} opener={peopleBtn} onClose={() => setShowPeople(false)} />
+      )}
+    </div>
   );
 }
 

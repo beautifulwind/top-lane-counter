@@ -40,3 +40,26 @@ export function fillBuild({ withSkill = false } = {}) {
 }
 
 export const SKILL_GROUP = '선마 (첫 번째로 마스터할 스킬)';
+
+/** 빌드 한 벌 (038): 한 줄 요약 + 필수 레벨(1·2·3·6) 딜교법 + 빌드(선마 Q까지)를 채운다. name: 빌드 이름 (선택) */
+export function fillWikiBuild({ name = '', summary = '착취로 짧게 딜교' } = {}) {
+  if (name) fireEvent.change(screen.getByLabelText('빌드 이름 (선택)'), { target: { value: name } });
+  fireEvent.change(screen.getByLabelText('한 줄 요약 (필수)'), { target: { value: summary } });
+  for (const lv of [1, 2, 3, 6]) fireEvent.change(screen.getByLabelText(`${lv}레벨 (필수)`), { target: { value: `${lv}렙 공략` } });
+  fillBuild({ withSkill: true });
+}
+
+/** fillWikiBuild로 채운 빌드가 DB에 가는 모양 (p_build) */
+export const WIKI_PAYLOAD = (extra = {}) => ({
+  runes: { primaryPath: 8000, keystone: 8010, primary: [9111, 9104, 8299], secondaryPath: 8400, secondary: [8446, 8444], shards: [5005, 5008, 5011] },
+  summoner_spells: ['SummonerFlash', 'SummonerTeleport'],
+  starting_items: ['1055', '2003'],
+  core_items: ['3053', '3047', '6631'],
+  max_skill: 'Q',
+  patch: '99.1.1',
+  name: null,
+  summary: '착취로 짧게 딜교',
+  level_notes: { 1: '1렙 공략', 2: '2렙 공략', 3: '3렙 공략', 6: '6렙 공략' },
+  lane_cautions: '',
+  ...extra,
+});

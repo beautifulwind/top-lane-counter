@@ -42,11 +42,11 @@ test('규칙: 선마는 Q·W·E 하나, 예전 모양(선마 순서)으로 채�
 
 // ---------------- 빌드 입력 ----------------
 
-test('빌드 등록: 시작 아이템 목록에는 500골드 이하만, 안내 문장 없이 넘기려 할 때만 "500골드를 넘습니다" (022)', async () => {
+test('새 빌드: 시작 아이템 목록에는 500골드 이하만, 안내 문장 없이 넘기려 할 때만 "500골드를 넘습니다" (022)', async () => {
   vi.useFakeTimers({ shouldAdvanceTime: true });
   asUser();
   start(`${MATCHUP}/build/new`);
-  await screen.findByRole('heading', { name: /빌드 등록/ });
+  await screen.findByRole('heading', { name: /새 빌드/ });
   // 1100골드 탐식의 망치(서사)는 시작 아이템에는 없고 핵심 템트리에는 있다
   expect(within(startGroup()).queryByRole('button', { name: /탐식의 망치/ })).toBeNull();
   expect(within(screen.getByRole('group', { name: '핵심 템트리 고르기' })).getByRole('button', { name: '탐식의 망치 (서사)' })).toBeDefined();
@@ -74,10 +74,10 @@ test('빌드 등록: 시작 아이템 목록에는 500골드 이하만, 안내 �
   vi.useRealTimers();
 });
 
-test('빌드 등록: 스킬은 선마 하나만 (1·2·3레벨·선마 순서 칸 없음), 다시 누르면 바뀐다', async () => {
+test('새 빌드: 스킬은 선마 하나만 (1·2·3레벨·선마 순서 칸 없음), 다시 누르면 바뀐다', async () => {
   asUser();
   start(`${MATCHUP}/build/new`);
-  await screen.findByRole('heading', { name: /빌드 등록/ });
+  await screen.findByRole('heading', { name: /새 빌드/ });
   expect(screen.queryByRole('group', { name: '1레벨 스킬' })).toBeNull();
   expect(screen.queryByRole('group', { name: '선마 순서' })).toBeNull();
   fillBuild();
@@ -92,15 +92,18 @@ test('빌드 등록: 스킬은 선마 하나만 (1·2·3레벨·선마 순서 �
   expect(within(preview).getByLabelText('선마: E')).toBeDefined();
 });
 
-test('[이 빌드로 다시 쓰기]: 합계를 넘는 예전 빌드는 이유를 보여 주고 보내기가 잠긴다', async () => {
+test('[지금 빌드 내용 가져오기]: 합계를 넘는 예전 빌드는 이유를 보여 주고, 등록하려 하면 막는다', async () => {
   asUser();
   TABLES.builds.push(fakeBuild(140, { nickname: '기존유저', level: 1, main_title: null }, {
     author_id: 'u-old', status: 'rejected', starting_items: ['1055', '2003', '2003'],
   }));
   start(`${MATCHUP}/build/new?from=140`);
-  await screen.findByRole('heading', { name: /빌드 등록/ });
+  await screen.findByRole('heading', { name: /새 빌드/ });
+  fireEvent.click(screen.getByRole('button', { name: '지금 빌드 내용 가져오기' }));
   expect(screen.getByText('아직 고를 것: 시작 아이템은 합계 500골드까지 고를 수 있습니다. (지금 550골드)')).toBeDefined();
-  expect(screen.getByRole('button', { name: '빌드 보내기' })).toBeDisabled();
+  fireEvent.click(screen.getByRole('button', { name: '빌드 등록' }));
+  expect(screen.getByRole('alert')).toHaveTextContent('시작 아이템은 합계 500골드까지 고를 수 있습니다. (지금 550골드)');
+  expect(fakeState.rpcCalls.filter((c) => c.name === 'create_build')).toEqual([]);
 });
 
 // ---------------- 빌드 카드 ----------------
@@ -150,7 +153,7 @@ test('운영자: 아이템 가격표 — 기준 패치와 상한을 보여 주�
 
 // ---------------- 문구 ----------------
 
-test('챔피언 문서: "다리우스 카운터", 순위 숫자, 안내 문구 없음, [+ 카운터 등록] → "다리우스 카운터 선택"', async () => {
+test('챔피언 문서: "다리우스 카운터", 순위 숫자, 안내 문구 없음, [+ 카운터 등록] → 새 상대법 등록 (상대 챔피언 = 다리우스)', async () => {
   start('/champion/Darius');
   expect(await screen.findByRole('heading', { name: '1. 다리우스 카운터' })).toBeDefined();
   expect(screen.queryByText(/위에 있을수록/)).toBeNull();
@@ -160,9 +163,10 @@ test('챔피언 문서: "다리우스 카운터", 순위 숫자, 안내 문구 �
   cleanup();
   start('/champion/Darius');
   fireEvent.click(await screen.findByRole('link', { name: '+ 카운터 등록' }));
-  expect(await screen.findByRole('heading', { name: '다리우스 카운터 선택' })).toBeDefined();
-  expect(screen.getByRole('heading', { name: '1. 카운터 고르기' })).toBeDefined();
-  expect(screen.getByText(/› 카운터 등록/)).toBeDefined();
+  expect(await screen.findByRole('heading', { name: '새 상대법 등록' })).toBeDefined();
+  expect(screen.getByRole('heading', { name: '1. 상대 챔피언' })).toBeDefined();
+  expect(await screen.findByRole('heading', { name: '2. 플레이할 챔피언' })).toBeDefined();
+  expect(screen.getByText(/› 새 상대법/)).toBeDefined();
 });
 
 test('상단 바: 사이트 이름 옆에 부제, 메뉴의 자유게시판 링크와 화면 제목', async () => {

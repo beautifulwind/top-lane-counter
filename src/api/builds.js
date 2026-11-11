@@ -3,11 +3,13 @@
 import { db } from './supabase';
 import { getItems, getLatestVersion, getRunes, getSummonerSpells } from './ddragon';
 import { START_GOLD_MAX, compareBuilds, toProposalBuild, toRow } from '../lib/buildContent';
+import { toWikiPayload } from '../lib/wikiBuild';
 
 const PERSON = 'nickname, role, level, main_title, is_guest';
 const BUILD_FIELDS =
   'id, counter_id, author_id, proposal_id, runes, summoner_spells, starting_items, core_items, max_skill, patch, ' +
-  'up_count, down_count, status, created_at, version, edited_at';
+  'up_count, down_count, status, created_at, version, edited_at, ' +
+  'name, seq, summary, level_notes, lane_cautions, updated_at'; // 038: 빌드 = 공략 한 벌
 const AUTHOR = `author:profiles!builds_author_id_fkey(${PERSON})`;
 const COUNTER = 'counter:counters!builds_counter_id_fkey(id, target_champion, counter_champion, status)';
 const REVIEW_FIELDS =
@@ -15,11 +17,15 @@ const REVIEW_FIELDS =
 
 function friendly(error, fallback) {
   const msg = error?.message ?? '';
-  if (/row-level security/i.test(msg)) return new Error('빌드를 등록할 권한이 없습니다. 로그인하고 닉네임을 정했는지 확인해 주세요.');
-  if (/permission denied/i.test(msg)) return new Error('권한이 없습니다. (로그인이 필요하거나 운영자만 할 수 있는 작업입니다)');
-  if (/[가-힣]/.test(msg)) return new Error(msg);
-  return new Error(`${fallback} (${msg})`);
+  const err = (text) => Object.assign(new Error(text), { code: error?.code ?? null }); // code: TL412(먼저 수정됨) 등을 화면이 구분한다
+  if (/row-level security/i.test(msg)) return err('빌드를 등록할 권한이 없습니다. 로그인하고 닉네임을 정했는지 확인해 주세요.');
+  if (/permission denied/i.test(msg)) return err('권한이 없습니다. (로그인이 필요하거나 운영자만 할 수 있는 작업입니다)');
+  if (/[가-힣]/.test(msg)) return err(msg);
+  return err(`${fallback} (${msg})`);
 }
+
+/** 빌드 수정이 다른 사람과 겹쳤을 때 DB가 내는 오류 코드 (038 edit_build) */
+export const BUILD_CONFLICT = 'TL412';
 
 async function run(query, fallback) {
   const { data, error } = await query;
@@ -36,7 +42,7 @@ async function rpc(name, args, fallback) {
 const shape = ({ up_count, down_count, ...b }) => ({ ...b, up: up_count, down: down_count });
 
 /**
- * 매치업의 공개된 빌드 (점수 → 투표 수 → 최신순). userId를 주면 내 표(mine: 1 | -1 | null)도 붙인다.
+ * 상대법의 공개된 빌드 (추천 수 → 점수 → 최신순). userId를 주면 내 표(mine: 1 | -1 | null)도 붙인다.
  */
 export async function getBuilds(counterRowId, userId = null) {
   const rows = await run(
@@ -61,6 +67,35 @@ export async function submitBuild(userId, counterRowId, build, patch) {
     db().from('builds').insert({ counter_id: counterRowId, author_id: userId, patch, ...toRow(build) }),
     '빌드를 보내지 못했습니다.',
   );
+}
+
+// ---------------- 상대법 = 빌드 묶음, 승인 없이 바로 공개 (038) ----------------
+// v = 입력 값 (wikiBuild.emptyWikiBuild 모양), patch = 지금 Data Dragon 버전
+
+/** 새 상대법 + 첫 빌드. 돌려주는 값: { counter_id, build_id } */
+export const createMatchup = (target, mine, v, patch) =>
+  rpc('create_matchup', { p_target: target, p_mine: mine, p_build: toWikiPayload(v, patch) }, '상대법을 등록하지 못했습니다.');
+
+/** 상대법에 새 빌드. 돌려주는 값: 새 빌드 id */
+export const createBuild = (counterRowId, v, patch) =>
+  rpc('create_build', { p_counter: counterRowId, p_build: toWikiPayload(v, patch) }, '빌드를 등록하지 못했습니다.');
+
+/** 빌드 수정 (위키). version = 고치기 시작할 때의 버전 → 다른 사람이 먼저 고쳤으면 BUILD_CONFLICT. 돌려주는 값: 새 버전 */
+export const editBuild = (b, v, patch) =>
+  rpc('edit_build', { p_id: b.id, p_version: b.version, p_build: toWikiPayload(v, patch) }, '빌드를 수정하지 못했습니다.');
+
+/** 기여자 (시초 먼저, 그다음 최근 수정 순): [{ user_id, nickname, role, is_guest, level, main_title, is_origin }] */
+export async function getBuildContributors(buildId) {
+  return (await rpc('build_contributors', { p_build: buildId }, '기여자 목록을 불러오지 못했습니다.')) ?? [];
+}
+
+/** 이 추천 수 이상인 빌드를 고칠 때 "신중히 수정해 주세요" 안내 (xp_rules.build_caution_ups, 없으면 3) */
+export async function getBuildCautionUps() {
+  const row = await run(
+    db().from('xp_rules').select('value').eq('key', 'build_caution_ups').maybeSingle(),
+    '빌드 규칙을 불러오지 못했습니다.',
+  );
+  return row?.value ?? 3;
 }
 
 /** 추천(1)·비추천(-1)·취소(null). 돌려주는 값: { up, down, mine } */

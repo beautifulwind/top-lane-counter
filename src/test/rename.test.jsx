@@ -41,7 +41,7 @@ test('자유게시판(예전 이름 노가리방)은 상단 바가 아니라 ☰
   expect(document.body.textContent).not.toContain('노가리방');
 });
 
-test('매치업 문서 순서: 한 줄 요약 → 빌드 → 레벨별 딜교법 → 특이사항 → 댓글', async () => {
+test('상대법 화면 순서: 빌드 탭 → (고른 빌드) 한 줄 요약 → 룬·아이템 → 레벨별 딜교법 → 특이사항 → 댓글', async () => {
   start(MATCHUP);
   await screen.findByRole('heading', { level: 1, name: '퀸으로 다리우스 이기는 법' });
   const toc = screen.getByRole('navigation', { name: '목차' });
@@ -52,15 +52,17 @@ test('매치업 문서 순서: 한 줄 요약 → 빌드 → 레벨별 딜교법
   expect(heads[3]).toMatch(/^4\. 댓글/);
   const summary = document.querySelector('.doc-summary');
   expect(summary).not.toBeNull();
-  expect(summary.compareDocumentPosition(document.getElementById('builds')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  const after = (a, b) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+  expect(after(screen.getByRole('tablist'), summary)).toBe(true);
+  expect(after(summary, document.querySelector('article.build'))).toBe(true);
+  expect(after(document.querySelector('article.build'), document.getElementById('levels'))).toBe(true);
 });
 
-test('카운터 등록: "상대법" 아래 입력 순서는 한 줄 요약 → 빌드 → 레벨별 딜교법 → 특이사항, 예시 문구, [제안]', async () => {
+test('새 상대법 등록: 입력 순서는 빌드 이름 → 한 줄 요약 → 빌드 → 레벨별 딜교법 → 특이사항, 예시 문구, [상대법 등록]', async () => {
   fakeLogin('u-old');
   start('/champion/Darius/counter/Teemo');
   fireEvent.click(await screen.findByRole('link', { name: '+ 카운터 등록' }));
-  await screen.findByRole('heading', { name: '2. 상대법' });
-  expect(screen.queryByRole('heading', { name: /티모로 다리우스 이기는 법/ })).toBeNull();
+  await screen.findByRole('heading', { name: '3. 티모로 다리우스 이기는 법 — 첫 빌드' });
   const form = document.querySelector('form.doc-form');
   const summary = within(form).getByLabelText('한 줄 요약 (필수)');
   expect(summary.getAttribute('placeholder')).toBe('예) 트린 평타를 틀어막는 착취·E선마·얼심 말파');
@@ -69,6 +71,7 @@ test('카운터 등록: "상대법" 아래 입력 순서는 한 줄 요약 → �
   const rune = within(form).getByRole('group', { name: '주 경로' });
   const lv1 = within(form).getByLabelText('1레벨 (필수)');
   const cautions = within(form).getByLabelText('특이사항');
+  expect(order(within(form).getByLabelText('빌드 이름 (선택)'), summary)).toBe(true);
   expect(order(summary, rune) && order(rune, lv1) && order(lv1, cautions)).toBe(true);
 
   // 레벨 예시는 1·2·3·6레벨 칸에만
@@ -78,14 +81,14 @@ test('카운터 등록: "상대법" 아래 입력 순서는 한 줄 요약 → �
     expect(within(form).getByLabelText(`${lv}레벨 (필수)`).getAttribute('placeholder')).toBe(`예) ${LEVEL_EXAMPLES[lv]}`);
   }
   expect(Object.keys(LEVEL_EXAMPLES)).toEqual(['1', '2', '3', '6']);
-  expect(within(form).getByRole('button', { name: '제안' })).toBeDefined();
-  expect(within(form).queryByRole('button', { name: '제안 보내기' })).toBeNull();
+  expect(within(form).getByRole('button', { name: '상대법 등록' })).toBeDefined();
+  expect(within(form).queryByRole('button', { name: '제안' })).toBeNull();
 });
 
 test('강타: 소환사 주문 목록에 없고, 예전 빌드를 다시 쓰면 이유를 보여 주고 뺄 수 있다', async () => {
   fakeLogin('u-old');
   start(`${MATCHUP}/build/new`);
-  await screen.findByRole('heading', { name: /빌드 등록/ });
+  await screen.findByRole('heading', { name: /새 빌드/ });
   const spells = screen.getByRole('group', { name: '소환사 주문' });
   expect(within(spells).queryByRole('button', { name: '강타' })).toBeNull();
   expect(within(spells).getByRole('button', { name: '점화' })).toBeDefined();
@@ -96,9 +99,9 @@ test('강타: 소환사 주문 목록에 없고, 예전 빌드를 다시 쓰면 
   }));
   fakeLogin('u-old');
   start(`${MATCHUP}/build/new?from=150`);
-  await screen.findByRole('heading', { name: /빌드 등록/ });
+  await screen.findByRole('heading', { name: /새 빌드/ });
+  fireEvent.click(screen.getByRole('button', { name: '지금 빌드 내용 가져오기' }));
   expect(screen.getByText('아직 고를 것: 강타는 고를 수 없습니다. 다른 소환사 주문을 골라 주세요.')).toBeDefined();
-  expect(screen.getByRole('button', { name: '빌드 보내기' })).toBeDisabled();
   pick('소환사 주문', '강타'); // 골라져 있던 강타를 빼면 목록에서도 사라진다
   expect(within(screen.getByRole('group', { name: '소환사 주문' })).queryByRole('button', { name: '강타' })).toBeNull();
   pick('소환사 주문', '점화');
@@ -113,7 +116,7 @@ test('규칙: 강타가 든 빌드는 buildProblem이 막는다', () => {
 test('빌드 입력: 핵심 템트리는 끌어서 순서 바꾸기 안내, [빼기]는 X 아이콘 버튼', async () => {
   fakeLogin('u-old');
   start(`${MATCHUP}/build/new`);
-  await screen.findByRole('heading', { name: /빌드 등록/ });
+  await screen.findByRole('heading', { name: /새 빌드/ });
   fillBuild();
   pick(SKILL_GROUP, '선마 Q');
   expect(screen.getByText(/끌어서 순서 바꾸기 \(폰은 꾹 눌러 끌기\)/)).toBeDefined();

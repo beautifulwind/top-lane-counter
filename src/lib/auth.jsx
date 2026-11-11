@@ -120,7 +120,8 @@ export { isGuest };
  */
 export const NICKNAME_ROUTES = [
   /^\/champion\/[^/]+\/propose$/,
-  /^\/champion\/[^/]+\/counter\/[^/]+\/(edit|build\/new)$/,
+  /^\/matchup\/new$/,
+  /^\/champion\/[^/]+\/counter\/[^/]+\/(edit|build\/new|build\/\d+\/edit)$/,
   /^\/board\/(new|\d+\/edit)$/,
   /^\/me(\/|$)/,
 ];

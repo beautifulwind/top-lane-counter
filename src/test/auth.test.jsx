@@ -47,8 +47,8 @@ test('카카오 첫 로그인(이메일 없음)도 쓰기 화면에 가면 닉�
 
   fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '카카오탑' } });
   fireEvent.click(screen.getByRole('button', { name: '시작하기' }));
-  expect(await screen.findByRole('heading', { name: '다리우스 카운터 선택' })).toBeDefined();
-  expect(where()).toBe('/champion/Darius/propose');
+  expect(await screen.findByRole('heading', { name: '새 상대법 등록' })).toBeDefined(); // 예전 주소 → 새 상대법 등록
+  expect(where()).toBe('/matchup/new');
   expect(await menuUserText()).toBe('Lv.1 카카오탑');
 });
 

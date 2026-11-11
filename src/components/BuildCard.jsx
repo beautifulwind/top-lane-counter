@@ -1,12 +1,12 @@
 import { displayNickname } from '../lib/nickname';
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { hideBuild, voteBuild } from '../api/builds';
+import { voteBuild } from '../api/builds';
 import { canWrite, isGuest, useAuth } from '../lib/auth';
 import GuestHint from './GuestHint';
 import { patchMinor } from '../lib/buildContent';
 import UserName from './UserName';
-import NoteForm from './NoteForm';
+import { OriginBadge } from './ContributorsDialog';
 import { ThumbIcon } from './Icons';
 
 export function Icon({ entry, size = 32, round = false, fallback = '?' }) {
@@ -47,17 +47,18 @@ export function BuildAuthor({ build }) {
 }
 
 /**
- * 빌드 카드 (매치업 문서·등록 미리보기·운영자 화면 공용).
- * interactive: 추천/비추천 누르기 + 운영자 [빌드 숨기기] (매치업 문서에서만). 아니면 숫자만 보인다.
- * onHidden(message): 운영자가 숨긴 뒤 / lastOne: 이 매치업의 마지막 공개 빌드 (숨기기 잠금)
+ * 빌드 카드 (상대법 화면·등록 미리보기·운영자 화면 공용).
+ * interactive: 추천/비추천 누르기 (상대법 화면에서만). 아니면 숫자만 보인다.
+ * origin: 작성자 옆에 시초 뱃지 (상대법 화면: 빌드를 처음 만든 사람)
  */
-export default function BuildCard({ build, items, runes, spells, latest, interactive = false, onHidden, lastOne = false }) {
+export default function BuildCard({ build, items, runes, spells, interactive = false, origin = false }) {
   const r = build.runes;
   return (
     <article className="build" aria-label={`빌드: ${displayNickname(build.author, '(탈퇴한 유저)')}`}>
       <div className="build-head">
         <span className="build-author">
           <BuildAuthor build={build} />
+          {origin && build.author && <>{' '}<OriginBadge /></>}
         </span>
         {build.patch && (
           <span className="badge">{`패치 ${patchMinor(build.patch)}`}</span>
@@ -114,7 +115,7 @@ export default function BuildCard({ build, items, runes, spells, latest, interac
       </div>
 
       {interactive ? (
-        <BuildActions build={build} onHidden={onHidden} lastOne={lastOne} />
+        <BuildActions build={build} />
       ) : (
         build.up !== undefined && (
           <div className="votes">
@@ -127,15 +128,14 @@ export default function BuildCard({ build, items, runes, spells, latest, interac
   );
 }
 
-/** 추천/비추천 (로그인한 사람만, 한 사람 한 표, 같은 버튼 다시 누르면 취소, 내 빌드는 못 누름) + 운영자 숨기기 */
-function BuildActions({ build, onHidden, lastOne }) {
+/** 추천/비추천 (로그인한 사람만, 한 사람 한 표, 같은 버튼 다시 누르면 취소, 내 빌드는 못 누름). 운영자 [빌드 숨기기]는 ⋮ 메뉴 (Matchup) */
+function BuildActions({ build }) {
   const auth = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [votes, setVotes] = useState({ up: build.up, down: build.down, mine: build.mine ?? null });
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
-  const [hiding, setHiding] = useState(false);
   const [guestHint, setGuestHint] = useState(false);
   const signedIn = auth.status === 'signedIn';
   const own = signedIn && build.author_id === auth.user.id;
@@ -198,28 +198,6 @@ function BuildActions({ build, onHidden, lastOne }) {
       </div>
       {error && <p className="form-error" role="alert">{error}</p>}
       {guestHint && <GuestHint what="추천·비추천을 누를" />}
-      {auth.isOperator && (
-        <div className="row-actions">
-          <button type="button" className="btn btn-small btn-op" onClick={() => setHiding((v) => !v)} aria-expanded={hiding} disabled={lastOne}>
-            빌드 숨기기
-          </button>
-          {lastOne && <small className="hint">마지막 공개 빌드라 숨길 수 없습니다. 다른 빌드를 먼저 승인하거나, 카운터를 숨겨 주세요.</small>}
-        </div>
-      )}
-      {hiding && (
-        <NoteForm
-          id={`hide-build-${build.id}`}
-          label="숨기는 사유 (필수, 작성자에게 보입니다)"
-          hint="숨기면 다른 사람에게 이 빌드가 안 보입니다. 추천 수는 그대로 남고, 운영자 페이지에서 다시 공개할 수 있습니다."
-          confirmLabel="숨기기 확정"
-          busyLabel="숨기는 중…"
-          onCancel={() => setHiding(false)}
-          onSubmit={async (reason) => {
-            await hideBuild(build.id, reason);
-            onHidden?.(`빌드를 숨겼습니다. (${displayNickname(build.author)})`);
-          }}
-        />
-      )}
     </>
   );
 }

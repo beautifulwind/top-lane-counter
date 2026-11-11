@@ -52,17 +52,17 @@ export default function Champion() {
           <div className="invite-card">
             <p className="invite-title">아직 비어 있습니다. 첫 기여자가 되어 주세요.</p>
             <p>
-              {josa(target.name, '을/를')} 이기는 챔피언과 공략을 제안해 주세요. 운영자가 확인한 뒤 공개합니다.
+              {josa(target.name, '을/를')} 이기는 챔피언과 공략을 등록해 주세요. 등록하면 바로 공개됩니다.
             </p>
             {signedIn ? (
               <div className="actions">
-                <Link to={`/champion/${id}/propose`} className="btn btn-primary">+ 카운터 등록</Link>
+                <Link to={`/matchup/new?target=${id}`} className="btn btn-primary">+ 카운터 등록</Link>
               </div>
             ) : (
               <>
-                <p className="hint">카운터를 제안하려면 로그인해 주세요.</p>
+                <p className="hint">카운터를 등록하려면 로그인해 주세요.</p>
                 <div className="actions">
-                  <Link to="/login" state={{ from: `/champion/${id}/propose` }} className="btn btn-primary">로그인하고 카운터 등록</Link>
+                  <Link to="/login" state={{ from: `/matchup/new?target=${id}` }} className="btn btn-primary">로그인하고 카운터 등록</Link>
                 </div>
               </>
             )}
@@ -119,7 +119,7 @@ export default function Champion() {
         )}
 
         <div className="actions">
-          {shown.length > 0 && <Link to={`/champion/${id}/propose`} className="btn">+ 카운터 등록</Link>}
+          {shown.length > 0 && <Link to={`/matchup/new?target=${id}`} className="btn">+ 카운터 등록</Link>}
           {isOperator && <Link to={`/admin/order/${id}`} className="btn btn-op">순서 변경</Link>}
         </div>
       </section>

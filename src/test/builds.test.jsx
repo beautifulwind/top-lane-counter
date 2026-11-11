@@ -5,7 +5,7 @@ import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
 import { TABLES, fakeBuild, fakeLogin, fakeState } from './fakeSupabase';
 import { buildProblem, compareBuilds, emptyBuild, isOutdated } from '../lib/buildContent';
-import { fillBuild, pick } from './buildHelpers';
+import { WIKI_PAYLOAD, fillWikiBuild, pick } from './buildHelpers';
 import { sectionCount } from './sectionCount';
 
 beforeEach(() => {
@@ -33,19 +33,21 @@ test('구버전: 패치 앞 두 자리만 비교한다', () => {
   expect(isOutdated('14.1.1', '99.1.1')).toBe(true);
 });
 
-test('정렬: 점수 → 투표 수 → 최신순', () => {
+test('정렬 (038): 추천 수 → 점수 → 최신순', () => {
   const b = (id, up, down, day) => ({ id, up, down, created_at: `2026-11-0${day}T00:00:00Z` });
-  const list = [b(1, 1, 0, 1), b(2, 3, 2, 1), b(3, 1, 0, 2), b(4, 5, 0, 1), b(5, 0, 3, 3)];
-  expect(list.sort(compareBuilds).map((x) => x.id)).toEqual([4, 2, 3, 1, 5]);
+  const list = [b(1, 1, 0, 1), b(2, 3, 2, 1), b(3, 1, 0, 2), b(4, 5, 0, 1), b(5, 0, 3, 3), b(6, 3, 0, 1)];
+  expect(list.sort(compareBuilds).map((x) => x.id)).toEqual([4, 6, 2, 3, 1, 5]);
 });
 
 test('빈 빌드는 고를 것을 차례로 알려 준다', () => {
   expect(buildProblem(emptyBuild())).toBe('주 경로를 골라 주세요.');
 });
 
-// ---------------- 매치업 문서: 투표 ----------------
+// ---------------- 상대법 화면: 빌드 탭·투표 ----------------
 
-test('비로그인: 추천을 누르면 로그인 화면으로, [+ 빌드 등록]도 로그인부터', async () => {
+const tabs = () => screen.getAllByRole('tab').map((t) => t.textContent);
+
+test('비로그인: 추천을 누르면 로그인 화면으로, [+ 새 빌드]도 로그인부터', async () => {
   start(MATCHUP);
   await screen.findByText(/퀸으로 다리우스 이기는 법/);
   click('추천 5', card('탑고수'));
@@ -53,7 +55,7 @@ test('비로그인: 추천을 누르면 로그인 화면으로, [+ 빌드 등록
   expect(rpcCalls('vote_build')).toEqual([]);
   cleanup();
   start(MATCHUP);
-  fireEvent.click(await screen.findByRole('link', { name: '+ 빌드 등록' }));
+  fireEvent.click(await screen.findByRole('link', { name: '+ 새 빌드' }));
   expect(await screen.findByRole('heading', { name: '로그인 · 가입' })).toBeDefined();
 });
 
@@ -79,9 +81,10 @@ test('내가 이미 누른 표가 보이고, 내 빌드에는 못 누른다', as
   TABLES.build_votes.push({ build_id: 103, user_id: 'u-old', value: 1 });
   TABLES.builds.find((b) => b.id === 102).author_id = 'u-old';
   asUser();
-  start(MATCHUP);
+  start(`${MATCHUP}?build=103`);
   await screen.findByText(/퀸으로 다리우스 이기는 법/);
   expect(within(card('칭호없음')).getByRole('button', { name: '추천 2' })).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(screen.getByRole('tab', { name: /^빌드 2/ }));
   const mine = card('탑고수');
   expect(within(mine).getByText('내 빌드')).toBeDefined();
   expect(within(mine).getByRole('button', { name: '추천 5' })).toBeDisabled();
@@ -98,83 +101,83 @@ test('투표 실패하면 이유를 보여 주고 숫자는 그대로', async ()
   expect(within(card('탑고수')).getByRole('button', { name: '추천 5' })).toBeDefined();
 });
 
-test('정렬: 점수가 같으면 투표가 많은 빌드가 먼저', async () => {
-  TABLES.builds.find((b) => b.id === 103).up_count = 6; // 점수 6
-  TABLES.builds.find((b) => b.id === 102).up_count = 8; // 8 − 1 − 1 = 6, 투표 10
-  TABLES.builds.find((b) => b.id === 102).down_count = 2;
+test('빌드 탭: 추천 많은 순(같으면 점수), 처음엔 맨 앞 빌드, 이름이 없으면 "빌드 N", 누르면 ?build=로 남는다', async () => {
+  TABLES.builds.find((b) => b.id === 103).up_count = 8; // 추천 8, 점수 8
+  Object.assign(TABLES.builds.find((b) => b.id === 102), { up_count: 8, down_count: 2, name: '정복자 딜교형' }); // 추천 8, 점수 6
   start(MATCHUP);
   await screen.findByText(/퀸으로 다리우스 이기는 법/);
-  const authors = [...document.querySelectorAll('.build-author')].map((e) => e.textContent);
-  expect(authors).toEqual(['Lv.7 단단묵직 탑고수', 'Lv.3 칭호없음', '(탈퇴한 유저)', 'Lv.0 (운)영자']);
+  expect(screen.getByRole('tablist', { name: '빌드 고르기' })).toBeDefined();
+  expect(tabs()).toEqual(['빌드 3 추천 8', '정복자 딜교형 추천 8', '빌드 1 추천 1', '빌드 5 추천 0']);
+  expect(screen.getByRole('tab', { name: /^빌드 3/ })).toHaveAttribute('aria-selected', 'true');
+  expect(screen.getByRole('tabpanel')).toHaveAccessibleName('빌드 3 추천 8');
+  expect(document.querySelectorAll('.build-author')).toHaveLength(1); // 고른 빌드 하나만 보인다
+  expect(within(card('칭호없음')).getByText('시초(처음 만든 사람)')).toBeDefined(); // 작성자 = 시초
+  fireEvent.click(screen.getByRole('tab', { name: /^정복자 딜교형/ }));
+  expect(where()).toBe(`${MATCHUP}?build=102`);
+  expect(screen.getByRole('heading', { name: '정복자 딜교형' })).toBeDefined();
+  // ←→로 옮기면 바로 그 빌드
+  fireEvent.keyDown(screen.getByRole('tab', { name: /^정복자 딜교형/ }), { key: 'ArrowRight' });
+  expect(where()).toBe(`${MATCHUP}?build=101`);
+  expect(document.activeElement).toBe(screen.getByRole('tab', { name: /^빌드 1/ }));
+  fireEvent.keyDown(document.activeElement, { key: 'End' });
+  expect(where()).toBe(`${MATCHUP}?build=105`);
 });
 
-test('운영자: 매치업 문서에서 빌드를 바로 숨긴다 (사유 = 확인 단계)', async () => {
+test('운영자: ⋮ → [빌드 숨기기] → 사유(= 확인 단계)를 써야 숨긴다', async () => {
   asOperator();
-  start(MATCHUP);
+  start(`${MATCHUP}?build=103`);
   await screen.findByText(/퀸으로 다리우스 이기는 법/);
-  const c = card('칭호없음');
-  click('빌드 숨기기', c);
-  const confirm = within(c).getByRole('button', { name: '숨기기 확정' });
+  fireEvent.click(screen.getByRole('button', { name: '빌드 3 더보기' }));
+  const item = screen.getByRole('menuitem', { name: '빌드 숨기기' });
+  expect(item).toHaveClass('op');
+  fireEvent.click(item);
+  const confirm = screen.getByRole('button', { name: '숨기기 확정' });
   expect(confirm).toBeDisabled();
-  fireEvent.change(within(c).getByLabelText(/숨기는 사유/), { target: { value: ' 아이템이 바뀌었습니다 ' } });
+  fireEvent.change(screen.getByLabelText(/숨기는 사유/), { target: { value: ' 아이템이 바뀌었습니다 ' } });
   TABLES.builds.find((b) => b.id === 103).status = 'hidden'; // DB 함수가 한 일
   fireEvent.click(confirm);
-  expect(await screen.findByText('빌드를 숨겼습니다. (칭호없음)')).toBeDefined();
+  expect(await screen.findByText('빌드를 숨겼습니다. (빌드 3 · 칭호없음)')).toBeDefined();
   expect(rpcCalls('hide_build')).toEqual([{ p_id: 103, p_reason: '아이템이 바뀌었습니다' }]);
-  expect(screen.queryByRole('article', { name: '빌드: 칭호없음' })).toBeNull();
+  expect(screen.queryByRole('tab', { name: /^빌드 3/ })).toBeNull();
 });
 
-test('일반 유저에게는 [빌드 숨기기]가 없다', async () => {
+test('일반 유저에게는 ⋮ 메뉴(빌드·상대법 숨기기)가 없다', async () => {
   asUser();
   start(MATCHUP);
   await screen.findByText(/퀸으로 다리우스 이기는 법/);
+  expect(screen.queryByRole('button', { name: /더보기$/ })).toBeNull();
   expect(screen.queryByRole('button', { name: '빌드 숨기기' })).toBeNull();
 });
 
-// ---------------- 빌드 등록 ----------------
+// ---------------- 새 빌드 (038: 승인 없이 바로 공개) ----------------
 
-test('빌드 등록: 다 고르면 미리보기가 보이고, 보내면 승인 대기로 들어간 뒤 /me로', async () => {
+test('새 빌드: 빈 칸에서 시작, 다 채워 등록하면 create_build → 그 빌드가 고른 상대법 화면', async () => {
   asUser();
   start(`${MATCHUP}/build/new`);
-  await screen.findByRole('heading', { name: /빌드 등록/ });
-  fillBuild();
-  const send = screen.getByRole('button', { name: '빌드 보내기' });
-  expect(send).toBeDisabled();
-  expect(screen.getByText('아직 고를 것: 선마(첫 번째로 마스터할 스킬)를 골라 주세요.')).toBeDefined();
-  pick('선마 (첫 번째로 마스터할 스킬)', '선마 Q');
+  await screen.findByRole('heading', { name: /새 빌드/ });
+  expect(screen.queryByRole('button', { name: '지금 빌드 내용 가져오기' })).toBeNull();
+  expect(screen.getByLabelText('한 줄 요약 (필수)')).toHaveValue('');
+  // 덜 채우면 이유를 보여 주고 보내지 않는다
+  fireEvent.click(screen.getByRole('button', { name: '빌드 등록' }));
+  expect(screen.getByRole('alert')).toHaveTextContent('한 줄 요약을 적어 주세요.');
+  fillWikiBuild({ name: '  착취 탱커 ' });
   // 022: 핵심 템트리는 끌어서 순서를 바꾼다 (▲▼/← 버튼 없음). 여기서는 [X]로 빼고 다시 넣어 순서를 바꾼다
   const core = screen.getByRole('list', { name: '고른 핵심 템트리' });
   expect(within(core).queryByRole('button', { name: /앞으로|위로|아래로/ })).toBeNull();
   expect(within(core).getByRole('button', { name: '강철판 장화 (끌어서 순서 바꾸기)' }).getAttribute('aria-roledescription')).toBe('끌어서 순서 바꾸기');
-  fireEvent.click(screen.getByRole('button', { name: '스테락의 도전 빼기' }));
-  fireEvent.click(screen.getByRole('button', { name: '선혈포식자 빼기' }));
-  pick('핵심 템트리 고르기', '스테락의 도전');
-  pick('핵심 템트리 고르기', '선혈포식자');
-  expect(screen.getByRole('article', { name: '빌드: 기존유저' })).toBeDefined();
-  expect(send).toBeEnabled();
-  fireEvent.click(send);
-  await vi.waitFor(() => expect(where()).toBe('/me'));
-  expect(await screen.findByText(/퀸으로 다리우스 이기는 법 — 빌드를 보냈습니다\./)).toBeDefined();
-  expect(fakeState.inserts).toEqual([{
-    table: 'builds',
-    values: {
-      counter_id: 1, author_id: 'u-old', patch: '99.1.1',
-      runes: { primaryPath: 8000, keystone: 8010, primary: [9111, 9104, 8299], secondaryPath: 8400, secondary: [8446, 8444], shards: [5005, 5008, 5011] },
-      summoner_spells: ['SummonerFlash', 'SummonerTeleport'],
-      starting_items: ['1055', '2003'],
-      core_items: ['3047', '3053', '6631'],
-      max_skill: 'Q',
-    },
-  }]);
-  // /me "내 빌드"에 대기 중으로 보인다
-  const row = await screen.findByRole('listitem', { name: '내 빌드: 퀸으로 다리우스 이기는 법' });
-  expect(within(row).getByText('대기 중')).toBeDefined();
+  expect(screen.getByRole('article', { name: '빌드: 기존유저' })).toBeDefined(); // 미리보기
+  fireEvent.click(screen.getByRole('button', { name: '빌드 등록' }));
+  await vi.waitFor(() => expect(where()).toMatch(new RegExp(`^${MATCHUP}\\?build=\\d+$`)));
+  expect(rpcCalls('create_build')).toEqual([{ p_counter: 1, p_build: WIKI_PAYLOAD({ name: '착취 탱커' }) }]);
+  expect(await screen.findByText('새 빌드를 등록했습니다.')).toBeDefined();
+  expect(screen.getByRole('tab', { name: /^착취 탱커/ })).toHaveAttribute('aria-selected', 'true');
+  expect(fakeState.inserts).toEqual([]); // 예전 승인 대기 등록은 쓰지 않는다
 });
 
-test('빌드 등록: 상점에서 못 사는 아이템·협곡에 없는 주문은 고르기 목록에 없다', async () => {
+test('새 빌드: 상점에서 못 사는 아이템·협곡에 없는 주문은 고르기 목록에 없다', async () => {
   asUser();
   start(`${MATCHUP}/build/new`);
-  await screen.findByRole('heading', { name: /빌드 등록/ });
+  await screen.findByRole('heading', { name: /새 빌드/ });
   const core = screen.getByRole('group', { name: '핵심 템트리 고르기' });
   expect(within(core).queryByRole('button', { name: '너만 살 수 있는 아이템' })).toBeNull();
   expect(within(core).queryByRole('button', { name: '칼바람 전용' })).toBeNull();
@@ -187,10 +190,10 @@ test('빌드 등록: 상점에서 못 사는 아이템·협곡에 없는 주문�
   expect(within(found).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['무한의 대검']);
 });
 
-test('빌드 등록: 보조 룬은 같은 줄이면 바뀌고, 2개를 넘으면 먼저 고른 것이 빠진다 / 핵심 템트리는 중복 불가', async () => {
+test('새 빌드: 보조 룬은 같은 줄이면 바뀌고, 2개를 넘으면 먼저 고른 것이 빠진다 / 핵심 템트리는 중복 불가', async () => {
   asUser();
   start(`${MATCHUP}/build/new`);
-  await screen.findByRole('heading', { name: /빌드 등록/ });
+  await screen.findByRole('heading', { name: /새 빌드/ });
   pick('보조 경로', '보조 경로 지배');
   const group = '보조 룬 (서로 다른 줄에서 2개)';
   const pressed = () => within(screen.getByRole('group', { name: group })).getAllByRole('button')
@@ -207,20 +210,43 @@ test('빌드 등록: 보조 룬은 같은 줄이면 바뀌고, 2개를 넘으면
   expect(within(screen.getByRole('group', { name: '시작 아이템 고르기' })).getByRole('button', { name: '체력 물약' })).toBeEnabled();
 });
 
-test('빌드 등록: DB가 거절하면 이유를 보여 주고 그대로 남는다', async () => {
+test('새 빌드: DB가 거절하면 이유를 보여 주고 그대로 남는다', async () => {
   asUser();
   start(`${MATCHUP}/build/new`);
-  await screen.findByRole('heading', { name: /빌드 등록/ });
-  fillBuild();
-  pick('선마 (첫 번째로 마스터할 스킬)', '선마 Q');
-  fakeState.insertError = '이 매치업에 이미 승인 대기 중인 내 빌드가 있습니다. 처리된 뒤에 다시 등록해 주세요.';
-  fireEvent.click(screen.getByRole('button', { name: '빌드 보내기' }));
-  expect(await screen.findByRole('alert')).toHaveTextContent('이미 승인 대기 중인 내 빌드가 있습니다');
+  await screen.findByRole('heading', { name: /새 빌드/ });
+  fillWikiBuild();
+  fakeState.rpcError = '똑같은 빌드가 이미 공개돼 있습니다. 그 빌드를 추천해 주세요.';
+  fireEvent.click(screen.getByRole('button', { name: '빌드 등록' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('똑같은 빌드가 이미 공개돼 있습니다');
   expect(where()).toBe(`${MATCHUP}/build/new`);
-  expect(screen.getByRole('button', { name: '빌드 보내기' })).toBeEnabled();
+  expect(screen.getByRole('button', { name: '빌드 등록' })).toBeEnabled();
 });
 
-test('[이 빌드로 다시 쓰기]: 내 빌드 내용이 채워진 채로 새 빌드를 보낸다 (원래 빌드는 그대로)', async () => {
+test('[+ 새 빌드]는 보던 빌드를 기억하고, [지금 빌드 내용 가져오기]로 그 빌드 내용(이름 빼고)을 채운다', async () => {
+  TABLES.builds.find((b) => b.id === 103).name = '칭호 빌드';
+  asUser();
+  start(`${MATCHUP}?build=103`);
+  await screen.findByText(/퀸으로 다리우스 이기는 법/);
+  fireEvent.click(screen.getByRole('link', { name: '+ 새 빌드' }));
+  await screen.findByRole('heading', { name: /새 빌드/ });
+  expect(where()).toBe(`${MATCHUP}/build/new?from=103`);
+  expect(screen.getByLabelText('한 줄 요약 (필수)')).toHaveValue(''); // 빈 칸에서 시작
+  fireEvent.click(screen.getByRole('button', { name: '지금 빌드 내용 가져오기' }));
+  expect(screen.getByText('"칭호 빌드"의 내용을 채웠습니다. 다른 점만 고쳐 주세요.')).toBeDefined();
+  expect(screen.getByLabelText('한 줄 요약 (필수)')).toHaveValue('사거리로 일방적인 견제');
+  expect(screen.getByLabelText('빌드 이름 (선택)')).toHaveValue('');
+  expect(screen.getByLabelText('4레벨')).toHaveValue('4렙 추가');
+  fireEvent.click(screen.getByRole('button', { name: '광전사의 군화 빼기' }));
+  pick('핵심 템트리 고르기', '칠흑의 양날 도끼');
+  fireEvent.click(screen.getByRole('button', { name: '빌드 등록' }));
+  await vi.waitFor(() => expect(rpcCalls('create_build')).toHaveLength(1));
+  const sent = rpcCalls('create_build')[0].p_build;
+  expect(sent.core_items).toEqual(['6672', '3031', '3071']);
+  expect(sent.runes.keystone).toBe(8005);
+  expect(sent.name).toBeNull();
+});
+
+test('[이 빌드로 다시 쓰기](마이페이지 내 빌드) → 새 빌드 화면에서 [지금 빌드 내용 가져오기]로 내 빌드를 채운다', async () => {
   TABLES.builds.push(fakeBuild(110, { nickname: '기존유저', level: 1, main_title: null }, {
     author_id: 'u-old', status: 'hidden', hide_reason: '아이템이 바뀌었습니다', hidden_at: '2026-11-05T00:00:00Z', up_count: 3,
   }));
@@ -231,22 +257,20 @@ test('[이 빌드로 다시 쓰기]: 내 빌드 내용이 채워진 채로 새 �
   expect(within(row).getByText(/숨긴 사유: 아이템이 바뀌었습니다/)).toBeDefined();
   expect(within(row).getByLabelText('추천 3 · 비추천 0')).toBeDefined();
   fireEvent.click(within(row).getByRole('link', { name: '이 빌드로 다시 쓰기' }));
-  expect(await screen.findByText(/내 빌드 내용을 채워 뒀습니다/)).toBeDefined();
+  fireEvent.click(await screen.findByRole('button', { name: '지금 빌드 내용 가져오기' }));
   expect(where()).toBe(`${MATCHUP}/build/new?from=110`);
-  fireEvent.click(screen.getByRole('button', { name: '광전사의 군화 빼기' }));
-  pick('핵심 템트리 고르기', '칠흑의 양날 도끼');
-  fireEvent.click(screen.getByRole('button', { name: '빌드 보내기' }));
-  await vi.waitFor(() => expect(where()).toBe('/me'));
-  expect(fakeState.inserts[0].values.core_items).toEqual(['6672', '3031', '3071']);
-  expect(fakeState.inserts[0].values.runes.keystone).toBe(8005);
-  expect(TABLES.builds.find((b) => b.id === 110).status).toBe('hidden');
+  expect(screen.getByText('내 빌드의 내용을 채웠습니다. 다른 점만 고쳐 주세요.')).toBeDefined();
+  fireEvent.click(screen.getByRole('button', { name: '빌드 등록' }));
+  await vi.waitFor(() => expect(rpcCalls('create_build')).toHaveLength(1));
+  expect(TABLES.builds.find((b) => b.id === 110).status).toBe('hidden'); // 원래 빌드는 그대로
 });
 
-test('남의 빌드 id로는 채워지지 않는다', async () => {
+test('다른 상대법의 빌드 id로는 [지금 빌드 내용 가져오기]가 없다', async () => {
+  TABLES.builds.push(fakeBuild(130, null, { counter_id: 77, author_id: 'u-old', status: 'hidden' }));
   asUser();
-  start(`${MATCHUP}/build/new?from=102`);
-  expect(await screen.findByText(/불러올 내 빌드를 찾지 못했습니다/)).toBeDefined();
-  expect(screen.getByRole('button', { name: '빌드 보내기' })).toBeDisabled();
+  start(`${MATCHUP}/build/new?from=130`);
+  await screen.findByRole('heading', { name: /새 빌드/ });
+  expect(screen.queryByRole('button', { name: '지금 빌드 내용 가져오기' })).toBeNull();
 });
 
 // ---------------- /me: 내 빌드 + 알림 ----------------

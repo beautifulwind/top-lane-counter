@@ -25,7 +25,7 @@ test('홈 → 챔피언 문서 → 매치업 문서를 클릭으로 이동해도
 
   fireEvent.click(screen.getByText('퀸'));
   expect(await screen.findByText(/퀸으로 다리우스 이기는 법/)).toBeDefined();
-  expect(await screen.findByText('(탈퇴한 유저)')).toBeDefined();
+  expect(await screen.findByRole('tab', { name: '빌드 2 추천 5' })).toBeDefined();
   expect(screen.getByText(RIOT_NOTICE)).toBeDefined();
 
   fireEvent.click(screen.getByRole('link', { name: '다리우스' }));

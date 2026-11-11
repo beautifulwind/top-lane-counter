@@ -4,7 +4,7 @@ import { MemoryRouter, useLocation } from 'react-router-dom';
 import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
 import { TABLES, fakeLogin, fakeProposal, fakeState } from './fakeSupabase';
-import { fillBuild, pick } from './buildHelpers';
+import { WIKI_PAYLOAD, fillBuild, fillWikiBuild } from './buildHelpers';
 
 beforeEach(() => {
   vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch());
@@ -25,93 +25,84 @@ test('로그인 안 했으면 [새 카운터 제안]은 로그인 화면으로 �
   expect(where()).toBe('/login');
 });
 
-test('새 카운터 제안: 이미 있는 카운터는 못 고르고, 필수 칸을 채워야 보내지고, 보내면 /me에 대기 중으로 보인다', async () => {
+test('새 상대법(038): 두 챔피언을 고르고 첫 빌드를 채워 등록하면 create_matchup → 바로 그 상대법 화면', async () => {
   fakeLogin('u-old');
   start('/champion/Darius');
   fireEvent.click(await screen.findByRole('link', { name: '+ 카운터 등록' }));
-  expect(await screen.findByRole('heading', { name: '다리우스 카운터 선택' })).toBeDefined();
-  expect(screen.getByRole('button', { name: /퀸 \(등록됨\)/ }).disabled).toBe(true);
-  expect(screen.queryByRole('button', { name: /다리우스/ })).toBeNull(); // 자기 자신은 목록에 없음
+  expect(await screen.findByRole('heading', { name: '새 상대법 등록' })).toBeDefined();
+  expect(where()).toBe('/matchup/new');
+  // 상대 챔피언은 미리 골라져 있고, 다시 고를 수 있다
+  expect(screen.getByText('다리우스', { selector: '.picked-text strong' })).toBeDefined();
+  expect(screen.getByRole('button', { name: '상대 챔피언 다시 고르기' })).toBeDefined();
+  const mine = await screen.findByRole('list', { name: '플레이할 챔피언 고르기' });
+  expect(within(mine).queryByRole('button', { name: /다리우스/ })).toBeNull(); // 자기 자신은 목록에 없음
+  // 이미 있는 상대법을 고르면 그 상대법·새 빌드로 안내한다 (입력 칸은 안 보인다)
+  fireEvent.click(within(mine).getByRole('button', { name: '퀸 (등록됨)' }));
+  expect(screen.getByText('이미 있는 상대법입니다. 그 상대법에 새 빌드를 더해 주세요.')).toBeDefined();
+  expect(screen.getByRole('link', { name: '+ 새 빌드' }).getAttribute('href')).toBe('/champion/Darius/counter/Quinn/build/new');
+  expect(screen.queryByLabelText('한 줄 요약 (필수)')).toBeNull();
+  fireEvent.click(screen.getByRole('button', { name: '플레이할 챔피언 다시 고르기' }));
 
-  fireEvent.change(screen.getByLabelText('카운터 챔피언 검색'), { target: { value: 'ㄱㄹ' } });
+  fireEvent.change(screen.getByLabelText('플레이할 챔피언 검색'), { target: { value: 'ㄱㄹ' } });
   fireEvent.click(screen.getByRole('button', { name: '가렌' }));
-  expect(screen.getByRole('heading', { name: '2. 상대법' })).toBeDefined(); // 022: 제목(OO로 OO 이기는 법) 대신 "상대법"
-  expect(screen.queryByRole('heading', { name: /가렌으로 다리우스 이기는 법/ })).toBeNull();
-
-  send();
-  expect(screen.getByRole('alert').textContent).toBe('한 줄 요약을 적어 주세요.');
+  expect(screen.getByRole('heading', { name: '3. 가렌으로 다리우스 이기는 법 — 첫 빌드' })).toBeDefined();
+  const register = () => fireEvent.click(screen.getByRole('button', { name: '상대법 등록' }));
+  register();
+  expect(screen.getByRole('alert')).toHaveTextContent('한 줄 요약을 적어 주세요.');
   type('한 줄 요약 (필수)', ' 사거리 싸움 ');
   // 필수 칸은 1/2/3/6뿐, 9·11레벨 칸은 처음부터 없다 (010)
   expect(screen.queryByLabelText(/^9레벨/)).toBeNull();
-  expect(screen.queryByLabelText(/^11레벨/)).toBeNull();
-  for (const lv of [1, 2, 3]) type(`${lv}레벨 (필수)`, `${lv}렙 공략`);
-  send();
-  expect(screen.getByRole('alert').textContent).toBe('6레벨 딜교법은 꼭 적어야 합니다.');
-  type('6레벨 (필수)', '6렙 공략');
+  register();
+  expect(screen.getByRole('alert')).toHaveTextContent('주 경로를 골라 주세요.'); // 요약 다음은 빌드 (화면 순서)
+  fillBuild({ withSkill: true });
+  register();
+  expect(screen.getByRole('alert')).toHaveTextContent('1레벨 딜교법은 꼭 적어야 합니다.');
+  for (const lv of [1, 2, 3, 6]) type(`${lv}레벨 (필수)`, `${lv}렙 공략`);
   fireEvent.change(screen.getByLabelText('레벨 추가'), { target: { value: '4' } });
   fireEvent.click(screen.getByRole('button', { name: '칸 추가' }));
   type('4레벨', '4렙 추가');
-  send();
-  // 글을 다 써도 빌드가 없으면 못 보낸다
-  expect(screen.getByRole('alert').textContent).toBe('빌드를 마저 채워 주세요: 주 경로를 골라 주세요.');
-  expect(fakeState.inserts).toEqual([]);
-  fillBuild();
-  send();
-  expect(screen.getByRole('alert').textContent).toBe('빌드를 마저 채워 주세요: 선마(첫 번째로 마스터할 스킬)를 골라 주세요.');
-  pick('선마 (첫 번째로 마스터할 스킬)', '선마 Q');
   expect(screen.getByRole('article', { name: '빌드: 기존유저' })).toBeDefined(); // 미리보기
-  send();
+  register();
 
-  expect(await screen.findByRole('heading', { name: /기존유저/ })).toBeDefined();
-  expect(where()).toBe('/me');
-  expect(fakeState.inserts).toEqual([{
-    table: 'edit_proposals',
-    values: {
-      type: 'new_counter', target_champion: 'Darius', counter_champion: 'Garen', proposer_id: 'u-old',
-      content: {
-        summary: '사거리 싸움',
-        level_notes: { 1: '1렙 공략', 2: '2렙 공략', 3: '3렙 공략', 4: '4렙 추가', 6: '6렙 공략' },
-        lane_cautions: '',
-      },
-      build: {
-        runes: { primaryPath: 8000, keystone: 8010, primary: [9111, 9104, 8299], secondaryPath: 8400, secondary: [8446, 8444], shards: [5005, 5008, 5011] },
-        summoner_spells: ['SummonerFlash', 'SummonerTeleport'], starting_items: ['1055', '2003'], core_items: ['3053', '3047', '6631'],
-        max_skill: 'Q', patch: '99.1.1',
-      },
-    },
+  await vi.waitFor(() => expect(where()).toBe('/champion/Darius/counter/Garen'));
+  expect(fakeState.rpcCalls.filter((c) => c.name === 'create_matchup').map((c) => c.args)).toEqual([{
+    p_target: 'Darius', p_mine: 'Garen',
+    p_build: WIKI_PAYLOAD({ summary: '사거리 싸움', level_notes: { 1: '1렙 공략', 2: '2렙 공략', 3: '3렙 공략', 4: '4렙 추가', 6: '6렙 공략' } }),
   }]);
-  expect(screen.getByText(/새 카운터 제안을 보냈습니다. 운영진이 승인하면 반영됩니다/)).toBeDefined();
-  const row = (await screen.findByText('가렌으로 다리우스 이기는 법')).closest('li');
-  expect(within(row).getByText('새 카운터')).toBeDefined();
-  expect(within(row).getByText('대기 중')).toBeDefined();
+  expect(fakeState.inserts).toEqual([]); // 예전 승인 대기 제안은 쓰지 않는다
+  expect(await screen.findByText('새 상대법을 등록했습니다.')).toBeDefined();
+  expect(screen.getByRole('tab', { name: '빌드 1 추천 0' })).toHaveAttribute('aria-selected', 'true');
+  expect(screen.getByText('사거리 싸움')).toBeDefined();
 });
 
-test('등록 안 된 매치업 화면의 [새 카운터 제안]은 그 챔피언을 미리 골라 둔다', async () => {
+test('등록 안 된 상대법 화면의 [+ 카운터 등록]은 두 챔피언을 미리 골라 둔다 (예전 주소도 새 화면으로)', async () => {
   fakeLogin('u-old');
   start('/champion/Darius/counter/Teemo');
-  fireEvent.click(await screen.findByRole('link', { name: '+ 카운터 등록' }));
-  expect(await screen.findByRole('heading', { name: '2. 상대법' })).toBeDefined();
-  expect(screen.getByText('티모', { selector: 'strong' })).toBeDefined();
-  expect(screen.getByRole('button', { name: '다시 고르기' })).toBeDefined();
+  expect(await screen.findByText('아직 등록되지 않은 카운터입니다. 지금 등록하면 바로 공개됩니다.')).toBeDefined();
+  fireEvent.click(screen.getByRole('link', { name: '+ 카운터 등록' }));
+  expect(await screen.findByRole('heading', { name: '3. 티모로 다리우스 이기는 법 — 첫 빌드' })).toBeDefined();
+  expect(screen.getByText('티모', { selector: '.picked-text strong' })).toBeDefined();
+  cleanup();
+  start('/champion/Darius/propose?counter=Garen');
+  expect(await screen.findByRole('heading', { name: '3. 가렌으로 다리우스 이기는 법 — 첫 빌드' })).toBeDefined();
+  expect(where()).toBe('/matchup/new');
 });
 
 test('DB가 막으면(예: 그 사이 누가 등록) 그 이유를 보여 주고 화면에 머문다', async () => {
   fakeLogin('u-old');
-  fakeState.insertError = '이미 등록된 카운터입니다. 문서 수정 제안을 이용해 주세요.';
-  start('/champion/Darius/propose?counter=Garen');
+  fakeState.rpcError = '이미 있는 상대법입니다. 그 상대법에 새 빌드를 더해 주세요.';
+  start('/matchup/new?target=Darius&mine=Garen');
   await screen.findByLabelText('한 줄 요약 (필수)');
-  type('한 줄 요약 (필수)', '요약');
-  for (const lv of [1, 2, 3, 6]) type(`${lv}레벨 (필수)`, 'x');
-  fillBuild({ withSkill: true });
-  send();
-  expect(await screen.findByText('이미 등록된 카운터입니다. 문서 수정 제안을 이용해 주세요.')).toBeDefined();
-  expect(where()).toBe('/champion/Darius/propose');
+  fillWikiBuild();
+  fireEvent.click(screen.getByRole('button', { name: '상대법 등록' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('이미 있는 상대법입니다. 그 상대법에 새 빌드를 더해 주세요.');
+  expect(where()).toBe('/matchup/new');
+  expect(screen.getByRole('button', { name: '상대법 등록' })).toBeEnabled();
 });
 
 test('문서 수정 제안: 지금 문서가 채워져 있고, 바뀐 게 없으면 못 보내고, 보내면 보고 있던 버전도 같이 보낸다', async () => {
   fakeLogin('u-old');
-  start('/champion/Darius/counter/Quinn');
-  fireEvent.click(await screen.findByRole('link', { name: '문서 수정 제안' }));
+  start('/champion/Darius/counter/Quinn/edit'); // 2b에서 끈다 (상대법 화면에는 링크 없음)
   expect(await screen.findByRole('heading', { name: /수정 제안/ })).toBeDefined();
   expect(screen.getByLabelText('한 줄 요약 (필수)').value).toBe('사거리로 일방적인 견제');
   expect(screen.getByLabelText('4레벨').value).toBe('4렙 추가');
@@ -149,7 +140,9 @@ test('010: 예전 문서의 9·11레벨은 추가 레벨로 보이고, 수정 �
   expect(lv9.className).toBe('level');
   expect(screen.getByText('6레벨').closest('.level').className).toBe('level req');
 
-  fireEvent.click(screen.getByRole('link', { name: '문서 수정 제안' }));
+  expect(screen.queryByRole('link', { name: '문서 수정 제안' })).toBeNull(); // 038: 빌드마다 [빌드 수정]
+  cleanup();
+  start('/champion/Darius/counter/Quinn/edit');
   expect(await screen.findByRole('heading', { name: /수정 제안/ })).toBeDefined();
   expect(screen.getByLabelText('9레벨').value).toBe('9렙');
   expect(screen.queryByLabelText('9레벨 (필수)')).toBeNull();

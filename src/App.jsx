@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
 import Home from './pages/Home';
@@ -53,9 +53,20 @@ function lazyPage(load) {
     );
   };
 }
-const ProposeCounter = lazyPage(() => import('./pages/ProposeCounter'));
+const MatchupNew = lazyPage(() => import('./pages/MatchupNew'));
 const ProposeEdit = lazyPage(() => import('./pages/ProposeEdit'));
-const ProposeBuild = lazyPage(() => import('./pages/ProposeBuild'));
+const BuildNew = lazyPage(() => import('./pages/BuildNew'));
+const BuildEdit = lazyPage(() => import('./pages/BuildEdit'));
+
+/** 예전 주소 (승인 제도 때 새 카운터 제안) /champion/:id/propose?counter=X[&from=제안 id] → 새 상대법 등록 /matchup/new?target=:id&mine=X[&from=] */
+function ProposeRedirect() {
+  const { id } = useParams();
+  const [params] = useSearchParams();
+  const next = new URLSearchParams({ target: id });
+  if (params.get('counter')) next.set('mine', params.get('counter'));
+  if (params.get('from')) next.set('from', params.get('from'));
+  return <Navigate to={`/matchup/new?${next}`} replace />;
+}
 const AdminHome = lazyPage(() => import('./pages/admin/AdminHome'));
 const AdminProposal = lazyPage(() => import('./pages/admin/AdminProposal'));
 const AdminOrder = lazyPage(() => import('./pages/admin/AdminOrder'));
@@ -94,10 +105,12 @@ export function AppRoutes() {
         <Route element={<Layout />}>
           <Route index element={<Home />} />
           <Route path="champion/:id" element={<Champion />} />
-          <Route path="champion/:id/propose" element={<ProposeCounter />} />
+          <Route path="champion/:id/propose" element={<ProposeRedirect />} />
+          <Route path="matchup/new" element={<MatchupNew />} />
           <Route path="champion/:targetId/counter/:counterId" element={<Matchup />} />
           <Route path="champion/:targetId/counter/:counterId/edit" element={<ProposeEdit />} />
-          <Route path="champion/:targetId/counter/:counterId/build/new" element={<ProposeBuild />} />
+          <Route path="champion/:targetId/counter/:counterId/build/new" element={<BuildNew />} />
+          <Route path="champion/:targetId/counter/:counterId/build/:buildId/edit" element={<BuildEdit />} />
           <Route path="login" element={<Login />} />
           <Route path="welcome" element={<Welcome />} />
           <Route path="privacy" element={<Privacy />} />

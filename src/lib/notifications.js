@@ -22,6 +22,14 @@ const STAFF_NEW = {
   proposal_submitted: { icon: 'flag', to: (n) => (n.proposal_id ? `/admin/proposals/${n.proposal_id}` : '/admin') },
   build_submitted: { icon: 'flag', to: (n) => (n.build_id ? `/admin/builds/${n.build_id}` : '/admin') },
   inquiry_received: { icon: 'comment', to: () => '/admin/inquiries' },
+  // 038: 승인 없이 바로 공개된 새 상대법·새 빌드 (운영자만) → 그 상대법 화면, 그 빌드를 고른 채로
+  matchup_created: { icon: 'flag', label: '상대법', to: (n) => wikiPath(n) },
+  build_created: { icon: 'flag', label: '빌드', to: (n) => wikiPath(n) },
+};
+const wikiPath = (n) => {
+  const c = n.counter ?? n.build?.counter;
+  if (!c) return null;
+  return `/champion/${c.target_champion}/counter/${c.counter_champion}${n.build_id ? `?build=${n.build_id}` : ''}`;
 };
 // 게시판·문서 댓글 알림: 아이콘 ("… 메모: …"는 메모를 둘째 줄로)
 const BOARD_ICON = {
@@ -59,8 +67,8 @@ export function describeNotification(n, name = (id) => id) {
   }
   const s = STAFF_NEW[n.kind];
   if (s) {
-    const own = n.proposal_id ? n.proposal : n.build?.counter;
-    const label = n.proposal_id ? (TYPE_LABEL[n.proposal?.type] ?? '제안') : '빌드';
+    const own = n.proposal_id ? n.proposal : (n.build?.counter ?? n.counter);
+    const label = s.label ?? (n.proposal_id ? (TYPE_LABEL[n.proposal?.type] ?? '제안') : '빌드');
     return {
       icon: s.icon,
       title: n.message,

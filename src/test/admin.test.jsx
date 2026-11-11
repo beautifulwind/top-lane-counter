@@ -25,8 +25,9 @@ test('일반 유저: /admin은 "운영자만 볼 수 있습니다", 상단 [관�
   expect((await openMenu()).queryByRole('link', { name: '관리' })).toBeNull();
   cleanup();
   start('/champion/Darius/counter/Quinn');
-  await screen.findByRole('link', { name: '문서 수정 제안' });
-  expect(screen.queryByRole('link', { name: '수정 기록' })).toBeNull();
+  await screen.findByRole('link', { name: '빌드 수정' });
+  expect(screen.queryByRole('link', { name: /수정 기록/ })).toBeNull(); // [수정 기록](기여자)은 누구나 보는 버튼, 예전 문서 기록은 운영자 ⋮ 메뉴
+  expect(screen.queryByRole('button', { name: /더보기$/ })).toBeNull();
   cleanup();
   start('/champion/Darius');
   await screen.findByRole('link', { name: '+ 카운터 등록' });
@@ -143,7 +144,8 @@ test('수정 기록: 버전 목록과 지금 버전 표시, 예전 버전 비교
   TABLES.doc_revisions.forEach((r) => { r.counter_id = 1; });
   asOperator();
   start('/champion/Darius/counter/Quinn');
-  fireEvent.click(await screen.findByRole('link', { name: '수정 기록' }));
+  fireEvent.click(await screen.findByRole('button', { name: '상대법 더보기' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: '예전 문서 수정 기록' }));
   const v2 = await screen.findByRole('listitem', { name: '2번 버전' });
   expect(within(v2).getByText('지금 문서')).toBeDefined();
   expect(within(v2).queryByRole('button', { name: '이 버전으로 되돌리기' })).toBeNull();

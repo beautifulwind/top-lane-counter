@@ -127,13 +127,17 @@ test('제안 자세히: 다시 낸 제안의 빌드가 바뀌었으면 원래 �
 
 // ---------------- 마지막 공개 빌드 ----------------
 
-test('매치업 문서: 공개 빌드가 하나뿐이면 [빌드 숨기기]가 잠긴다', async () => {
+test('상대법 화면: 공개 빌드가 하나뿐이면 ⋮ [빌드 숨기기]가 잠기고 이유가 보인다', async () => {
   TABLES.builds = TABLES.builds.filter((b) => b.id === 102);
   asOperator();
   start('/champion/Darius/counter/Quinn');
-  const card = await screen.findByRole('article', { name: '빌드: 탑고수' });
-  expect(within(card).getByRole('button', { name: '빌드 숨기기' })).toBeDisabled();
-  expect(within(card).getByText(/마지막 공개 빌드라 숨길 수 없습니다/)).toBeDefined();
+  await screen.findByRole('article', { name: '빌드: 탑고수' });
+  fireEvent.click(screen.getByRole('button', { name: '빌드 2 더보기' }));
+  const item = screen.getByRole('menuitem', { name: '빌드 숨기기' });
+  expect(item).toHaveAttribute('aria-disabled', 'true');
+  expect(item).toHaveAccessibleDescription(/마지막 공개 빌드라 숨길 수 없습니다/);
+  fireEvent.click(item);
+  expect(screen.queryByLabelText(/숨기는 사유/)).toBeNull();
 });
 
 test('빌드 자세히: 마지막 공개 빌드면 숨기기 잠금', async () => {

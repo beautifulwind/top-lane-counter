@@ -70,17 +70,18 @@ test('자세히: 거절된 문서 수정 제안 [다시 쓰기] → 보낸 글�
   expect(screen.getByText(/거절된 내 제안의 글을 채워 뒀습니다/)).toBeDefined();
 });
 
-test('자세히: 거절된 새 카운터 제안 [다시 쓰기] → 글·빌드가 채워진 새 카운터 제안 화면', async () => {
+test('자세히: 거절된 새 카운터 제안 [다시 쓰기] → 글·빌드가 채워진 새 상대법 등록 화면 (038: 바로 공개)', async () => {
   TABLES.edit_proposals.push(fakeProposal({ id: 2, ...GAREN, status: 'rejected', reject_reason: '빌드가 이상합니다' }));
   asProposer();
   start('/me/proposals/2');
   fireEvent.click(await screen.findByRole('link', { name: '다시 쓰기' }));
-  expect(where()).toBe('/champion/Darius/propose?counter=Garen&from=2');
   expect((await screen.findByLabelText('한 줄 요약 (필수)')).value).toBe('고친 요약');
+  expect(where()).toBe('/matchup/new?target=Darius&mine=Garen&from=2');
   expect(screen.getByText(/거절된 내 제안의 글과 빌드를 채워 뒀습니다/)).toBeDefined();
-  fireEvent.click(screen.getByRole('button', { name: '제안' }));
-  await vi.waitFor(() => expect(fakeState.inserts.length).toBe(1));
-  expect(fakeState.inserts[0].values.build.core_items).toEqual(FAKE_PROPOSAL_BUILD.core_items);
+  fireEvent.click(screen.getByRole('button', { name: '상대법 등록' }));
+  await vi.waitFor(() => expect(rpcCalls('create_matchup')).toHaveLength(1));
+  expect(rpcCalls('create_matchup')[0].p_build.core_items).toEqual(FAKE_PROPOSAL_BUILD.core_items);
+  expect(fakeState.inserts).toEqual([]);
 });
 
 // ---------------- 제안자: 승인 대기 중 고치기 ----------------

@@ -17,13 +17,14 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 const start = (path) => render(<MemoryRouter initialEntries={[path]}><AppRoutes /></MemoryRouter>);
 const asOperator = () => fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
-const opMarks = () => document.querySelectorAll('.btn-op, .top-btn.op, .op-link');
-const isOp = (el) => el.matches('.btn-op, .top-btn.op, .op-link');
+const OP = '.btn-op, .top-btn.op, .op-link, .more-item.op'; // 038: ⋮ 메뉴 안 운영진 항목도 보라
+const opMarks = () => document.querySelectorAll(OP);
+const isOp = (el) => el.matches(OP);
 
 test('일반 사용자: 매치업·챔피언 화면에 운영자 색이 없다', async () => {
   fakeLogin('u-old', { nickname: '기존유저' });
   start('/champion/Darius/counter/Quinn');
-  await screen.findByRole('link', { name: '문서 수정 제안' });
+  await screen.findByRole('link', { name: '빌드 수정' });
   expect(opMarks()).toHaveLength(0);
   cleanup();
   start('/champion/Darius');
@@ -31,14 +32,20 @@ test('일반 사용자: 매치업·챔피언 화면에 운영자 색이 없다',
   expect(opMarks()).toHaveLength(0);
 });
 
-test('운영자: 매치업의 [수정 기록] [카운터 숨기기] [빌드 숨기기]·메뉴 [관리]는 운영자 색, [문서 수정 제안]은 보통 색', async () => {
+test('운영자: 상대법 ⋮ 메뉴의 [상대법 숨기기] [예전 문서 수정 기록] [빌드 숨기기]·메뉴 [관리]는 운영자 색, [빌드 수정] [수정 기록] [+ 새 빌드]는 보통 색', async () => {
   asOperator();
   start('/champion/Darius/counter/Quinn');
-  expect(isOp(await screen.findByRole('link', { name: '수정 기록' }))).toBe(true);
-  expect(isOp(screen.getByRole('button', { name: '카운터 숨기기' }))).toBe(true);
-  for (const b of screen.getAllByRole('button', { name: '빌드 숨기기' })) expect(isOp(b)).toBe(true);
-  expect(isOp(screen.getByRole('link', { name: '문서 수정 제안' }))).toBe(false);
-  expect(isOp(screen.getByRole('link', { name: '+ 빌드 등록' }))).toBe(false);
+  fireEvent.click(await screen.findByRole('button', { name: '상대법 더보기' }));
+  expect(isOp(screen.getByRole('menuitem', { name: '상대법 숨기기' }))).toBe(true);
+  expect(isOp(screen.getByRole('menuitem', { name: '예전 문서 수정 기록' }))).toBe(true);
+  const other = screen.getByRole('button', { name: '빌드 2 더보기' });
+  fireEvent.mouseDown(other); // 바깥을 누르면 앞의 메뉴는 닫힌다
+  fireEvent.click(other);
+  expect(screen.queryByRole('menuitem', { name: '상대법 숨기기' })).toBeNull();
+  expect(isOp(screen.getByRole('menuitem', { name: '빌드 숨기기' }))).toBe(true);
+  expect(isOp(screen.getByRole('link', { name: '빌드 수정' }))).toBe(false);
+  expect(isOp(screen.getByRole('button', { name: '수정 기록' }))).toBe(false);
+  expect(isOp(screen.getByRole('link', { name: '+ 새 빌드' }))).toBe(false);
   const menu = await openMenu();
   expect(isOp(menu.getByRole('link', { name: '관리' }))).toBe(true);
   expect(isOp(menu.getByRole('link', { name: '마이페이지' }))).toBe(false);

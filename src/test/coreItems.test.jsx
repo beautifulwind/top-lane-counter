@@ -130,7 +130,6 @@ test('빌드 입력: 서사템에 "서사" 태그, 전설이 없으면 "전설 1
   pick('핵심 템트리 고르기', '덤불 조끼 (서사)');
   pick('핵심 템트리 고르기', '탐식의 망치 (서사)');
   expect(screen.getByText('아직 고를 것: 핵심 템트리에 전설 아이템을 1개 이상 넣어 주세요.')).toBeDefined();
-  expect(screen.getByRole('button', { name: '빌드 보내기' })).toBeDisabled();
   const picked = screen.getByRole('list', { name: '고른 핵심 템트리' });
   expect(within(picked).getAllByText('서사')).toHaveLength(2);
   pick('핵심 템트리 고르기', '선혈포식자');

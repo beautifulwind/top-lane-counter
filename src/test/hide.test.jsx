@@ -17,6 +17,11 @@ const start = (path) => render(<MemoryRouter initialEntries={[path]}><AppRoutes 
 const where = () => screen.getByTestId('where').textContent;
 const asOperator = () => fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
 const op = { nickname: '영자', role: 'admin', level: 0, main_title: null };
+/** 상대법 화면 제목 옆 ⋮ → [상대법 숨기기] (038: 운영 메뉴는 ⋮ 안에) */
+async function hideFromMenu() {
+  fireEvent.click(await screen.findByRole('button', { name: '상대법 더보기' }));
+  fireEvent.click(screen.getByRole('menuitem', { name: '상대법 숨기기' }));
+}
 
 /** 운영자가 숨긴 "가렌 → 다리우스" 카운터 (id 3) + 숨김 기록 */
 function hiddenGaren() {
@@ -30,22 +35,23 @@ function hiddenGaren() {
   );
 }
 
-test('일반 유저: 매치업 문서의 [카운터 숨기기]와 챔피언 목록의 [숨기기]가 안 보인다', async () => {
+test('일반 유저: 상대법 화면의 ⋮(상대법 숨기기)와 챔피언 목록의 [숨기기]가 안 보인다', async () => {
   fakeLogin('u-old');
   start('/champion/Darius/counter/Quinn');
-  await screen.findByRole('link', { name: '문서 수정 제안' });
-  expect(screen.queryByRole('button', { name: '카운터 숨기기' })).toBeNull();
+  await screen.findByRole('link', { name: '빌드 수정' });
+  expect(screen.queryByRole('button', { name: '상대법 더보기' })).toBeNull();
+  expect(screen.queryByRole('button', { name: /숨기기/ })).toBeNull();
   cleanup();
   start('/champion/Darius');
   await screen.findByRole('link', { name: /퀸/ });
   expect(screen.queryByRole('button', { name: /숨기기/ })).toBeNull();
 });
 
-test('운영자: 매치업 문서 [카운터 숨기기] → 그 자리에 사유 입력, 사유를 써야 [숨기기 확정] → 챔피언 문서로 (확인 창 없음)', async () => {
+test('운영자: 상대법 화면 ⋮ [상대법 숨기기] → 그 자리에 사유 입력, 사유를 써야 [숨기기 확정] → 챔피언 문서로 (확인 창 없음)', async () => {
   asOperator();
   vi.spyOn(window, 'confirm');
   start('/champion/Darius/counter/Quinn');
-  fireEvent.click(await screen.findByRole('button', { name: '카운터 숨기기' }));
+  await hideFromMenu();
   const ok = screen.getByRole('button', { name: '숨기기 확정' });
   expect(ok.disabled).toBe(true);
   fireEvent.change(screen.getByLabelText(/숨기는 사유/), { target: { value: '  ' } });
@@ -82,7 +88,7 @@ test('숨기기를 DB가 거부하면 이유를 보여 주고 입력창이 그�
   asOperator();
   fakeState.rpcError = '이미 숨긴 카운터입니다.';
   start('/champion/Darius/counter/Quinn');
-  fireEvent.click(await screen.findByRole('button', { name: '카운터 숨기기' }));
+  await hideFromMenu();
   fireEvent.change(screen.getByLabelText(/숨기는 사유/), { target: { value: '실수' } });
   fireEvent.click(screen.getByRole('button', { name: '숨기기 확정' }));
   expect(await screen.findByText('이미 숨긴 카운터입니다.')).toBeDefined();
