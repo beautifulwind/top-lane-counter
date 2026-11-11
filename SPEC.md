@@ -915,3 +915,14 @@ RLS 원칙:
 - **화면**: 챔피언 문서·상대법 화면·운영자 숨긴 상대법 도구(미리보기·완전 삭제·순서)·로그인 안내·약관 제1조·방침(시행일 그대로)·칭호 조건·알림 제목(`counter_restored`)·휴대폰 알림. 조사는 새로 받침 계산을 만들지 않고 손으로 맞췄고, 이름 사이에 들어가는 조사는 기존 `josa.js`를 그대로 쓴다. 테스트(`tone.test.js`)가 "카운터"가 남아 있지 않은지, "상대법를·는·가·로·와" 같은 틀린 조사가 없는지 확인한다.
 - **그대로 둔 것**: 검색용 이름 "탑신병자 - 롤 탑 카운터"(legal.js·index.html 제목·manifest 이름), 꺼진 승인 제도 화면의 문구(Resubmit·AdminProposal·ModeratorAdmin·proposals.js 승인 오류·buildContent·`TYPE_LABEL`의 "새 카운터" — 승인 제도를 다시 켤 때 함께 정리), 코드 주석, 이미 저장된 알림·처리 기록·경험치 내역·경험치 규칙 설명.
 - **DB(041)**: 지금 DB의 함수 본문에서 "카운터"가 든 오류·알림 문구를 낱말 표(조사까지 맞춤)로 고쳐 `create or replace`. 알림·처리 기록 같은 저장된 값은 건드리지 않는다. 확인 조회 `scripts/check_terms_sangdaebeop.sql`(실행 전·후), DB 검사는 바뀐 문장에 맞췄다.
+
+### 6-29. 회원 관리 통합 · 회원 정보 · 새 글 알림 — 1단계 DB (2026-11-11, 042)
+- **회원 목록** `admin_member_list(검색어, 역할, 쪽, 쪽 크기)` (운영자 전용): 최근 가입 순, 닉네임 부분 일치, 역할 거르기(user·moderator·admin), 쪽 크기 최대 50. 손님도 나오고 `is_guest`로 구분. 가입자 수는 있던 `admin_member_stats()`(036)를 그대로 쓴다.
+- **회원 정보** `admin_member_detail(회원, 개수)` (운영자 전용): 있던 `admin_member_info`(036·040)에 경험치(xp)·상대법 수(matchups)를 더하고, 쓴 글·댓글(지운 것·지운 글 밑 댓글 제외), 고친 빌드(`build_editors`), 처리 이력(`moderation_log`에서 그 회원이 대상인 줄)을 함께 돌려준다. 처리자가 탈퇴했으면 "탈퇴한 이용자"로 바꿔 내보낸다(기록에 남은 닉네임 사본은 안 나감). 이메일·로그인 ID는 읽지 않는다.
+- **지운 글·댓글**: 회원 정보에 넣지 않고 있던 `admin_deleted_writings(회원)`(040)를 그대로 쓴다. 운영자만 — 감독관·운영자 모드를 끈 운영자는 DB가 거부(`require_operator`).
+- **구조**: 두 함수 모두 안쪽 `…_unchecked`(아무도 직접 못 부름) + `require_operator()`를 먼저 하는 바깥 함수(013과 같은 방식). 감독관 지정·해제는 있던 `set_moderator`(030, 운영자만) 그대로.
+- **새 글 알림** `post_created`: 자유게시판 새 글이 공개로 올라오면(`posts_notify_admins` 트리거) 운영자에게 알림. 글쓴이 본인 제외, 댓글은 없음. 운영자 모드를 끄면 읽기 정책·모두 읽음·푸시(`push_wanted`)가 034·038과 같은 규칙으로 가린다. 푸시 묶음 `staff_new`(설정 화면 "운영진 알림" 하나로 켜고 끔). `push_targets`에 `post_id`를 더해 Edge Function이 `/board/<글 번호>`로 보낼 수 있게 함.
+- **새 표 없음** → `reset_test_data*.sql`은 그대로(알림은 이미 비움).
+- **순서**: 042 실행 → `supabase/scripts/check_member_admin.sql` → (2단계) web-push Edge Function 재배포 → 새 화면 push. 옛 화면은 모르는 알림 종류를 종 모양 + 문장으로 보여 주므로 042만 먼저 실행해도 안 깨진다.
+- **개인정보처리방침**: 현재 "회원 정보 조회" 문구(Privacy.jsx 109·284·286줄)에 쓴 글·댓글 내용, 고친 빌드, 처리 이력 조회가 빠져 있다 → 2단계에서 문안 제시(시행일은 건드리지 않음).
+- **DB 검사**: `supabase/tests/member_admin_test.sql`.
