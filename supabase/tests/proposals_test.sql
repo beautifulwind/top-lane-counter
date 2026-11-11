@@ -54,7 +54,7 @@ select t.fails('특이사항 3001자 (011: 문구는 "특이사항")',
 select t.fails('이미 있는 카운터(퀸)',
   $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
     values ('new_counter','Darius','Quinn',auth.uid(),'{"summary":"x","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"}}', t.build())$$,
-  '이미 등록된 카운터');
+  '이미 등록된 상대법');
 select t.fails('자기 자신 카운터',
   $$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
     values ('new_counter','Darius','Darius',auth.uid(),'{"summary":"x","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"}}', t.build())$$,

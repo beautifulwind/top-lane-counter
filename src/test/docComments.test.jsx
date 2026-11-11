@@ -152,7 +152,7 @@ test('숨긴 카운터: 일반 사용자에게 댓글 안 보임, 운영자 미�
   start('/admin/preview/Darius/Quinn');
   const sec = (await screen.findByText('1개', { selector: '#comments .count-badge' })).closest('section');
   expect(within(sec).getByText('숨긴 문서의 댓글')).toBeDefined();
-  expect(within(sec).getByText('숨긴 카운터라 새 댓글은 달 수 없습니다.')).toBeDefined();
+  expect(within(sec).getByText('숨긴 상대법이라 새 댓글은 달 수 없습니다.')).toBeDefined();
   expect(within(sec).queryByLabelText('댓글 쓰기')).toBeNull();
 });
 

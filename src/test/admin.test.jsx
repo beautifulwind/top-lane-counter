@@ -32,7 +32,7 @@ test('일반 유저: /admin은 "운영자만 볼 수 있습니다", 상단 [관�
   expect(screen.queryByRole('button', { name: /더보기$/ })).toBeNull();
   cleanup();
   start('/champion/Darius');
-  await screen.findByRole('link', { name: '+ 카운터 등록' });
+  await screen.findByRole('link', { name: '+ 상대법 등록' });
   expect(screen.queryByRole('link', { name: '순서 변경' })).toBeNull();
 });
 
@@ -121,7 +121,7 @@ test('순서 변경: [순서 변경] → ▲로 옮기고 [순서 저장]하면 
   asOperator();
   start('/champion/Darius');
   fireEvent.click(await screen.findByRole('link', { name: '순서 변경' }));
-  expect(await screen.findByRole('heading', { name: '다리우스 카운터 순서' })).toBeDefined();
+  expect(await screen.findByRole('heading', { name: '다리우스 상대법 순서' })).toBeDefined();
   const names = () => [...document.querySelectorAll('.order-name')].map((n) => n.textContent);
   expect(names()).toEqual(['퀸', '가렌']);
   const save = screen.getByRole('button', { name: '순서 저장' });

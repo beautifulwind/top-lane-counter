@@ -96,7 +96,7 @@ test('제안자 알림 counter_restored: 제목·[종류] 매치업·메모, 누
     proposal: { type: 'new_counter', target_champion: 'Darius', counter_champion: 'Garen' }, build: null,
   };
   const d = describeNotification(n, (id) => ({ Darius: '다리우스', Garen: '가렌' }[id]));
-  expect(d.title).toBe('숨겨졌던 내 카운터가 다시 공개됐습니다');
+  expect(d.title).toBe('숨겨졌던 내 상대법이 다시 공개됐습니다');
   expect(d.subject).toBe('[새 카운터] 가렌으로 다리우스 이기는 법');
   expect(d.detail).toBe('메모: 확인했습니다');
   expect(d.to).toBe('/me/proposals/7');

@@ -909,3 +909,9 @@ RLS 원칙:
 7. 확인: `supabase/scripts/check_web_push.sql` → 14·15번 true. 브라우저에서 `https://<프로젝트ID>.supabase.co/functions/v1/web-push`를 열면 `{"publicKey":"…"}` (공개 키라 보여도 괜찮다). 사이트에서 알림을 켜고 알림이 생기게 한 뒤 Edge Functions → web-push → Logs에 `{"event":"web_push",…,"sent":1}`.
    - 안 오면: `select id, status_code, left(content::text, 120) from net._http_response order by id desc limit 5;` — 401이면 `PUSH_WEBHOOK_SECRET`과 Vault 값이 다름, 404면 함수 이름·주소, 응답의 `failed`가 늘면 VAPID 세 값 확인.
 8. 끄기(잠깐 멈추기): Vault의 `push_function_url`을 지우면 알림 저장은 그대로이고 푸시만 안 간다.
+
+### 6-28. 용어 정리 "카운터" → "상대법" (2026-11-11, 041)
+- **새 용어**: 카운터 → "상대법", 카운터 챔피언 → "플레이할 챔피언". 화면에 보이는 글자만 바꾼다. 표·칸·함수 이름, 주소(URL), 코드 변수명, 알림 종류(kind)는 그대로.
+- **화면**: 챔피언 문서·상대법 화면·운영자 숨긴 상대법 도구(미리보기·완전 삭제·순서)·로그인 안내·약관 제1조·방침(시행일 그대로)·칭호 조건·알림 제목(`counter_restored`)·휴대폰 알림. 조사는 새로 받침 계산을 만들지 않고 손으로 맞췄고, 이름 사이에 들어가는 조사는 기존 `josa.js`를 그대로 쓴다. 테스트(`tone.test.js`)가 "카운터"가 남아 있지 않은지, "상대법를·는·가·로·와" 같은 틀린 조사가 없는지 확인한다.
+- **그대로 둔 것**: 검색용 이름 "탑신병자 - 롤 탑 카운터"(legal.js·index.html 제목·manifest 이름), 꺼진 승인 제도 화면의 문구(Resubmit·AdminProposal·ModeratorAdmin·proposals.js 승인 오류·buildContent·`TYPE_LABEL`의 "새 카운터" — 승인 제도를 다시 켤 때 함께 정리), 코드 주석, 이미 저장된 알림·처리 기록·경험치 내역·경험치 규칙 설명.
+- **DB(041)**: 지금 DB의 함수 본문에서 "카운터"가 든 오류·알림 문구를 낱말 표(조사까지 맞춤)로 고쳐 `create or replace`. 알림·처리 기록 같은 저장된 값은 건드리지 않는다. 확인 조회 `scripts/check_terms_sangdaebeop.sql`(실행 전·후), DB 검사는 바뀐 문장에 맞췄다.

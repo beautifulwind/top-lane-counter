@@ -55,7 +55,7 @@ test('카카오 첫 로그인(이메일 없음)도 쓰기 화면에 가면 닉�
 test('닉네임 없음: 읽기는 그대로 + 위에 [닉네임 정하기] 띠, 정하면 원래 페이지로 돌아간다', async () => {
   fakeLogin('u-new');
   start('/champion/Darius');
-  expect(await screen.findByText(/다리우스 카운터/)).toBeDefined();
+  expect(await screen.findByText(/다리우스 상대법/)).toBeDefined();
   expect(where()).toBe('/champion/Darius');
   fireEvent.click(screen.getByRole('link', { name: '닉네임 정하기' }));
   expect(await screen.findByRole('heading', { name: '닉네임 정하기' })).toBeDefined();
@@ -63,7 +63,7 @@ test('닉네임 없음: 읽기는 그대로 + 위에 [닉네임 정하기] 띠, 
 
   fireEvent.change(screen.getByLabelText('닉네임'), { target: { value: '  탑고수 ' } });
   fireEvent.click(screen.getByRole('button', { name: '시작하기' }));
-  expect(await screen.findByText(/다리우스 카운터/)).toBeDefined();
+  expect(await screen.findByText(/다리우스 상대법/)).toBeDefined();
   expect(where()).toBe('/champion/Darius');
   expect(await menuUserText()).toBe('Lv.1 탑고수'); // 칭호 없으면 칭호 자리 없음
 });
@@ -120,7 +120,7 @@ test('운영자 페이지(/admin)에도 관리자 지정 기능은 없다 (SPEC:
   fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
   start('/admin');
   expect(await screen.findByRole('heading', { name: '운영자 페이지' })).toBeDefined();
-  await screen.findByRole('heading', { name: /숨긴 카운터/ });
+  await screen.findByRole('heading', { name: /숨긴 상대법/ });
   expect(screen.queryByText(/관리자 지정|권한 변경|관리자로/)).toBeNull();
 });
 

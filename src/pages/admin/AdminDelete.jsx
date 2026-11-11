@@ -42,8 +42,8 @@ function DeleteForm() {
     return (
       <article>
         {crumbs}
-        <h1 className="doc-title">카운터 완전 삭제</h1>
-        <p className="empty">숨긴 카운터만 삭제할 수 있습니다. {josa(title, '은/는')} 숨긴 카운터가 아닙니다.</p>
+        <h1 className="doc-title">상대법 완전 삭제</h1>
+        <p className="empty">숨긴 상대법만 삭제할 수 있습니다. {josa(title, '은/는')} 숨긴 상대법이 아닙니다.</p>
       </article>
     );
   }
@@ -65,16 +65,16 @@ function DeleteForm() {
   return (
     <article>
       {crumbs}
-      <h1 className="doc-title">카운터 완전 삭제</h1>
+      <h1 className="doc-title">상대법 완전 삭제</h1>
       <p className="doc-sub">{title}</p>
       <p className="warn" role="note">삭제하면 되돌릴 수 없습니다. 다시 살릴 가능성이 있으면 숨긴 채로 두세요.</p>
       <h2 className="section-title">함께 지워지는 것</h2>
       <ul className="hint-list" aria-label="함께 지워지는 것">
-        <li>카운터와 매치업 문서</li>
+        <li>상대법과 매치업 문서</li>
         <li>문서 수정 기록 {counts.revisions}개</li>
         <li>빌드 {counts.builds}개와 추천·비추천 {counts.votes}개</li>
         <li>문서 댓글 {counts.comments}개 (댓글 경험치도 회수됩니다)</li>
-        <li>이 카운터에 대한 제안 {counts.proposals}개 (제안자의 [마이페이지]에서도 사라집니다)</li>
+        <li>이 상대법에 대한 제안 {counts.proposals}개 (제안자의 [마이페이지]에서도 사라집니다)</li>
         <li>숨김·공개·재검토 기록</li>
       </ul>
       <p className="hint">누가, 언제, 왜 삭제했는지와 원래 제안자는 운영자 페이지의 [삭제 기록]에 남습니다.</p>

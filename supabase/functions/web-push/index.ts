@@ -48,7 +48,7 @@ const RESULT: Record<string, { title: string; memo: string }> = {
   build_rejected: { title: '빌드가 거절됐습니다', memo: '거절 사유' },
   build_restored: { title: '숨겨졌던 내 빌드가 다시 공개됐습니다', memo: '메모' },
   revision_request: { title: '재검토 요청을 받았습니다', memo: '운영자 메모' },
-  counter_restored: { title: '숨겨졌던 내 카운터가 다시 공개됐습니다', memo: '메모' },
+  counter_restored: { title: '숨겨졌던 내 상대법이 다시 공개됐습니다', memo: '메모' },
 };
 const STAFF: Record<string, (n: PushNotice) => string> = {
   proposal_submitted: (n) => (n.proposal_id ? `/admin/proposals/${n.proposal_id}` : '/admin'),

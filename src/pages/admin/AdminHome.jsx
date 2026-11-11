@@ -135,11 +135,11 @@ function PendingList() {
       <h1 className="doc-title page-title"><ShieldIcon size={26} className="title-icon op" /> 운영자 페이지</h1>
       {done && <p className="notice" role="status">{done}</p>}
       {APPROVAL_ENABLED ? (
-        <p className="hint">카운터 순서 변경은 각 챔피언 문서의 [순서 변경], 문서 되돌리기는 매치업 문서의 [수정 기록]에서 합니다.</p>
+        <p className="hint">상대법 순서 변경은 각 챔피언 문서의 [순서 변경], 문서 되돌리기는 매치업 문서의 [수정 기록]에서 합니다.</p>
       ) : (
         <p className="hint">
           승인 제도는 꺼져 있습니다. 새 상대법·새 빌드는 바로 공개되고 [알림]으로 옵니다. 상대법·빌드 숨기기는 상대법 화면의 ⋮ 메뉴,
-          카운터 순서 변경은 각 챔피언 문서의 [순서 변경]에서 합니다.
+          상대법 순서 변경은 각 챔피언 문서의 [순서 변경]에서 합니다.
         </p>
       )}
 
@@ -179,9 +179,9 @@ function PendingList() {
 
       {data && (
         <section className="section">
-          <SectionHead icon={EyeOffIcon} count={data.hidden.length}>숨긴 카운터</SectionHead>
+          <SectionHead icon={EyeOffIcon} count={data.hidden.length}>숨긴 상대법</SectionHead>
           {data.hidden.length === 0 ? (
-            <p className="empty">숨긴 카운터가 없습니다.</p>
+            <p className="empty">숨긴 상대법이 없습니다.</p>
           ) : (
             <ul className="proposal-list">
               {data.hidden.map((c) => (
@@ -262,7 +262,7 @@ function PendingList() {
         <section className="section">
           <SectionHead icon={TrashIcon} count={data.deletions.length}>삭제 기록</SectionHead>
           {data.deletions.length === 0 ? (
-            <p className="empty">삭제한 카운터가 없습니다.</p>
+            <p className="empty">삭제한 상대법이 없습니다.</p>
           ) : (
             <ul className="proposal-list">
               {data.deletions.map((d) => (
@@ -293,7 +293,7 @@ const ACTION_LABEL = {
 
 /** 숨긴 카운터의 원래 제안 상태 → 운영자에게 보여 줄 문구 */
 function originState(origin) {
-  if (!origin) return { text: '제안 없이 생긴 카운터 (재검토 요청 불가)', canRequest: false, waiting: false };
+  if (!origin) return { text: '제안 없이 생긴 상대법 (재검토 요청 불가)', canRequest: false, waiting: false };
   if (origin.status === 'revision_requested') return { text: '재검토 요청 중 (제안자 수정 대기)', canRequest: false, waiting: false };
   if (origin.status === 'pending') return { text: '다시 보냄 (승인 대기 목록에 있음)', canRequest: false, waiting: true };
   if (origin.status === 'rejected') return { text: '다시 낸 제안을 거절함 (재검토 다시 요청 가능)', canRequest: true, waiting: false };
@@ -458,7 +458,7 @@ function HiddenRow({ counter: c, name, onDone }) {
         <NoteForm
           id={`restore-note-${c.id}`}
           label="다시 공개 메모 (필수)"
-          hint={`카운터 목록 맨 뒤로 들어갑니다.${c.origin?.status === 'revision_requested' ? ' 보낸 재검토 요청은 취소됩니다.' : ''}`}
+          hint={`상대법 목록 맨 뒤로 들어갑니다.${c.origin?.status === 'revision_requested' ? ' 보낸 재검토 요청은 취소됩니다.' : ''}`}
           confirmLabel="다시 공개 확정"
           busyLabel="공개하는 중…"
           onCancel={() => setOpen(null)}
@@ -591,7 +591,7 @@ function HiddenBuildRow({ build: b, game, name, onDone }) {
         <VoteTally up={b.up} down={b.down} />
       </div>
       <p className="reject-reason">사유: {b.hide_reason}</p>
-      {counterHidden && <p className="hint">카운터가 숨겨져 있어서, 다시 공개해도 카운터를 공개하기 전까지는 안 보입니다.</p>}
+      {counterHidden && <p className="hint">상대법이 숨겨져 있어서, 다시 공개해도 상대법을 공개하기 전까지는 안 보입니다.</p>}
       <details className="build-summary">
         <summary>빌드 보기</summary>
         <BuildCard build={b} {...game} />

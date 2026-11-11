@@ -22,7 +22,7 @@ const send = () => fireEvent.click(screen.getByRole('button', { name: '제안' }
 
 test('로그인 안 했으면 [새 카운터 제안]은 로그인 화면으로 보낸다', async () => {
   start('/champion/Darius');
-  fireEvent.click(await screen.findByRole('link', { name: '+ 카운터 등록' }));
+  fireEvent.click(await screen.findByRole('link', { name: '+ 상대법 등록' }));
   expect(await screen.findByRole('heading', { name: '로그인 · 가입' })).toBeDefined();
   expect(where()).toBe('/login');
 });
@@ -30,7 +30,7 @@ test('로그인 안 했으면 [새 카운터 제안]은 로그인 화면으로 �
 test('새 상대법(038): 두 챔피언을 고르고 첫 빌드를 채워 등록하면 create_matchup → 바로 그 상대법 화면', async () => {
   fakeLogin('u-old');
   start('/champion/Darius');
-  fireEvent.click(await screen.findByRole('link', { name: '+ 카운터 등록' }));
+  fireEvent.click(await screen.findByRole('link', { name: '+ 상대법 등록' }));
   expect(await screen.findByRole('heading', { name: '새 상대법 등록' })).toBeDefined();
   expect(where()).toBe('/matchup/new');
   // 상대 챔피언은 미리 골라져 있고, 다시 고를 수 있다
@@ -77,11 +77,11 @@ test('새 상대법(038): 두 챔피언을 고르고 첫 빌드를 채워 등록
   expect(screen.getByText('사거리 싸움')).toBeDefined();
 });
 
-test('등록 안 된 상대법 화면의 [+ 카운터 등록]은 두 챔피언을 미리 골라 둔다 (예전 주소도 새 화면으로)', async () => {
+test('등록 안 된 상대법 화면의 [+ 상대법 등록]은 두 챔피언을 미리 골라 둔다 (예전 주소도 새 화면으로)', async () => {
   fakeLogin('u-old');
   start('/champion/Darius/counter/Teemo');
-  expect(await screen.findByText('아직 등록되지 않은 카운터입니다. 지금 등록하면 바로 공개됩니다.')).toBeDefined();
-  fireEvent.click(screen.getByRole('link', { name: '+ 카운터 등록' }));
+  expect(await screen.findByText('아직 등록되지 않은 상대법입니다. 지금 등록하면 바로 공개됩니다.')).toBeDefined();
+  fireEvent.click(screen.getByRole('link', { name: '+ 상대법 등록' }));
   expect(await screen.findByRole('heading', { name: '3. 티모로 다리우스 이기는 법 — 첫 빌드' })).toBeDefined();
   expect(screen.getByText('티모', { selector: '.picked-text strong' })).toBeDefined();
   cleanup();

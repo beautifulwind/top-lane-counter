@@ -285,7 +285,7 @@ export const restoreCounter = (counterRowId, note) =>
 export async function getHiddenCounters() {
   const counters = await run(
     db().from('counters').select('id, target_champion, counter_champion, status').eq('status', 'hidden'),
-    '숨긴 카운터를 불러오지 못했습니다.',
+    '숨긴 상대법을 불러오지 못했습니다.',
   );
   if (counters.length === 0) return [];
   const ids = counters.map((c) => c.id);
@@ -322,7 +322,7 @@ export async function getHiddenMatchup(targetId, counterId) {
       .eq('counter_champion', counterId)
       .eq('status', 'hidden')
       .maybeSingle(),
-    '숨긴 카운터를 불러오지 못했습니다.',
+    '숨긴 상대법을 불러오지 못했습니다.',
   );
   if (!row) return null;
   const { matchup_docs, ...counter } = row;

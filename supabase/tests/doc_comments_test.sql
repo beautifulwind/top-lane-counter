@@ -50,7 +50,7 @@ select t.fails('빈 댓글', format('select public.create_doc_comment(%s, %L)', 
 select public.create_doc_comment(:garen, '가렌 문서 좋네요') as d1 \gset
 reset role;
 select t.ok('첫 제안자에게 알림 (문서 연결)',
-  (select message = '내가 제안한 카운터 문서에 새 댓글이 달렸습니다.' and counter_id = :garen
+  (select message = '내가 제안한 상대법 문서에 새 댓글이 달렸습니다.' and counter_id = :garen
    from notifications where user_id = :'B' and kind = 'doc_comment'));
 select t.ok('문서 댓글 +1, 탑신병자', pg_temp.xp(:'D') = 1 and pg_temp.titles(:'D') = array['top_addict']);
 select t.ok('내역: 문서 댓글 (매치업 이름, ref = 카운터:댓글)',
@@ -65,7 +65,7 @@ select public.create_doc_comment(:garen, '제안자 본인 댓글') as d_own \gs
 reset role;
 select t.ok('알림 합침 (새 댓글 2개), 제안자 본인 댓글은 알림 없음',
   pg_temp.notes(:'B', 'doc_comment') = 1
-  and (select message = '내가 제안한 카운터 문서에 새 댓글 2개가 달렸습니다.' from notifications where user_id = :'B' and kind = 'doc_comment'));
+  and (select message = '내가 제안한 상대법 문서에 새 댓글 2개가 달렸습니다.' from notifications where user_id = :'B' and kind = 'doc_comment'));
 
 set role authenticated;
 set request.jwt.claim.sub = :'D';
@@ -177,7 +177,7 @@ select t.ok('완전 삭제: 댓글도 지움, 삭제 기록에 댓글 수',
   and (select comments_count = 9 from counter_deletions where counter_id = :garen));
 select t.ok('완전 삭제: 댓글 경험치 회수 (카운터 삭제), 탑신병자 회수',
   pg_temp.xp(:'D') = 0 and pg_temp.titles(:'D') = '{}'
-  and (select reason = '카운터 삭제' from xp_events where user_id = :'D' and source_key = 'doc_comment:' || :d1 order by id desc limit 1));
+  and (select reason = '상대법 삭제' from xp_events where user_id = :'D' and source_key = 'doc_comment:' || :d1 order by id desc limit 1));
 select t.ok('합산 상한: 지워진 문서 댓글 자리에 게시판 댓글이 들어옴 (에프 6개 = 6)',
   (select coalesce(sum(amount), 0) = 6 from xp_events where user_id = :'F' and type in ('comment', 'doc_comment')));
 

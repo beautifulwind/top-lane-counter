@@ -257,7 +257,7 @@ function MyBuilds({ data }) {
         <ul className="proposal-list">
           {data.builds.map((b) => {
             const c = b.counter;
-            const title = c ? `${matchupTitle(name(c.counter_champion), name(c.target_champion))}` : '(숨긴 카운터)';
+            const title = c ? `${matchupTitle(name(c.counter_champion), name(c.target_champion))}` : '(숨긴 상대법)';
             const path = c && `/champion/${c.target_champion}/counter/${c.counter_champion}`;
             const open = c?.status === 'approved';
             return (

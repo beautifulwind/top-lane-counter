@@ -46,7 +46,7 @@ export default function Champion() {
 
       {done && <p className="notice" role="status">{done}</p>}
       <section className="section">
-        <SectionHead icon={SparklesIcon} num={1} count={shown.length}>{target.name} 카운터</SectionHead>
+        <SectionHead icon={SparklesIcon} num={1} count={shown.length}>{target.name} 상대법</SectionHead>
 
         {shown.length === 0 ? (
           <div className="invite-card">
@@ -56,13 +56,13 @@ export default function Champion() {
             </p>
             {signedIn ? (
               <div className="actions">
-                <Link to={`/matchup/new?target=${id}`} className="btn btn-primary">+ 카운터 등록</Link>
+                <Link to={`/matchup/new?target=${id}`} className="btn btn-primary">+ 상대법 등록</Link>
               </div>
             ) : (
               <>
-                <p className="hint">카운터를 등록하려면 로그인해 주세요.</p>
+                <p className="hint">상대법을 등록하려면 로그인해 주세요.</p>
                 <div className="actions">
-                  <Link to="/login" state={{ from: `/matchup/new?target=${id}` }} className="btn btn-primary">로그인하고 카운터 등록</Link>
+                  <Link to="/login" state={{ from: `/matchup/new?target=${id}` }} className="btn btn-primary">로그인하고 상대법 등록</Link>
                 </div>
               </>
             )}
@@ -100,7 +100,7 @@ export default function Champion() {
                     <NoteForm
                       id={`hide-reason-${c.id}`}
                       label={`${champ.name} 숨기는 사유 (필수, 제안자에게 보입니다)`}
-                      hint="숨기면 다른 사람에게 이 카운터·문서·빌드가 안 보입니다. 운영자 페이지에서 다시 공개할 수 있습니다."
+                      hint="숨기면 다른 사람에게 이 상대법·문서·빌드가 안 보입니다. 운영자 페이지에서 다시 공개할 수 있습니다."
                       confirmLabel="숨기기 확정"
                       busyLabel="숨기는 중…"
                       onCancel={() => setHiding(null)}
@@ -119,7 +119,7 @@ export default function Champion() {
         )}
 
         <div className="actions">
-          {shown.length > 0 && <Link to={`/matchup/new?target=${id}`} className="btn">+ 카운터 등록</Link>}
+          {shown.length > 0 && <Link to={`/matchup/new?target=${id}`} className="btn">+ 상대법 등록</Link>}
           {isOperator && <Link to={`/admin/order/${id}`} className="btn btn-op">순서 변경</Link>}
         </div>
       </section>

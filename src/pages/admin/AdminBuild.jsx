@@ -64,7 +64,7 @@ function Review() {
   const toggle = (kind) => setOpen(open === kind ? null : kind);
 
   const checks = [
-    flags.hiddenCounter && { bad: true, text: '숨긴 카운터의 빌드입니다. 승인할 수 없습니다 (거절해 주세요).' },
+    flags.hiddenCounter && { bad: true, text: '숨긴 상대법의 빌드입니다. 승인할 수 없습니다 (거절해 주세요).' },
     flags.duplicate && { bad: true, text: '똑같은 빌드가 이미 공개돼 있습니다. 그대로는 승인할 수 없습니다 (고쳐서 승인하거나 거절해 주세요).' },
     flags.unknown && { bad: false, text: `${flags.unknown} (아이콘이 "?"로 보입니다)` },
     flags.layout && { bad: false, text: flags.layout },
@@ -132,7 +132,7 @@ function Review() {
             <button type="button" className="btn btn-small btn-op" onClick={() => toggle('hide')} aria-expanded={open === 'hide'} disabled={lastOne}>
               빌드 숨기기
             </button>
-            {lastOne && <small className="hint">마지막 공개 빌드라 숨길 수 없습니다. 다른 빌드를 먼저 승인하거나, 카운터를 숨겨 주세요.</small>}
+            {lastOne && <small className="hint">마지막 공개 빌드라 숨길 수 없습니다. 다른 빌드를 먼저 승인하거나, 상대법을 숨겨 주세요.</small>}
           </div>
         )}
         {b.status === 'hidden' && (

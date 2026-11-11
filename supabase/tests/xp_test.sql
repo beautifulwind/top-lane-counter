@@ -81,7 +81,7 @@ set request.jwt.claim.sub = :'A';
 select hide_counter(:garen, '확인 필요');
 reset role;
 select t.ok('숨기면 −100 (이유: 카운터 숨김) → Lv.1, 0 아래로 안 감', pg_temp.xp(:'B') = 0 and pg_temp.lv(:'B') = 1
-  and (select count(*) = 1 from xp_events where user_id = :'B' and change = 'revoke' and amount = -100 and reason = '카운터 숨김 (승인 취소)'));
+  and (select count(*) = 1 from xp_events where user_id = :'B' and change = 'revoke' and amount = -100 and reason = '상대법 숨김 (승인 취소)'));
 select t.ok('탑신병자 회수 → 대표 칭호도 비워짐', pg_temp.titles(:'B') = '{}' and (select main_title is null from profiles where id = :'B'));
 select t.ok('알림: 레벨 내려감 + 칭호 회수', pg_temp.notes(:'B', 'level_down') = 1 and pg_temp.notes(:'B', 'title_revoked') = 1
   and (select message = '칭호 ''탑신병자''가 회수됐습니다. (승인 취소·삭제 등으로 조건이 깨졌습니다)' from notifications where user_id = :'B' and kind = 'title_revoked'));
@@ -201,8 +201,8 @@ select t.ok('삭제: 문서 수정 −50 → 0 (새 카운터는 이미 회수�
   and pg_temp.key_sum(:'B', 'proposal:' || (select v from ids where k = 'garen_p')) = 0
   and (select count(*) = 4 from xp_events where user_id = :'B' and change = 'revoke'));  -- 숨김 3번 + 삭제 1
 select t.ok('삭제: 빌드 −30·추천 −40 → 0, 이유 "카운터 삭제"', pg_temp.xp(:'D') = 0
-  and (select count(*) = 1 from xp_events where user_id = :'D' and change = 'revoke' and type = 'build' and reason = '카운터 삭제')
-  and (select count(*) = 20 from xp_events where user_id = :'D' and change = 'revoke' and type = 'vote' and reason = '빌드 삭제 (카운터 삭제)'));
+  and (select count(*) = 1 from xp_events where user_id = :'D' and change = 'revoke' and type = 'build' and reason = '상대법 삭제')
+  and (select count(*) = 20 from xp_events where user_id = :'D' and change = 'revoke' and type = 'vote' and reason = '빌드 삭제 (상대법 삭제)'));
 select t.ok('지워진 카운터의 내역도 매치업 이름과 함께 남음',
   (select bool_and(counter_champion = 'Garen') from xp_events where user_id in (:'B', :'D')));
 select t.ok('칭호 모두 회수', pg_temp.titles(:'B') = '{}' and pg_temp.titles(:'D') = '{}');

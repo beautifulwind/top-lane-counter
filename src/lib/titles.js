@@ -13,9 +13,9 @@ export const TITLES = {
 /** /me 칭호판 말풍선의 조건 설명 — 괄호 설명 없이 짧게 (2026-11-04). 자세한 기준은 SPEC 6-3. rules = xp_rules 값 { title_tool_hater: 10, ... } */
 export const titleCondition = (key, rules = {}) => ({
   top_addict: '처음으로 승인받은 기여 1개 또는 자유게시판 글·댓글·문서 댓글 1개',
-  tool_hater: `카운터 관련 승인 ${rules.title_tool_hater ?? 10}개`,
-  solid_heavy: `카운터 관련 승인 ${rules.title_solid_heavy ?? 25}개`,
-  butcher_owner: `카운터 관련 승인 ${rules.title_butcher_owner ?? 50}개`,
+  tool_hater: `상대법 관련 승인 ${rules.title_tool_hater ?? 10}개`,
+  solid_heavy: `상대법 관련 승인 ${rules.title_solid_heavy ?? 25}개`,
+  butcher_owner: `상대법 관련 승인 ${rules.title_butcher_owner ?? 50}개`,
   general: `공개 중인 내 빌드들의 추천 합계 ${rules.title_general ?? 100}`,
   offmeta: `비주류 픽 매치업 기여 승인 ${rules.title_offmeta ?? 5}개`,
 })[key] ?? '';

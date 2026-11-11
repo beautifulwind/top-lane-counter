@@ -94,13 +94,13 @@ select t.ok('일반 유저는 숨김 기록을 못 봄', (select count(*) = 0 fr
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 select t.fails('숨긴 동안 같은 매치업 새 카운터 제안 불가',
   format($$insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build) values ('new_counter','Darius','Garen',auth.uid(),%L, t.build())$$, :'doc'),
-  '숨긴 카운터라');
+  '숨긴 상대법이라');
 select t.fails('숨긴 카운터 문서 수정 제안 불가',
   format($$insert into edit_proposals (type, target_champion, counter_champion, counter_id, proposer_id, content) values ('doc_edit','x','y',%s,auth.uid(),'{"summary":"또 고침","level_notes":{"1":"a","2":"b","3":"c","6":"d","9":"e","11":"f"}}')$$, :garen),
   '찾지 못했습니다');
 
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
-select t.fails('숨긴 카운터의 대기 중 수정 제안은 승인 불가', format($$select approve_proposal(%s, '좋습니다', null, null, t.pv(%1$s))$$, (select v from ids where k = 'edit_p')), '숨긴 카운터의 제안');
+select t.fails('숨긴 카운터의 대기 중 수정 제안은 승인 불가', format($$select approve_proposal(%s, '좋습니다', null, null, t.pv(%1$s))$$, (select v from ids where k = 'edit_p')), '숨긴 상대법의 제안');
 select reject_proposal((select v from ids where k = 'edit_p'), '카운터를 숨겼습니다', t.pv((select v from ids where k = 'edit_p')));
 select t.ok('그 제안은 거절은 됨', (select status = 'rejected' from edit_proposals where id = (select v from ids where k = 'edit_p')));
 select t.fails('순서 변경에 숨긴 카운터를 넣으면 거부', format($$select reorder_counters('Darius', array[%s,%s]::bigint[])$$, (select v from ids where k = 'quinn'), :garen), '목록이 바뀌었습니다');
@@ -108,7 +108,7 @@ select reorder_counters('Darius', array[(select v from ids where k = 'quinn')]::
 select t.ok('순서 변경은 숨긴 카운터를 빼고 동작', (select sort_order = 0 from counters where id = (select v from ids where k = 'quinn')));
 
 -- 숨기기 전에 들어와 있던 같은 매치업의 새 카운터 제안 → 승인 불가 (거절해야 함)
-select t.fails('숨긴 매치업의 새 카운터 제안 승인 불가', format($$select approve_proposal(%s, '좋습니다', null, null, t.pv(%1$s))$$, (select v from ids where k = 'garen_p2')), '숨긴 카운터입니다');
+select t.fails('숨긴 매치업의 새 카운터 제안 승인 불가', format($$select approve_proposal(%s, '좋습니다', null, null, t.pv(%1$s))$$, (select v from ids where k = 'garen_p2')), '숨긴 상대법입니다');
 
 -- ===== 다시 공개 =====
 select t.fails('메모 501자', format($$select restore_counter(%s, %L)$$, :garen, repeat('a', 501)), '500자');
@@ -119,7 +119,7 @@ select t.ok('다시 공개: 제안은 다시 승인, 취소 사유는 지움',
 select t.ok('다시 공개: 기록(restore, 메모)',
   (select count(*) = 1 from counter_status_log where counter_id = :garen and action = 'restore' and reason = '확인해 보니 맞는 카운터'));
 select t.ok('숨김 기록은 남아 있음', (select count(*) = 2 from counter_status_log where counter_id = :garen));
-select t.fails('숨긴 카운터가 아니면 다시 공개 불가', format($$select restore_counter(%s, '공개')$$, :garen), '숨긴 카운터가 아닙니다');
+select t.fails('숨긴 카운터가 아니면 다시 공개 불가', format($$select restore_counter(%s, '공개')$$, :garen), '숨긴 상대법이 아닙니다');
 reset role;
 set role anon;
 set request.jwt.claim.sub = '';  -- 비로그인: 로그인 정보 없음

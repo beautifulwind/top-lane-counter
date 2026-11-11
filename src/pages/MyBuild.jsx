@@ -55,7 +55,7 @@ function BuildView({ b, data, crumbs, sent }) {
   const auth = useAuth();
   const name = (cid) => data.champs[cid]?.name ?? cid;
   const c = b.counter;
-  const title = c ? `${matchupTitle(name(c.counter_champion), name(c.target_champion))}` : '(숨긴 카운터)';
+  const title = c ? `${matchupTitle(name(c.counter_champion), name(c.target_champion))}` : '(숨긴 상대법)';
   const path = c && `/champion/${c.target_champion}/counter/${c.counter_champion}`;
   const open = c?.status === 'approved';
   const edited = !!b.original_build && ['approved', 'hidden'].includes(b.status);

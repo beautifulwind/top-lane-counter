@@ -27,7 +27,7 @@ test('운영자 페이지: 승인 대기·재검토·빌드 승인 대기 구역
   TABLES.edit_proposals.push(fakeProposal()); // 남아 있어도 (039는 0일 때만 실행된다) 목록에 나오지 않는다
   asOperator();
   start('/admin');
-  expect(await screen.findByRole('heading', { name: /숨긴 카운터/ })).toBeDefined();
+  expect(await screen.findByRole('heading', { name: /숨긴 상대법/ })).toBeDefined();
   expect(screen.getByRole('heading', { name: /숨긴 빌드/ })).toBeDefined();
   expect(screen.getByText(/승인 제도는 꺼져 있습니다/)).toBeDefined();
   expect(screen.queryByRole('heading', { name: /승인 대기/ })).toBeNull();

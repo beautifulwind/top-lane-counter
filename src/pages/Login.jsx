@@ -44,7 +44,7 @@ export default function Login() {
         <span className="login-logo" aria-hidden="true"><ShieldIcon size={30} /></span>
         <h1 className="doc-title">로그인 · 가입</h1>
         <p className="lead">
-          로그인하면 카운터·문서 수정·빌드를 제안하고, 빌드에 추천·비추천을 누르고, 자유게시판과 문서에 글·댓글을 쓸 수 있습니다. 보기는 로그인 없이도 됩니다.
+          로그인하면 상대법·문서 수정·빌드를 제안하고, 빌드에 추천·비추천을 누르고, 자유게시판과 문서에 글·댓글을 쓸 수 있습니다. 보기는 로그인 없이도 됩니다.
         </p>
         {guest ? (
           <p className="notice login-join">지금은 비회원입니다. 구글·카카오를 고르면 지금 기록을 이어 갈지 정할 수 있습니다.</p>

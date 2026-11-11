@@ -20,7 +20,7 @@ const start = (path = '/') =>
 test('홈 → 챔피언 문서 → 매치업 문서를 클릭으로 이동해도 화면이 비지 않는다', async () => {
   start('/');
   fireEvent.click(await screen.findByText('다리우스'));
-  expect(await screen.findByText(/다리우스 카운터/)).toBeDefined();
+  expect(await screen.findByText(/다리우스 상대법/)).toBeDefined();
   expect(screen.getByText(RIOT_NOTICE)).toBeDefined();
 
   fireEvent.click(screen.getByText('퀸'));
@@ -29,7 +29,7 @@ test('홈 → 챔피언 문서 → 매치업 문서를 클릭으로 이동해도
   expect(screen.getByText(RIOT_NOTICE)).toBeDefined();
 
   fireEvent.click(screen.getByRole('link', { name: '다리우스' }));
-  expect(await screen.findByText(/다리우스 카운터/)).toBeDefined();
+  expect(await screen.findByText(/다리우스 상대법/)).toBeDefined();
   fireEvent.click(screen.getByRole('link', { name: '홈' }));
   expect(await screen.findByRole('searchbox')).toBeDefined();
   expect(console.error).not.toHaveBeenCalled();
@@ -39,12 +39,12 @@ test('이동 직후 데이터가 오기 전에는 로딩 문구가 보인다', a
   start('/');
   fireEvent.click(await screen.findByText('다리우스'));
   expect(screen.getByText('불러오는 중…')).toBeDefined();
-  await screen.findByText(/다리우스 카운터/);
+  await screen.findByText(/다리우스 상대법/);
 });
 
 test('예시 데이터는 다리우스 상대 퀸 하나뿐이다', async () => {
   start('/champion/Darius');
-  await screen.findByText(/다리우스 카운터/);
+  await screen.findByText(/다리우스 상대법/);
   const rows = document.querySelectorAll('.counter-row');
   expect([...rows].map((r) => r.querySelector('strong').textContent)).toEqual(['퀸']);
 });

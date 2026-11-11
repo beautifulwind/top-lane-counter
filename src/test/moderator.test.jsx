@@ -62,7 +62,7 @@ test('감독관 /admin: 메뉴에 [관리], 새 카운터 대기와 자유게시
   expect(await screen.findByRole('heading', { name: /새 카운터 승인 대기/ })).toBeDefined();
   expect((await openMenu()).getByRole('link', { name: '관리' })).toBeDefined();
   expect(await screen.findByRole('heading', { name: /자유게시판·댓글/ })).toBeDefined();
-  for (const name of ['감독관 관리', '사진 저장 공간', '비주류 픽', '아이템 가격', '숨긴 카운터', '삭제 기록']) {
+  for (const name of ['감독관 관리', '사진 저장 공간', '비주류 픽', '아이템 가격', '숨긴 상대법', '삭제 기록']) {
     expect(screen.queryByRole('heading', { name: new RegExp(name) })).toBeNull();
   }
   const rows = await vi.waitFor(() => {

@@ -201,7 +201,7 @@ select pg_temp.add(core => array['3071','3047','3053']);
 insert into ids select 'b3', max(id) from builds where author_id = auth.uid();
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select hide_counter(:quinn, '정리');
-select t.fails('숨긴 카운터의 빌드는 승인 불가', format($$select approve_build(%s, '좋습니다', null, t.bv(%1$s))$$, (select v from ids where k = 'b3')), '숨긴 카운터의 빌드');
+select t.fails('숨긴 카운터의 빌드는 승인 불가', format($$select approve_build(%s, '좋습니다', null, t.bv(%1$s))$$, (select v from ids where k = 'b3')), '숨긴 상대법의 빌드');
 select t.fails('숨긴 카운터의 공개 빌드에는 투표 불가', format('select vote_build(%s, (-1)::smallint)', (select v from ids where k = 'b1')), '공개된 빌드에만');
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 select t.fails('숨긴 카운터에는 빌드 등록 불가', 'select pg_temp.add()', '매치업을 찾지 못했습니다');

@@ -82,7 +82,7 @@ test('/me 칭호판: 6개 훈장 전부 — 얻은 것은 칭호색, 못 얻은 
   expect(medal(board, '장군').className).toBe('medal general locked');
   // 카운터 승인 단계 점: 도구혐오자 1 · 단단묵직 2 · 백정주인 3
   expect(['도구혐오자', '단단묵직', '백정주인', '장군'].map((n) => medal(board, n).querySelectorAll('svg > g > circle').length)).toEqual([1, 2, 3, 0]);
-  expect(screen.queryByText(/카운터 관련 승인/)).toBeNull();
+  expect(screen.queryByText(/상대법 관련 승인/)).toBeNull();
   expect(screen.queryByRole('radio')).toBeNull();
 });
 
@@ -93,7 +93,7 @@ test('/me 칭호판: 마우스를 올리면 이름·조건·날짜 말풍선(버
   const board = await screen.findByRole('list', { name: '칭호판' });
   fireEvent.mouseEnter(medal(board, '도구혐오자'));
   const tip = screen.getByRole('tooltip');
-  expect(tip.textContent).toMatch(/도구혐오자카운터 관련 승인 10개.*얻음$/);
+  expect(tip.textContent).toMatch(/도구혐오자상대법 관련 승인 10개.*얻음$/);
   expect(within(tip).queryByRole('button')).toBeNull();
   fireEvent.mouseLeave(medal(board, '도구혐오자'));
   expect(screen.queryByRole('tooltip')).toBeNull();

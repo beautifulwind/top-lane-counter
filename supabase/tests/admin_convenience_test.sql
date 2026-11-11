@@ -43,7 +43,7 @@ insert into edit_proposals (type, counter_id, target_champion, counter_champion,
 values ('doc_edit', (select id from counters where counter_champion = 'Quinn'), 'Darius', 'Quinn', auth.uid(), :'doc') returning id as de \gset
 reset role;
 select t.ok('새 카운터 제안: 운영자·감독관 모두에게',
-  (select count(*) = 3 from notifications where proposal_id = :np and kind = 'proposal_submitted' and message = '새 카운터 제안이 들어왔습니다.'
+  (select count(*) = 3 from notifications where proposal_id = :np and kind = 'proposal_submitted' and message = '새 상대법 제안이 들어왔습니다.'
      and user_id in (:'OP', :'MOD', :'M2')));
 select t.ok('새 제안: 제안자 본인에게는 안 감', not exists (select 1 from notifications where user_id = :'U' and kind = 'proposal_submitted'));
 select t.ok('문서 수정 제안: 운영자에게만 (감독관은 처리 못 함)',

@@ -26,3 +26,35 @@ test('화면 코드에 "~해요"체 말끝이 없다', () => {
   }
   expect(found).toEqual([]);
 });
+
+// 용어 정리 (2026-11): 화면에 보이는 "카운터"는 "상대법"으로 바꿨다. 아래 파일·줄만 예외다.
+//  - 검색용 이름 "탑 카운터" (legal.js · index.html · manifest.json): 검색 키워드라 그대로 둔다.
+//  - 승인 제도 화면(꺼짐): 보이지 않아 바꾸지 않았다. 다시 켤 때 함께 정리한다.
+const KEEP_FILES = new Set([
+  'src/lib/legal.js', 'src/lib/pageTitle.js', 'src/lib/format.js', 'src/lib/buildContent.js',
+  'src/components/ModeratorAdmin.jsx', 'src/pages/Resubmit.jsx', 'src/pages/admin/AdminProposal.jsx',
+  'src/api/proposals.js',
+]);
+const isComment = (l) => /^\s*(\/\/|\/\*|\*|\{\/\*)/.test(l);
+
+test('화면 코드에 "카운터"가 남아 있지 않다 (승인 제도 화면·검색용 이름 제외)', () => {
+  const found = [];
+  for (const p of files('src')) {
+    if (KEEP_FILES.has(p.replaceAll('\\', '/'))) continue;
+    for (const [i, line] of readFileSync(p, 'utf8').split('\n').entries()) {
+      const code = line.split(/\s\/\/ /)[0];
+      if (code.includes('카운터') && !isComment(line)) found.push(`${p}:${i + 1} ${line.trim()}`);
+    }
+  }
+  expect(found.filter((f) => !/new_counter|새 카운터|승인 대기/.test(f))).toEqual([]);
+});
+
+test('바꾼 말 뒤 조사가 맞다 ("상대법를·상대법는·상대법가·상대법로·상대법와" 없음)', () => {
+  const found = [];
+  for (const p of [...files('src'), 'index.html']) {
+    for (const [i, line] of readFileSync(p, 'utf8').split('\n').entries()) {
+      if (/상대법(를|는|가|로|와)(?![가-힣])|상대법(를|는|가|로|와) /.test(line)) found.push(`${p}:${i + 1}`);
+    }
+  }
+  expect(found).toEqual([]);
+});

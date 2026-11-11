@@ -73,9 +73,9 @@ export default function Matchup() {
       <article>
         {crumbs}
         <h1 className="doc-title">{title}</h1>
-        <p className="empty">아직 등록되지 않은 카운터입니다. 지금 등록하면 바로 공개됩니다.</p>
+        <p className="empty">아직 등록되지 않은 상대법입니다. 지금 등록하면 바로 공개됩니다.</p>
         <div className="actions">
-          <Link to={`/matchup/new?target=${targetId}&mine=${counterId}`} className="btn">+ 카운터 등록</Link>
+          <Link to={`/matchup/new?target=${targetId}&mine=${counterId}`} className="btn">+ 상대법 등록</Link>
         </div>
       </article>
     );
@@ -339,7 +339,7 @@ export function DocComments({ counterRowId, auth, live, num }) {
       <CommentThread
         ops={DOC_COMMENT_OPS} parentId={counterRowId} comments={shown.comments} auth={auth} rules={shown.rules}
         open={live} live={live} num={num}
-        closedHint={live ? null : '숨긴 카운터라 새 댓글은 달 수 없습니다.'}
+        closedHint={live ? null : '숨긴 상대법이라 새 댓글은 달 수 없습니다.'}
         onDone={(message) => {
           setNotice(message);
           retry();

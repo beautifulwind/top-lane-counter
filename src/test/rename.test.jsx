@@ -61,7 +61,7 @@ test('상대법 화면 순서: 빌드 탭 → (고른 빌드) 한 줄 요약 →
 test('새 상대법 등록: 입력 순서는 빌드 이름 → 한 줄 요약 → 빌드 → 레벨별 딜교법 → 특이사항, 예시 문구, [상대법 등록]', async () => {
   fakeLogin('u-old');
   start('/champion/Darius/counter/Teemo');
-  fireEvent.click(await screen.findByRole('link', { name: '+ 카운터 등록' }));
+  fireEvent.click(await screen.findByRole('link', { name: '+ 상대법 등록' }));
   await screen.findByRole('heading', { name: '3. 티모로 다리우스 이기는 법 — 첫 빌드' });
   const form = document.querySelector('form.doc-form');
   const summary = within(form).getByLabelText('한 줄 요약 (필수)');

@@ -279,7 +279,7 @@ set request.jwt.claim.sub = :'OP';
 select hide_counter(:garen, '숨김');
 set request.jwt.claim.sub = :'MOD';
 select t.ok('숨긴 카운터의 문서 댓글은 안 보임', not exists (select 1 from doc_comments where id = :d_g));
-select t.fails('숨긴 카운터의 문서 댓글 숨김 불가', format('select hide_doc_comment(%s, %L)', :d_g, '메모'), '숨긴 카운터');
+select t.fails('숨긴 카운터의 문서 댓글 숨김 불가', format('select hide_doc_comment(%s, %L)', :d_g, '메모'), '숨긴 상대법');
 reset role;
 select t.ok('카운터를 숨기면 제안자 +100 회수 (운영자의 되돌리기)', (select coalesce(sum(amount), 0) = 0 from xp_events where user_id = :'U' and source_key = 'proposal:' || :np));
 

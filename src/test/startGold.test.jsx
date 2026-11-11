@@ -155,16 +155,16 @@ test('운영자: 아이템 가격표 — 기준 패치와 상한을 보여 주�
 
 // ---------------- 문구 ----------------
 
-test('챔피언 문서: "다리우스 카운터", 순위 숫자, 안내 문구 없음, [+ 카운터 등록] → 새 상대법 등록 (상대 챔피언 = 다리우스)', async () => {
+test('챔피언 문서: "다리우스 상대법", 순위 숫자, 안내 문구 없음, [+ 상대법 등록] → 새 상대법 등록 (상대 챔피언 = 다리우스)', async () => {
   start('/champion/Darius');
-  expect(await screen.findByRole('heading', { name: '1. 다리우스 카운터' })).toBeDefined();
+  expect(await screen.findByRole('heading', { name: '1. 다리우스 상대법' })).toBeDefined();
   expect(screen.queryByText(/위에 있을수록/)).toBeNull();
   expect(screen.getByLabelText('1위')).toHaveTextContent('1');
   expect(screen.getByLabelText('1위').className).toBe('rank top');
   asUser();
   cleanup();
   start('/champion/Darius');
-  fireEvent.click(await screen.findByRole('link', { name: '+ 카운터 등록' }));
+  fireEvent.click(await screen.findByRole('link', { name: '+ 상대법 등록' }));
   expect(await screen.findByRole('heading', { name: '새 상대법 등록' })).toBeDefined();
   expect(screen.getByRole('heading', { name: '1. 상대 챔피언' })).toBeDefined();
   expect(await screen.findByRole('heading', { name: '2. 플레이할 챔피언' })).toBeDefined();

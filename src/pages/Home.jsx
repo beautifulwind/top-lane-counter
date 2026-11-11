@@ -19,7 +19,7 @@ export default function Home() {
   return (
     <>
       <h1 className="doc-title">챔피언 선택</h1>
-      <p className="lead">라인에서 만난 상대를 고르면, 그 챔피언을 이기는 카운터와 공략을 볼 수 있습니다.</p>
+      <p className="lead">라인에서 만난 상대를 고르면, 그 챔피언을 이기는 상대법과 공략을 볼 수 있습니다.</p>
 
       <div className="search">
         <SearchIcon size={18} className="search-icon" />

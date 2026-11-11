@@ -40,7 +40,7 @@ function Preview() {
       <article>
         {crumbs}
         <h1 className="doc-title">{title}</h1>
-        <p className="empty">숨긴 카운터가 아닙니다. 이미 다시 공개했거나 삭제했을 수 있습니다.</p>
+        <p className="empty">숨긴 상대법이 아닙니다. 이미 다시 공개했거나 삭제했을 수 있습니다.</p>
       </article>
     );
   }
@@ -49,7 +49,7 @@ function Preview() {
   return (
     <article>
       {crumbs}
-      <p className="warn" role="note">숨긴 카운터 미리보기 — 다른 사람에게는 보이지 않습니다.</p>
+      <p className="warn" role="note">숨긴 상대법 미리보기 — 다른 사람에게는 보이지 않습니다.</p>
       <h1 className="doc-title">{title}</h1>
       <DocView doc={doc ?? {}} builds={data.builds} game={data} />
       <DocComments counterRowId={data.matchup.counter.id} auth={auth} live={false} />

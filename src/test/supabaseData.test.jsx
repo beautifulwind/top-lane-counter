@@ -42,7 +42,7 @@ test('상대법 빌드: 승인된 것만 탭으로, 추천 많은 순, 작성자
 
 test('승인 안 된 카운터는 매치업 문서가 열리지 않는다', async () => {
   start('/champion/Darius/counter/Vayne');
-  expect(await screen.findByText(/아직 등록되지 않은 카운터입니다/)).toBeDefined();
+  expect(await screen.findByText(/아직 등록되지 않은 상대법입니다/)).toBeDefined();
 });
 
 test('Supabase 오류가 나면 빈 화면 대신 오류 문구가 보인다', async () => {

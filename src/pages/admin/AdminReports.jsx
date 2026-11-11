@@ -82,7 +82,7 @@ function ReportGroup({ group: g, champs, onDone }) {
       <div className="proposal-main">
         <span className="proposal-type">{what}</span> <span className="report-count">신고 {g.reports.length}건</span>
       </div>
-      {matchup && <p className="hint">{matchup}{counter.status !== 'approved' && ' (숨긴 카운터)'}</p>}
+      {matchup && <p className="hint">{matchup}{counter.status !== 'approved' && ' (숨긴 상대법)'}</p>}
       <p className="report-preview">{preview}</p>
       {isPost && !deleted && g.post?.body && <p className="report-preview body">{g.post.body.slice(0, 200)}{g.post.body.length > 200 ? '…' : ''}</p>}
       <div className="proposal-meta">

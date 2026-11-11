@@ -83,7 +83,7 @@ select t.fails('재검토 요청 전에는 다시 제출 불가', format($$selec
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000a';
 select t.fails('재검토 요청: 메모 공백', format($$select request_revision(%s, '  ')$$, :garen), '메모를 적어');
 select t.fails('재검토 요청: 메모 501자', format($$select request_revision(%s, %L)$$, :garen, repeat('a', 501)), '500자');
-select t.fails('재검토 요청: 공개 중인 카운터', format($$select request_revision(%s, '고쳐 주세요')$$, (select v from ids where k = 'quinn')), '숨긴 카운터만');
+select t.fails('재검토 요청: 공개 중인 카운터', format($$select request_revision(%s, '고쳐 주세요')$$, (select v from ids where k = 'quinn')), '숨긴 상대법만');
 select t.fails('재검토 요청: 없는 카운터', $$select request_revision(999999, '고쳐 주세요')$$, '찾지 못했습니다');
 select request_revision(:garen, '  9레벨 내용을 고쳐 주세요 ');
 select t.ok('재검토 요청: 제안 상태·메모(공백 정리)·요청한 운영자',
@@ -195,7 +195,7 @@ select t.fails('제안자 없는 카운터 재검토 요청', format($$select re
 select restore_counter((select v from ids where k = 'quinn'), '테스트 끝');
 
 -- ===== 10. 완전 삭제 =====
-select t.fails('공개 중인 카운터 삭제', format($$select delete_counter(%s, 'Garen', '중복')$$, :garen), '숨긴 카운터만');
+select t.fails('공개 중인 카운터 삭제', format($$select delete_counter(%s, 'Garen', '중복')$$, :garen), '숨긴 상대법만');
 select hide_counter(:garen, '중복 카운터');
 select t.fails('삭제: 사유 공백', format($$select delete_counter(%s, 'Garen', '  ')$$, :garen), '삭제 사유를');
 select t.fails('삭제: 확인 챔피언이 다름', format($$select delete_counter(%s, 'Quinn', '중복')$$, :garen), '확인한 챔피언이');

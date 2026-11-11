@@ -51,7 +51,7 @@ test('미리보기: 운영자만 숨긴 문서(딜교·특이사항·빌드)를 
   asOperator();
   start('/admin');
   fireEvent.click(within(await row()).getByRole('link', { name: '미리보기' }));
-  expect(await screen.findByText('숨긴 카운터 미리보기 — 다른 사람에게는 보이지 않습니다.')).toBeDefined();
+  expect(await screen.findByText('숨긴 상대법 미리보기 — 다른 사람에게는 보이지 않습니다.')).toBeDefined();
   expect(where()).toBe('/admin/preview/Darius/Garen');
   expect(screen.getByRole('heading', { name: '가렌으로 다리우스 이기는 법' })).toBeDefined();
   expect(screen.getByText('숨긴 주의사항')).toBeDefined();
@@ -60,7 +60,7 @@ test('미리보기: 운영자만 숨긴 문서(딜교·특이사항·빌드)를 
   expect(screen.queryByRole('link', { name: '문서 수정 제안' })).toBeNull();
   cleanup();
   start('/admin/preview/Darius/Quinn'); // 공개 중인 카운터는 미리보기 대상이 아님
-  expect(await screen.findByText(/숨긴 카운터가 아닙니다/)).toBeDefined();
+  expect(await screen.findByText(/숨긴 상대법이 아닙니다/)).toBeDefined();
 });
 
 test('미리보기·삭제 화면은 일반 유저에게 막혀 있다', async () => {
@@ -91,12 +91,12 @@ test('재검토 요청: 줄에서 바로 메모를 적어야 확정되고 reques
   expect(window.confirm).not.toHaveBeenCalled();
 });
 
-test('제안 없이 생긴 카운터는 재검토 요청 버튼이 잠긴다', async () => {
+test('제안 없이 생긴 상대법는 재검토 요청 버튼이 잠긴다', async () => {
   hiddenGaren(null);
   asOperator();
   start('/admin');
   const r = await row();
-  expect(within(r).getByText('제안 없이 생긴 카운터 (재검토 요청 불가)')).toBeDefined();
+  expect(within(r).getByText('제안 없이 생긴 상대법 (재검토 요청 불가)')).toBeDefined();
   expect(within(r).getByRole('button', { name: '재검토 요청' }).disabled).toBe(true);
   expect(within(r).getByRole('link', { name: '완전 삭제' })).toBeDefined();
 });
@@ -228,7 +228,7 @@ test('완전 삭제: 지워지는 개수를 보여 주고, 사유 + 챔피언 �
   asOperator();
   start('/admin');
   fireEvent.click(within(await row()).getByRole('link', { name: '완전 삭제' }));
-  expect(await screen.findByRole('heading', { name: '카운터 완전 삭제' })).toBeDefined();
+  expect(await screen.findByRole('heading', { name: '상대법 완전 삭제' })).toBeDefined();
   const list = screen.getByRole('list', { name: '함께 지워지는 것' });
   expect(list.textContent).toMatch(/수정 기록 2개/);
   expect(list.textContent).toMatch(/빌드 1개와 추천·비추천 1개/);
@@ -268,7 +268,7 @@ test('완전 삭제를 DB가 거부하면 이유를 보여 주고 화면에 머�
   expect(where()).toBe('/admin/delete/Darius/Garen');
   cleanup();
   start('/admin/delete/Darius/Quinn');
-  expect(await screen.findByText(/숨긴 카운터만 삭제할 수 있습니다/)).toBeDefined();
+  expect(await screen.findByText(/숨긴 상대법만 삭제할 수 있습니다/)).toBeDefined();
   expect(screen.queryByRole('button', { name: '완전 삭제' })).toBeNull();
 });
 
