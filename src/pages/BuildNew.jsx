@@ -62,7 +62,7 @@ function BuildNewForm() {
       </nav>
       <h1 className="doc-title">{title} — 새 빌드</h1>
       <p className="lead">
-        이 상대법에 다른 공략 한 벌을 더합니다. 등록하면 바로 공개됩니다. 패치 {patchMinor(data.game.latest)} 기준으로 등록됩니다.
+        이 상대법에 다른 빌드를 더합니다. 등록하면 바로 공개됩니다. 패치 {patchMinor(data.game.latest)} 기준으로 등록됩니다.
       </p>
       <WikiBuildForm
         game={data.game}
