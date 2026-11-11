@@ -35,6 +35,13 @@ rows (ord, what, to_delete, to_keep, note) as (
          (select count(*) from public.builds where id not in (select id from kept_builds)),
          (select count(*) from kept_builds),
          '말파 카운터의 공개 빌드만 남김 (대기·거절·숨김 빌드는 지움)'
+  union all select 5.1, 'build_revisions (빌드 수정 기록, 038)',
+         case when to_regclass('public.build_revisions') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.build_revisions', false, true, '')))[1]::text::bigint end,
+         case when to_regclass('public.build_revisions') is null then 0 else (select count(*) from kept_builds) end,
+         '모두 지우고 남는 말파 공개 빌드마다 지금 내용으로 "이전" 1줄 (038 실행 전이면 0)'
+  union all select 5.2, 'build_editors (빌드 기여자, 038)',
+         case when to_regclass('public.build_editors') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.build_editors', false, true, '')))[1]::text::bigint end,
+         0, '모두 지움 (문서 수정 제안도 지워지므로)'
   union all select 6, 'build_votes (추천·비추천)', (select count(*) from public.build_votes), 0, '남는 빌드의 추천·비추천 수도 0'
   union all select 7, 'build_vote_log (빌드 추천·비추천 기록)', (select count(*) from public.build_vote_log), 0, null
   union all select 8, 'build_status_log (빌드 승인·숨김 기록)', (select count(*) from public.build_status_log), 0, null
@@ -53,6 +60,9 @@ rows (ord, what, to_delete, to_keep, note) as (
   union all select 16.1, 'moderation_log (운영진 처리 기록)', (select count(*) from public.moderation_log), 0, '감독관 지정·해제 기록 포함 전부 지움 (역할 자체는 profiles에 그대로)'
   union all select 16.2, 'proposal_reviewing (검토 중 표시)', (select count(*) from public.proposal_reviewing), 0, '임시 표시라 모두 비움'
   union all select 17, 'board_last_write (도배 방지 시각)', (select count(*) from public.board_last_write), 0, null
+  union all select 17.1, 'wiki_last_write (상대법·빌드 등록·수정 간격, 038)',
+         case when to_regclass('public.wiki_last_write') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.wiki_last_write', false, true, '')))[1]::text::bigint end,
+         0, null
   union all select 18, 'notifications (알림)', (select count(*) from public.notifications), 0, null
   union all select 18.1, 'inquiries (문의하기 문의·답변)', (select count(*) from public.inquiries), 0, '모두 비움'
   union all select 18.2, 'inquiry_quota (문의 하루 개수)', (select count(*) from public.inquiry_quota), 0, '모두 비움'

@@ -581,6 +581,29 @@
   - 아이폰(iOS 16.4+): Safari로 열면 [계정 설정]에 「홈 화면에 추가한 앱에서만…」 안내만 보인다 → 공유 → [홈 화면에 추가] → 홈 화면 아이콘으로 열어 로그인 → [이 기기에서 알림 켜기] → 허용 → 위와 같이 잠금 화면 알림·누르면 이동.
   - 공통: "받을 알림"에서 끈 종류는 안 옴 / 운영자 모드를 끄면 운영진 알림이 안 옴 / 로그아웃하면 그 기기로 안 옴 / Edge Functions → web-push → Logs에 `{"event":"web_push",…,"sent":1}`.
 
+### 6-25. 상대법 = 빌드 묶음 · 위키 방식(무승인) — 1단계 DB (2026-11-11, 038)
+> 화면(2단계)·승인 끄기(039)·글·댓글 삭제 방식(3단계, 040)은 아직이다. 038은 DB만 준비하고 **승인 제도는 켜진 채**라 지금 화면이 그대로 동작한다.
+- **구조**: 상대법(`counters`, 플레이할 챔피언 `counter_champion` vs 상대 `target_champion`) 안에 빌드 여러 개. 빌드 하나 = 이름(선택, 1~20자, 비면 "빌드 {seq}") · 한 줄 요약 · 룬 · 스펠 · 시작 아이템 · 핵심 템트리 · 선마 · 레벨별 딜교법 · 특이사항. 검사는 예전 빌드 검사(`clean_build`·핵심 템트리·강타·시작 골드·똑같은 공개 빌드 금지)와 예전 문서 검사(`clean_doc_content` — 요약 필수, 1/2/3/6레벨 필수)를 그대로 쓴다(`clean_wiki_build`).
+  - `seq`는 공개될 때 상대법 안에서 1, 2, 3… 으로 정해지고 바뀌지 않는다(추천 순서와 별개). `counters.first_build_id` = 상대법과 함께 등록된 첫 빌드(+30 따로 없음).
+  - **시초** = 빌드 작성자(`builds.author_id`), 상대법 시초 = `counters.proposed_by`.
+- **함수 (승인 없이 바로 공개)**: `create_matchup(상대, 플레이할, 빌드)` → `{counter_id, build_id}` · `create_build(상대법, 빌드)` · `edit_build(빌드, 본 버전, 빌드)` → 새 버전 · `build_contributors(빌드)`(누구나, 공개 빌드만).
+  - 쓰기: 로그인 + 닉네임(비회원 포함, `board_writer`). **남의 빌드 수정은 정식 회원(구글·카카오)만** — 비회원은 새 상대법·새 빌드·내 빌드 수정까지(DB가 거부: 「다른 분의 빌드는 구글·카카오로 로그인한 회원만 수정할 수 있습니다. …」). 3-B 되돌리기가 생기면 풀 예정.
+  - 같은 조합: 공개 중이면 「이미 있는 상대법입니다. 그 상대법에 새 빌드를 더해 주세요.」, 숨긴 상태면 「운영진이 숨긴 상대법이라 새로 등록할 수 없습니다.」. 새 상대법은 그 상대 챔피언 목록 맨 뒤(순서는 계속 운영자가 정함). 옛 화면용으로 `matchup_docs` 사본도 만든다(이후 수정은 반영 안 함).
+  - **동시 수정**: `builds.version`(수정마다 +1)을 화면이 같이 보내고, 다르면 오류 코드 **`TL412`** 「다른 분이 먼저 수정했습니다. 최신 내용을 확인해 주세요.」. 바뀐 게 없으면 거부, 글만 고치면 패치 그대로·아이템 등을 고치면 지금 패치.
+  - **간격**: 새 상대법·새 빌드 등록 60초(`wiki_create_interval`), 수정 10초(`build_edit_interval`) — `wiki_last_write`.
+  - **신중 안내**: 추천 `build_caution_ups`(3)개 이상인 빌드를 고칠 때 화면이 「많은 분이 추천한 빌드입니다. 신중히 수정해 주세요」(막지 않음, 2단계).
+  - 숨긴 빌드·숨긴 상대법은 수정·새 빌드 불가. 상대법·빌드는 작성자도 못 지운다(운영자 숨김·완전 삭제 그대로, 마지막 공개 빌드는 못 숨김 그대로).
+- **수정 기록** `build_revisions`: 등록(`create`)·수정(`edit`)·이전(`migrate`)마다 수정자·시각·전후 내용·버전. **아무도 직접 못 읽는다**(정책 없음·권한 회수, 운영자 화면과 되돌리기 `revert`는 다음 작업). 수정한 날부터 **1년**(`build_revision_keep_days`) 지나면 `purge_old_build_revisions()`가 지운다 — pg_cron `purge-old-build-revisions` 매일 4:55. 탈퇴하면 수정자만 비운다.
+- **기여자** `build_editors`: 시초 말고 그 빌드를 고친 사람(처음·마지막 시각, 횟수). `build_contributors`가 시초(맨 앞, `is_origin: true` — 닉네임 글자와 별개 칸이라 닉네임으로 흉내 낼 수 없음) + 처음 고친 순서로 돌려준다. 수정 기록 1년 정리와 상관없이 남고, 탈퇴하면 빠진다(시초가 탈퇴하면 시초 줄은 이름 없이 남음).
+- **경험치**: 새 상대법 +100(키 `matchup:<상대법 id>`, 공개 중), 새 빌드 +30(키 `build:<id>`, 공개 중, 첫 빌드 제외), **수정 0**. 위키로 등록한 것은 그날(한국 시간) 먼저 등록한 순서대로 합계 **200**(`create_daily_cap`)까지. 숨기면 회수·다시 공개하면 다시(회수 이유 「상대법 숨김」·「상대법 삭제」). 예전 승인 기록(`proposal:<id>`·승인 빌드)은 그대로라 이전으로 경험치가 바뀌지 않는다.
+- **칭호**: 도구혐오자·단단묵직·백정주인은 "승인된 새 카운터·문서 수정 제안 + 내가 시초인 공개 상대법 + 공개 빌드(첫 빌드 제외)" 수. 탑신병자·장군·비주류는 기준 그대로(위키 상대법의 비주류 여부는 첫 빌드가 공개될 때 고정).
+- **알림·푸시**: `matchup_created` 「새 상대법이 등록됐습니다.」·`build_created` 「새 빌드가 등록됐습니다.」 — **운영자만**(감독관 X), 처리자 본인 제외, 상대법·빌드 연결(`counter_id`·`build_id`). 푸시 묶음 `staff_new`(운영진 알림). 운영자 모드를 끄면 목록·빨간 점·읽음 처리·푸시에서 빠진다(034·037과 같음). 수정마다 알림은 없다. `push_targets`가 `counter_id`·챔피언 id도 돌려준다(Edge Function 이동 주소는 2단계).
+- **승인 제도 스위치** `xp_rules.approval_on`(038 = 1 켜짐). 0이 되면 옛 화면의 제안·승인 대기 빌드 등록을 DB가 「이제 승인 없이 바로 등록합니다. 화면을 새로고침해 주세요.」로 거부(위키 함수는 그대로). 039가 0으로 바꾼다 — 그 전에 운영자가 승인 대기·재검토 중인 것을 모두 처리한다.
+- **기존 데이터 이전** (`wiki_backfill_matchups()`, 038 끝에서 한 번, 039에서 한 번 더 — 다시 불러도 같은 결과): 상대법마다 `matchup_docs` 내용을 공개(숨김 포함) 빌드에 복사, 번호, 첫 빌드(처음 제안과 함께 공개된 빌드), 빌드마다 `migrate` 기록 1줄, 승인된 문서 수정 제안자를 기여자로. 시초 = 빌드 작성자(말파이트 첫 빌드 = 처음 제안자). `matchup_docs`·`doc_revisions`·제안은 지우지 않고 보관.
+  - 038 ~ 039 사이 옛 길: 빌드가 공개되면 번호·문서 내용을 채우고(`builds_wiki_fill`), 문서가 바뀌면 아직 문서와 같은 내용인 빌드에도 반영(`matchup_docs_to_builds`, `migrate` 기록·기여자).
+- **테스트 데이터 비우기**: 수정 기록·기여자·간격을 비우고 남는 말파 공개 빌드마다 `migrate` 1줄을 새로 남긴다.
+- **확인 조회**: `supabase/scripts/check_wiki_builds.sql` (038 실행 전·후, 일정 등록 뒤 한 번씩, 22줄 표, 마지막이 조회문). DB 검사: `supabase/tests/wiki_builds_test.sql`.
+
 ## 7. 데이터 구조 (Supabase 초안)
 
 챔피언·아이템·룬·소환사 주문은 Data Dragon의 ID(예: 챔피언 `"Darius"`, 아이템 `3078`)로 참조한다.
@@ -617,6 +640,10 @@
 - **notifications**: `user_id`, `kind`, `proposal_id`, `build_id`, `post_id`, `counter_id`(문서 댓글 알림), `message`, `created_at`, `read_at`(확인하면 채워짐) — 본인만 읽기, 만들기·읽음 처리는 DB 함수만. 색인 `(user_id, id desc)`(027), 만든 지 `xp_rules.notification_keep_days`(90)일 지나면 `purge_old_notifications()`가 지운다(pg_cron 매일)
 - **push_subscriptions** (037): 웹 푸시 기기 알림 주소 — `user_id`(프로필 삭제 시 함께 삭제), `endpoint`(고유, https), `p256dh`, `auth`, `created_at`. 본인만 읽기·넣기·지우기(고치기 없음), 한 사람 최대 10대. 만료(404·410)는 Edge Function이 `push_forget`(service_role)으로 지움
 - **push_settings** (037): 웹 푸시 종류별 켜기/끄기 — `user_id`(PK, 프로필 삭제 시 함께 삭제), `staff_new`, `my_results`(기본 켜짐), `updated_at`. 본인만 읽기·넣기·고치기. `notifications` insert 트리거 `notifications_push`가 `push_wanted`로 판단해 pg_net → Edge Function `web-push`
+- **builds (038 추가 칸)**: `name`(선택 1~20자), `seq`(상대법 안 번호), `summary`·`level_notes`·`lane_cautions`(빌드별 공략), `updated_at`·`updated_by`(마지막 수정), `wiki`(위키로 등록). **counters (038)**: `first_build_id`, `wiki`
+- **build_revisions** (038): 빌드 등록·수정 기록 — `build_id`(빌드와 함께 삭제), `counter_id`, `editor_id`(탈퇴하면 비움), `kind`(migrate/create/edit/revert), `before`·`after`(전후 내용), `version`, `created_at`. 아무도 직접 못 읽음, 1년 뒤 삭제
+- **build_editors** (038): 기여자 — `build_id`, `user_id`(탈퇴하면 삭제), `first_at`, `last_at`, `edits`. `build_contributors()`로만
+- **wiki_last_write** (038): 등록·수정 간격용 마지막 시각 (아무도 직접 못 읽음)
 - **counter_status_log**: 숨긴 카운터의 숨김·다시 공개·재검토 요청·다시 제출·거절 기록 (운영자만 읽기)
 - **counter_deletions**: 완전 삭제 기록 — 카운터와 연결하지 않아 카운터가 지워져도 남는다 (운영자만 읽기). 지운 개수(제안·수정 기록·빌드·추천·`comments_count` 문서 댓글)
 
@@ -746,6 +773,7 @@ RLS 원칙:
 35. `supabase/migrations/035_purge_moderation_log.sql` (처리 기록 1년 보관 삭제 함수 `purge_old_moderation_log()`·설정값. 아무것도 지우지 않고 더하기만 하므로 지금 화면과 그대로 동작. 실행 뒤 `supabase/scripts/check_purge_moderation_log.sql`로 확인하고, 파일 맨 아래 pg_cron 일정 등록 SQL을 따로 한 번)
 36. `supabase/migrations/036_member_info_moderator_revision.sql` (운영자 전용 `admin_member_stats`·`admin_search_members`·`admin_member_info` · 감독관 재검토 요청 `request_proposal_revision` 권한 확대 · 처리 기록 종류 `request_revision`. 있던 함수의 이름·인자는 그대로라 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행하고, 확인 뒤 새 코드 push. 확인 조회: `supabase/scripts/check_member_info.sql` — 실행 전·후 한 번씩)
 37. `supabase/migrations/037_web_push.sql` (웹 푸시 — 표 `push_subscriptions`·`push_settings`·RLS, 알림 트리거 `notifications_push`, Edge Function용 `push_targets`·`push_forget`. 있던 표·함수는 바꾸지 않아 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행하고, `supabase/scripts/check_web_push.sql`로 확인(실행 전·후) → **11-11 설정** → 다시 확인(14·15번 true) → 새 코드 push)
+38. `supabase/migrations/038_wiki_builds.sql` (상대법 = 빌드 묶음·위키 방식 DB 준비 — 빌드 공략 칸·수정 기록·기여자·`create_matchup`·`create_build`·`edit_build`·`build_contributors`·경험치·칭호·알림 종류·기존 데이터 이전. 승인 제도는 켜진 채라 지금 배포된 화면과 그대로 동작하므로 이 SQL을 먼저 실행하고, 확인 뒤 새 코드 push. 확인 조회: `supabase/scripts/check_wiki_builds.sql` — 실행 전·후 한 번씩. **실행 뒤 파일 맨 아래 pg_cron 일정 등록 SQL을 따로 한 번**: `select cron.schedule('purge-old-build-revisions', '55 19 * * *', $$select public.purge_old_build_revisions()$$);`)
 - **테스트 데이터 비우기** (마이그레이션 아님, 정식 공개 직전 등 필요할 때): `supabase/scripts/reset_test_data_preview.sql`(읽기만 — 지울·남을 개수)로 확인 → `supabase/scripts/reset_test_data.sql`. 계정(운영자 계정·운영자 모드 상태·테스트용 구글 계정 포함 — 계정은 하나도 지우지 않는다)·프로필·설정값과 트린다미어 상대 말파이트 카운터(지금 문서·공개 빌드·처음 제안)만 남기고, 문의·처리 기록(`moderation_log`, 감독관 지정·해제 기록 포함)·알림·`proposal_reviewing` 등은 모두 비우며, 말파 문서의 수정 기록은 지금 내용 1줄로 정리, 경험치·레벨·칭호는 알림 없이 다시 계산한다. SQL Editor가 RLS를 물으면 **"Run without RLS"**로 실행 ("Run and enable RLS"는 임시 표 `reset_keep`·`reset_admins` 때문에 에러). 운영자 계정이 없거나 끝에서 운영자 role·모드가 바뀌어 있으면 전부 되돌리고 멈춘다. 되돌릴 수 없으므로 순서는 ① 백업 확인 → ② preview → ③ reset → ④ 결과 표 확인.
 - 합쳐서 한 번에 돌리지 않는다: 파일마다 `begin … commit`이라 중간에 실패하면 앞부분만 반영되고, 다시 돌리면 "already exists"가 난다.
 - 새 마이그레이션(010 …)을 만들면 이 목록에 추가한다. `supabase/tests/run.sh`가 빈 DB에 같은 순서로 실행한 뒤 검사용 데이터(`tests/fixtures.sql`)를 넣고 검사한다 (`supabase/tests`는 실제 프로젝트에서 실행하지 않음).

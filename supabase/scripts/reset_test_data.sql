@@ -4,6 +4,7 @@
 -- 남김: 계정(auth.users)·프로필(닉네임·역할)·닉네임 변경 기록, 휴대폰 알림을 켠 기기·알림 종류 설정(037), 설정값(xp_rules·xp_levels·item_prices·offmeta_champions),
 --       트린다미어 상대 말파이트 카운터 1개 — 지금 문서, 공개 빌드, 그 카운터를 만든 처음 제안 1개.
 -- 지움: 그 밖의 카운터·문서·제안·빌드 전부, 빌드 추천·비추천과 그 기록, 자유게시판 글·댓글·추천, 문서 댓글, 신고, 알림, 문의하기 문의·답변(032),
+--       빌드 수정 기록·기여자·등록 간격(038 — 남는 말파 공개 빌드마다 지금 내용으로 "이전" 기록 1줄을 새로 남김),
 --       경험치 기록, 숨김 기록, 운영진 처리 기록(moderation_log, 감독관 지정·해제 기록 포함 전부), 빌드·카운터 상태 기록, 완전 삭제 기록, 도배 방지 시각, 018 백업 표의 내용,
 --       자유게시판 사진(023): 붙은 사진 줄은 지우고 파일 경로는 정리 대기열(storage_trash)로 — SQL은 Storage 파일을 못 지우므로
 --       실제 파일은 다음 사진 정리(Edge Function media-cleanup, 매일)가 지운다. 바로 지우려면 Storage → board-media에서 직접.
@@ -117,6 +118,18 @@ update public.matchup_docs d set revision_id = r.id from r where d.counter_id = 
 alter table public.matchup_docs enable trigger matchup_docs_touch;
 update public.edit_proposals set base_revision_id = null where base_revision_id is not null;
 
+-- 6.1 (038) 빌드 수정 기록·기여자·등록 간격: 비우고, 남은 말파 공개 빌드마다 지금 내용으로 "이전(migrate)" 1줄 (038 실행 전이면 건너뜀)
+do $$
+begin
+  if to_regclass('public.build_revisions') is not null then
+    execute 'delete from public.build_revisions';
+    execute 'delete from public.build_editors';
+    execute 'delete from public.wiki_last_write';
+    perform public.wiki_backfill_matchups();
+  end if;
+end;
+$$;
+
 -- ---------------------------------------------------------------------
 -- 7. 위에서 지운 것 때문에 트랜잭션 끝에 돌 경험치 계산을 지금 끝내 두고, 경험치 기록·알림·숨김 기록을 비운다
 -- ---------------------------------------------------------------------
@@ -171,6 +184,8 @@ union all select '문서 수정 기록', count(*) from public.doc_revisions
 union all select '제안', count(*) from public.edit_proposals
 union all select '빌드', count(*) from public.builds
 union all select '빌드 추천·비추천', count(*) from public.build_votes
+union all select '빌드 수정 기록 (038, 남은 공개 빌드마다 1줄 · 실행 전이면 0)', case when to_regclass('public.build_revisions') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.build_revisions', false, true, '')))[1]::text::integer end
+union all select '빌드 기여자 (038, 실행 전이면 0)', case when to_regclass('public.build_editors') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.build_editors', false, true, '')))[1]::text::integer end
 union all select '자유게시판 글', count(*) from public.posts
 union all select '붙은 사진', count(*) from public.board_attachments
 union all select '사진 정리 대기열 (다음 정리 때 파일 삭제)', count(*) from public.storage_trash
