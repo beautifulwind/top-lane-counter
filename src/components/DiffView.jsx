@@ -3,9 +3,10 @@ import { docDiff, lineDiff } from '../lib/diff';
 /**
  * 기존 문서(before, 없으면 null = 새 문서) ↔ 바뀐 문서(after) 비교.
  * 바뀐 칸은 줄 단위로 − 지운 줄 / + 더한 줄, 바뀌지 않은 칸은 접어 둔다.
+ * fields를 주면 그 비교 결과를 그대로 그린다 (043 빌드 비교: lib/diff.js buildDiff).
  */
-export default function DiffView({ before, after }) {
-  const fields = docDiff(before, after);
+export default function DiffView({ before, after, fields: given = null }) {
+  const fields = given ?? docDiff(before, after);
   const changed = fields.filter((f) => f.changed);
   const same = fields.filter((f) => !f.changed);
   return (

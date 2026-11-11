@@ -6,7 +6,7 @@ import { getBuilds, hideBuild } from '../api/builds';
 import { DOC_COMMENT_OPS, getDocComments, getEditRules } from '../api/board';
 import CommentThread from '../components/CommentThread';
 import { useAsync } from '../lib/useAsync';
-import { useAuth } from '../lib/auth';
+import { canModerate, useAuth } from '../lib/auth';
 import { ErrorBox, Loading } from '../components/Status';
 import BuildCard from '../components/BuildCard';
 import NoteForm from '../components/NoteForm';
@@ -191,6 +191,7 @@ export default function Matchup() {
           data={data}
           path={path}
           isOperator={isOperator}
+          canHide={canModerate(auth, selected.author_id, selected.author)}
           lastOne={builds.length === 1}
           hiding={hiding === selected.id}
           setHiding={(v) => { setReporting(null); setHiding(v); }}
@@ -276,7 +277,7 @@ function BuildTabs({ builds, selected, onSelect, newTo }) {
 }
 
 /** 고른 빌드 한 벌: 이름·패치·최근 수정 → 한 줄 결론 → 룬·주문·아이템·선마·추천 → 레벨별 딜교법 → 특이사항 → [빌드 수정]·[수정 기록] */
-function BuildPanel({ build, index, doc, data, path, isOperator, lastOne, hiding, setHiding, onHidden, reportItem, reportBox }) {
+function BuildPanel({ build, index, doc, data, path, isOperator, canHide, lastOne, hiding, setHiding, onHidden, reportItem, reportBox }) {
   const [showPeople, setShowPeople] = useState(false);
   const peopleBtn = useRef(null);
   const label = buildLabel(build, index);
@@ -286,12 +287,14 @@ function BuildPanel({ build, index, doc, data, path, isOperator, lastOne, hiding
   const cautions = build.lane_cautions ?? doc?.lane_cautions ?? '';
   const updated = day(build.updated_at ?? build.edited_at ?? build.created_at);
 
+  // 숨기기: 운영자는 전부, 감독관은 일반 회원·탈퇴한 분이 처음 만든 빌드만 (043, 실제 검사는 DB). 수정 기록 자세히·되돌리기는 운영자만
   const menu = [
     reportItem,
-    isOperator && {
+    canHide && {
       label: '빌드 숨기기', op: true, disabled: lastOne, onSelect: () => setHiding(build.id),
       hint: lastOne ? '마지막 공개 빌드라 숨길 수 없습니다. 상대법을 숨겨 주세요.' : null,
     },
+    isOperator && { label: '수정 기록 자세히', op: true, to: `/admin/builds/${build.id}/history` },
   ];
 
   return (
@@ -309,7 +312,7 @@ function BuildPanel({ build, index, doc, data, path, isOperator, lastOne, hiding
         <NoteForm
           id={`hide-build-${build.id}`}
           label="숨기는 사유 (필수, 처음 만든 분에게 보입니다)"
-          hint="숨기면 다른 사람에게 이 빌드가 안 보입니다. 추천 수는 그대로 남고, 운영자 페이지에서 다시 공개할 수 있습니다."
+          hint="숨기면 다른 사람에게 이 빌드가 안 보입니다. 추천 수는 그대로 남고, 운영자 페이지의 숨긴 빌드에서 다시 공개할 수 있습니다."
           confirmLabel="숨기기 확정"
           busyLabel="숨기는 중…"
           onCancel={() => setHiding(null)}

@@ -84,6 +84,7 @@ const AdminHistory = lazyPage(() => import('./pages/admin/AdminHistory'));
 const AdminPreview = lazyPage(() => import('./pages/admin/AdminPreview'));
 const AdminDelete = lazyPage(() => import('./pages/admin/AdminDelete'));
 const AdminBuild = lazyPage(() => import('./pages/admin/AdminBuild'));
+const AdminBuildHistory = lazyPage(() => import('./pages/admin/AdminBuildHistory'));
 const AdminReports = lazyPage(() => import('./pages/admin/AdminReports'));
 const AdminInquiries = lazyPage(() => import('./pages/admin/AdminInquiries'));
 const AdminMembers = lazyPage(() => import('./pages/admin/AdminMembers'));
@@ -145,6 +146,7 @@ export function AppRoutes() {
           <Route path="admin/preview/:targetId/:counterId" element={<AdminPreview />} />
           <Route path="admin/delete/:targetId/:counterId" element={<AdminDelete />} />
           <Route path="admin/builds/:id" element={<AdminBuild />} />
+          <Route path="admin/builds/:id/history" element={<AdminBuildHistory />} />
           <Route path="admin/reports" element={<AdminReports />} />
           <Route path="admin/inquiries" element={<AdminInquiries />} />
           {/* 042: 회원 관리 한 화면 (예전 /admin의 "회원"·"감독관 관리" 칸). 감독관 관리 자리는 감독관만 거른 회원 관리로 */}

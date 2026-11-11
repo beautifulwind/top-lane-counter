@@ -53,7 +53,7 @@ function AdminBody() {
   return isOperator ? <PendingList /> : <ModeratorHome />;
 }
 
-/** 감독관: 새 카운터 승인 대기, 자유게시판·댓글(신고·숨긴 글) */
+/** 감독관: 새 카운터 승인 대기, 자유게시판·댓글(신고·숨긴 글), 숨긴 빌드(043: 처리할 수 있는 것만), 문의 */
 function ModeratorHome() {
   const { user } = useAuth();
   const location = useLocation();
@@ -92,11 +92,42 @@ function ModeratorHome() {
         <SectionHead icon={MessageIcon}>자유게시판·댓글</SectionHead>
         <BoardAdmin />
       </section>
+      <ModeratorHiddenBuilds onDone={(message) => setDone(message)} />
       <section className="section">
         <SectionHead icon={HelpIcon}>문의</SectionHead>
         <InquiryAdmin />
       </section>
     </article>
+  );
+}
+
+/**
+ * 감독관의 숨긴 빌드 (043): 읽기 정책이 처리할 수 있는 것(공개 상대법, 일반 회원·탈퇴한 분이 처음 만든 빌드)만 돌려준다.
+ * 누가 숨겼는지는 감독관이 볼 수 없어 [다시 공개]는 늘 보이고, 운영자가 숨긴 것이면 DB가 이유를 알려 준다.
+ */
+function ModeratorHiddenBuilds({ onDone }) {
+  const { data, error, loading, retry } = useAsync(async () => {
+    const [champs, hidden, game] = await Promise.all([getChampionMap(), getHiddenBuilds(), getBuildGame()]);
+    return { champs, hidden, game };
+  }, []);
+  const name = (id) => data.champs[id]?.name ?? id;
+  return (
+    <section className="section">
+      <SectionHead icon={EyeOffIcon} count={data?.hidden.length}>숨긴 빌드</SectionHead>
+      {loading && <Loading />}
+      {error && <ErrorBox error={error} onRetry={retry} />}
+      {data && data.hidden.length === 0 && <p className="empty">숨긴 빌드가 없습니다.</p>}
+      {data && data.hidden.length > 0 && (
+        <>
+          <p className="hint">감독관은 감독관이 숨긴 빌드만 다시 공개할 수 있습니다.</p>
+          <ul className="proposal-list">
+            {data.hidden.map((b) => (
+              <HiddenBuildRow key={b.id} build={b} game={data.game} name={name} moderator onDone={(m) => { onDone(m); retry(); }} />
+            ))}
+          </ul>
+        </>
+      )}
+    </section>
   );
 }
 
@@ -570,7 +601,7 @@ function PendingBuildRow({ build: b, game, name, onDone, onReload }) {
 }
 
 /** 숨긴 빌드 한 줄: [다시 공개]는 그 자리에 메모 입력창 */
-function HiddenBuildRow({ build: b, game, name, onDone }) {
+function HiddenBuildRow({ build: b, game, name, onDone, moderator = false }) {
   const [open, setOpen] = useState(false);
   const title = buildTitle(b, name);
   const counterHidden = b.counter?.status !== 'approved';
@@ -596,7 +627,8 @@ function HiddenBuildRow({ build: b, game, name, onDone }) {
         <button type="button" className="btn btn-small btn-op" onClick={() => setOpen((v) => !v)} aria-expanded={open}>
           다시 공개
         </button>
-        <Link to={`/admin/builds/${b.id}`} className="btn btn-small btn-op">자세히</Link>
+        {!moderator && <Link to={`/admin/builds/${b.id}`} className="btn btn-small btn-op">자세히</Link>}
+        {!moderator && <Link to={`/admin/builds/${b.id}/history`} className="btn btn-small btn-op">수정 기록</Link>}
       </div>
       {open && (
         <NoteForm

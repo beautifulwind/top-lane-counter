@@ -111,7 +111,7 @@ export const EMPTY_USAGE = () => ({
 // 테스트가 바꾸는 상태. setupTests.js가 테스트마다 초기화한다.
 export const fakeState = {
   error: null, session: null, initError: null, oauthCalls: [], linkCalls: [], linkError: null, listeners: new Set(),
-  inserts: [], insertError: null, pendingCounts: null, pendingCountsAsked: 0, rpcCalls: [], memberCalls: [], memberStats: { total: 0, members: 0, guests: 0, google: 0, kakao: 0, both: 0, new_7d: 0, new_7d_members: 0 }, members: [], memberInfo: {}, memberDetail: {}, deletedWritings: {}, rpcError: null, rpcErrorCode: null, reviewCalls: [], reviewers: {}, boardError: null,
+  inserts: [], insertError: null, pendingCounts: null, pendingCountsAsked: 0, rpcCalls: [], memberCalls: [], memberStats: { total: 0, members: 0, guests: 0, google: 0, kakao: 0, both: 0, new_7d: 0, new_7d_members: 0 }, members: [], memberInfo: {}, memberDetail: {}, deletedWritings: {}, buildRevisions: {}, rpcError: null, rpcErrorCode: null, reviewCalls: [], reviewers: {}, boardError: null,
   functionCalls: [], functionError: null, // Edge Function 호출 (017 delete-account)
   anonCalls: [], anonError: null, anonDelay: null, hideCounts: {}, signOutCalls: [], touched: 0, // 비회원 (020)
   uploads: [], uploadError: null, mediaProblem: null, mediaUsage: EMPTY_USAGE(), // 사진 (023, mediaUsage = media_usage 결과)
@@ -162,6 +162,8 @@ export function resetFake() {
   fakeState.members = [];
   fakeState.memberInfo = {};
   fakeState.memberDetail = {};
+  fakeState.buildRevisions = {};
+  fakeState.revertRemoved = 0;
   fakeState.deletedWritings = {};
   fakeState.rpcError = null;
   fakeState.pendingCounts = null;
@@ -481,6 +483,15 @@ async function rpc(name, args) {
     fakeState.touched += 1; // 화면이 알아서 부르는 것이라 rpcCalls에는 넣지 않는다
     return { data: null, error: null };
   }
+  if (name === 'admin_build_revisions') {
+    // 043 운영자 빌드 수정 기록: fakeState.buildRevisions = { 빌드id: { build, revisions } } (화면이 알아서 부르는 것이라 rpcCalls에 넣지 않는다)
+    if (!isAdminNow()) return { data: null, error: { message: '운영자만 할 수 있습니다.', code: '42501' } };
+    const d = fakeState.buildRevisions[args.p_build];
+    if (!d) return { data: null, error: { message: '빌드를 찾지 못했습니다.', code: 'P0002' } };
+    const lim = args.p_limit ?? 20;
+    const rest = [...d.revisions].sort((a, b) => b.id - a.id).filter((r) => args.p_before == null || r.id < args.p_before);
+    return { data: structuredClone({ build: d.build, revisions: rest.slice(0, lim), has_more: rest.length > lim, keep_days: 365 }), error: null };
+  }
   // 043: 목록은 화면이 알아서 부르는 것이라 rpcCalls에 넣지 않는다 (보내기·처리만 남긴다)
   if (['report_wiki', 'staff_wiki_reports', 'handle_wiki_report'].includes(name)) return wikiReportRpc(name, args);
   fakeState.rpcCalls.push({ name, args });
@@ -500,6 +511,22 @@ async function rpc(name, args) {
     const mine = TABLES.notifications.filter((n) => args.p_ids.includes(n.id) && n.user_id === me && !n.read_at);
     mine.forEach((n) => { n.read_at = new Date().toISOString(); });
     return { data: mine.length, error: null };
+  }
+  if (name === 'revert_build') {
+    // 043 되돌리기: 운영자만, 본 버전이 다르면 TL412, 지금과 같으면 거부. 되돌린 기록을 맨 앞에 더하고 버전 +1
+    if (!isAdminNow()) return { data: null, error: { message: '운영자만 할 수 있습니다.', code: '42501' } };
+    const d = fakeState.buildRevisions[args.p_build];
+    if (args.p_version !== d.build.version) return { data: null, error: { message: '다른 분이 먼저 수정했습니다. 최신 내용을 확인해 주세요.', code: 'TL412' } };
+    const rv = d.revisions.find((r) => r.id === args.p_revision);
+    if (JSON.stringify(rv.after) === JSON.stringify(d.build.current)) return { data: null, error: { message: '지금 내용과 같습니다.', code: '23514' } };
+    const me = meNow();
+    const version = d.build.version + 1;
+    d.revisions.push({
+      id: Math.max(...d.revisions.map((r) => r.id)) + 1, kind: 'revert', version, revert_of: rv.id, created_at: new Date().toISOString(),
+      editor: { id: me.id, nickname: me.nickname, role: me.role, is_guest: false, level: me.level, main_title: me.main_title }, before: d.build.current, after: rv.after,
+    });
+    Object.assign(d.build, { version, current: rv.after });
+    return { data: { version, removed_contributors: fakeState.revertRemoved ?? 0 }, error: null };
   }
   if (name === 'set_operator_mode') {
     // 034: 운영자 본인만 (모드를 꺼도 role은 그대로라 다시 켤 수 있다)

@@ -199,6 +199,17 @@ export const resubmitBuild = (id, build, patch) =>
 export const hideBuild = (id, reason) => rpc('hide_build', { p_id: id, p_reason: reason }, '숨기지 못했습니다.');
 export const restoreBuild = (id, note) => rpc('restore_build', { p_id: id, p_note: note }, '다시 공개하지 못했습니다.');
 
+/**
+ * 운영자: 빌드 수정 기록 자세히 (043, 최근 순). before = 이 기록 번호보다 앞의 것 (더 보기)
+ * 돌려주는 값: { build: { id, counter_id, seq, name, status, version, is_first, target_champion, counter_champion, counter_status, author, current },
+ *   revisions: [{ id, kind(create·edit·migrate·revert), version, created_at, revert_of, editor, before, after }], has_more, keep_days }
+ */
+export const getBuildRevisions = (id, before = null, limit = 20) =>
+  rpc('admin_build_revisions', { p_build: id, p_before: before, p_limit: limit }, '수정 기록을 불러오지 못했습니다.');
+/** 운영자: 그 수정 기록의 "후" 내용으로 되돌리기 (메모 필수). version = 화면이 본 빌드 버전 (다르면 TL412). 돌려주는 값: { version, removed_contributors } */
+export const revertBuild = (id, revisionId, version, note) =>
+  rpc('revert_build', { p_build: id, p_revision: revisionId, p_version: version, p_note: note }, '되돌리지 못했습니다.');
+
 // ---------------- 시작 아이템 합계 상한·아이템 가격표 (018) ----------------
 
 /** 시작 아이템 합계 상한 (xp_rules.starting_gold_max, 없으면 500) */
