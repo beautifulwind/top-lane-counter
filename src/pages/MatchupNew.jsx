@@ -71,7 +71,7 @@ function MatchupNewForm() {
       </nav>
       <h1 className="doc-title">새 상대법 등록</h1>
       <p className="lead">
-        어떤 챔피언을 상대로 무엇을 하면 이기는지, 공략 한 벌(빌드)과 함께 적어 주세요. 등록하면 바로 공개됩니다.
+        어떤 챔피언을 상대로 무엇을 하면 이기는지, 빌드와 함께 적어 주세요. 등록하면 바로 공개됩니다.
       </p>
 
       <section className="section">
