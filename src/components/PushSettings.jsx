@@ -20,8 +20,8 @@ export default function PushSettings({ auth }) {
       <SectionHead icon={BellIcon} id="push-settings">휴대폰 알림</SectionHead>
       <p className="lead">
         {APPROVAL_ENABLED
-          ? `켜 두면 ${staffAccount ? '새 제안·문의·오류 신고나 ' : ''}내 제안의 처리 결과를 휴대폰 잠금 화면 알림으로 받습니다.`
-          : `켜 두면 ${staffAccount ? (auth.isOperatorAccount ? '새 상대법·새 빌드·새 문의·새 오류 신고나 ' : '새 문의·새 오류 신고나 ') : ''}숨겨졌던 내 상대법·빌드가 다시 공개된 소식을 휴대폰 잠금 화면 알림으로 받습니다.`}
+          ? `켜 두면 ${staffAccount ? '새 제안·문의·오류 신고·새 신고나 ' : ''}내 제안의 처리 결과를 휴대폰 잠금 화면 알림으로 받습니다.`
+          : `켜 두면 ${staffAccount ? (auth.isOperatorAccount ? '새 상대법·새 빌드·새 글·새 문의·새 오류 신고·새 신고나 ' : '새 문의·새 오류 신고·새 신고나 ') : ''}숨겨졌던 내 상대법·빌드가 다시 공개된 소식을 휴대폰 잠금 화면 알림으로 받습니다.`}
         알림을 누르면 그 내용을 볼 수 있는 화면으로 갑니다.
       </p>
       {support === 'ok' ? <DeviceSwitch userId={auth.user.id} /> : <p className="hint push-help" role="note">{PUSH_HELP[support]}</p>}
@@ -101,10 +101,10 @@ function PushKinds({ userId, staffAccount, operatorAccount, operatorOff }) {
         <label className="check-row">
           <input type="checkbox" checked={settings.staff_new} onChange={(e) => change('staff_new', e.target.checked)} />
           <span>
-            {/* 받는 사람은 DB가 정한다: 새 상대법·새 빌드(038)·새 글(042)은 운영자만, 새 문의(033)·새 오류 신고(043)는 감독관도 */}
+            {/* 받는 사람은 DB가 정한다: 새 상대법·새 빌드(038)·새 글(042)은 운영자만, 새 문의(033)·새 오류 신고(043)·새 신고(045)는 감독관도 */}
             {APPROVAL_ENABLED
-              ? '운영진 알림: 새 제안·새 빌드·새 문의·새 글·새 오류 신고'
-              : operatorAccount ? '운영진 알림: 새 상대법·새 빌드·새 문의·새 글·새 오류 신고' : '운영진 알림: 새 문의·새 오류 신고'}
+              ? '운영진 알림: 새 제안·새 빌드·새 글·새 문의·새 오류 신고·새 신고'
+              : operatorAccount ? '운영진 알림: 새 상대법·새 빌드·새 글·새 문의·새 오류 신고·새 신고' : '운영진 알림: 새 문의·새 오류 신고·새 신고'}
             {operatorOff && <small className="hint">운영자 모드를 끈 동안에는 오지 않습니다.</small>}
           </span>
         </label>

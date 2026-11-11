@@ -559,7 +559,7 @@
 - **푸시 대상** (`push_group(종류)`):
   | 묶음 | 받는 사람 | 알림 종류 | 설정 칸 |
   |---|---|---|---|
-  | 운영진 알림 `staff_new` | 운영자·감독관 | `proposal_submitted`(새 제안·재검토 뒤 다시 낸 제안) · `build_submitted`(새 빌드 제안) · `inquiry_received`(새 문의) | "운영진 알림: 새 제안·새 빌드·새 문의·새 글" (승인 제도를 끈 지금은 "새 상대법·새 빌드·새 문의·새 글") |
+  | 운영진 알림 `staff_new` | 운영자·감독관 | `proposal_submitted`(새 제안·재검토 뒤 다시 낸 제안) · `build_submitted`(새 빌드 제안) · `inquiry_received`(새 문의) | "운영진 알림: 새 제안·새 빌드·새 글·새 문의·새 오류 신고·새 신고" (승인 제도를 끈 지금은 운영자 "새 상대법·새 빌드·새 글·새 문의·새 오류 신고·새 신고", 감독관 "새 문의·새 오류 신고·새 신고". `error_reported`(043)·`report_received`(045)도 이 묶음 — 6-30·6-31) |
   | 내 제안 결과 `my_results` | 제안자 | `proposal_approved` · `proposal_rejected` · `build_approved` · `build_rejected` · `revision_request`(재검토 요청) · `counter_restored` · `build_restored`(다시 공개) | "내 제안 결과: 승인·거절·재검토 요청·다시 공개" |
   그 밖의 종류(재검토 요청 취소, 빌드 숨김, 레벨·칭호, 댓글, 문의 답변, 감독관 지정 등)는 푸시하지 않는다 (사이트 알림에는 그대로 쌓임).
 - **기존 규칙 그대로**: 감독관에게 안 가는 알림(빌드·계정 문의·운영진 제안 등)과 처리한 본인 제외는 알림 줄을 만들 때(`notify`·`notify_staff`) 이미 걸러지므로, 푸시는 "생긴 줄"만 따라간다. **운영자 모드를 끈 운영자**에게는 운영진 알림을 푸시하지 않는다(받는 사람이 지금 감독관이거나 모드가 켜진 운영자일 때만 — `push_wanted`). 운영진 종류가 운영진이 아닌 사람에게 있으면(해제 뒤 등) 보내지 않는다.
@@ -806,6 +806,8 @@ RLS 원칙:
 41. `supabase/migrations/041_terms_sangdaebeop.sql` (화면 용어 "카운터" → "상대법" — 함수의 오류·알림 문구. 확인 조회 `supabase/scripts/check_terms_sangdaebeop.sql` — 실행 전·후)
 42. `supabase/migrations/042_member_admin_new_post_notify.sql` (회원 목록·회원 정보 조회 · 새 글 알림 `post_created`. 확인 조회 `supabase/scripts/check_member_admin.sql` → web-push 재배포 → 새 화면 push)
 43. `supabase/migrations/043_wiki_reports_revert.sql` (오류 신고 `wiki_reports` · 운영자 빌드 수정 기록·되돌리기 · 감독관 빌드 숨기기 · `build_edit_check`. 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행. 확인 조회 `supabase/scripts/check_wiki_reports_revert.sql` — 실행 전·후. **실행 뒤 pg_cron 일정 등록 SQL을 따로 한 번**: `select cron.schedule('purge-wiki-reports', '0 20 * * *', $$select public.purge_wiki_reports()$$);` → 확인 조회 21번 1)
+44. (비움 — 탈퇴 처리용으로 예약. 045는 044 없이 043 다음에 실행해도 된다)
+45. `supabase/migrations/045_report_received_notify.sql` (게시판 신고 → 운영진 알림 `report_received`. 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행. 확인 조회 `supabase/scripts/check_report_received.sql` — 실행 전·후 → web-push 재배포 → 새 화면 push. **pg_cron 필요 없음**)
 - **테스트 데이터 비우기** (마이그레이션 아님, 정식 공개 직전 등 필요할 때): `supabase/scripts/reset_test_data_preview.sql`(읽기만 — 지울·남을 개수)로 확인 → `supabase/scripts/reset_test_data.sql`. 계정(운영자 계정·운영자 모드 상태·테스트용 구글 계정 포함 — 계정은 하나도 지우지 않는다)·프로필·설정값과 트린다미어 상대 말파이트 카운터(지금 문서·공개 빌드·처음 제안)만 남기고, 문의·처리 기록(`moderation_log`, 감독관 지정·해제 기록 포함)·알림·`proposal_reviewing` 등은 모두 비우며, 말파 문서의 수정 기록은 지금 내용 1줄로 정리, 경험치·레벨·칭호는 알림 없이 다시 계산한다. SQL Editor가 RLS를 물으면 **"Run without RLS"**로 실행 ("Run and enable RLS"는 임시 표 `reset_keep`·`reset_admins` 때문에 에러). 운영자 계정이 없거나 끝에서 운영자 role·모드가 바뀌어 있으면 전부 되돌리고 멈춘다. 되돌릴 수 없으므로 순서는 ① 백업 확인 → ② preview → ③ reset → ④ 결과 표 확인.
 - 합쳐서 한 번에 돌리지 않는다: 파일마다 `begin … commit`이라 중간에 실패하면 앞부분만 반영되고, 다시 돌리면 "already exists"가 난다.
 - 새 마이그레이션(010 …)을 만들면 이 목록에 추가한다. `supabase/tests/run.sh`가 빈 DB에 같은 순서로 실행한 뒤 검사용 데이터(`tests/fixtures.sql`)를 넣고 검사한다 (`supabase/tests`는 실제 프로젝트에서 실행하지 않음).
@@ -933,7 +935,7 @@ RLS 원칙:
 - **DB 검사**: `supabase/tests/member_admin_test.sql`.
 
 ### 6-30. 오류 신고 · 빌드 되돌리기 · 운영자 빌드 수정 기록 · 감독관 빌드 숨기기 — 1단계 DB · 2a·2b 화면 (2026-11-11, 043)
-- **결정(2026-11-11)**: 오류 신고는 새 표 `wiki_reports`(게시판 신고 `reports`와 따로) · 정식 회원만(비회원은 화면에서 로그인 안내) · 처리 결과는 신고자에게 알림만(푸시 없음) · 되돌리기는 운영자만 · 되돌린 범위의 수정만 한 사람은 기여자에서 뺌 · 되돌려도 작성자·수정자 알림 없음 · 감독관 숨기기·다시 공개는 **빌드만**(시초가 일반 회원이거나 탈퇴한 것) · 상대법 숨기기·완전 삭제는 운영자만 · 새 글 알림은 운영자만 · 게스트의 남의 빌드 수정 제한 유지 · 게시판 신고 운영진 알림은 이번에 안 붙임.
+- **결정(2026-11-11)**: 오류 신고는 새 표 `wiki_reports`(게시판 신고 `reports`와 따로) · 정식 회원만(비회원은 화면에서 로그인 안내) · 처리 결과는 신고자에게 알림만(푸시 없음) · 되돌리기는 운영자만 · 되돌린 범위의 수정만 한 사람은 기여자에서 뺌 · 되돌려도 작성자·수정자 알림 없음 · 감독관 숨기기·다시 공개는 **빌드만**(시초가 일반 회원이거나 탈퇴한 것) · 상대법 숨기기·완전 삭제는 운영자만 · 새 글 알림은 운영자만 · 게스트의 남의 빌드 수정 제한 유지 · 게시판 신고 운영진 알림은 이번에 안 붙임(→ 045, 6-31).
 - **오류 신고** `report_wiki(상대법, 빌드, 이유, 메모)`: 빌드를 비우면 상대법 전체. 이유 `wrong`(내용이 틀림)·`outdated`(패치가 지남)·`vandal`(장난·훼손)·`duplicate`(같은 빌드가 또 있음)·`other`(기타, 메모 필수). 상대법 전체 신고는 wrong·vandal·other만. 메모 200자. 공개 중인 상대법·빌드만. 남발 막기: 같은 사람·같은 대상의 처리 전 신고 1건(부분 unique 인덱스), 하루(한국 시간) `error_report_daily_cap`(10)건. 처리된 뒤에는 같은 대상에 다시 낼 수 있다(위키라 내용이 바뀜).
 - **운영진 알림** `error_reported`: 운영자 + 감독관, 신고자 본인 제외. 그 대상에 처리 전 신고가 **처음** 생길 때만(같은 빌드에 신고가 쌓여도 알림은 한 번). 운영자 모드를 끄면 읽기 정책·[모두 읽음]·푸시(`push_wanted`)가 034·038·042와 같은 규칙으로 가린다. 푸시 묶음 `staff_new`. 알림에 `counter_id`·`build_id`.
 - **목록·처리**: `staff_wiki_reports(open | handled, 쪽, 쪽 크기)` — 운영진. 처리 전은 오래된 순, 처리된 것은 최근 처리 순. 신고자는 운영자에게만(감독관에게는 null). 같은 대상의 처리 전 신고 수(`same_open`), 내가 낸 신고(`mine`). `handle_wiki_report(신고, resolved | dismissed, 메모, 같은 대상 함께)` — 운영진, 메모 필수, 감독관은 자기가 낸 신고 처리 불가. 처리 기록 `resolve_report`·`dismiss_report`(대상 `wiki_report`). 신고자에게 `error_report_handled`("처리했습니다. 고맙습니다." / "검토했지만 고칠 내용이 없어 기각했습니다." — 메모는 안 보냄, 푸시 없음). 처리 대기 건수 `admin_pending_counts()`에 `wiki_reports`(감독관은 자기가 낸 것 제외).
@@ -965,3 +967,19 @@ RLS 원칙:
   - 감독관 운영자 페이지에 "숨긴 빌드" 칸(읽기 정책이 처리할 수 있는 것만 돌려줌) + [다시 공개](메모 필수). 감독관은 누가 숨겼는지 읽을 수 없어 버튼은 늘 보이고, 운영자가 숨긴 것이면 DB 안내("운영자가 숨긴 것은 감독관이 다시 공개할 수 없습니다.")가 나온다. [자세히]·[수정 기록] 링크는 운영자만. 운영자 숨긴 빌드 줄에 [수정 기록] 링크.
   - 화면 검사 `src/test/buildHistory.test.jsx`.
 - **DB 검사**: `supabase/tests/wiki_report_revert_test.sql` (`admin_convenience_test`의 처리 대기 건수에 `wiki_reports` 키, `moderator_test`의 운영자 전용 함수 목록에서 `hide_build`·`restore_build`를 운영진 함수로 옮김).
+
+### 6-31. 게시판 신고 → 운영진 알림 (2026-11-11, 045)
+- **결정(2026-11-11)**: 글·댓글·문서 댓글 신고(`reports`)가 들어오면 운영진에게 새 알림 종류 `report_received`. 오류 신고 `error_reported`(043)와 같은 규칙, 있던 `notifications`·`push_group`·`push_targets`·운영자 모드 규칙을 그대로 재사용. 새 표 없음(pg_cron 필요 없음 — 알림 정리 90일은 종류와 상관없이 있던 일정이 한다).
+- **만드는 곳**: `reports` 표의 insert 트리거 `reports_notify_staff`(`notify_staff_new_report`, 안쪽 함수 — 아무도 직접 못 부름). `report_post`·`report_comment`·`report_doc_comment` 어느 길이든 빠지지 않고, 화면은 알림을 만들지 않는다. 있던 함수·표는 바꾸지 않는다.
+- **받는 사람**: 운영자 + 감독관, 신고자 본인 제외. 단 **감독관에게는 감독관이 처리할 수 있는 대상일 때만**(글·댓글 작성자가 일반 회원이거나 탈퇴 — 030 `moderatable_author`와 같은 기준. 운영진이 쓴 글의 신고는 감독관 신고 목록에 안 나오므로 알림도 안 감).
+- **"처음"만**: 같은 글·댓글·문서 댓글에 처리 전(open) 신고가 이미 있으면 안 보낸다. 대상별 잠금(`pg_advisory_xact_lock`)으로 동시 신고도 한 번만. 숨김·삭제·기각으로 처리 전 신고가 0이 된 뒤 *다른 사람*이 새로 신고하면 새 "처음"으로 보고 다시 보낸다.
+- **문장·연결**: 「새 신고가 들어왔습니다. (글)」·「(댓글)」·「(문서 댓글)」 — 이유는 문장에 안 넣는다(처음 신고의 이유만 보여 주면 오해). 알림에 글·댓글이면 `post_id`, 문서 댓글이면 `counter_id`. 누르면 `/admin/reports`(신고 화면 "글·댓글 신고" 탭, 기본 탭 — `lib/notifications.js`·web-push Edge Function 둘 다). 문서 댓글만 둘째 줄에 「[문서 댓글] 매치업」.
+- **운영자 모드·푸시**: 읽기 정책·`mark_all_notifications_read`에 `report_received`를 더해 운영자 모드를 끄면 목록·빨간 점·[모두 읽음]에서 빠진다(034·038·042·043과 같은 규칙). 푸시 묶음 `staff_new`. 옛 화면은 모르는 종류를 종 모양 + 문장으로만 보여 주고 이동하지 않는다(042와 같은 방식). 푸시 설정 문구: 운영자 "새 상대법·새 빌드·새 글·새 문의·새 오류 신고·새 신고" / 감독관 "새 문의·새 오류 신고·새 신고".
+- **예외 조사 결과**:
+  - 자기 글·댓글 신고: `report_*`가 이미 거부(23514) → 신고 줄이 없으니 알림도 없음. 같은 사람의 재신고도 unique 인덱스가 거부(처리 뒤에도). 바꾸지 않음.
+  - 이미 처리된 글: 숨기거나 지운 글·댓글은 `report_*`가 거부(P0002). 기각된 글·숨겼다 다시 공개한 글에 다른 사람이 신고하면 처리 전 신고가 0이라 새 알림.
+  - 운영진이 신고자: 본인만 빼고 나머지 운영진에게. 운영자 글 신고는 운영자에게만(감독관 제외). 감독관 글 신고도 운영자에게만.
+  - 신고자 탈퇴: 신고 줄이 cascade로 사라지고 이미 보낸 알림은 남는다(누르면 신고 목록). 글쓴이가 신고된 글을 스스로 지우면 처리 전 신고가 기각되고(015) 알림은 안 읽은 채 남는다. 비회원은 `reports_no_guest`가 이미 막음.
+  - 045 실행 전에 쌓여 있던 처리 전 신고에는 알림을 소급해서 보내지 않는다(그 대상에 새 신고가 와도 "처음"이 아니라 알림 없음 — 신고 목록·처리 대기 건수로 처리).
+- **DB 검사**: `supabase/tests/report_received_test.sql`. 확인 조회 `supabase/scripts/check_report_received.sql`(맨 끝이 조회, 기존 알림 수·신고 수를 실행 전후 비교). `reset_test_data*.sql`은 새 표가 없어 지우는 범위는 그대로(알림·신고를 이미 전부 지움)이고, 미리보기·결과 표에 신고 알림 수 줄만 더했다.
+- **화면 검사**: `src/test/push.test.jsx`(알림 이동·푸시 문구·설정 문구)·`src/test/tone.test.js`(DB 문장·설정 문구 말투).

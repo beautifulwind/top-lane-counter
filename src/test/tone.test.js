@@ -58,3 +58,17 @@ test('바꾼 말 뒤 조사가 맞다 ("상대법를·상대법는·상대법가
   }
   expect(found).toEqual([]);
 });
+
+// 045 게시판 신고 운영진 알림: 알림 문장(DB)·푸시 설정 문구가 "~합니다"체이고 용어가 맞다
+test('새 신고 알림 문구 (045): DB 문장은 "~합니다"체, 푸시 설정 문구는 정해진 순서와 용어', () => {
+  const sql = readFileSync('supabase/migrations/045_report_received_notify.sql', 'utf8');
+  const message = /format\('(새 신고가 들어왔습니다\. \(%s\))'/.exec(sql);
+  expect(message?.[1]).toBe('새 신고가 들어왔습니다. (%s)');
+  // 코드(주석 아님) 안의 한글 문장에 "~해요"체 말끝이 없다
+  const code = sql.split('\n').filter((l) => !/^\s*--/.test(l)).join('\n');
+  expect([...code.matchAll(/[가-힣]+요/g)].map(([w]) => w).filter((w) => !ALLOWED.has(w))).toEqual([]);
+  // 푸시 설정 문구: 운영자 "새 상대법·새 빌드·새 글·새 문의·새 오류 신고·새 신고" / 감독관 "새 문의·새 오류 신고·새 신고"
+  const settings = readFileSync('src/components/PushSettings.jsx', 'utf8');
+  expect(settings).toContain('운영진 알림: 새 상대법·새 빌드·새 글·새 문의·새 오류 신고·새 신고');
+  expect(settings).toContain("'운영진 알림: 새 문의·새 오류 신고·새 신고'");
+});

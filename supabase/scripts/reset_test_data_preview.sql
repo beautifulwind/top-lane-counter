@@ -67,6 +67,7 @@ rows (ord, what, to_delete, to_keep, note) as (
          case when to_regclass('public.wiki_last_write') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.wiki_last_write', false, true, '')))[1]::text::bigint end,
          0, null
   union all select 18, 'notifications (알림)', (select count(*) from public.notifications), 0, null
+  union all select 18.05, '  └ 그중 게시판 신고 알림 (report_received, 045 실행 전이면 0)', (select count(*) from public.notifications where kind = 'report_received'), 0, '알림과 함께 모두 지움'
   union all select 18.1, 'inquiries (문의하기 문의·답변)', (select count(*) from public.inquiries), 0, '모두 비움'
   union all select 18.2, 'inquiry_quota (문의 하루 개수)', (select count(*) from public.inquiry_quota), 0, '모두 비움'
   union all select 19, 'xp_events (경험치 기록)', (select count(*) from public.xp_events), 0, '남은 데이터로 다시 계산해 새로 쌓음'

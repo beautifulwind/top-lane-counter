@@ -29,6 +29,8 @@ const STAFF_NEW = {
   post_created: { icon: 'comment', to: (n) => (n.post_id ? `/board/${n.post_id}` : null) },
   // 043: 상대법·빌드 오류 신고 (운영진, 같은 대상의 첫 신고만) → 신고 화면 "오류 신고" 탭
   error_reported: { icon: 'flag', label: (n) => (n.build_id ? '빌드' : '상대법'), to: () => '/admin/reports?tab=wiki' },
+  // 045: 게시판 신고 — 글·댓글·문서 댓글 (운영진, 같은 대상의 처음 신고만) → 신고 화면 "글·댓글 신고" 탭(기본 탭). 문서 댓글만 둘째 줄에 매치업
+  report_received: { icon: 'flag', label: '문서 댓글', to: () => '/admin/reports' },
 };
 const wikiPath = (n) => {
   const c = n.counter ?? n.build?.counter;

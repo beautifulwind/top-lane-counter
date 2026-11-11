@@ -91,7 +91,7 @@ test('휴대폰 알림 설정: 운영진은 "새 상대법·새 빌드·새 문�
   asOperator();
   start('/me/settings');
   const kinds = await screen.findByRole('group', { name: /받을 알림/ });
-  expect(within(kinds).getByRole('checkbox', { name: /운영진 알림: 새 상대법·새 빌드·새 문의/ })).toBeDefined();
+  expect(within(kinds).getByRole('checkbox', { name: /운영진 알림: 새 상대법·새 빌드·새 글·새 문의·새 오류 신고·새 신고/ })).toBeDefined();
   expect(within(kinds).getByRole('checkbox', { name: /내 상대법·빌드 다시 공개/ })).toBeDefined();
   expect(screen.queryByText(/승인·거절·재검토/)).toBeNull();
   expect(screen.queryByText(/새 제안/)).toBeNull();

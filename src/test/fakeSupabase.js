@@ -211,7 +211,7 @@ const roleNow = () => meNow()?.role;
 // 034: DB의 is_admin·is_staff처럼 운영자 모드를 끈 운영자는 운영진이 아니다 (operator_mode가 없으면 켜짐)
 const isAdminNow = () => roleNow() === 'admin' && meNow()?.operator_mode !== false;
 const isStaffNow = () => isAdminNow() || roleNow() === 'moderator';
-const STAFF_NOTICE_KINDS = ['proposal_submitted', 'build_submitted', 'inquiry_received', 'matchup_created', 'build_created', 'error_reported'];
+const STAFF_NOTICE_KINDS = ['proposal_submitted', 'build_submitted', 'inquiry_received', 'matchup_created', 'build_created', 'error_reported', 'report_received'];
 const operatorModeOffNow = () => roleNow() === 'admin' && meNow()?.operator_mode === false;
 /** RLS 흉내: 숨긴 글·댓글(숨긴 글의 댓글 포함)은 운영자에게만 */
 function visibleRows(table) {

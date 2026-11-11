@@ -156,7 +156,7 @@ test('로그아웃하면 이 기기 알림 주소를 지우고 구독을 끊는�
 test('운영자·감독관: 운영진 알림 칸이 보이고, 바꾸면 내 설정으로 저장된다', async () => {
   fakeLogin('u-mod', { nickname: '감독', role: 'moderator' });
   start('/me/settings');
-  const staff = await screen.findByRole('checkbox', { name: '운영진 알림: 새 문의·새 오류 신고' });
+  const staff = await screen.findByRole('checkbox', { name: '운영진 알림: 새 문의·새 오류 신고·새 신고' });
   expect(staff).toBeChecked();
   fireEvent.click(staff);
   await waitFor(() => expect(TABLES.push_settings).toEqual([expect.objectContaining({ user_id: 'u-mod', staff_new: false, my_results: true })]));
@@ -168,7 +168,7 @@ test('운영자·감독관: 운영진 알림 칸이 보이고, 바꾸면 내 설
 test('운영자 모드를 끈 운영자: 운영진 알림이 오지 않는다는 안내 (운영자 문구는 새 상대법·새 빌드·새 글까지)', async () => {
   fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, operator_mode: false });
   start('/me/settings');
-  expect(await screen.findByRole('checkbox', { name: /운영진 알림: 새 상대법·새 빌드·새 문의·새 글·새 오류 신고/ })).toBeDefined();
+  expect(await screen.findByRole('checkbox', { name: /운영진 알림: 새 상대법·새 빌드·새 글·새 문의·새 오류 신고·새 신고/ })).toBeDefined();
   expect(await screen.findByText('운영자 모드를 끈 동안에는 오지 않습니다.')).toBeDefined();
 });
 
@@ -242,6 +242,19 @@ describe('describePush: 잠금 화면 내용이 알림 목록과 같은 곳으�
     const push = describePush(n);
     expect(push).toMatchObject({ title: '운영진 알림', body: n.message, url: '/admin/reports?tab=wiki', tag: 'n-5' });
     expect(describeNotification({ ...n, counter: null, build: null }).to).toBe(push.url);
+  });
+  test('report_received (045): 신고 화면 "글·댓글 신고" 탭(기본 탭)으로 — 알림 목록과 같은 곳, 옛 화면이 모르는 종류는 이동 없음', () => {
+    const n = { id: 6, kind: 'report_received', message: '새 신고가 들어왔습니다. (글)', proposal_id: null, build_id: null, post_id: 31 };
+    const push = describePush(n);
+    expect(push).toMatchObject({ title: '운영진 알림', body: n.message, url: '/admin/reports', tag: 'n-6' });
+    expect(describeNotification({ ...n, counter: null, post: null }).to).toBe(push.url);
+    // 문서 댓글 신고는 둘째 줄에 [문서 댓글] 매치업
+    const doc = { ...n, message: '새 신고가 들어왔습니다. (문서 댓글)', post_id: null, counter_id: 1, counter: { target_champion: 'Darius', counter_champion: 'Quinn', status: 'approved' } };
+    expect(describeNotification(doc, (id) => ({ Darius: '다리우스', Quinn: '퀸' })[id])).toMatchObject({
+      title: doc.message, subject: '[문서 댓글] 퀸으로 다리우스 이기는 법', to: '/admin/reports',
+    });
+    // 이 파일 이전 배포는 모르는 종류를 종 모양 + 문장으로만 보여 주고 이동하지 않는다 (fallback)
+    expect(describeNotification({ kind: 'some_future_kind', message: '새 알림' })).toMatchObject({ icon: 'bell', title: '새 알림', to: null });
   });
   test('긴 메모는 잘라서 보낸다, 메모가 없으면 안내 문구', () => {
     expect([...describePush({ id: 1, kind: 'proposal_rejected', message: '가'.repeat(300) }).body].length).toBe(120);

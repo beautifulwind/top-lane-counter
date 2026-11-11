@@ -63,6 +63,8 @@ const STAFF: Record<string, (n: PushNotice) => string> = {
   post_created: (n) => (n.post_id ? `/board/${n.post_id}` : '/notifications'),
   // 043: 상대법·빌드 오류 신고 → 신고 화면 "오류 신고" 탭 (처리 결과 error_report_handled는 휴대폰 알림을 보내지 않는다)
   error_reported: () => '/admin/reports?tab=wiki',
+  // 045: 게시판 신고(글·댓글·문서 댓글) → 신고 화면 "글·댓글 신고" 탭 (기본 탭)
+  report_received: () => '/admin/reports',
 };
 function matchupUrl(n: PushNotice): string {
   if (!n.target_champion || !n.counter_champion) return '/notifications';
