@@ -4,6 +4,7 @@ import { COMMENT_MAX, beginEdit } from '../api/board';
 import { canEditNow, fmtTime, useNow } from '../lib/editWindow';
 import { BoardByline, CharCount, ConfirmInline, HiddenBand, ReportForm } from './BoardParts';
 import NoteForm from './NoteForm';
+import MoreMenu from './MoreMenu';
 import { canModerate, canVote, canWrite, isGuest } from '../lib/auth';
 import { DEFAULT_MEDIA_RULES, finishMedia } from '../api/media';
 import { MediaGallery, MediaPicker, mediaToItems, sameMedia } from './Media';
@@ -13,7 +14,9 @@ import { MessageIcon } from './Icons';
 
 /**
  * 댓글 칸 (자유게시판 글, 매치업 문서 공통 — SPEC 6-5, 6-6, 고치기 시간 6-7).
- * ops: POST_COMMENT_OPS | DOC_COMMENT_OPS (kind, create(parentId, body), edit, remove, report, hide, restore)
+ * ops: POST_COMMENT_OPS | DOC_COMMENT_OPS (kind, create(parentId, body), edit, remove, report, hide, restore, staffRemove)
+ * 댓글마다 ⋮ 메뉴 (040): 내 댓글 [고치기][지우기], 남의 댓글 [신고], 운영진 [숨기기]·[운영진 삭제](메모 필수).
+ * 숨긴 댓글의 [다시 공개]는 메뉴 밖 띠에. 지운 댓글은 아무에게도 안 보인다.
  * parentId: 글 id 또는 카운터 id
  * open: 새 댓글을 달 수 있나 (글·문서가 보이는 상태), closedHint: 못 달 때 안내 (없으면 안내 없이 폼만 숨김)
  * live: 글·문서가 보이는 상태인가 (아니면 고치기·신고 숨김 — 숨긴 글·카운터는 운영자만 봄)
@@ -58,7 +61,7 @@ export default function CommentThread({
 }
 
 function Comment({ comment: c, ops, live, rules, mediaRules, now, auth, onDone, onReload }) {
-  const [mode, setMode] = useState(null); // 'edit' | 'delete' | 'report' | 'hide'
+  const [mode, setMode] = useState(null); // 'edit' | 'delete' | 'report' | 'hide' | 'staffDelete'
   const [body, setBody] = useState(c.body);
   const [media, setMedia] = useState(() => mediaToItems(c.media));
   const editRef = useRef(null);
@@ -118,7 +121,24 @@ function Comment({ comment: c, ops, live, rules, mediaRules, now, auth, onDone, 
       {c.status === 'hidden' && (
         <HiddenBand row={c} what="댓글" onRestore={(note) => ops.restore(c.id, note)} onDone={onDone} />
       )}
-      <BoardByline row={c} />
+      <div className="comment-head">
+        <BoardByline row={c} />
+        {mode === null && (
+          <MoreMenu
+            label="댓글 더보기"
+            items={[
+              editable && { label: '고치기', onSelect: startEdit, disabled: busy },
+              mine && { label: '지우기', danger: true, onSelect: () => setMode('delete') },
+              signedIn && !mine && visible && !canHide && { label: '신고', onSelect: () => setMode('report') },
+              isGuest(auth) && !mine && visible && {
+                label: '신고', disabled: true, hint: '비회원은 신고할 수 없습니다. 마이페이지에서 구글·카카오를 연결해 주세요.',
+              },
+              canHide && c.status === 'visible' && { label: '숨기기', op: true, onSelect: () => setMode('hide') },
+              canHide && !mine && ops.staffRemove && { label: '운영진 삭제', op: true, danger: true, onSelect: () => setMode('staffDelete') },
+            ]}
+          />
+        )}
+      </div>
       {mode === 'edit' ? (
         <form className="comment-form media-drop-zone" ref={editRef} onSubmit={save} onKeyDown={(e) => e.key === 'Escape' && !busy && cancelEdit()}>
           <label htmlFor={`edit-comment-${c.id}`} className="sr-only">댓글 고치기</label>
@@ -146,18 +166,6 @@ function Comment({ comment: c, ops, live, rules, mediaRules, now, auth, onDone, 
           <MediaGallery media={c.media} label="댓글 사진" />
         </>
       )}
-      {mode === null && (
-        <div className="comment-actions">
-          {editable && <button type="button" className="link-btn" onClick={startEdit} disabled={busy}>고치기</button>}
-          {mine && <button type="button" className="link-btn" onClick={() => setMode('delete')}>지우기</button>}
-          {signedIn && !mine && visible && !canHide && (
-            <button type="button" className="link-btn" onClick={() => setMode('report')}>신고</button>
-          )}
-          {canHide && c.status === 'visible' && (
-            <button type="button" className="link-btn op-link" onClick={() => setMode('hide')}>숨기기</button>
-          )}
-        </div>
-      )}
       {mode === null && error && <p className="form-error" role="alert">{error}</p>}
       {mode === 'delete' && (
         <ConfirmInline
@@ -175,6 +183,20 @@ function Comment({ comment: c, ops, live, rules, mediaRules, now, auth, onDone, 
             await ops.report(c.id, reason, detail);
             setMode(null);
             onDone('신고했습니다. 운영진이 확인하겠습니다.');
+          }}
+        />
+      )}
+      {mode === 'staffDelete' && (
+        <NoteForm
+          id={`staff-delete-${ops.kind}-${c.id}`}
+          label="삭제 사유 (필수, 작성자에게 보입니다)"
+          confirmLabel="삭제 확정"
+          busyLabel="삭제하는 중…"
+          onCancel={() => setMode(null)}
+          onSubmit={async (note) => {
+            await ops.staffRemove(c.id, note);
+            setMode(null);
+            onDone('댓글을 삭제했습니다. 작성자에게 알림이 갔습니다.');
           }}
         />
       )}

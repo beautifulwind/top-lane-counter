@@ -101,6 +101,9 @@ function MemberInfo({ userId }) {
       <li>등급 {ROLE_LABEL[data.role] ?? data.role} · 레벨 {data.level}{data.main_title ? ` · 대표 칭호 ${titleName(data.main_title)}` : ''}</li>
       <li>얻은 칭호 {titles.length ? titles.join(', ') : '없음'}</li>
       <li>활동 제안 {data.proposals}개 · 글 {data.posts}개 · 빌드 {data.builds}개 · 댓글 {data.comments}개</li>
+      {(data.deleted_posts > 0 || data.deleted_comments > 0) && (
+        <li>지운 글 {data.deleted_posts}개 · 지운 댓글 {data.deleted_comments}개 <small className="hint">(1년 보관, 운영자만)</small></li>
+      )}
     </ul>
   );
 }

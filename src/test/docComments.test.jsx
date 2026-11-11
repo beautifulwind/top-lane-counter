@@ -6,6 +6,7 @@ import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
 import { TABLES, fakeComment, fakeDocComment, fakeLogin, fakePost, fakeState } from './fakeSupabase';
 import { canEditNow, editDeadline } from '../lib/editWindow';
+import { moreNames, openMore, pickMore } from './moreMenu';
 
 const COUNTERS = TABLES.counters.map((c) => ({ ...c }));
 beforeEach(() => {
@@ -62,7 +63,7 @@ test('문서 댓글 달기 → 바로 보임 / 남의 댓글은 신고 / 빌드 
   expect(document.querySelectorAll('.build-card .comment-list')).toHaveLength(0);
 
   const other = within(within(sec).getByRole('list', { name: '댓글' })).getAllByRole('listitem')[0];
-  fireEvent.click(within(other).getByRole('button', { name: '신고' }));
+  pickMore(within(other), '신고', '댓글 더보기');
   const reasons = within(other).getAllByRole('radio').map((r) => r.closest('label').textContent);
   expect(reasons.map((t) => t.split(' (')[0])).toEqual(['욕설·인신공격', '혐오·비하', '신상 공개·개인정보', '도배·광고', '기타']);
   expect(reasons[1]).toContain('실존 인물·고인 비하');
@@ -81,10 +82,9 @@ test('내 문서 댓글: 10분 안이면 [고치기](유예 받고 마감 표시
   start(MATCHUP);
   const sec = await section();
   const [fresh, old] = within(within(sec).getByRole('list', { name: '댓글' })).getAllByRole('listitem');
-  expect(within(old).queryByRole('button', { name: '고치기' })).toBeNull();
-  expect(within(old).getByRole('button', { name: '지우기' })).toBeDefined();
+  expect(moreNames(within(old), '댓글 더보기')).toEqual(['지우기']);
 
-  fireEvent.click(within(fresh).getByRole('button', { name: '고치기' }));
+  pickMore(within(fresh), '고치기', '댓글 더보기');
   const box = await within(fresh).findByLabelText('댓글 고치기');
   expect(rpcs('begin_edit')).toEqual([{ p_kind: 'doc_comment', p_id: 1 }]);
   expect(within(fresh).getByText(/까지 저장할 수 있습니다/)).toBeDefined();
@@ -103,7 +103,7 @@ test('[고치기]를 누를 때 이미 마감이면 안내만', async () => {
   start(MATCHUP);
   const sec = await section();
   fakeState.boardError = '고칠 수 있는 시간이 지났습니다. 지우고 다시 쓸 수는 있습니다.';
-  fireEvent.click(within(sec).getByRole('button', { name: '고치기' }));
+  pickMore(within(sec), '고치기', '댓글 더보기');
   expect((await within(sec).findByRole('alert')).textContent).toContain('고칠 수 있는 시간이 지났습니다.');
   expect(within(sec).queryByLabelText('댓글 고치기')).toBeNull();
 });
@@ -114,11 +114,9 @@ test('게시판 글: 1시간 지나면 [고치기] 없음 / 고치기 주소로 
   fakeLogin('u-old');
   const { unmount } = start('/board/1');
   await screen.findByText('본문 1');
-  expect(within(document.querySelector('.post-actions')).getByRole('button', { name: '지우기' })).toBeDefined();
-  expect(screen.queryByRole('link', { name: '고치기' })).toBeNull();
+  expect(moreNames(screen, '글 더보기')).toEqual(['지우기']);
   const c = within(screen.getByRole('list', { name: '댓글' })).getByRole('listitem');
-  expect(within(c).getByRole('button', { name: '지우기' })).toBeDefined();
-  expect(within(c).queryByRole('button', { name: '고치기' })).toBeNull();
+  expect(moreNames(within(c), '댓글 더보기')).toEqual(['지우기']);
   unmount();
 
   fakeState.boardError = '고칠 수 있는 시간이 지났습니다. 지우고 다시 쓸 수는 있습니다.';
@@ -132,8 +130,8 @@ test('운영자: 문서 댓글 [숨기기](메모 필수) → 숨김 띠 → [�
   asOp();
   start(MATCHUP);
   const sec = await section();
-  const hide = within(sec).getByRole('button', { name: '숨기기' });
-  expect(hide.classList.contains('op-link')).toBe(true);
+  const hide = openMore(within(sec), '댓글 더보기').getByRole('menuitem', { name: '숨기기' });
+  expect(hide.classList.contains('op')).toBe(true);
   fireEvent.click(hide);
   fireEvent.change(within(sec).getByLabelText('숨기는 사유 (필수, 작성자에게 보입니다)'), { target: { value: '욕설' } });
   fireEvent.click(within(sec).getByRole('button', { name: '숨기기 확정' }));

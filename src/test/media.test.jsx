@@ -6,6 +6,7 @@ import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
 import { TABLES, fakeComment, fakeGuestLogin, fakeLogin, fakePost, fakeState } from './fakeSupabase';
 import { ReportForm } from '../components/BoardParts';
+import { pickMore } from './moreMenu';
 
 // 브라우저 줄이기(canvas)는 jsdom에 없어서 흉내: 사진은 webp로, 큰 GIF는 문구로 막는다
 vi.mock('../lib/imageCompress', async (orig) => {
@@ -157,7 +158,7 @@ test('댓글: 사진 하나만 붙여 올리기, 고칠 때 빼기, 서명 못 �
 
   const mine = within(screen.getByRole('list', { name: '댓글' })).getAllByRole('listitem').find((li) => li.id === 'comment-801');
   expect(within(mine).getAllByRole('img', { name: '댓글 사진 1' })).toHaveLength(1);
-  fireEvent.click(within(mine).getByRole('button', { name: '고치기' }));
+  pickMore(within(mine), '고치기', '댓글 더보기');
   fireEvent.click(await within(mine).findByRole('button', { name: '사진 1 빼기' }));
   expect(within(mine).getByRole('button', { name: '고친 내용 저장' }).disabled).toBe(true); // 글도 사진도 없으면 못 저장
   fireEvent.change(within(mine).getByLabelText('댓글 고치기'), { target: { value: '글로 바꿈' } });
@@ -285,7 +286,7 @@ test('댓글: 댓글 칸에 붙여넣기·끌어다 놓기로 첨부 (1개까지
   expect(await within(newForm).findByRole('alert')).toHaveTextContent('사진은 1개까지 붙일 수 있습니다.');
 
   const mine = document.getElementById('comment-11');
-  fireEvent.click(within(mine).getByRole('button', { name: '고치기' }));
+  pickMore(within(mine), '고치기', '댓글 더보기');
   const editForm = (await within(mine).findByLabelText('댓글 고치기')).closest('form');
   dropOn(editForm, [gif()]);
   await vi.waitFor(() => expect(within(editForm).getAllByRole('img', { name: /붙일 사진/ })).toHaveLength(1));

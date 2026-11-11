@@ -36,6 +36,8 @@ const BOARD_ICON = {
   post_comment: 'comment', doc_comment: 'comment',
   post_hidden: 'hidden', comment_hidden: 'hidden', doc_comment_hidden: 'hidden',
   post_restored: 'shown', comment_restored: 'shown', doc_comment_restored: 'shown',
+  // 040: 운영진 삭제 (지운 글은 열 수 없어 링크 없음, 댓글은 그 글·문서로)
+  post_deleted: 'ban', comment_deleted: 'ban', doc_comment_deleted: 'ban',
 };
 
 /** 칭호 알림 문장("칭호 '장군'을 얻었습니다…")에서 칭호 키 */
@@ -90,7 +92,7 @@ export function describeNotification(n, name = (id) => id) {
     const [title, memo] = (n.message ?? '').split(' 메모: ');
     const docLink = n.counter?.status === 'approved'
       ? `/champion/${n.counter.target_champion}/counter/${n.counter.counter_champion}#comments` : null;
-    const postLink = n.post_id && n.kind !== 'post_hidden' ? `/board/${n.post_id}` : null; // 숨긴 글은 열 수 없다
+    const postLink = n.post_id && n.kind !== 'post_hidden' && n.kind !== 'post_deleted' ? `/board/${n.post_id}` : null; // 숨긴·지운 글은 열 수 없다
     return {
       icon: BOARD_ICON[n.kind],
       title,

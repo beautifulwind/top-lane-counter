@@ -231,7 +231,7 @@ select t.fails('기각된 뒤에도 같은 사람은 다시 신고 못 함', for
 reset role;
 
 -- ===================================================================
--- 6. 글 지우기: 남의 댓글이 있으면 "삭제된 글"로 남김 / 없으면 완전히 지움
+-- 6. 글 지우기 (040): 지움 표시만 — 누구에게도 안 보이고, 달린 남의 댓글도 함께 안 보임 (경험치는 유지)
 -- ===================================================================
 set role authenticated;
 set request.jwt.claim.sub = :'D';
@@ -241,47 +241,41 @@ reset role;
 insert into reports (reporter_id, post_id, reason) values (:'A', :p1, 'abuse');  -- 열린 신고 하나
 set role authenticated;
 set request.jwt.claim.sub = :'B';
-select t.ok('남의 댓글 있음 → soft', public.delete_my_post(:p1) = 'soft');
-select t.ok('삭제된 글: 제목·본문 비움, 추천 0, 댓글은 그대로 보임',
-  (select title = '' and body = '' and deleted_at is not null and up_count = 0 from posts where id = :p1)
-  and (select count(*) = 3 from post_comments where post_id = :p1));
+select t.ok('지우기 → hard (옛 화면 호환 값)', public.delete_my_post(:p1) = 'hard');
+reset role;
+select t.ok('지운 글: 내용은 보관, 지움 표시(작성자), 추천 0, 댓글 행은 그대로',
+  (select title <> '' and deleted_at is not null and delete_kind = 'author' and deleted_by = :'B' and up_count = 0 from posts where id = :p1)
+  and (select count(*) = 3 from post_comments where post_id = :p1 and deleted_at is null));
+set role authenticated;
+set request.jwt.claim.sub = :'B';
+select t.ok('작성자에게도 글·댓글이 안 보임',
+  not exists (select 1 from posts where id = :p1) and not exists (select 1 from post_comments where post_id = :p1));
 select t.fails('삭제된 글 다시 지우기', format('select public.delete_my_post(%s)', :p1), '이미 삭제된 글');
 select t.fails('삭제된 글 고치기', format('select public.edit_post(%s, %L, %L)', :p1, 'x', 'y'), '삭제된 글입니다');
 set request.jwt.claim.sub = :'D';
 select t.fails('삭제된 글에 댓글', format('select public.create_comment(%s, %L)', :p1, 'x'), '삭제된 글에는 댓글을');
 select t.fails('삭제된 글 추천', format('select public.vote_post(%s)', :p1), '추천할 수 없는 글');
 select t.fails('삭제된 글 신고', format('select public.report_post(%s, %L)', :p1, 'spam'), '신고할 수 없는 글');
+select t.fails('삭제된 글의 댓글 고치기', format('select public.edit_comment(%s, %L)', :c1, 'x'), '댓글을 찾지 못했습니다');
+select t.fails('삭제된 글의 댓글 신고', format('select public.report_comment(%s, %L)', :c2, 'spam'), '신고할 수 없는 댓글');
+set request.jwt.claim.sub = :'A';
+select t.ok('운영자에게도 안 보임', not exists (select 1 from posts where id = :p1) and not exists (select 1 from post_comments where post_id = :p1));
 reset role;
 select t.ok('열린 신고는 기각 (작성자가 글을 지움)',
   (select count(*) = 0 from reports where post_id = :p1 and status = 'open')
   and (select count(*) = 1 from reports where post_id = :p1 and handled_note = '작성자가 글을 지움'));
-select t.ok('글 경험치 회수 (글 삭제), 댓글 경험치는 그대로',
+select t.ok('글 경험치 회수 (글 삭제), 남의 댓글 경험치는 그대로',
   pg_temp.xp(:'B') = 1 and pg_temp.xp(:'D') = 1 and pg_temp.xp(:'F') = 1
   and (select reason = '글 삭제' from xp_events where user_id = :'B' and source_key = 'post:' || :p1 order by id desc limit 1));
-select t.ok('목록에 "삭제된 글"로 남는다',
-  (select (r ->> 'deleted')::boolean and r ->> 'title' = '' from jsonb_array_elements(public.board_page() -> 'rows') r));
-
--- 남은 댓글이 모두 없어지면 완전히 지운다
-set role authenticated;
-set request.jwt.claim.sub = :'B';
-select public.delete_my_comment(:c_self);
-set request.jwt.claim.sub = :'D';
-select public.delete_my_comment(:c1);
-reset role;
-select t.ok('아직 에프 댓글 남음 → 글 남음', (select count(*) = 1 from posts where id = :p1));
-set role authenticated;
-set request.jwt.claim.sub = :'F';
-select public.delete_my_comment(:c2);
-reset role;
-select t.ok('마지막 댓글 지움 → 글도 완전히 지움', (select count(*) = 0 from posts where id = :p1));
+select t.ok('목록·개수에 없음', (public.board_page() ->> 'total')::int = 0 and jsonb_array_length(public.board_page() -> 'rows') = 0);
 
 set role authenticated;
 set request.jwt.claim.sub = :'B';
 select public.create_post('혼자 쓴 글', '본문') as p2 \gset
-select public.create_comment(:p2, '내 댓글');
-select t.ok('내 댓글만 있으면 → hard', public.delete_my_post(:p2) = 'hard');
+select public.create_comment(:p2, '내 댓글') as c_p2 \gset
+select t.ok('지우기 → hard', public.delete_my_post(:p2) = 'hard');
 reset role;
-select t.ok('완전히 지움 (내 댓글도)', (select count(*) = 0 from posts where id = :p2) and (select count(*) = 0 from post_comments where post_id = :p2));
+select t.ok('지운 글·댓글 행은 보관 (1년 뒤 정리)', (select count(*) = 1 from posts where id = :p2) and (select count(*) = 1 from post_comments where post_id = :p2));
 
 -- ===================================================================
 -- 7. 하루 상한 (글 5개 = 25, 댓글 10개 = 10) — 숨기면 다음 것이 들어온다
@@ -366,8 +360,8 @@ set request.jwt.claim.sub = :'F';
 select public.create_comment(:p_quit, '남는 댓글');
 reset role;
 delete from auth.users where id = :'B';
-select t.ok('탈퇴: 댓글 달린 글은 삭제된 글로 (작성자 비움)',
-  (select author_id is null and deleted_at is not null and title = '' from posts where id = :p_quit));
+select t.ok('탈퇴: 댓글 달린 글은 내용을 지우고 지움 표시 (작성자 비움, 안 보임)',
+  (select author_id is null and deleted_at is not null and delete_kind = 'author' and title = '' and body = '' from posts where id = :p_quit));
 select t.ok('탈퇴: 나머지 글은 지움', (select count(*) = 0 from posts where title like '목록 %'));
 select t.ok('남은 댓글 경험치 그대로', (select count(*) = 1 from post_comments where post_id = :p_quit));
 

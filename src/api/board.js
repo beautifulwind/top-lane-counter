@@ -60,7 +60,7 @@ async function rpc(name, args, fallback) {
   return data;
 }
 
-/** 목록: { total, size, rows: [{ id, title, status, deleted, comment_count, up_count, created_at, edited_at, author }] } (최신순) */
+/** 목록: { total, size, rows: [{ id, title, status, comment_count, up_count, created_at, edited_at, author }] } (최신순) */
 export const getBoardPage = (q, page) =>
   rpc('board_page', { p_q: q || null, p_page: page, p_size: PAGE_SIZE }, '글 목록을 불러오지 못했습니다.');
 
@@ -92,7 +92,7 @@ export const createPost = (title, body, media = []) =>
 /** media: 경로 목록이면 그 목록으로 바꾸고, null이면 사진은 그대로 */
 export const editPost = (id, title, body, media = null) =>
   rpc('edit_post', { p_id: id, p_title: title, p_body: body, p_media: media }, '글을 고치지 못했습니다.');
-/** 'soft'(다른 사람 댓글이 있어 "삭제된 글"로 남음) | 'hard' */
+/** 040부터 지운 글은 아무에게도 안 보인다 (달린 댓글도 함께). 1년 보관 뒤 정리 */
 export const deleteMyPost = (id) => rpc('delete_my_post', { p_id: id }, '글을 지우지 못했습니다.');
 /** 추천 누르기/취소 → { up, mine } */
 export const votePost = (id) => rpc('vote_post', { p_id: id }, '추천하지 못했습니다.');
@@ -113,6 +113,9 @@ export const hidePost = (id, note) => rpc('hide_post', { p_id: id, p_note: note 
 export const restorePost = (id, note) => rpc('restore_post', { p_id: id, p_note: note }, '다시 공개하지 못했습니다.');
 export const hideComment = (id, note) => rpc('hide_comment', { p_id: id, p_note: note }, '숨기지 못했습니다.');
 export const restoreComment = (id, note) => rpc('restore_comment', { p_id: id, p_note: note }, '다시 공개하지 못했습니다.');
+// 운영진 삭제 (040): 메모 필수, 작성자에게 알림. 감독관은 일반 회원 것만 (DB가 검사)
+export const staffDeletePost = (id, note) => rpc('staff_delete_post', { p_id: id, p_note: note }, '삭제하지 못했습니다.');
+export const staffDeleteComment = (id, note) => rpc('staff_delete_comment', { p_id: id, p_note: note }, '삭제하지 못했습니다.');
 export const dismissReports = ({ postId = null, commentId = null, docCommentId = null }, note) =>
   rpc('dismiss_reports', { p_post: postId, p_comment: commentId, p_note: note || null, p_doc_comment: docCommentId }, '기각하지 못했습니다.');
 
@@ -219,13 +222,14 @@ export const reportDocComment = (id, reason, detail) =>
   rpc('report_doc_comment', { p_id: id, p_reason: reason, p_detail: detail || null }, '신고하지 못했습니다.');
 export const hideDocComment = (id, note) => rpc('hide_doc_comment', { p_id: id, p_note: note }, '숨기지 못했습니다.');
 export const restoreDocComment = (id, note) => rpc('restore_doc_comment', { p_id: id, p_note: note }, '다시 공개하지 못했습니다.');
+export const staffDeleteDocComment = (id, note) => rpc('staff_delete_doc_comment', { p_id: id, p_note: note }, '삭제하지 못했습니다.');
 
 /** 댓글 화면(CommentThread)에 넘기는 처리 묶음 */
 export const POST_COMMENT_OPS = {
   kind: 'comment', media: true, create: createComment, edit: editComment, remove: deleteMyComment,
-  report: reportComment, hide: hideComment, restore: restoreComment,
+  report: reportComment, hide: hideComment, restore: restoreComment, staffRemove: staffDeleteComment,
 };
 export const DOC_COMMENT_OPS = {
   kind: 'doc_comment', create: createDocComment, edit: editDocComment, remove: deleteMyDocComment,
-  report: reportDocComment, hide: hideDocComment, restore: restoreDocComment,
+  report: reportDocComment, hide: hideDocComment, restore: restoreDocComment, staffRemove: staffDeleteDocComment,
 };

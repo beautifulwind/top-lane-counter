@@ -751,6 +751,10 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
 .comment.hidden-row { padding: var(--pad-row) var(--pad-box); }
 .comment-body { margin-top: var(--gap-sm); white-space: pre-wrap; word-break: break-word; overflow-wrap: anywhere; }
 .comment-actions { display: flex; gap: var(--gap-md); margin-top: var(--gap-sm); }
+/* 040: 글·댓글 ⋮ 메뉴 — 댓글은 글쓴이 줄 오른쪽, 글은 추천 줄 오른쪽 */
+.comment-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--gap-sm); }
+.comment-head .post-meta { min-width: 0; padding-top: 10px; }
+.row-push { margin-left: auto; }
 .comment-form { display: flex; flex-direction: column; gap: var(--gap-sm); margin-top: var(--gap-md); }
 .comment-form textarea, .report-form textarea {
   width: 100%; padding: 10px var(--pad-box); font: inherit; font-size: var(--fs-md);

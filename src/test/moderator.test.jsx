@@ -9,6 +9,7 @@ import UserName from '../components/UserName';
 import { fakeFetch } from './fakeDdragon';
 import { TABLES, fakeComment, fakeLogin, fakePost, fakeProposal, fakeState } from './fakeSupabase';
 import { openMenu } from './menu';
+import { moreNames } from './moreMenu';
 import { describeNotification } from '../lib/notifications';
 
 beforeEach(() => {
@@ -128,7 +129,7 @@ test.each([
   for (const name of ['승인', '거절', '재검토 요청']) expect(screen.queryByRole('button', { name })).toBeNull();
 });
 
-test('감독관 글·댓글: 일반 회원 글은 [숨기기], 운영진의 글은 [신고]만', async () => {
+test('감독관 글·댓글: 일반 회원 글은 ⋮ [숨기기]·[운영진 삭제], 운영진의 글은 [신고]만', async () => {
   asMod();
   TABLES.posts.push(fakePost(1, { author_id: 'u-x', author: MEMBER }), fakePost(2, { author_id: 'u-m2', author: STAFF, comment_count: 2 }));
   TABLES.post_comments.push(
@@ -136,17 +137,15 @@ test('감독관 글·댓글: 일반 회원 글은 [숨기기], 운영진의 글�
     fakeComment(12, 2, { author_id: 'u-m2', author: STAFF, body: '감독 댓글' }),
   );
   start('/board/1');
-  expect(await screen.findByRole('button', { name: '숨기기' })).toBeDefined();
-  expect(screen.queryByRole('button', { name: '신고' })).toBeNull();
+  await screen.findByRole('button', { name: '글 더보기' });
+  expect(moreNames(screen, '글 더보기')).toEqual(['숨기기', '운영진 삭제']);
   cleanup();
   start('/board/2');
   const [member, staff] = within(await screen.findByRole('list', { name: '댓글' })).getAllByRole('listitem');
-  expect(within(member).getByRole('button', { name: '숨기기' })).toBeDefined();
-  expect(within(staff).queryByRole('button', { name: '숨기기' })).toBeNull();
-  expect(within(staff).getByRole('button', { name: '신고' })).toBeDefined();
-  // 글 자체(운영진의 글)도 [숨기기] 없음: 댓글 줄 밖의 숨기기 버튼은 없어야 한다
-  const outside = screen.getAllByRole('button', { name: '숨기기' }).filter((b) => !member.contains(b));
-  expect(outside).toEqual([]);
+  expect(moreNames(within(member), '댓글 더보기')).toEqual(['숨기기', '운영진 삭제']);
+  expect(moreNames(within(staff), '댓글 더보기')).toEqual(['신고']);
+  // 글 자체(운영진의 글)도 [신고]만
+  expect(moreNames(screen, '글 더보기')).toEqual(['신고']);
 });
 
 test('감독관 다시 공개: 다른 감독관이 숨긴 것만, 운영자가 숨긴 것은 버튼 없음', async () => {

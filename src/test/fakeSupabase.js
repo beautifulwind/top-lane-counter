@@ -688,6 +688,9 @@ function boardRpc(name, args) {
       if (fakeState.boardError) return fail(fakeState.boardError);
       Object.assign(TABLES.doc_comments.find((c) => c.id === args.p_id), { body: args.p_body.trim(), edited_at: new Date().toISOString() });
       return ok();
+    case 'staff_delete_doc_comment':
+      if (!isStaffNow()) return fail('운영진만 할 수 있습니다.');
+    // eslint-disable-next-line no-fallthrough -- 지우는 방법은 같다
     case 'delete_my_doc_comment':
       TABLES.doc_comments = TABLES.doc_comments.filter((c) => c.id !== args.p_id);
       return ok();
@@ -712,14 +715,14 @@ function boardRpc(name, args) {
       Object.assign(post(args.p_id), { title: args.p_title.trim(), body: args.p_body.trim(), edited_at: new Date().toISOString() });
       if (args.p_media != null) post(args.p_id).media = mediaRows(args.p_media);
       return ok();
-    case 'delete_my_post': {
+    case 'delete_my_post':
+    case 'staff_delete_post': {
+      // 040: 지운 글은 달린 댓글과 함께 아무에게도 안 보인다 (DB엔 1년 보관 — 여기선 목록에서 뺀다)
+      if (name === 'staff_delete_post' && !isStaffNow()) return fail('운영진만 할 수 있습니다.');
       const p = post(args.p_id);
-      if (TABLES.post_comments.some((c) => c.post_id === p.id && c.author_id !== me())) {
-        Object.assign(p, { title: '', body: '', deleted_at: new Date().toISOString(), up_count: 0 });
-        return ok('soft');
-      }
       TABLES.posts = TABLES.posts.filter((x) => x !== p);
-      return ok('hard');
+      TABLES.post_comments = TABLES.post_comments.filter((c) => c.post_id !== p.id);
+      return ok(name === 'delete_my_post' ? 'hard' : null);
     }
     case 'vote_post': {
       const p = post(args.p_id);
@@ -744,6 +747,9 @@ function boardRpc(name, args) {
       Object.assign(comment(args.p_id), { body: args.p_body.trim(), edited_at: new Date().toISOString() });
       if (args.p_media != null) comment(args.p_id).media = mediaRows(args.p_media);
       return ok();
+    case 'staff_delete_comment':
+      if (!isStaffNow()) return fail('운영진만 할 수 있습니다.');
+    // eslint-disable-next-line no-fallthrough -- 지우는 방법은 같다
     case 'delete_my_comment': {
       const c = comment(args.p_id);
       TABLES.post_comments = TABLES.post_comments.filter((x) => x !== c);

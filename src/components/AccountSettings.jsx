@@ -181,7 +181,7 @@ export function DeleteAccount({ auth }) {
           {guest && <p className="hint">같이 쓰는 기기라면 다 쓴 뒤 지워 주세요. 비회원은 로그아웃이 없습니다.</p>}
           <ul className="hint delete-account-list">
             <li><strong>지워집니다:</strong> 계정·닉네임, 보낸 제안, 공개되지 않은 빌드, 빌드에 누른 추천·비추천, 알림, 경험치·칭호, 자유게시판 댓글·추천·신고, 문서 댓글, 다른 사람 댓글이 없는 내 글</li>
-            <li><strong>작성자만 지우고 남습니다:</strong> 문서에 반영된 내용과 수정 기록, 공개된 빌드, 다른 사람 댓글이 달린 내 글(&ldquo;삭제된 글&rdquo;로)</li>
+            <li><strong>작성자만 지우고 남습니다:</strong> 문서에 반영된 내용과 수정 기록, 공개된 빌드, 다른 사람 댓글이 달린 내 글(내용은 지우고 보이지 않게)</li>
             {guest ? <li>되돌릴 수 없습니다.</li> : <li>카카오로 연결돼 있었으면 카카오 쪽 연결도 끊습니다. 되돌릴 수 없습니다.</li>}
           </ul>
           {!open ? (

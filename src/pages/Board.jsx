@@ -79,8 +79,8 @@ export default function Board() {
               <Link to={`/board/${p.id}`} className="post-link">
                 <span className="post-title-line">
                   {p.status === 'hidden' && <span className="op-badge">숨김</span>}
-                  <span className={p.deleted ? 'post-title deleted' : 'post-title'}>{p.deleted ? '(삭제된 글)' : p.title}</span>
-                  {p.media_count > 0 && !p.deleted && <span className="post-media" role="img" aria-label="사진 있음" title="사진 있음"><ImageIcon size={16} /></span>}
+                  <span className="post-title">{p.title}</span>
+                  {p.media_count > 0 && <span className="post-media" role="img" aria-label="사진 있음" title="사진 있음"><ImageIcon size={16} /></span>}
                 </span>
                 <span className="post-meta">
                   {p.author ? <UserName profile={p.author} /> : <span>(탈퇴한 유저)</span>}

@@ -84,7 +84,7 @@ insert into edit_proposals (type, target_champion, counter_champion, proposer_id
 values ('new_counter', 'Darius', 'Teemo', auth.uid(), :'doc', t.build()) returning id as p2 \gset
 reset role;
 insert into posts (author_id, title, body) values (:'U', '글1', '본문'), (:'U', '글2', '본문');
-update posts set deleted_at = now(), title = '', body = '' where title = '글2';
+update posts set deleted_at = now(), delete_kind = 'author', deleted_by = :'U' where title = '글2';
 insert into post_comments (post_id, author_id, body) values ((select id from posts where title = '글1'), :'U', '댓글');
 insert into doc_comments (counter_id, author_id, body) values ((select id from counters where counter_champion = 'Quinn'), :'U', '문서 댓글');
 set role authenticated;
@@ -101,7 +101,8 @@ select t.ok('활동 수: 제안 2·글 1(삭제 제외)·빌드 0·댓글 2', (:
   and (:'mi'::jsonb ->> 'builds')::int = 0 and (:'mi'::jsonb ->> 'comments')::int = 2);
 select t.ok('응답에 이메일·로그인 ID가 없음', :'mi' not like '%secret-u@x.com%' and :'mi' not like '%SECRET%' and :'mi' not like '%@%');
 select t.ok('응답 칸은 정해진 것뿐', (select bool_and(k in ('id', 'nickname', 'role', 'level', 'main_title', 'is_guest', 'created_at',
-  'providers', 'titles', 'proposals', 'posts', 'builds', 'comments')) from jsonb_object_keys(:'mi'::jsonb) k));
+  'providers', 'titles', 'proposals', 'posts', 'builds', 'comments', 'deleted_posts', 'deleted_comments')) from jsonb_object_keys(:'mi'::jsonb) k));
+select t.ok('지운 글 1·지운 댓글 0 (040)', (:'mi'::jsonb ->> 'deleted_posts')::int = 1 and (:'mi'::jsonb ->> 'deleted_comments')::int = 0);
 set role authenticated;
 set request.jwt.claim.sub = :'OP';
 select t.ok('비회원 정보: 가입 방식 없음, 비회원 표시', (admin_member_info(:'GU') ->> 'is_guest')::boolean and admin_member_info(:'GU') -> 'providers' = '[]'::jsonb);

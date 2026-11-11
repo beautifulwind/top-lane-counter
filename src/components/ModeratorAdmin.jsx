@@ -7,7 +7,7 @@ import NoteForm from './NoteForm';
 import UserName from './UserName';
 
 const ACTION_LABEL = {
-  hide: '숨김', restore: '다시 공개', dismiss_reports: '신고 기각',
+  hide: '숨김', restore: '다시 공개', delete: '삭제', dismiss_reports: '신고 기각',
   approve_proposal: '제안 승인', reject_proposal: '제안 거절', request_revision: '재검토 요청', edit_proposal: '제안 내용 수정',
   answer_inquiry: '문의 답변', move_inquiry: '문의 분류 변경',
   grant_moderator: '감독관 지정', revoke_moderator: '감독관 해제',

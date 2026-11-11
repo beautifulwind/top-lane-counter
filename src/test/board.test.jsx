@@ -1,4 +1,5 @@
-// 7단계: 자유게시판 — 목록·검색·쪽, 글쓰기·고치기·지우기(삭제된 글로 남기기), 추천, 댓글, 신고, 운영자 숨기기·다시 공개·신고 처리, 알림
+// 7단계: 자유게시판 — 목록·검색·쪽, 글쓰기·고치기·지우기, 추천, 댓글, 신고, 운영자 숨기기·다시 공개·신고 처리, 알림
+// 040: 고치기·지우기·신고·숨기기·운영진 삭제는 글·댓글마다 ⋮ 메뉴 안 (추천은 밖)
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -6,6 +7,7 @@ import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
 import { TABLES, fakeComment, fakeLogin, fakePost, fakeState } from './fakeSupabase';
 import { openMenu } from './menu';
+import { moreNames, openMore, pickMore } from './moreMenu';
 
 beforeEach(() => {
   vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch());
@@ -29,17 +31,16 @@ test('메뉴에 자유게시판 링크', async () => {
   expect((await openMenu()).getByRole('link', { name: '자유게시판' }).getAttribute('href')).toBe('/board');
 });
 
-test('비로그인 목록: 최신순, 댓글 수·추천, 삭제된 글, 숨긴 글은 안 보임, [로그인하고 글쓰기]', async () => {
+test('비로그인 목록: 최신순, 댓글 수·추천, 숨긴 글은 안 보임, [로그인하고 글쓰기]', async () => {
   TABLES.posts.push(
     fakePost(1, { title: '오래된 글', comment_count: 2 }),
     fakePost(2, { title: '새 글', up_count: 3, author_id: 'u-x', author: OTHER }),
-    fakePost(3, { title: '', body: '', deleted_at: '2026-11-01T05:00:00Z', comment_count: 1 }),
     fakePost(4, { title: '숨긴 글', status: 'hidden', hidden_note: '광고' }),
   );
   start('/board');
   const list = await screen.findByRole('list', { name: '글 목록' });
   const rows = within(list).getAllByRole('listitem').map((li) => li.querySelector('.post-title').textContent);
-  expect(rows).toEqual(['(삭제된 글)', '새 글', '오래된 글']);
+  expect(rows).toEqual(['새 글', '오래된 글']);
   expect(within(list).getByLabelText('댓글 2개')).toBeDefined();
   expect(within(list).getByLabelText('추천 3')).toBeDefined();
   expect(screen.queryByText('숨긴 글')).toBeNull();
@@ -103,7 +104,7 @@ test('비로그인 글 보기: 본문·댓글, 추천은 숫자만, 댓글은 �
   expect(within(c).getByText('수정됨')).toBeDefined();
   expect(screen.getByLabelText('추천 2')).toBeDefined();
   expect(screen.queryByRole('button', { name: /추천/ })).toBeNull();
-  expect(screen.queryByRole('button', { name: '신고' })).toBeNull();
+  expect(screen.queryByRole('button', { name: /더보기/ })).toBeNull(); // 비로그인: ⋮ 메뉴 없음
   expect(screen.getByText(/하면 댓글을 달 수 있습니다/)).toBeDefined();
 });
 
@@ -125,9 +126,9 @@ test('남의 글: 추천 누르기·취소, 신고(이유 필수, 기타는 내�
   expect(screen.getByRole('button', { name: '추천 2' }).getAttribute('aria-pressed')).toBe('true');
   fireEvent.click(screen.getByRole('button', { name: '추천 2' }));
   expect(await screen.findByRole('button', { name: '추천 1' })).toBeDefined();
-  expect(screen.queryByRole('button', { name: '고치기' })).toBeNull();
+  expect(moreNames(screen, '글 더보기')).toEqual(['신고']);
 
-  fireEvent.click(screen.getByRole('button', { name: '신고' }));
+  pickMore(screen, '신고', '글 더보기');
   const form = screen.getByRole('group', { name: '글 신고 — 이유를 골라 주세요' }).closest('form');
   const send = within(form).getByRole('button', { name: '신고 보내기' });
   expect(send.disabled).toBe(true);
@@ -139,18 +140,21 @@ test('남의 글: 추천 누르기·취소, 신고(이유 필수, 기타는 내�
   expect(rpcs('report_post')).toEqual([{ p_id: 1, p_reason: 'other', p_detail: '홍보 링크' }]);
 
   // 같은 글을 또 신고하면 DB가 막는다
-  fireEvent.click(await screen.findByRole('button', { name: '신고' }));
+  await screen.findByRole('button', { name: '글 더보기' });
+  pickMore(screen, '신고', '글 더보기');
   fireEvent.click(screen.getByLabelText('도배·광고'));
   fireEvent.click(screen.getByRole('button', { name: '신고 보내기' }));
   expect((await screen.findByRole('alert')).textContent).toBe('이미 신고한 글입니다.');
 });
 
-test('내 글: 고치기 → 수정됨, 지우기 (남의 댓글 있으면 "삭제된 글"로 남음)', async () => {
+test('내 글: ⋮ [고치기] → 수정됨, [지우기] → 달린 댓글과 함께 안 보이고 목록으로', async () => {
   TABLES.posts.push(fakePost(1, { comment_count: 1, created_at: new Date().toISOString() })); // 방금 쓴 글 (고칠 수 있는 시간 안)
   TABLES.post_comments.push(fakeComment(11, 1, { author_id: 'u-x', author: OTHER, body: '남의 댓글' }));
   fakeLogin('u-old');
   start('/board/1');
-  fireEvent.click(await screen.findByRole('link', { name: '고치기' }));
+  await screen.findByRole('button', { name: '글 더보기' });
+  expect(moreNames(screen, '글 더보기')).toEqual(['고치기', '지우기']);
+  pickMore(screen, '고치기', '글 더보기');
   expect(await screen.findByText(/까지 저장할 수 있습니다/)).toBeDefined();
   expect(rpcs('begin_edit')).toEqual([{ p_kind: 'post', p_id: 1 }]);
   const title = await screen.findByLabelText('제목');
@@ -162,20 +166,21 @@ test('내 글: 고치기 → 수정됨, 지우기 (남의 댓글 있으면 "삭�
   expect(document.querySelector('.post-meta .edited').textContent).toBe('수정됨');
   expect(screen.queryByRole('button', { name: /추천/ })).toBeNull(); // 내 글은 추천 못 함
 
-  fireEvent.click(screen.getByRole('button', { name: '지우기' }));
-  const confirm = screen.getByRole('group', { name: '글을 지우시겠습니까? 다른 사람 댓글은 남습니다.' });
+  pickMore(screen, '지우기', '글 더보기');
+  const confirm = screen.getByRole('group', { name: '글을 지우시겠습니까? 달린 댓글도 함께 보이지 않게 됩니다.' });
   fireEvent.click(within(confirm).getByRole('button', { name: '지우기' }));
-  expect(await screen.findByText('글을 지웠습니다. 다른 사람 댓글이 있어서 "삭제된 글"로 남습니다.')).toBeDefined();
-  await vi.waitFor(() => expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('(삭제된 글)'));
-  expect(screen.getByText('남의 댓글')).toBeDefined();
-  expect(screen.getByText('삭제된 글에는 댓글을 달 수 없습니다.')).toBeDefined();
+  expect(await screen.findByText('글을 지웠습니다.')).toBeDefined();
+  expect(where).toBe('/board');
+  expect(rpcs('delete_my_post')).toEqual([{ p_id: 1 }]);
+  expect(await screen.findByText('아직 글이 없습니다. 첫 글을 써 보세요!')).toBeDefined();
 });
 
-test('내 글: 남의 댓글이 없으면 완전히 지우고 목록으로', async () => {
+test('내 글: 댓글이 없으면 확인 문구에 댓글 이야기 없음, 지우고 목록으로', async () => {
   TABLES.posts.push(fakePost(1));
   fakeLogin('u-old');
   start('/board/1');
-  fireEvent.click(await screen.findByRole('button', { name: '지우기' }));
+  await screen.findByRole('button', { name: '글 더보기' });
+  pickMore(screen, '지우기', '글 더보기');
   fireEvent.click(within(screen.getByRole('group', { name: '글을 지우시겠습니까?' })).getByRole('button', { name: '지우기' }));
   expect(await screen.findByText('글을 지웠습니다.')).toBeDefined();
   expect(where).toBe('/board');
@@ -204,11 +209,10 @@ test('댓글: 달기(빈 칸이면 못 보냄) → 바로 보임, 내 댓글 고
   expect(rpcs('create_comment')).toEqual([{ p_post: 1, p_body: '내 댓글입니다', p_media: [] }]);
 
   const [other, mine] = within(screen.getByRole('list', { name: '댓글' })).getAllByRole('listitem');
-  expect(within(other).queryByRole('button', { name: '고치기' })).toBeNull();
-  expect(within(other).getByRole('button', { name: '신고' })).toBeDefined();
-  expect(within(mine).queryByRole('button', { name: '신고' })).toBeNull();
+  expect(moreNames(within(other), '댓글 더보기')).toEqual(['신고']);
+  expect(moreNames(within(mine), '댓글 더보기')).toEqual(['고치기', '지우기']);
 
-  fireEvent.click(within(mine).getByRole('button', { name: '고치기' }));
+  pickMore(within(mine), '고치기', '댓글 더보기');
   fireEvent.change(await within(mine).findByLabelText('댓글 고치기'), { target: { value: '고친 댓글' } });
   expect(within(mine).getByText(/까지 저장할 수 있습니다/)).toBeDefined();
   fireEvent.click(within(mine).getByRole('button', { name: '고친 내용 저장' }));
@@ -216,7 +220,7 @@ test('댓글: 달기(빈 칸이면 못 보냄) → 바로 보임, 내 댓글 고
   const mine2 = within(screen.getByRole('list', { name: '댓글' })).getAllByRole('listitem')[1];
   expect(within(mine2).getByText('수정됨')).toBeDefined();
 
-  fireEvent.click(within(mine2).getByRole('button', { name: '지우기' }));
+  pickMore(within(mine2), '지우기', '댓글 더보기');
   fireEvent.click(within(within(mine2).getByRole('group', { name: '댓글을 지우시겠습니까?' })).getByRole('button', { name: '지우기' }));
   await vi.waitFor(() => expect(screen.queryByText('고친 댓글')).toBeNull());
   expect(screen.getByText('1개', { selector: '#comments .count-badge' })).toBeDefined();
@@ -228,7 +232,7 @@ test('그 자리에 열리는 칸은 Esc로 닫힌다: 댓글 고치기(쓴 내�
   fakeLogin('u-old');
   start('/board/1');
   const mine = (await screen.findAllByRole('listitem')).find((li) => li.id === 'comment-12');
-  fireEvent.click(within(mine).getByRole('button', { name: '고치기' }));
+  pickMore(within(mine), '고치기', '댓글 더보기');
   const box = await within(mine).findByLabelText('댓글 고치기');
   fireEvent.change(box, { target: { value: '바꾸다 말았습니다' } });
   fireEvent.keyDown(box, { key: 'Escape' });
@@ -236,7 +240,8 @@ test('그 자리에 열리는 칸은 Esc로 닫힌다: 댓글 고치기(쓴 내�
   expect(within(mine).getByText('내 댓글')).toBeDefined();
   expect(rpcs('edit_comment')).toEqual([]);
 
-  fireEvent.click(within(mine).getByRole('button', { name: '지우기' }));
+  await within(mine).findByRole('button', { name: '댓글 더보기' });
+  pickMore(within(mine), '지우기', '댓글 더보기');
   const confirm = within(mine).getByRole('group', { name: '댓글을 지우시겠습니까?' });
   expect(document.activeElement).toBe(within(confirm).getByRole('button', { name: '취소' }));
   fireEvent.keyDown(document.activeElement, { key: 'Escape' });
@@ -248,9 +253,12 @@ test('운영자: 글 [숨기기](보라, 메모 필수) → 숨김 띠·메모 �
   TABLES.posts.push(fakePost(1, { author_id: 'u-x', author: OTHER }));
   asOp();
   start('/board/1');
-  const hide = await screen.findByRole('button', { name: '숨기기' });
-  expect(hide.classList.contains('btn-op')).toBe(true);
-  expect(screen.queryByRole('button', { name: '신고' })).toBeNull();
+  await screen.findByRole('button', { name: '글 더보기' });
+  const menu = openMore(screen, '글 더보기');
+  expect(menu.getAllByRole('menuitem').map((el) => el.textContent)).toEqual(['숨기기', '운영진 삭제']); // 신고 없음
+  const hide = menu.getByRole('menuitem', { name: '숨기기' });
+  expect(hide.classList.contains('op')).toBe(true);
+  expect(menu.getByRole('menuitem', { name: '운영진 삭제' }).classList.contains('danger')).toBe(true);
   fireEvent.click(hide);
   const ok = screen.getByRole('button', { name: '숨기기 확정' });
   expect(ok.disabled).toBe(true);
@@ -280,7 +288,8 @@ test('운영자: 숨긴 댓글도 보이고 [다시 공개], 보이는 댓글은
   start('/board/1');
   const [hidden, normal] = within(await screen.findByRole('list', { name: '댓글' })).getAllByRole('listitem');
   expect(hidden.textContent).toContain('메모: 욕설');
-  fireEvent.click(within(normal).getByRole('button', { name: '숨기기' }));
+  expect(moreNames(within(hidden), '댓글 더보기')).toEqual(['운영진 삭제']); // 숨긴 댓글은 [다시 공개]가 띠에
+  pickMore(within(normal), '숨기기', '댓글 더보기');
   fireEvent.change(within(normal).getByLabelText('숨기는 사유 (필수, 작성자에게 보입니다)'), { target: { value: '도배' } });
   fireEvent.click(within(normal).getByRole('button', { name: '숨기기 확정' }));
   expect(await screen.findByText('댓글을 숨겼습니다. 작성자에게 알림이 갔습니다.')).toBeDefined();
