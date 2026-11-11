@@ -56,6 +56,9 @@ rows (ord, what, to_delete, to_keep, note) as (
          '이 스크립트는 바로 못 지움 — 다음 사진 정리 때 대기열·안 붙은 지 24시간 지난 파일이 지워짐'
   union all select 14, 'doc_comments (문서 댓글)', (select count(*) from public.doc_comments), 0, null
   union all select 15, 'reports (신고)', (select count(*) from public.reports), 0, null
+  union all select 15.1, 'wiki_reports (상대법·빌드 오류 신고, 043)',
+         case when to_regclass('public.wiki_reports') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.wiki_reports', false, true, '')))[1]::text::bigint end,
+         0, '처리 전·처리된 것 모두 지움 (043 실행 전이면 0)'
   union all select 16, 'hide_log (숨김 기록)', (select count(*) from public.hide_log), 0, null
   union all select 16.1, 'moderation_log (운영진 처리 기록)', (select count(*) from public.moderation_log), 0, '감독관 지정·해제 기록 포함 전부 지움 (역할 자체는 profiles에 그대로)'
   union all select 16.2, 'proposal_reviewing (검토 중 표시)', (select count(*) from public.proposal_reviewing), 0, '임시 표시라 모두 비움'

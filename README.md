@@ -70,7 +70,7 @@ GitHub Codespaces에서는 열면 개발 서버가 자동으로 3000번에서 �
 - Edge Functions(`supabase/functions/`)는 대시보드에서 배포하고, 비밀 값은 Supabase의 Secrets에만 둡니다.
 - 테스트 데이터 비우기 스크립트도 `supabase/scripts/`에 있습니다 (정식 공개 직전 등). 되돌릴 수 없으니 백업 확인 → `reset_test_data_preview.sql`(지울 개수 확인) → `reset_test_data.sql` 순서로 실행합니다. 계정(운영자·운영자 모드 포함)은 지우지 않습니다.
 - 웹 푸시(037)는 Edge Function `web-push`와 비밀 값(`VAPID_PUBLIC_KEY`·`VAPID_PRIVATE_KEY`·`VAPID_SUBJECT`·`PUSH_WEBHOOK_SECRET`), Vault 두 값(`push_function_url`·`push_webhook_secret`)이 필요합니다. 순서와 방법은 SPEC.md 11-11.
-- 오래된 기록 자동 삭제(알림 90일·문의 180일·처리 기록 1년)는 pg_cron으로 매일 새벽에 돕니다. 035(처리 기록 1년)는 마이그레이션을 실행한 뒤 파일 맨 아래 일정 등록 SQL을 한 번 따로 실행해야 합니다.
+- 오래된 기록 자동 삭제(알림 90일·문의 180일·처리 기록 1년·처리한 오류 신고 1년(043))는 pg_cron으로 매일 새벽에 돕니다. 035(처리 기록 1년)는 마이그레이션을 실행한 뒤 파일 맨 아래 일정 등록 SQL을 한 번 따로 실행해야 합니다.
 
 ## 배포
 

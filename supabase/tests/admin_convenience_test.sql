@@ -136,10 +136,10 @@ select t.ok('기타 → 계정·탈퇴, 건의로 옮기기는 알림 없음', (
 --       답변 대기 문의 2개(U): 건의 1, 계정·탈퇴 1
 set role authenticated;
 set request.jwt.claim.sub = :'OP';
-select t.ok('운영자: 제안 5 · 빌드 1 · 문의 2', admin_pending_counts() = '{"proposals":5,"builds":1,"inquiries":2}'::jsonb);
+select t.ok('운영자: 제안 5 · 빌드 1 · 문의 2', admin_pending_counts() = '{"proposals":5,"builds":1,"inquiries":2,"wiki_reports":0}'::jsonb);  -- 043: 오류 신고 건수 키
 set request.jwt.claim.sub = :'MOD';
 -- 감독관(MOD): 다른 일반 회원의 새 카운터만 = np · np_cancel (본인 제안 np_mod, 운영자 제안 np_op, 문서 수정 de 제외), 계정·탈퇴 문의 제외
-select t.ok('감독관: 제안 2 · 빌드 0 · 문의 1', admin_pending_counts() = '{"proposals":2,"builds":0,"inquiries":1}'::jsonb);
+select t.ok('감독관: 제안 2 · 빌드 0 · 문의 1', admin_pending_counts() = '{"proposals":2,"builds":0,"inquiries":1,"wiki_reports":0}'::jsonb);  -- 043: 오류 신고 건수 키
 reset role;
 
 -- ===== 6. 감독관도 고쳐서 승인 + 처리 기록 =====

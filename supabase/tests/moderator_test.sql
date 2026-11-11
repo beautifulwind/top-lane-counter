@@ -71,9 +71,11 @@ grant select on op_only to authenticated;
 select t.ok('운영자 전용 함수 목록이 비어 있지 않고 핵심이 들어 있음', (select count(*) >= 20 from op_only)
   and exists (select 1 from op_only where fn = 'approve_build') and exists (select 1 from op_only where fn = 'hide_counter')
   and exists (select 1 from op_only where fn = 'delete_counter') and exists (select 1 from op_only where fn = 'set_item_prices')
-  and exists (select 1 from op_only where fn = 'set_moderator') and exists (select 1 from op_only where fn = 'hide_build')
+  and exists (select 1 from op_only where fn = 'set_moderator') and exists (select 1 from op_only where fn = 'revert_build')  -- 043: 빌드 되돌리기는 운영자만
   and exists (select 1 from op_only where fn = 'revert_doc') and exists (select 1 from op_only where fn = 'reorder_counters')
-  and not exists (select 1 from op_only where fn in ('hide_post', 'approve_proposal', 'dismiss_reports')));
+  and exists (select 1 from op_only where fn = 'admin_build_revisions')
+  -- 043: 빌드 숨기기·다시 공개는 감독관도 (범위 검사는 wiki_report_revert_test)
+  and not exists (select 1 from op_only where fn in ('hide_post', 'approve_proposal', 'dismiss_reports', 'hide_build', 'restore_build')));
 set role authenticated;
 set request.jwt.claim.sub = :'MOD';
 do $$
