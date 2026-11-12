@@ -1,5 +1,5 @@
 -- 로컬 검사 전용 (supabase/tests/run.sh). 실제 Supabase SQL Editor에서 실행하지 말 것.
--- 046: 장인 인증 (신청·심사·만료·되돌리기·임시 닉네임·사칭 금지·비슷한 닉네임·개인정보 지우기·알림·권한·신규 가입자)
+-- 046: 장인 인증 (신청/심사/만료/되돌리기/임시 닉네임/사칭 금지/비슷한 닉네임/개인정보 지우기/알림/권한/신규 가입자)
 \set ON_ERROR_STOP 1
 \set QUIET 1
 \set OP  '00000000-0000-0000-0000-00000000000a'
@@ -33,34 +33,34 @@ create temp table ids (k text primary key, v bigint);
 grant all on ids to authenticated, anon;
 create function pg_temp.id(p text) returns bigint language sql stable as $$ select v from ids where k = p $$;
 
--- ===== 1. 사칭 금지: [장인]·(장인)·"장인 "으로 시작 =====
+-- ===== 1. 사칭 금지: [장인]/(장인)/"장인 "으로 시작 =====
 set role authenticated;
 set request.jwt.claim.sub = :'T';
-select t.fails('닉네임 [장인]…', $$update public.profiles set nickname = '[장인]티' where id = auth.uid()$$, '[장인]·(장인)을 쓸 수 없고');
-select t.fails('닉네임 (장인)…', $$update public.profiles set nickname = '티(장인)' where id = auth.uid()$$, '[장인]·(장인)을 쓸 수 없고');
-select t.fails('괄호 모양·띄어쓰기 변형 【 장 인 】', $$update public.profiles set nickname = '【 장 인 】티' where id = auth.uid()$$, '[장인]·(장인)을 쓸 수 없고');
+select t.fails(E'닉네임 [장인]\u2026', $$update public.profiles set nickname = '[장인]티' where id = auth.uid()$$, E'[장인]\u00B7(장인)을 쓸 수 없고');
+select t.fails(E'닉네임 (장인)\u2026', $$update public.profiles set nickname = '티(장인)' where id = auth.uid()$$, E'[장인]\u00B7(장인)을 쓸 수 없고');
+select t.fails(E'괄호 모양\u00B7띄어쓰기 변형 \u3010 장 인 \u3011', $$update public.profiles set nickname = E'\u3010 장 인 \u3011티' where id = auth.uid()$$, E'[장인]\u00B7(장인)을 쓸 수 없고');
 select t.fails('"장인 "으로 시작', $$update public.profiles set nickname = '장인 티' where id = auth.uid()$$, '"장인 "으로 시작할 수 없습니다');
 select t.fails('"장인_"으로 시작 (구분 기호)', $$update public.profiles set nickname = '장인_티' where id = auth.uid()$$, '"장인 "으로 시작할 수 없습니다');
-select t.fails('보이지 않는 글자를 끼운 "장인​ 티"', format('update public.profiles set nickname = %L where id = auth.uid()', E'장인​ 티'), '"장인 "으로 시작할 수 없습니다');
-select t.fails('(운)은 그대로 막힘', $$update public.profiles set nickname = '(운)티' where id = auth.uid()$$, '(운)·(감)을 쓸 수 없습니다');
+select t.fails(E'보이지 않는 글자를 끼운 "장인\u200B 티"', format('update public.profiles set nickname = %L where id = auth.uid()', E'장인\u200B 티'), '"장인 "으로 시작할 수 없습니다');
+select t.fails('(운)은 그대로 막힘', $$update public.profiles set nickname = '(운)티' where id = auth.uid()$$, E'(운)\u00B7(감)을 쓸 수 없습니다');
 reset role;
-select t.ok('"장인정신"·"티장인"은 쓸 수 있음 (판정만)',
+select t.ok(E'"장인정신"\u00B7"티장인"은 쓸 수 있음 (판정만)',
   not public.nickname_mimics_influencer('장인정신') and not public.nickname_mimics_influencer('티장인') and not public.nickname_reserved('장인정신'));
 select t.ok('칭호 이름에 "장인" 없음', not exists (
   select 1 from (values ('top_addict'), ('tool_hater'), ('solid_heavy'), ('butcher_owner'), ('general'), ('offmeta')) v(k)
    where public.title_name(k) like '%장인%'));
 
 -- ===== 2. 비슷한 닉네임 (nickname_key) =====
-select t.ok('열쇠: 대소문자·I/l/1·0/o·띄어쓰기·키릴 글자가 같다',
+select t.ok(E'열쇠: 대소문자\u00B7I/l/1\u00B70/o\u00B7띄어쓰기\u00B7키릴 글자가 같다',
   public.nickname_key('Faker') = public.nickname_key('FAKER') and public.nickname_key('Faker') = public.nickname_key('Fa ker')
   and public.nickname_key('FakerI') = public.nickname_key('Faker1') and public.nickname_key('F0ker') = public.nickname_key('Foker')
-  and public.nickname_key('Fаker') = public.nickname_key('Faker')  -- 두 번째 글자 키릴 а
-  and public.nickname_key('Ｆａｋｅｒ') = public.nickname_key('Faker'));
+  and public.nickname_key(E'F\u0430ker') = public.nickname_key('Faker')  -- 두 번째 글자 키릴 U+0430
+  and public.nickname_key(E'\uFF26\uFF41\uFF4B\uFF45\uFF52') = public.nickname_key('Faker'));
 select t.ok('열쇠: 다른 닉네임은 다르다', public.nickname_key('Faker') <> public.nickname_key('Faker2') and public.nickname_key('유저') <> public.nickname_key('유저2'));
 set role authenticated;
 set request.jwt.claim.sub = :'T';
 select t.fails('비슷한 닉네임 Fa ker 막힘 (23505)', $$update public.profiles set nickname = 'Fa ker' where id = auth.uid()$$, '이미 사용 중인 닉네임');
-select t.fails('키릴 а를 섞은 Fаker 막힘', $$update public.profiles set nickname = 'Fаker' where id = auth.uid()$$, '이미 사용 중인 닉네임');
+select t.fails(E'키릴 \u0430를 섞은 F\u0430ker 막힘', $$update public.profiles set nickname = E'F\u0430ker' where id = auth.uid()$$, '이미 사용 중인 닉네임');
 reset role;
 select t.ok('보통 닉네임끼리는 인덱스도 막음 (profiles_nickname_key_unique)',
   exists (select 1 from pg_indexes where indexname = 'profiles_nickname_key_unique') and not exists (select 1 from pg_indexes where indexname = 'profiles_nickname_unique'));
@@ -68,36 +68,36 @@ select t.ok('보통 닉네임끼리는 인덱스도 막음 (profiles_nickname_ke
 -- ===== 3. 신청할 수 없는 사람 =====
 set role authenticated;
 set request.jwt.claim.sub = :'GU';
-select t.fails('비회원은 신청 불가', $$select apply_influencer('creator', '손님', 'https://youtube.com/@guest', 'g@x.com')$$, '구글·카카오로 로그인한 회원만');
+select t.fails('비회원은 신청 불가', $$select apply_influencer('creator', '손님', 'https://youtube.com/@guest', 'g@x.com')$$, E'구글\u00B7카카오로 로그인한 회원만');
 set request.jwt.claim.sub = :'OP';
 select t.fails('운영자는 신청 불가', $$select apply_influencer('creator', '영자', 'https://youtube.com/@op', 'o@x.com')$$, '운영자 계정은 장인 인증을 신청할 수 없습니다');
 set request.jwt.claim.sub = :'U';
 select t.fails('(a) 공식 이메일 필수', $$select apply_influencer('creator', 'Faker', 'https://youtube.com/@faker', null)$$, '공식 이메일을 적어 주세요');
-select t.fails('(a) 채널 링크 필수', $$select apply_influencer('pro', 'Faker', 'youtube.com', 'faker@t1.gg')$$, '채널·방송 링크를');
+select t.fails('(a) 채널 링크 필수', $$select apply_influencer('pro', 'Faker', 'youtube.com', 'faker@t1.gg')$$, E'채널\u00B7방송 링크를');
 select t.fails('(b) 라이엇 닉네임#태그 필수', $$select apply_influencer('grandmaster', 'Faker', null, null, 'nohash', 'https://op.gg/x')$$, '라이엇 닉네임#태그를');
 select t.fails('(b) op.gg 링크만', $$select apply_influencer('grandmaster', 'Faker', null, null, 'Hide on bush#KR1', 'https://evil.com/op.gg')$$, 'op.gg 링크를');
 select t.fails('유형 필수', $$select apply_influencer('streamer', 'Faker', 'https://youtube.com/@f', 'f@x.com')$$, '유형을 골라 주세요');
-select t.fails('희망 닉네임에도 사칭 금지', $$select apply_influencer('creator', '[장인]Faker', 'https://youtube.com/@f', 'f@x.com')$$, '[장인]·(장인)을 쓸 수 없고');
+select t.fails('희망 닉네임에도 사칭 금지', $$select apply_influencer('creator', '[장인]Faker', 'https://youtube.com/@f', 'f@x.com')$$, E'[장인]\u00B7(장인)을 쓸 수 없고');
 reset role;
 select t.ok('실패한 신청은 남지 않음', (select count(*) from influencer_applications) = 0 and (select nickname from profiles where id = :'U') = '유저');
 
--- ===== 4. (a) 신청: 다른 회원(V)이 쓰는 Faker로 — 둘이 잠깐 같은 닉네임, 신청자는 "인증 대기" =====
+-- ===== 4. (a) 신청: 다른 회원(V)이 쓰는 Faker로 - 둘이 잠깐 같은 닉네임, 신청자는 "인증 대기" =====
 set role authenticated;
 set request.jwt.claim.sub = :'U';
 insert into ids values ('a_u', apply_influencer('creator', 'Faker', 'https://www.YouTube.com/@faker/', 'Faker@T1.gg'));
 reset role;
 select t.ok('신청자 닉네임 = 희망 닉네임, 상태 pending', (select nickname = 'Faker' and nickname_state = 'pending' and influencer is null from profiles where id = :'U'));
 select t.ok('원래 쓰던 V는 그대로', (select nickname = 'Faker' and nickname_state is null from profiles where id = :'V'));
-select t.ok('신청 줄: 공식 이메일(소문자)·채널 열쇠·이전 닉네임·14일 만료',
+select t.ok(E'신청 줄: 공식 이메일(소문자)\u00B7채널 열쇠\u00B7이전 닉네임\u00B714일 만료',
   (select official_email = 'faker@t1.gg' and channel_key = 'youtube.com/@faker' and old_nickname = '유저' and status = 'pending'
           and expires_at between now() + interval '13 days 23 hours' and now() + interval '14 days 1 hour'
      from influencer_applications where id = pg_temp.id('a_u')));
 select t.ok('닉네임 변경 기록 kind apply', exists (select 1 from nickname_changes where user_id = :'U' and kind = 'apply' and new_nickname = 'Faker'));
 select t.ok('신청자 알림 influencer_received ((a) 문장)', exists (select 1 from notifications where user_id = :'U' and kind = 'influencer_received'
   and message = '신청이 접수됐습니다. 적어 주신 공식 이메일로 확인 메일을 보냅니다. 14일 안에 "본인입니다"라고 회신해 주세요.'));
-select t.ok('운영자 알림 influencer_applied (닉네임·유형만)', exists (select 1 from notifications where user_id = :'OP' and kind = 'influencer_applied'
-  and message = '장인 인증 신청이 들어왔습니다. (Faker · 크리에이터)'));
-select t.ok('감독관·다른 회원에게는 신청 알림 없음', not exists (select 1 from notifications where kind = 'influencer_applied' and user_id <> :'OP'));
+select t.ok(E'운영자 알림 influencer_applied (닉네임\u00B7유형만)', exists (select 1 from notifications where user_id = :'OP' and kind = 'influencer_applied'
+  and message = E'장인 인증 신청이 들어왔습니다. (Faker \u00B7 크리에이터)'));
+select t.ok(E'감독관\u00B7다른 회원에게는 신청 알림 없음', not exists (select 1 from notifications where kind = 'influencer_applied' and user_id <> :'OP'));
 
 set role authenticated;
 set request.jwt.claim.sub = :'U';
@@ -112,34 +112,34 @@ select t.ok('감독관도 신청을 못 읽음', (select count(*) from influence
 select t.fails('감독관은 목록 함수도 불가', $$select admin_influencer_applications()$$, '운영자만 할 수 있습니다');
 select t.ok('감독관 처리 대기 건수 influencers = 0', (admin_pending_counts() ->> 'influencers')::int = 0);
 set request.jwt.claim.sub = :'X';
-select t.fails('같은 채널(대소문자·www·끝 / 무시) 겹침', $$select apply_influencer('creator', '촙', 'http://youtube.com/@FAKER?si=1', 'x@x.com')$$, '이미 신청됐거나 인증된 채널입니다');
+select t.fails(E'같은 채널(대소문자\u00B7www\u00B7끝 / 무시) 겹침', $$select apply_influencer('creator', '촙', 'http://youtube.com/@FAKER?si=1', 'x@x.com')$$, '이미 신청됐거나 인증된 채널입니다');
 select t.fails('인증 대기 중인 닉네임으로는 신청 불가', $$select apply_influencer('creator', 'faker', 'https://youtube.com/@other', 'x@x.com')$$, '이미 장인 인증을 신청 중인 닉네임입니다');
 set request.jwt.claim.sub = :'T';
 select t.fails('인증 대기 중인 닉네임은 보통 회원도 못 가져감', $$update public.profiles set nickname = 'FAKER' where id = auth.uid()$$, '이미 사용 중인 닉네임');
 set request.jwt.claim.sub = :'OP';
-select t.ok('운영자 목록: 공식 이메일·겹친 회원(V)', (select (i ->> 'official_email') = 'faker@t1.gg' and (i -> 'overlap' ->> 'id')::uuid = :'V'
+select t.ok(E'운영자 목록: 공식 이메일\u00B7겹친 회원(V)', (select (i ->> 'official_email') = 'faker@t1.gg' and (i -> 'overlap' ->> 'id')::uuid = :'V'
   from jsonb_array_elements(admin_influencer_applications() -> 'items') i where (i ->> 'id')::bigint = pg_temp.id('a_u')));
 select t.ok('운영자 처리 대기 건수 influencers = 1', (admin_pending_counts() ->> 'influencers')::int = 1);
 reset role;
 
--- ===== 5. (b) 신청: 라이엇 닉네임#태그 겹침 (대소문자·공백 정규화) =====
+-- ===== 5. (b) 신청: 라이엇 닉네임#태그 겹침 (대소문자/공백 정규화) =====
 set role authenticated;
 set request.jwt.claim.sub = :'W';
 insert into ids values ('b_w', apply_influencer('grandmaster', 'chovy', null, null, 'Hide on bush #KR1', 'https://www.op.gg/summoners/kr/Hide%20on%20bush-KR1'));
 reset role;
-select t.ok('(b) 신청: 라이엇 ID 원문 + 해시, 채널·이메일 없음',
+select t.ok(E'(b) 신청: 라이엇 ID 원문 + 해시, 채널\u00B7이메일 없음',
   (select riot_id = 'Hide on bush#KR1' and riot_key = public.influencer_riot_key('hideonbush#kr1') and channel_url is null and official_email is null
      from influencer_applications where id = pg_temp.id('b_w')));
 select t.ok('(b) 신청자 알림: 운영자 계정 자리표시 {운영자 닉네임}', exists (select 1 from notifications where user_id = :'W' and kind = 'influencer_received'
   and message = '신청이 접수됐습니다. 14일 안에 운영자 계정 {운영자 닉네임}으로 친구 요청을 보내 주세요. 요청이 도착하면 이 닉네임의 주인이 맞는지 확인합니다. 수락은 하지 않습니다.'));
-select t.ok('운영자 알림 (그랜드마스터 이상)', exists (select 1 from notifications where user_id = :'OP' and message = '장인 인증 신청이 들어왔습니다. (chovy · 그랜드마스터 이상)'));
-select t.ok('운영자 알림에 이메일·라이엇 ID 없음', not exists (select 1 from notifications where kind = 'influencer_applied' and (message ilike '%t1.gg%' or message ilike '%hide on%')));
+select t.ok('운영자 알림 (그랜드마스터 이상)', exists (select 1 from notifications where user_id = :'OP' and message = E'장인 인증 신청이 들어왔습니다. (chovy \u00B7 그랜드마스터 이상)'));
+select t.ok(E'운영자 알림에 이메일\u00B7라이엇 ID 없음', not exists (select 1 from notifications where kind = 'influencer_applied' and (message ilike '%t1.gg%' or message ilike '%hide on%')));
 set role authenticated;
 set request.jwt.claim.sub = :'T';
 select t.fails('같은 라이엇 닉네임#태그 겹침', $$select apply_influencer('grandmaster', '티이', null, null, ' hide ON BUSH#kr1 ', 'https://op.gg/x')$$, '이미 신청됐거나 인증된 라이엇 닉네임입니다');
 reset role;
 
--- ===== 6. 승인 권한 · 승인 (겹친 V는 "닉네임 변경 예정") =====
+-- ===== 6. 승인 권한 / 승인 (겹친 V는 "닉네임 변경 예정") =====
 set role authenticated;
 set request.jwt.claim.sub = :'MOD';
 select t.fails('감독관은 승인 불가', format('select approve_influencer(%s, %L)', pg_temp.id('a_u'), '이메일 회신 확인'), '운영자만 할 수 있습니다');
@@ -154,7 +154,7 @@ select t.ok('모드를 끈 동안 [모두 읽음]은 신청 알림을 건드리�
 select approve_influencer(pg_temp.id('a_u'), '이메일 회신 확인');
 select t.fails('이미 처리된 신청 (TL409)', format('select approve_influencer(%s, %L)', pg_temp.id('a_u'), '또'), '이미 처리된 신청입니다');
 reset role;
-select t.ok('승인: 신청자 장인(creator)·보통 닉네임', (select influencer = 'creator' and influencer_at is not null and nickname_state is null and nickname = 'Faker' from profiles where id = :'U'));
+select t.ok(E'승인: 신청자 장인(creator)\u00B7보통 닉네임', (select influencer = 'creator' and influencer_at is not null and nickname_state is null and nickname = 'Faker' from profiles where id = :'U'));
 select t.ok('승인: V는 닉네임 변경 예정 (3일 뒤)', (select nickname_state = 'yielding' and nickname_reset_at between now() + interval '2 days 23 hours' and now() + interval '3 days 1 hour' from profiles where id = :'V'));
 select t.ok('승인되면 공식 이메일 지움, 채널은 남김', (select official_email is null and channel_url is not null and status = 'approved' and review_note = '이메일 회신 확인' from influencer_applications where id = pg_temp.id('a_u')));
 select t.ok('알림: 신청자 influencer_approved / V nickname_reset_soon',
@@ -163,7 +163,7 @@ select t.ok('알림: 신청자 influencer_approved / V nickname_reset_soon',
                  and message = '운영 원칙에 따라 3일 뒤 닉네임이 임시 닉네임으로 바뀝니다. 그 전에 새 닉네임을 정해 주세요.'));
 select t.ok('처리 기록 approve_influencer (메모, 대상 닉네임)', exists (select 1 from moderation_log where action = 'approve_influencer' and target_kind = 'influencer_application'
   and target_id = pg_temp.id('a_u')::text and note = '이메일 회신 확인' and target_nickname = 'Faker'));
-select t.ok('사람 json: 기여자 목록에 장인 유형·닉네임 상태 칸', exists (
+select t.ok(E'사람 json: 기여자 목록에 장인 유형\u00B7닉네임 상태 칸', exists (
   select 1 from jsonb_array_elements(public.build_contributors((select id from builds where status = 'approved' order by id limit 1))) e
    where e ? 'influencer' and e ? 'nickname_state'));
 set role authenticated;
@@ -175,7 +175,7 @@ select t.fails('장인 닉네임은 아무도 못 가져감', $$update public.pr
 select t.fails('장인이 쓰는 닉네임으로 신청 불가', $$select apply_influencer('creator', 'FAKER', 'https://youtube.com/@t', 't@x.com')$$, '이미 인증된 장인이 쓰는 닉네임입니다');
 reset role;
 
--- ===== 7. 하루 작업: 유예가 끝난 V → 임시 닉네임, 그 뒤 바로 새 닉네임 =====
+-- ===== 7. 하루 작업: 유예가 끝난 V -> 임시 닉네임, 그 뒤 바로 새 닉네임 =====
 update profiles set nickname_reset_at = now() - interval '1 minute' where id = :'V';
 update nickname_changes set changed_at = now() where user_id = :'V';
 insert into nickname_changes (user_id, old_nickname, new_nickname, kind) values (:'V', '브이', 'Faker', 'user');  -- 방금 직접 바꾼 기록이 있어도
@@ -194,7 +194,7 @@ set request.jwt.claim.sub = :'V';
 select t.fails('그다음 직접 바꾸기는 다시 30일 제한', $$update public.profiles set nickname = '브이넷' where id = auth.uid()$$, '30일에 한 번');
 reset role;
 
--- ===== 8. (b) 승인 → 겹친 X(Chovy)는 유예 중에도 바로 직접 바꿀 수 있음 =====
+-- ===== 8. (b) 승인 -> 겹친 X(Chovy)는 유예 중에도 바로 직접 바꿀 수 있음 =====
 set role authenticated;
 set request.jwt.claim.sub = :'OP';
 select approve_influencer(pg_temp.id('b_w'), '친구 요청 확인');
@@ -212,7 +212,7 @@ set request.jwt.claim.sub = :'T';
 select t.fails('승인된 라이엇 닉네임#태그는 계속 막힘', $$select apply_influencer('grandmaster', '티이', null, null, 'hide on bush#KR1', 'https://op.gg/x')$$, '이미 신청됐거나 인증된 라이엇 닉네임입니다');
 reset role;
 
--- ===== 9. 반려 (겹침 → 이전 닉네임으로 되돌림, 7일 제한, 채널은 바로 풀림, 메모는 신청자에게만) =====
+-- ===== 9. 반려 (겹침 -> 이전 닉네임으로 되돌림, 7일 제한, 채널은 바로 풀림, 메모는 신청자에게만) =====
 set role authenticated;
 set request.jwt.claim.sub = :'R';
 insert into ids values ('a_r', apply_influencer('creator', 'zeus', 'https://youtube.com/@zeus', 'zeus@x.com'));
@@ -220,11 +220,11 @@ set request.jwt.claim.sub = :'OP';
 select reject_influencer(pg_temp.id('a_r'), 'SECRET-NOTE-1 회신 없음');
 reset role;
 select t.ok('반려: 겹쳤으므로 이전 닉네임 "알"로 되돌림', (select nickname = '알' and nickname_state is null from profiles where id = :'R'));
-select t.ok('반려 줄: 이메일 지움·되돌린 닉네임·처리자', (select status = 'rejected' and official_email is null and nickname_reverted = '알' and reviewed_by = :'OP'
+select t.ok(E'반려 줄: 이메일 지움\u00B7되돌린 닉네임\u00B7처리자', (select status = 'rejected' and official_email is null and nickname_reverted = '알' and reviewed_by = :'OP'
   from influencer_applications where id = pg_temp.id('a_r')));
 select t.ok('S(Zeus)는 그대로', (select nickname = 'Zeus' and nickname_state is null from profiles where id = :'S'));
-select t.ok('반려 알림 (사유 · 7일 · 되돌린 닉네임)', exists (select 1 from notifications where user_id = :'R' and kind = 'influencer_rejected'
-  and message = '장인 인증이 반려됐습니다. 사유: SECRET-NOTE-1 회신 없음 · 7일 뒤 다시 신청할 수 있습니다. 닉네임은 신청 전 닉네임 「알」(으)로 되돌렸습니다.'));
+select t.ok(E'반려 알림 (사유 \u00B7 7일 \u00B7 되돌린 닉네임)', exists (select 1 from notifications where user_id = :'R' and kind = 'influencer_rejected'
+  and message = E'장인 인증이 반려됐습니다. 사유: SECRET-NOTE-1 회신 없음 \u00B7 7일 뒤 다시 신청할 수 있습니다. 닉네임은 신청 전 닉네임 \u300C알\u300D(으)로 되돌렸습니다.'));
 select t.ok('처리 기록 reject_influencer', exists (select 1 from moderation_log where action = 'reject_influencer' and target_id = pg_temp.id('a_r')::text));
 set role authenticated;
 set request.jwt.claim.sub = :'R';
@@ -234,7 +234,7 @@ set request.jwt.claim.sub = :'T';
 insert into ids values ('a_t', apply_influencer('creator', '티', 'https://youtube.com/@zeus', 'real-zeus@x.com'));
 reset role;
 select t.ok('반려된 채널은 다른 사람이 바로 신청 가능 (선점 방해 막기)', pg_temp.id('a_t') is not null);
-select t.ok('신청 줄 메모·이메일이 신청자 말고 다른 사람 알림에 없음', not exists (
+select t.ok(E'신청 줄 메모\u00B7이메일이 신청자 말고 다른 사람 알림에 없음', not exists (
   select 1 from notifications where user_id <> :'R' and (message like '%SECRET-NOTE-1%' or message like '%zeus@x.com%' or message like '%t1.gg%')));
 select t.ok('지금 닉네임과 같은 희망 닉네임: 이름은 그대로, 인증 대기', (select nickname = '티' and nickname_state = 'pending' from profiles where id = :'T'));
 
@@ -255,7 +255,7 @@ select reject_influencer(pg_temp.id('a_s2'), '오타', true, true);
 reset role;
 select t.ok('[닉네임도 되돌리기]: 신청 전 닉네임으로', (select nickname from profiles where id = :'S') = 'ZeusPro');
 select t.ok('[바로 다시 신청 허용] 알림 문장', exists (select 1 from notifications where user_id = :'S' and kind = 'influencer_rejected'
-  and message like '장인 인증이 반려됐습니다. 사유: 오타 · 바로 다시 신청할 수 있습니다.%'));
+  and message like E'장인 인증이 반려됐습니다. 사유: 오타 \u00B7 바로 다시 신청할 수 있습니다.%'));
 select t.ok('[바로 다시 신청 허용]이면 다시 신청 가능 (앞 반려는 8일 전)', public.influencer_next_apply_at(:'S') is null);
 
 -- 이전 닉네임을 이미 다른 사람이 쓰면 임시 닉네임
@@ -269,16 +269,16 @@ set request.jwt.claim.sub = :'OP';
 select reject_influencer(pg_temp.id('a_s3'), '되돌림 확인', true, false);
 reset role;
 select t.ok('이전 닉네임이 쓰이고 있으면 임시 닉네임', (select nickname ~ '^탑신병자#' from profiles where id = :'S'));
-select t.ok('그 알림에 임시 닉네임 안내', exists (select 1 from notifications where user_id = :'S' and message like '%임시 닉네임 「탑신병자#%」(으)로 바뀌었습니다. 새 닉네임을 정해 주세요.'));
+select t.ok('그 알림에 임시 닉네임 안내', exists (select 1 from notifications where user_id = :'S' and message like E'%임시 닉네임 \u300C탑신병자#%\u300D(으)로 바뀌었습니다. 새 닉네임을 정해 주세요.'));
 
--- 180일 동안 반려 3번 → 마지막 반려부터 180일 ([바로 다시 신청 허용]·만료는 안 셈)
+-- 180일 동안 반려 3번 -> 마지막 반려부터 180일 ([바로 다시 신청 허용]/만료는 안 셈)
 update influencer_applications set ended_at = now() - interval '100 days' where id = pg_temp.id('a_s');
 select t.ok('세는 반려 2번(+허용 1번)이면 7일 제한만', public.influencer_next_apply_at(:'S') between now() + interval '6 days 23 hours' and now() + interval '7 days 1 hour');
 insert into influencer_applications (user_id, kind, nickname, channel_url, channel_key, status, expires_at, ended_at, review_note)
 values (:'S', 'pro', 'z', 'https://twitch.tv/z9', 'twitch.tv/z9', 'rejected', now(), now() - interval '50 days', '세 번째');
 select t.ok('세는 반려 3번이면 마지막 반려부터 180일', public.influencer_next_apply_at(:'S') between now() + interval '179 days 23 hours' and now() + interval '180 days 1 hour');
 
--- ===== 11. 만료 · 만료 전 알림 (한 번만) · 만료일 늘리기 =====
+-- ===== 11. 만료 / 만료 전 알림 (한 번만) / 만료일 늘리기 =====
 set role authenticated;
 set request.jwt.claim.sub = :'MOD';
 select t.fails('감독관은 만료일 늘리기 불가', format('select extend_influencer_application(%s)', pg_temp.id('a_t')), '운영자만 할 수 있습니다');
@@ -286,7 +286,7 @@ set request.jwt.claim.sub = :'OP';
 select t.ok('만료일 7일 늘리기', (select e between now() + interval '20 days 23 hours' and now() + interval '21 days 1 hour'
   from (select extend_influencer_application(pg_temp.id('a_t')) as e) x));  -- between은 왼쪽을 두 번 계산하므로 한 번만 부름
 reset role;
-select t.ok('늘린 횟수·처리 기록', (select extended_count from influencer_applications where id = pg_temp.id('a_t')) = 1
+select t.ok(E'늘린 횟수\u00B7처리 기록', (select extended_count from influencer_applications where id = pg_temp.id('a_t')) = 1
   and exists (select 1 from moderation_log where action = 'extend_influencer' and target_id = pg_temp.id('a_t')::text));
 update influencer_applications set expires_at = now() + interval '2 days 12 hours' where id = pg_temp.id('a_t');
 select influencer_daily();
@@ -296,12 +296,12 @@ select t.ok('만료 전 알림은 한 번만 ((a) 문장)', (select count(*) fro
                  and message = '신청이 3일 뒤 만료됩니다. 확인 메일에 아직 회신하지 않았다면 만료되기 전에 회신해 주세요.'));
 update influencer_applications set created_at = now() - interval '21 days', expires_at = now() - interval '1 minute' where id = pg_temp.id('a_t');
 select t.ok('하루 작업: 만료 1', (influencer_daily() ->> 'expired')::int = 1);
-select t.ok('만료: 상태·이메일 지움·인증 대기 풀림 (겹침 없어 닉네임 그대로)',
+select t.ok(E'만료: 상태\u00B7이메일 지움\u00B7인증 대기 풀림 (겹침 없어 닉네임 그대로)',
   (select status = 'expired' and official_email is null and ended_at is not null from influencer_applications where id = pg_temp.id('a_t'))
   and (select nickname = '티' and nickname_state is null from profiles where id = :'T'));
 select t.ok('만료 알림 (늘린 기간 포함 일수)', exists (select 1 from notifications where user_id = :'T' and kind = 'influencer_expired'
   and message = '21일 안에 확인이 끝나지 않아 신청이 만료됐습니다. 다시 신청할 수 있습니다.'));
-select t.ok('만료는 반려에 세지 않음 → 바로 다시 신청 가능', public.influencer_next_apply_at(:'T') is null);
+select t.ok(E'만료는 반려에 세지 않음 \u2192 바로 다시 신청 가능', public.influencer_next_apply_at(:'T') is null);
 -- (b) 만료 전 알림 문장
 set role authenticated;
 set request.jwt.claim.sub = :'T';
@@ -312,12 +312,12 @@ select influencer_daily();
 select t.ok('(b) 만료 전 알림에 운영자 계정 자리표시', exists (select 1 from notifications where user_id = :'T' and kind = 'influencer_expiring'
   and message = '신청이 1일 뒤 만료됩니다. 아직 친구 요청을 보내지 않았다면 {운영자 닉네임}으로 보내 주세요.'));
 
--- ===== 12. 취소 · 탈퇴 (개인정보 지움) =====
+-- ===== 12. 취소 / 탈퇴 (개인정보 지움) =====
 set role authenticated;
 set request.jwt.claim.sub = :'T';
 select cancel_influencer_application(pg_temp.id('b_t'));
 reset role;
-select t.ok('취소: 라이엇 ID·해시 지움, 상태 cancelled', (select status = 'cancelled' and riot_id is null and riot_key is null from influencer_applications where id = pg_temp.id('b_t')));
+select t.ok(E'취소: 라이엇 ID\u00B7해시 지움, 상태 cancelled', (select status = 'cancelled' and riot_id is null and riot_key is null from influencer_applications where id = pg_temp.id('b_t')));
 set role authenticated;
 set request.jwt.claim.sub = :'T';
 insert into ids values ('b_t2', apply_influencer('grandmaster', '티', null, null, 'Tee#KR2', 'https://op.gg/summoners/kr/Tee-KR2'));
@@ -325,10 +325,10 @@ set request.jwt.claim.sub = :'V';
 select t.fails('남의 신청은 취소 불가', format('select cancel_influencer_application(%s)', pg_temp.id('b_t2')), '신청을 찾지 못했습니다');
 reset role;
 delete from auth.users where id = :'T';
-select t.ok('탈퇴: 신청 줄은 남고 사람·라이엇 ID·해시를 지움, 상태 withdrawn',
+select t.ok(E'탈퇴: 신청 줄은 남고 사람\u00B7라이엇 ID\u00B7해시를 지움, 상태 withdrawn',
   (select user_id is null and status = 'withdrawn' and riot_id is null and riot_key is null and ended_at is not null from influencer_applications where id = pg_temp.id('b_t2')));
 
--- ===== 13. 인증 해제 · 운영자가 닉네임 바꾸기 =====
+-- ===== 13. 인증 해제 / 운영자가 닉네임 바꾸기 =====
 set role authenticated;
 set request.jwt.claim.sub = :'MOD';
 select t.fails('감독관은 인증 해제 불가', format('select revoke_influencer(%L, %L)', :'U', '사유'), '운영자만 할 수 있습니다');
@@ -355,8 +355,8 @@ update influencer_applications set revoked_at = now() - interval '366 days' wher
 select t.ok('하루 작업: 끝난 지 1년 지난 신청 2건 정리', (influencer_daily() ->> 'purged')::int = 2);
 select t.ok('승인 중인 신청은 남음', exists (select 1 from influencer_applications where id = pg_temp.id('b_w') and status = 'approved'));
 
--- ===== 15. 알림 종류 · 푸시 묶음 =====
-select t.ok('푸시 묶음: 운영자 신청 알림 staff_new, 신청자·회원 알림 my_results',
+-- ===== 15. 알림 종류 / 푸시 묶음 =====
+select t.ok(E'푸시 묶음: 운영자 신청 알림 staff_new, 신청자\u00B7회원 알림 my_results',
   public.push_group('influencer_applied') = 'staff_new'
   and (select bool_and(public.push_group(k) = 'my_results') from unnest(array['influencer_received', 'influencer_expiring', 'influencer_approved',
        'influencer_rejected', 'influencer_expired', 'influencer_revoked', 'nickname_reset_soon', 'nickname_reset', 'link_removed']) k)
@@ -379,26 +379,26 @@ select set_operator_mode(false);
 select t.fails('운영자 모드를 끄면 불가', $$select admin_new_members()$$, '운영자만 할 수 있습니다');
 select set_operator_mode(true);
 select admin_new_members()::text as nm \gset
-select t.ok('24시간 안: U(23시간 59분)만, V(24시간 1분)·비회원 제외',
+select t.ok(E'24시간 안: U(23시간 59분)만, V(24시간 1분)\u00B7비회원 제외',
   (select array_agg(m ->> 'id') from jsonb_array_elements(:'nm'::jsonb -> 'members') m) = array[:'U'::text]
   and (:'nm'::jsonb ->> 'total')::int = 1 and (:'nm'::jsonb ->> 'hours')::int = 24);
-select t.ok('칸은 id·닉네임·가입일·가입 방식·역할뿐, 가입 방식은 이름만',
+select t.ok(E'칸은 id\u00B7닉네임\u00B7가입일\u00B7가입 방식\u00B7역할뿐, 가입 방식은 이름만',
   (select bool_and(k in ('id', 'nickname', 'created_at', 'providers', 'role')) from jsonb_array_elements(:'nm'::jsonb -> 'members') r, jsonb_object_keys(r) k)
   and (:'nm'::jsonb -> 'members' -> 0 -> 'providers') = '["google"]'::jsonb);
-select t.ok('이메일·로그인 ID 글자가 없음', :'nm' !~ '(u@x\.com|SECRET-GOOGLE-ID|k-1|g-2)');
-select t.ok('48시간이면 V도 (구글·카카오 둘 다)', (select (m -> 'providers') = '["google", "kakao"]'::jsonb
+select t.ok(E'이메일\u00B7로그인 ID 글자가 없음', :'nm' !~ '(u@x\.com|SECRET-GOOGLE-ID|k-1|g-2)');
+select t.ok(E'48시간이면 V도 (구글\u00B7카카오 둘 다)', (select (m -> 'providers') = '["google", "kakao"]'::jsonb
   from jsonb_array_elements(admin_new_members(48) -> 'members') m where (m ->> 'id')::uuid = :'V'));
 select t.ok('쪽 나누기 (크기 1, 2쪽)', jsonb_array_length(admin_new_members(48, 2, 1) -> 'members') = 1 and (admin_new_members(48, 2, 1) ->> 'total')::int = 2);
 reset role;
 select t.ok('보여 주는 기간일 뿐 지우지 않음', (select count(*) from profiles where id = :'V') = 1);
 
--- ===== 17. 장인 빌드 라벨용 기여자 수 · 권한 =====
+-- ===== 17. 장인 빌드 라벨용 기여자 수 / 권한 =====
 insert into ids select 'b1', id from builds where status = 'approved' order by id limit 1;
 insert into build_editors (build_id, user_id) values (pg_temp.id('b1'), :'X'), (pg_temp.id('b1'), :'W');
 set role anon;
 select t.ok('기여자 수(시초 제외): 누구나 읽음', (build_editor_counts((select counter_id from builds where id = pg_temp.id('b1'))) ->> pg_temp.id('b1')::text)::int = 2);
 reset role;
-select t.ok('비로그인은 신청·운영자 함수 실행 권한 없음', not has_function_privilege('anon', 'public.apply_influencer(text, text, text, text, text, text)', 'execute')
+select t.ok(E'비로그인은 신청\u00B7운영자 함수 실행 권한 없음', not has_function_privilege('anon', 'public.apply_influencer(text, text, text, text, text, text)', 'execute')
   and not has_function_privilege('anon', 'public.admin_new_members(integer, integer, integer)', 'execute'));
 select t.ok('안쪽 함수는 아무도 못 부름', not exists (
   select 1 from pg_proc p join pg_namespace n on n.oid = p.pronamespace

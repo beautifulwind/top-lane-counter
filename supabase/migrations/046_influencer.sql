@@ -1,56 +1,56 @@
 -- =====================================================================
--- 046: 장인 인증 — 1단계 DB (2026-11-12, SPEC 6-32)
---   화면 문구는 "장인", 코드·DB 이름은 influencer 그대로.
+-- 046: 장인 인증 - 1단계 DB (2026-11-12, SPEC 6-32)
+--   화면 문구는 "장인", 코드/DB 이름은 influencer 그대로.
 --
--- 1. 신청 표 influencer_applications — 장인은 두 유형
---    (a) 크리에이터 creator · 프로게이머 pro: 채널·방송 링크 + 공식 이메일(필수). 운영자가 그 이메일로 확인 메일을 보내고(사이트 밖)
---        "본인입니다" 회신을 확인한 뒤 승인·반려.
+-- 1. 신청 표 influencer_applications - 장인은 두 유형
+--    (a) 크리에이터 creator / 프로게이머 pro: 채널/방송 링크 + 공식 이메일(필수). 운영자가 그 이메일로 확인 메일을 보내고(사이트 밖)
+--        "본인입니다" 회신을 확인한 뒤 승인/반려.
 --    (b) 그랜드마스터 이상 grandmaster: 라이엇 닉네임#태그 + op.gg 링크(필수). 신청자가 운영자의 인증 전용 라이엇 계정에 친구 요청을 보내고,
---        운영자는 수락하지 않고 보낸 사람 이름과 op.gg 티어만 확인한 뒤 승인·반려. (운영자 계정 닉네임은 DB에 두지 않는다 — 화면 문구 상수 한 곳)
+--        운영자는 수락하지 않고 보낸 사람 이름과 op.gg 티어만 확인한 뒤 승인/반려. (운영자 계정 닉네임은 DB에 두지 않는다 - 화면 문구 상수 한 곳)
 --    - 14일(influencer_review_days) 안에 처리되지 않으면 만료(influencer-daily). 운영자는 만료일을 7일 늘릴 수 있다.
---    - 같은 채널 주소·같은 라이엇 닉네임#태그(대소문자·공백 정규화)로 처리 전·승인된 신청이 겹치지 않는다(부분 unique 인덱스).
---    - 공식 이메일·라이엇 닉네임#태그는 심사가 끝나면(승인·반려·만료·취소·탈퇴) 트리거가 바로 지운다.
---      승인된 (b)는 겹침 검사용 해시(riot_key, sha256)만 남고, 해제·탈퇴 때 그것도 지운다. 읽기는 본인·운영자만(감독관 제외).
---    - 반려 뒤 7일, 180일 동안 운영자 반려 3번이면 180일 동안 다시 신청할 수 없다(만료·취소는 세지 않음).
---      반려하면 그 라이엇 닉네임#태그·채널은 바로 풀려 다른 사람이 즉시 신청할 수 있다(선점 방해 막기).
+--    - 같은 채널 주소/같은 라이엇 닉네임#태그(대소문자/공백 정규화)로 처리 전/승인된 신청이 겹치지 않는다(부분 unique 인덱스).
+--    - 공식 이메일/라이엇 닉네임#태그는 심사가 끝나면(승인/반려/만료/취소/탈퇴) 트리거가 바로 지운다.
+--      승인된 (b)는 겹침 검사용 해시(riot_key, sha256)만 남고, 해제/탈퇴 때 그것도 지운다. 읽기는 본인/운영자만(감독관 제외).
+--    - 반려 뒤 7일, 180일 동안 운영자 반려 3번이면 180일 동안 다시 신청할 수 없다(만료/취소는 세지 않음).
+--      반려하면 그 라이엇 닉네임#태그/채널은 바로 풀려 다른 사람이 즉시 신청할 수 있다(선점 방해 막기).
 --      운영자가 [바로 다시 신청 허용]으로 반려하면 7일 제한도 없고 3번에도 세지 않는다.
 --    - 가입 뒤 최소 기간 influencer_min_account_days = 0(끔, xp_rules로 조절).
 -- 2. 닉네임
---    - nickname_key: 비슷한 글자(대소문자·전각·키릴/그리스 글자·0/o·1/l/I·rn/m·띄어쓰기·구분 기호)를 같은 글자로 본 열쇠.
---      닉네임 유일성 인덱스를 lower(nickname) → nickname_key 부분 인덱스 2개로 바꾼다:
---        profiles_nickname_key_unique  (nickname_state is null)       — 보통 닉네임끼리 겹치지 않음
---        profiles_nickname_key_pending (nickname_state = 'pending')   — 인증 대기끼리 겹치지 않음
+--    - nickname_key: 비슷한 글자(대소문자/전각/키릴/그리스 글자/0/o/1/l/I/rn/m/띄어쓰기/구분 기호)를 같은 글자로 본 열쇠.
+--      닉네임 유일성 인덱스를 lower(nickname) -> nickname_key 부분 인덱스 2개로 바꾼다:
+--        profiles_nickname_key_unique  (nickname_state is null)       - 보통 닉네임끼리 겹치지 않음
+--        profiles_nickname_key_pending (nickname_state = 'pending')   - 인증 대기끼리 겹치지 않음
 --      그래서 "보통 닉네임 1명 + 같은 닉네임으로 신청한 인증 대기 1명"만 잠깐 함께 있을 수 있다.
 --      승인되면 원래 쓰던 사람은 'yielding'(닉네임 변경 예정, 3일)이 되고 장인이 보통 닉네임이 된다. 3일이 지나면 임시 닉네임 탑신병자#xxxxxx.
 --    - 신청하면 닉네임이 희망 닉네임으로 바뀌고 "인증 대기"(nickname_state 'pending'). 심사 중에는 직접 못 바꾼다.
---      반려·만료·취소 때 다른 사람과 겹쳐 있으면(또는 운영자가 [닉네임도 되돌리기]를 고르면) 되돌린다:
+--      반려/만료/취소 때 다른 사람과 겹쳐 있으면(또는 운영자가 [닉네임도 되돌리기]를 고르면) 되돌린다:
 --      이전 닉네임이 비어 있으면(아무도 안 쓰면) 이전 것, 아니면 임시 닉네임.
 --    - 인증된 장인은 닉네임을 직접 못 바꾸고 운영자가 바꾼다(admin_set_nickname). "닉네임 변경 예정"인 사람은 30일 제한 없이 바로 바꿀 수 있다.
---      임시 닉네임·되돌린 닉네임·운영자가 바꾼 닉네임 뒤에도 30일 제한 없이 바꿀 수 있다(nickname_changes.kind).
---    - 사칭 막기: "[장인]"·"(장인)"(괄호 모양 변형 포함)이 든 닉네임, "장인 "으로 시작하는 닉네임 금지 (nickname_reserved, 기존 (운)·(감)과 함께).
--- 3. 알림 — 운영자용 influencer_applied(푸시 staff_new, 운영자 모드를 끄면 가림) / 신청자·회원용(푸시 my_results):
---    influencer_received · influencer_expiring · influencer_approved · influencer_rejected · influencer_expired · influencer_revoked ·
---    nickname_reset_soon(닉네임 변경 예정, 유예 시작) · nickname_reset · link_removed(3단계 047에서 씀 — 종류만 미리).
---    influencer_received·influencer_expiring의 (b) 문장에는 "{운영자 닉네임}" 자리표시가 들어 있고 화면·푸시가 문구 상수로 채운다(조사는 josa.js).
--- 4. 처리 기록 approve_influencer · reject_influencer · extend_influencer · revoke_influencer · rename_member (대상 influencer_application · user)
+--      임시 닉네임/되돌린 닉네임/운영자가 바꾼 닉네임 뒤에도 30일 제한 없이 바꿀 수 있다(nickname_changes.kind).
+--    - 사칭 막기: "[장인]"/"(장인)"(괄호 모양 변형 포함)이 든 닉네임, "장인 "으로 시작하는 닉네임 금지 (nickname_reserved, 기존 (운)/(감)과 함께).
+-- 3. 알림 - 운영자용 influencer_applied(푸시 staff_new, 운영자 모드를 끄면 가림) / 신청자/회원용(푸시 my_results):
+--    influencer_received / influencer_expiring / influencer_approved / influencer_rejected / influencer_expired / influencer_revoked /
+--    nickname_reset_soon(닉네임 변경 예정, 유예 시작) / nickname_reset / link_removed(3단계 047에서 씀 - 종류만 미리).
+--    influencer_received/influencer_expiring의 (b) 문장에는 "{운영자 닉네임}" 자리표시가 들어 있고 화면/푸시가 문구 상수로 채운다(조사는 josa.js).
+-- 4. 처리 기록 approve_influencer / reject_influencer / extend_influencer / revoke_influencer / rename_member (대상 influencer_application / user)
 --    처리 대기 건수 admin_pending_counts()에 influencers(운영자만, 감독관 0).
--- 5. 회원 관리: admin_new_members(시간 기본 24, 쪽, 크기) — 운영자 전용(_unchecked + require_operator), 정식 회원만(비회원 제외),
---    돌려주는 값은 id·닉네임·가입일·가입 방식·역할뿐(이메일·로그인 ID 없음). 24시간은 보여 주는 기간일 뿐 지우지 않는다.
--- 6. 사람 json 칸: profiles에 influencer(유형)·influencer_at·nickname_state·nickname_reset_at (누구나 읽음, 직접 못 고침).
---    사람을 json으로 돌려주는 함수(build_contributors·admin_build_revisions·board_page·open_reports_for_moderator·admin_member_list·
---    admin_search_members·admin_member_info)에 influencer·nickname_state를 더한다.
+-- 5. 회원 관리: admin_new_members(시간 기본 24, 쪽, 크기) - 운영자 전용(_unchecked + require_operator), 정식 회원만(비회원 제외),
+--    돌려주는 값은 id/닉네임/가입일/가입 방식/역할뿐(이메일/로그인 ID 없음). 24시간은 보여 주는 기간일 뿐 지우지 않는다.
+-- 6. 사람 json 칸: profiles에 influencer(유형)/influencer_at/nickname_state/nickname_reset_at (누구나 읽음, 직접 못 고침).
+--    사람을 json으로 돌려주는 함수(build_contributors/admin_build_revisions/board_page/open_reports_for_moderator/admin_member_list/
+--    admin_search_members/admin_member_info)에 influencer/nickname_state를 더한다.
 --    장인 빌드 라벨용 build_editor_counts(상대법): 빌드마다 시초를 뺀 기여자 수 ("이후 N명이 수정했습니다").
--- 7. influencer_daily(): 만료 처리 · 만료 3일 전 알림(한 신청에 한 번) · 유예가 끝난 닉네임을 임시 닉네임으로 · 끝난 지 1년 지난 신청 정리.
---    pg_cron으로 하루 한 번 (등록 SQL은 작업 보고에 따로 — 이 파일에는 없다).
+-- 7. influencer_daily(): 만료 처리 / 만료 3일 전 알림(한 신청에 한 번) / 유예가 끝난 닉네임을 임시 닉네임으로 / 끝난 지 1년 지난 신청 정리.
+--    pg_cron으로 하루 한 번 (등록 SQL은 작업 보고에 따로 - 이 파일에는 없다).
 --
--- 만들지 않는 것: 빌드 수정 잠금(edit_lock — 장인 빌드도 위키처럼 누구나 고침, build_edit_check 그대로), 증빙 파일 버킷·인증 코드, 외부 링크(047).
+-- 만들지 않는 것: 빌드 수정 잠금(edit_lock - 장인 빌드도 위키처럼 누구나 고침, build_edit_check 그대로), 증빙 파일 버킷/인증 코드, 외부 링크(047).
 --
--- ▶ 실행 전 확인 (필수): supabase/scripts/check_influencer.sql을 먼저 실행해 1번 줄 "닉네임 열쇠 중복"이 0인지 본다.
+-- >> 실행 전 확인 (필수): supabase/scripts/check_influencer.sql을 먼저 실행해 1번 줄 "닉네임 열쇠 중복"이 0인지 본다.
 --   0이 아니면 같은 줄 메모의 닉네임들 중 한쪽에 닉네임 변경을 부탁하고 다시 확인한다.
 --   (이 파일도 맨 앞에서 같은 검사를 하고, 겹치면 아무것도 바꾸지 않고 멈춘다.)
 --
--- ▶ 되돌리기 (닉네임 인덱스 롤백) — 문제가 생기면 SQL Editor에서 아래를 한 번에 실행한다.
---   인증 대기·닉네임 변경 예정 상태가 남아 있으면 같은 닉네임이 둘일 수 있어 옛 인덱스가 만들어지지 않으므로 먼저 상태를 정리한다.
+-- >> 되돌리기 (닉네임 인덱스 롤백) - 문제가 생기면 SQL Editor에서 아래를 한 번에 실행한다.
+--   인증 대기/닉네임 변경 예정 상태가 남아 있으면 같은 닉네임이 둘일 수 있어 옛 인덱스가 만들어지지 않으므로 먼저 상태를 정리한다.
 --   (장인 기능 전체를 지우는 것이 아니라 닉네임 유일성 규칙만 예전 lower(nickname)으로 되돌린다.)
 --     begin;
 --     select public.influencer_close(id, 'cancelled', null, true, false) from public.influencer_applications where status = 'pending';
@@ -67,11 +67,11 @@
 --     create unique index profiles_nickname_key_pending on public.profiles (nickname_key) where nickname_state = 'pending';
 --     commit;
 --
--- 하위 호환: 있던 표·함수의 이름·인자·반환은 그대로(사람 json에 키 둘이 늘 뿐, 처리 대기 건수에 키 하나). 새 표·칸·함수·알림 종류만 더한다.
+-- 하위 호환: 있던 표/함수의 이름/인자/반환은 그대로(사람 json에 키 둘이 늘 뿐, 처리 대기 건수에 키 하나). 새 표/칸/함수/알림 종류만 더한다.
 --   지금 배포된 화면과 그대로 동작한다(옛 화면은 모르는 알림 종류를 종 모양 + 문장으로 보여 준다. 신청 화면이 없으니 신청도 안 들어온다).
---   닉네임 중복 판정만 바뀐다: "Faker"와 "FakerI"·"Fa ker"처럼 비슷한 닉네임은 이제 새로 정할 수 없다(이미 있는 닉네임은 그대로).
+--   닉네임 중복 판정만 바뀐다: "Faker"와 "FakerI"/"Fa ker"처럼 비슷한 닉네임은 이제 새로 정할 수 없다(이미 있는 닉네임은 그대로).
 --   중복 오류는 예전과 같은 23505라 지금 화면이 "이미 사용 중인 닉네임입니다."로 보여 준다.
--- 순서: check_influencer.sql(실행 전) → 이 파일 실행 → check_influencer.sql(실행 후) → pg_cron 일정 등록 → (2단계) 화면 push·web-push 재배포.
+-- 순서: check_influencer.sql(실행 전) -> 이 파일 실행 -> check_influencer.sql(실행 후) -> pg_cron 일정 등록 -> (2단계) 화면 push/web-push 재배포.
 -- 045까지 실행한 DB에서, SQL Editor에 통째로 붙여넣어 "한 번" 실행한다.
 -- =====================================================================
 
@@ -98,10 +98,10 @@ insert into public.xp_rules (key, value, note) values
   ('influencer_expiring_days',       3, '장인 인증: 만료 이 일수 전에 신청자에게 알림 (한 신청에 한 번, 046)'),
   ('influencer_retry_days',          7, '장인 인증: 운영자가 반려한 뒤 이 일수가 지나야 다시 신청 (046)'),
   ('influencer_reject_window_days', 180, '장인 인증: 이 일수 안에 반려가 influencer_reject_limit번이면 신청 금지 (046)'),
-  ('influencer_reject_limit',        3, '장인 인증: 신청 금지가 되는 반려 횟수 (만료·취소·[바로 다시 신청 허용] 반려는 안 셈, 046)'),
+  ('influencer_reject_limit',        3, E'장인 인증: 신청 금지가 되는 반려 횟수 (만료\u00B7취소\u00B7[바로 다시 신청 허용] 반려는 안 셈, 046)'),
   ('influencer_ban_days',          180, '장인 인증: 반려가 쌓였을 때 신청 금지 일수 (마지막 반려부터, 046)'),
-  ('influencer_nickname_grace_days', 3, '장인 인증: 장인과 같은 닉네임을 쓰던 회원이 새 닉네임을 정할 유예 일수 — 지나면 임시 닉네임 (046)'),
-  ('influencer_keep_days',         365, '장인 인증: 끝난 신청(반려·만료·취소·탈퇴·해제) 보관 일수 — 지나면 influencer_daily가 지움 (046)')
+  ('influencer_nickname_grace_days', 3, E'장인 인증: 장인과 같은 닉네임을 쓰던 회원이 새 닉네임을 정할 유예 일수 \u2014 지나면 임시 닉네임 (046)'),
+  ('influencer_keep_days',         365, E'장인 인증: 끝난 신청(반려\u00B7만료\u00B7취소\u00B7탈퇴\u00B7해제) 보관 일수 \u2014 지나면 influencer_daily가 지움 (046)')
 on conflict (key) do nothing;
 
 -- ---------------------------------------------------------------------
@@ -117,20 +117,20 @@ begin
     return null;
   end if;
   n := normalize(p, NFKC);
-  -- 대문자 모양이 같은 키릴·그리스 글자 → 라틴 대문자 (소문자로 바꾸기 전에)
-  n := pg_catalog.translate(n, 'АВЕКМНОРСТХІЈЅΑΒΕΖΗΙΚΜΝΟΡΤΥΧ', 'ABEKMHOPCTXIJSABEZHIKMNOPTYX');
+  -- 대문자 모양이 같은 키릴/그리스 글자 -> 라틴 대문자 (소문자로 바꾸기 전에)
+  n := pg_catalog.translate(n, E'\u0410\u0412\u0415\u041A\u041C\u041D\u041E\u0420\u0421\u0422\u0425\u0406\u0408\u0405\u0391\u0392\u0395\u0396\u0397\u0399\u039A\u039C\u039D\u039F\u03A1\u03A4\u03A5\u03A7', 'ABEKMHOPCTXIJSABEZHIKMNOPTYX');
   n := pg_catalog.lower(n);
-  -- 공백류·보이지 않는 글자·결합 기호·구분 기호(_ - . · ・ ‧ • ㆍ)는 지운다
+  -- 공백류/보이지 않는 글자/결합 기호/구분 기호(_ - . / U+30FB U+2027 U+2022 U+318D)는 지운다
   n := pg_catalog.regexp_replace(n,
-    '[\s ­͏ᅟᅠ឴឵᠎ -‏ -  -⁯　ㅤ﻿ﾠ̀-ͯ_.·・‧•ㆍ-]', '', 'g');
-  -- 소문자 모양이 같은 글자 → 라틴 글자, 숫자·기호 → 비슷한 글자 (i·I·1·| → l, 0 → o)
-  n := pg_catalog.translate(n, 'аеорсухјѕԁһοανρτκυɡіιıi1|0', 'aeopcyxjsdhoavptkugllllllo');
+    '[\s\u00A0\u00AD\u034F\u115F\u1160\u17B4\u17B5\u180E\u2000-\u200F\u2028-\u202F\u205F-\u206F\u3000\u3164\uFEFF\uFFA0\u0300-\u036F_.\u00B7\u30FB\u2027\u2022\u318D-]', '', 'g');
+  -- 소문자 모양이 같은 글자 -> 라틴 글자, 숫자/기호 -> 비슷한 글자 (i/I/1/| -> l, 0 -> o)
+  n := pg_catalog.translate(n, E'\u0430\u0435\u043E\u0440\u0441\u0443\u0445\u0458\u0455\u0501\u04BB\u03BF\u03B1\u03BD\u03C1\u03C4\u03BA\u03C5\u0261\u0456\u03B9\u0131i1|0', 'aeopcyxjsdhoavptkugllllllo');
   n := pg_catalog.replace(n, 'rn', 'm');
   n := pg_catalog.replace(n, 'vv', 'w');
   return n;
 end;
 $$;
-comment on function public.nickname_key(text) is '닉네임 겹침 판정 열쇠 (046) — 비슷한 글자를 같은 글자로. 화면에 보이는 값이 아니다';
+comment on function public.nickname_key(text) is E'닉네임 겹침 판정 열쇠 (046) \u2014 비슷한 글자를 같은 글자로. 화면에 보이는 값이 아니다';
 
 -- 실행 전 중복 확인: 지금 닉네임끼리 열쇠가 겹치면 아무것도 바꾸지 않고 멈춘다
 do $$
@@ -147,7 +147,7 @@ begin
 end $$;
 
 -- ---------------------------------------------------------------------
--- 2. 프로필 칸 · 닉네임 인덱스 교체 · 닉네임 변경 기록 종류
+-- 2. 프로필 칸 / 닉네임 인덱스 교체 / 닉네임 변경 기록 종류
 -- ---------------------------------------------------------------------
 alter table public.profiles
   add column influencer        text check (influencer in ('creator', 'pro', 'grandmaster')),
@@ -157,7 +157,7 @@ alter table public.profiles
   add column nickname_key      text generated always as (public.nickname_key(nickname)) stored,
   add constraint profiles_influencer_at check ((influencer is null) = (influencer_at is null)),
   add constraint profiles_nickname_reset_at check ((nickname_state is not distinct from 'yielding') = (nickname_reset_at is not null));
-comment on column public.profiles.influencer is '인증된 장인 유형 creator·pro·grandmaster (046). null = 장인 아님. 함수로만 바뀐다';
+comment on column public.profiles.influencer is E'인증된 장인 유형 creator\u00B7pro\u00B7grandmaster (046). null = 장인 아님. 함수로만 바뀐다';
 comment on column public.profiles.nickname_state is
   'pending = 장인 인증 대기(신청하며 희망 닉네임으로 바뀜), yielding = 장인과 같은 닉네임이라 nickname_reset_at에 임시 닉네임으로 바뀜 (046)';
 comment on column public.profiles.nickname_key is '닉네임 겹침 판정 열쇠 (public.nickname_key, 046)';
@@ -171,12 +171,12 @@ create index profiles_created_at on public.profiles (created_at desc, id desc);
 alter table public.nickname_changes
   add column kind text not null default 'user' check (kind in ('user', 'apply', 'revert', 'reset', 'admin'));
 comment on column public.nickname_changes.kind is
-  'user 본인 · apply 장인 신청 · revert 신청이 끝나 되돌림 · reset 임시 닉네임 · admin 운영자 (046). revert·reset·admin 뒤에는 30일 제한 없이 바꿀 수 있다';
+  E'user 본인 \u00B7 apply 장인 신청 \u00B7 revert 신청이 끝나 되돌림 \u00B7 reset 임시 닉네임 \u00B7 admin 운영자 (046). revert\u00B7reset\u00B7admin 뒤에는 30일 제한 없이 바꿀 수 있다';
 
 -- ---------------------------------------------------------------------
--- 3. 닉네임 바꾸기 규칙 (본인이 바꿀 때) · 겹침 검사 · 사칭 금지
+-- 3. 닉네임 바꾸기 규칙 (본인이 바꿀 때) / 겹침 검사 / 사칭 금지
 -- ---------------------------------------------------------------------
--- 시스템(장인 신청·되돌리기·임시 닉네임·운영자)이 바꿀 때는 system_set_nickname이 tl.nickname_system을 켜고 직접 기록한다
+-- 시스템(장인 신청/되돌리기/임시 닉네임/운영자)이 바꿀 때는 system_set_nickname이 tl.nickname_system을 켜고 직접 기록한다
 create or replace function public.keep_nickname()
 returns trigger language plpgsql security definer set search_path = ''
 as $$
@@ -220,7 +220,7 @@ begin
 end;
 $$;
 
--- 비슷한 닉네임 겹침: 인증 대기·변경 예정인 사람의 닉네임도 새로 못 가져간다 (인덱스는 보통 닉네임끼리만 막으므로)
+-- 비슷한 닉네임 겹침: 인증 대기/변경 예정인 사람의 닉네임도 새로 못 가져간다 (인덱스는 보통 닉네임끼리만 막으므로)
 create function public.check_nickname_key()
 returns trigger language plpgsql security definer set search_path = ''
 as $$
@@ -241,19 +241,19 @@ $$;
 create trigger profiles_nickname_key before insert or update of nickname on public.profiles
   for each row execute function public.check_nickname_key();
 
--- "장인" 표시 흉내: [장인]·(장인) (괄호 모양·띄어쓰기·보이지 않는 글자 변형 포함), "장인 "으로 시작 (구분 기호 포함)
+-- "장인" 표시 흉내: [장인]/(장인) (괄호 모양/띄어쓰기/보이지 않는 글자 변형 포함), "장인 "으로 시작 (구분 기호 포함)
 create function public.nickname_mimics_influencer(p text)
 returns boolean language plpgsql immutable set search_path = ''
 as $$
 declare
   n text := normalize(coalesce(p, ''), NFKC);
-  open_chars constant text := '[{<〔【〈《「『〖﹙⁽₍❨❪❬❮❰❲❴⟦⟨⟪⟬⦅〘〚﹛﹝＜';
-  close_chars constant text := ']}>〕】〉》」』〗﹚⁾₎❩❫❭❯❱❳❵⟧⟩⟫⟭⦆〙〛﹜﹞＞';
+  open_chars constant text := E'[{<\u3014\u3010\u3008\u300A\u300C\u300E\u3016\uFE59\u207D\u208D\u2768\u276A\u276C\u276E\u2770\u2772\u2774\u27E6\u27E8\u27EA\u27EC\u2985\u3018\u301A\uFE5B\uFE5D\uFF1C';
+  close_chars constant text := E']}>\u3015\u3011\u3009\u300B\u300D\u300F\u3017\uFE5A\u207E\u208E\u2769\u276B\u276D\u276F\u2771\u2773\u2775\u27E7\u27E9\u27EB\u27ED\u2986\u3019\u301B\uFE5C\uFE5E\uFF1E';
   m text;
 begin
-  n := pg_catalog.regexp_replace(n, '[­͏ᅟᅠ឴឵᠎​-‏‪-‮⁠-⁯ㅤ﻿ﾠ̀-ͯ]', '', 'g');
-  n := pg_catalog.btrim(pg_catalog.regexp_replace(n, '[\s  -     　]+', ' ', 'g'));
-  if n ~ '^장인[ _|·.:/~-]' then
+  n := pg_catalog.regexp_replace(n, '[\u00AD\u034F\u115F\u1160\u17B4\u17B5\u180E\u200B-\u200F\u202A-\u202E\u2060-\u206F\u3164\uFEFF\uFFA0\u0300-\u036F]', '', 'g');
+  n := pg_catalog.btrim(pg_catalog.regexp_replace(n, '[\s\u00A0\u2000-\u200A\u2028\u2029\u202F\u205F\u3000]+', ' ', 'g'));
+  if n ~ E'^장인[ _|\u00B7.:/~-]' then
     return true;
   end if;
   m := pg_catalog.regexp_replace(n, ' ', '', 'g');
@@ -263,7 +263,7 @@ begin
 end;
 $$;
 
--- 029의 (운)·(감) 검사 그대로 + 장인 흉내
+-- 029의 (운)/(감) 검사 그대로 + 장인 흉내
 create or replace function public.check_nickname_reserved()
 returns trigger language plpgsql security definer set search_path = ''
 as $$
@@ -271,17 +271,17 @@ begin
   if new.nickname is not null
      and (tg_op = 'INSERT' or new.nickname is distinct from old.nickname) then
     if public.nickname_reserved(new.nickname) then
-      raise exception '닉네임에는 (운)·(감)을 쓸 수 없습니다.' using errcode = '23514';
+      raise exception E'닉네임에는 (운)\u00B7(감)을 쓸 수 없습니다.' using errcode = '23514';
     end if;
     if public.nickname_mimics_influencer(new.nickname) then
-      raise exception '닉네임에는 [장인]·(장인)을 쓸 수 없고, "장인 "으로 시작할 수 없습니다.' using errcode = '23514';
+      raise exception E'닉네임에는 [장인]\u00B7(장인)을 쓸 수 없고, "장인 "으로 시작할 수 없습니다.' using errcode = '23514';
     end if;
   end if;
   return new;
 end;
 $$;
 
--- 시스템이 닉네임·상태를 함께 바꾼다 (본인 규칙·겹침 트리거를 건너뛰고, 변경 기록은 여기서 kind와 함께)
+-- 시스템이 닉네임/상태를 함께 바꾼다 (본인 규칙/겹침 트리거를 건너뛰고, 변경 기록은 여기서 kind와 함께)
 create function public.system_set_nickname(p_user uuid, p_nickname text, p_state text, p_reset_at timestamptz, p_kind text)
 returns void language plpgsql security definer set search_path = ''
 as $$
@@ -325,10 +325,10 @@ create table public.influencer_applications (
   nickname             text not null check (nickname = btrim(nickname) and char_length(nickname) between 1 and 20),  -- 희망 닉네임
   old_nickname         text,                                                      -- 신청 직전 닉네임 (되돌리기용)
   channel_url          text check (channel_url is null or (char_length(channel_url) <= 300 and channel_url ~* '^https?://[^\s/]+\.[^\s]+$')),
-  channel_key          text,                                                      -- 겹침 판정용 (scheme·www·m.·쿼리·끝 / 뺀 소문자)
+  channel_key          text,                                                      -- 겹침 판정용 (scheme/www/m./쿼리/끝 / 뺀 소문자)
   official_email       text check (official_email is null or (char_length(official_email) <= 254 and official_email ~ '^[^@\s]+@[^@\s]+\.[^@\s]+$')),
   riot_id              text check (riot_id is null or char_length(riot_id) <= 30),  -- 라이엇 닉네임#태그 (심사 중에만)
-  riot_key             text,                                                      -- sha256(정규화한 닉네임#태그) — 처리 전·승인된 동안만
+  riot_key             text,                                                      -- sha256(정규화한 닉네임#태그) - 처리 전/승인된 동안만
   opgg_url             text check (opgg_url is null or (char_length(opgg_url) <= 300 and opgg_url ~* '^https?://([a-z0-9-]+\.)*op\.gg(/\S*)?$')),
   status               text not null default 'pending'
                        check (status in ('pending', 'approved', 'rejected', 'expired', 'cancelled', 'withdrawn', 'revoked')),
@@ -336,8 +336,8 @@ create table public.influencer_applications (
   expires_at           timestamptz not null,
   extended_count       integer not null default 0 check (extended_count >= 0),
   expiring_notified_at timestamptz,                                               -- 만료 전 알림을 보낸 때 (한 번만)
-  ended_at             timestamptz,                                               -- 승인·반려·만료·취소·탈퇴된 때
-  reviewed_by          uuid references public.profiles (id) on delete set null,   -- 승인·반려한 운영자
+  ended_at             timestamptz,                                               -- 승인/반려/만료/취소/탈퇴된 때
+  reviewed_by          uuid references public.profiles (id) on delete set null,   -- 승인/반려한 운영자
   review_note          text check (review_note is null or char_length(review_note) between 1 and 500),
   retry_now            boolean not null default false,                            -- 반려하며 [바로 다시 신청 허용]
   nickname_reverted    text,                                                      -- 끝나며 되돌린 닉네임 (안 되돌렸으면 null)
@@ -363,15 +363,15 @@ create index influencer_applications_user on public.influencer_applications (use
 create index influencer_applications_open on public.influencer_applications (expires_at) where status = 'pending';
 create index influencer_applications_ended on public.influencer_applications (ended_at) where status <> 'pending';
 comment on table public.influencer_applications is
-  '장인 인증 신청 (046). 쓰기는 함수로만. 공식 이메일·라이엇 닉네임#태그는 심사가 끝나면 지움. 읽기: 본인·운영자(감독관 제외)';
+  E'장인 인증 신청 (046). 쓰기는 함수로만. 공식 이메일\u00B7라이엇 닉네임#태그는 심사가 끝나면 지움. 읽기: 본인\u00B7운영자(감독관 제외)';
 
 alter table public.influencer_applications enable row level security;
 revoke all on public.influencer_applications from anon, authenticated;
 grant select on public.influencer_applications to authenticated;
-create policy "influencer_applications: 본인·운영자 읽기" on public.influencer_applications
+create policy "influencer_applications: 본인과 운영자 읽기" on public.influencer_applications
   for select using (user_id = (select auth.uid()) or public.is_admin());
 
--- 개인정보 지우기: 심사가 끝나면(승인·반려·만료·취소·탈퇴·해제) 공식 이메일·라이엇 닉네임#태그를 바로 비운다.
+-- 개인정보 지우기: 심사가 끝나면(승인/반려/만료/취소/탈퇴/해제) 공식 이메일/라이엇 닉네임#태그를 바로 비운다.
 -- 탈퇴(user_id가 비워짐)면 상태를 withdrawn으로. 승인된 (b)의 겹침 해시는 승인 동안만 남긴다.
 create function public.influencer_applications_clear_private()
 returns trigger language plpgsql security definer set search_path = ''
@@ -395,7 +395,7 @@ create trigger influencer_applications_clear_private before update on public.inf
   for each row execute function public.influencer_applications_clear_private();
 
 -- ---------------------------------------------------------------------
--- 5. 처리 기록 종류 · 알림 종류 · 운영자 모드 · 푸시 묶음
+-- 5. 처리 기록 종류 / 알림 종류 / 운영자 모드 / 푸시 묶음
 -- ---------------------------------------------------------------------
 alter table public.moderation_log drop constraint moderation_log_action_check;
 alter table public.moderation_log add constraint moderation_log_action_check check (action = any (array[
@@ -473,7 +473,7 @@ as $$
   select case p_kind when 'creator' then '크리에이터' when 'pro' then '프로게이머' when 'grandmaster' then '그랜드마스터 이상' else p_kind end;
 $$;
 
--- 채널 주소 겹침 판정: scheme·www.·m.·쿼리·조각·끝의 / 를 빼고 소문자
+-- 채널 주소 겹침 판정: scheme/www./m./쿼리/조각/끝의 / 를 빼고 소문자
 create function public.influencer_channel_key(p_url text)
 returns text language sql immutable set search_path = ''
 as $$
@@ -484,18 +484,18 @@ as $$
            '/+$', ''), '');
 $$;
 
--- 라이엇 닉네임#태그 겹침 판정 (원문은 남기지 않으므로 해시): NFKC·소문자·공백 제거 뒤 sha256
+-- 라이엇 닉네임#태그 겹침 판정 (원문은 남기지 않으므로 해시): NFKC/소문자/공백 제거 뒤 sha256
 create function public.influencer_riot_key(p_riot text)
 returns text language sql immutable set search_path = ''
 as $$
   select pg_catalog.encode(pg_catalog.sha256(pg_catalog.convert_to(
-           pg_catalog.regexp_replace(pg_catalog.lower(normalize(p_riot, NFKC)), '[\s 　]', '', 'g'), 'UTF8')), 'hex');
+           pg_catalog.regexp_replace(pg_catalog.lower(normalize(p_riot, NFKC)), '[\s\u00A0\u3000]', '', 'g'), 'UTF8')), 'hex');
 $$;
 
 -- 다시 신청할 수 있는 때 (지금 신청 가능하면 null)
---  · 가입 뒤 influencer_min_account_days
---  · 운영자 반려 뒤 influencer_retry_days ([바로 다시 신청 허용] 반려 제외)
---  · influencer_reject_window_days 안에 운영자 반려가 influencer_reject_limit번 → 그 마지막 반려부터 influencer_ban_days
+--  / 가입 뒤 influencer_min_account_days
+--  / 운영자 반려 뒤 influencer_retry_days ([바로 다시 신청 허용] 반려 제외)
+--  / influencer_reject_window_days 안에 운영자 반려가 influencer_reject_limit번 -> 그 마지막 반려부터 influencer_ban_days
 create function public.influencer_next_apply_at(p_user uuid)
 returns timestamptz language plpgsql stable security definer set search_path = ''
 as $$
@@ -521,7 +521,7 @@ begin
 end;
 $$;
 
--- 처리 전 신청을 끝낸다 (반려·만료·취소). 닉네임: 다른 사람과 겹쳐 있거나 p_revert면 되돌림
+-- 처리 전 신청을 끝낸다 (반려/만료/취소). 닉네임: 다른 사람과 겹쳐 있거나 p_revert면 되돌림
 --   (이전 닉네임을 아무도 안 쓰면 이전 것, 아니면 임시 닉네임). 돌려주는 값: 되돌린 닉네임 (안 되돌렸으면 null)
 create function public.influencer_close(p_app bigint, p_status text, p_note text, p_revert boolean, p_retry_now boolean)
 returns text language plpgsql security definer set search_path = ''
@@ -567,12 +567,12 @@ create function public.influencer_reverted_sentence(p_name text)
 returns text language sql immutable set search_path = ''
 as $$
   select case when p_name is null then ''
-              when p_name like '탑신병자#%' then format(' 닉네임은 임시 닉네임 「%s」(으)로 바뀌었습니다. 새 닉네임을 정해 주세요.', p_name)
-              else format(' 닉네임은 신청 전 닉네임 「%s」(으)로 되돌렸습니다.', p_name) end;
+              when p_name like '탑신병자#%' then format(E' 닉네임은 임시 닉네임 \u300C%s\u300D(으)로 바뀌었습니다. 새 닉네임을 정해 주세요.', p_name)
+              else format(E' 닉네임은 신청 전 닉네임 \u300C%s\u300D(으)로 되돌렸습니다.', p_name) end;
 $$;
 
 -- ---------------------------------------------------------------------
--- 7. 신청자: 신청 · 취소 · 내 상태
+-- 7. 신청자: 신청 / 취소 / 내 상태
 -- ---------------------------------------------------------------------
 create function public.apply_influencer(p_kind text, p_nickname text, p_channel_url text default null, p_email text default null,
                                         p_riot_id text default null, p_opgg_url text default null)
@@ -594,7 +594,7 @@ declare
 begin
   select * into prof from public.profiles where id = me for update;
   if prof.is_guest then
-    raise exception '장인 인증은 구글·카카오로 로그인한 회원만 신청할 수 있습니다.' using errcode = '42501';
+    raise exception E'장인 인증은 구글\u00B7카카오로 로그인한 회원만 신청할 수 있습니다.' using errcode = '42501';
   end if;
   if prof.role = 'admin' then
     raise exception '운영자 계정은 장인 인증을 신청할 수 없습니다.' using errcode = '42501';
@@ -622,7 +622,7 @@ begin
 
   if p_kind in ('creator', 'pro') then
     if chan is null or char_length(chan) > 300 or chan !~* '^https?://[^\s/]+\.[^\s]+$' then
-      raise exception '채널·방송 링크를 https://로 시작하는 주소로 적어 주세요.' using errcode = '22023';
+      raise exception E'채널\u00B7방송 링크를 https://로 시작하는 주소로 적어 주세요.' using errcode = '22023';
     end if;
     if mail is null or char_length(mail) > 254 or mail !~ '^[^@\s]+@[^@\s]+\.[^@\s]+$' then
       raise exception '공식 이메일을 적어 주세요. (채널 소개란이나 팀 공식 페이지에 공개된 이메일)' using errcode = '22023';
@@ -638,7 +638,7 @@ begin
       raise exception '라이엇 닉네임#태그를 적어 주세요. (예: 닉네임#KR1)' using errcode = '22023';
     end if;
     if opgg is null or char_length(opgg) > 300 or opgg !~* '^https?://([a-z0-9-]+\.)*op\.gg(/\S*)?$' then
-      raise exception 'op.gg 링크를 적어 주세요. (https://op.gg/…)' using errcode = '22023';
+      raise exception E'op.gg 링크를 적어 주세요. (https://op.gg/\u2026)' using errcode = '22023';
     end if;
     chan := null;
     mail := null;
@@ -678,7 +678,7 @@ begin
                 '요청이 도착하면 이 닉네임의 주인이 맞는지 확인합니다. 수락은 하지 않습니다.', days)
     else format('신청이 접수됐습니다. 적어 주신 공식 이메일로 확인 메일을 보냅니다. %s일 안에 "본인입니다"라고 회신해 주세요.', days) end);
   insert into public.notifications (user_id, kind, message)
-  select u.id, 'influencer_applied', format('장인 인증 신청이 들어왔습니다. (%s · %s)', nick, public.influencer_kind_label(p_kind))
+  select u.id, 'influencer_applied', format(E'장인 인증 신청이 들어왔습니다. (%s \u00B7 %s)', nick, public.influencer_kind_label(p_kind))
     from public.profiles u where u.role = 'admin' and u.id <> me;
   return aid;
 end;
@@ -700,7 +700,7 @@ begin
 end;
 $$;
 
--- 내 장인 상태: 마지막 신청(본인 것이라 심사 중이면 공식 이메일·라이엇 닉네임#태그 포함), 다시 신청할 수 있는 때
+-- 내 장인 상태: 마지막 신청(본인 것이라 심사 중이면 공식 이메일/라이엇 닉네임#태그 포함), 다시 신청할 수 있는 때
 create function public.my_influencer_status()
 returns jsonb language plpgsql stable security definer set search_path = ''
 as $$
@@ -728,7 +728,7 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------
--- 8. 운영자: 목록 · 승인 · 반려 · 만료일 늘리기 · 인증 해제 · 닉네임 바꾸기
+-- 8. 운영자: 목록 / 승인 / 반려 / 만료일 늘리기 / 인증 해제 / 닉네임 바꾸기
 -- ---------------------------------------------------------------------
 -- p_status: 'pending'(처리 전, 오래된 순) / 'done'(끝난 것, 최근 순)
 create function public.admin_influencer_applications_unchecked(p_status text, p_page integer, p_size integer)
@@ -759,7 +759,7 @@ begin
                                                   'main_title', u.main_title, 'is_guest', u.is_guest, 'created_at', u.created_at,
                                                   'influencer', u.influencer, 'nickname_state', u.nickname_state)
                           from public.profiles u where u.id = x.user_id),
-               -- 처리 전: 같은 닉네임(비슷한 글자)을 지금 쓰는 다른 회원 — 승인하면 그 회원이 3일 뒤 임시 닉네임으로 바뀐다
+               -- 처리 전: 같은 닉네임(비슷한 글자)을 지금 쓰는 다른 회원 - 승인하면 그 회원이 3일 뒤 임시 닉네임으로 바뀐다
                'overlap', case when x.status = 'pending' then (
                    select jsonb_build_object('id', o.id, 'nickname', o.nickname, 'role', o.role)
                      from public.profiles o join public.profiles me on me.id = x.user_id
@@ -813,7 +813,7 @@ begin
   perform pg_advisory_xact_lock(hashtext('nickname_key:' || u.nickname_key));
   if exists (select 1 from public.profiles o where o.nickname_key = u.nickname_key and o.id <> u.id
                 and (o.role <> 'user' or o.influencer is not null or o.nickname_state is not null)) then
-    raise exception '같은 닉네임을 운영진·장인·다른 신청자가 쓰고 있어 승인할 수 없습니다. 반려하거나 닉네임을 정리해 주세요.' using errcode = '23505';
+    raise exception E'같은 닉네임을 운영진\u00B7장인\u00B7다른 신청자가 쓰고 있어 승인할 수 없습니다. 반려하거나 닉네임을 정리해 주세요.' using errcode = '23505';
   end if;
   -- 같은 닉네임을 쓰던 보통 회원: 닉네임 변경 예정 (유예 뒤 임시 닉네임) + 미리 알림
   for h in select o.id from public.profiles o where o.nickname_key = u.nickname_key and o.id <> u.id for update loop
@@ -866,7 +866,7 @@ begin
         then format('%s일 뒤 다시 신청할 수 있습니다.', coalesce(public.xp_rule('influencer_retry_days'), 7))
       else format('%s부터 다시 신청할 수 있습니다.', to_char(next_at at time zone 'Asia/Seoul', 'YYYY-MM-DD HH24:MI')) end;
     perform public.notify(a.user_id, 'influencer_rejected',
-      format('장인 인증이 반려됐습니다. 사유: %s · %s', note, tail) || public.influencer_reverted_sentence(back), null, null);
+      format(E'장인 인증이 반려됐습니다. 사유: %s \u00B7 %s', note, tail) || public.influencer_reverted_sentence(back), null, null);
   end if;
   perform public.log_moderation('reject_influencer', 'influencer_application', a.id::text, note, a.nickname);
 end;
@@ -980,7 +980,7 @@ begin
     raise exception '이미 사용 중인 닉네임입니다. 비슷한 닉네임도 쓸 수 없습니다.' using errcode = '23505';
   end if;
   perform public.system_set_nickname(u.id, nick, null, null, 'admin');
-  perform public.log_moderation('rename_member', 'user', u.id::text, format('%s → %s · %s', u.nickname, nick, note), nick);
+  perform public.log_moderation('rename_member', 'user', u.id::text, format(E'%s \u2192 %s \u00B7 %s', u.nickname, nick, note), nick);
 end;
 $$;
 
@@ -994,7 +994,7 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------
--- 9. 하루 한 번 (pg_cron influencer-daily): 만료 · 만료 전 알림 · 임시 닉네임 · 1년 정리
+-- 9. 하루 한 번 (pg_cron influencer-daily): 만료 / 만료 전 알림 / 임시 닉네임 / 1년 정리
 -- ---------------------------------------------------------------------
 create function public.influencer_daily()
 returns jsonb language plpgsql security definer set search_path = ''
@@ -1036,7 +1036,7 @@ begin
     n_warned := n_warned + 1;
   end loop;
 
-  -- 3) 유예가 끝난 "닉네임 변경 예정" 회원 → 임시 닉네임
+  -- 3) 유예가 끝난 "닉네임 변경 예정" 회원 -> 임시 닉네임
   for r in select id from public.profiles where nickname_state = 'yielding' and nickname_reset_at <= now() for update loop
     perform public.system_set_nickname(r.id, public.influencer_temp_nickname(), null, null, 'reset');
     insert into public.notifications (user_id, kind, message)
@@ -1044,7 +1044,7 @@ begin
     n_reset := n_reset + 1;
   end loop;
 
-  -- 4) 끝난 지 influencer_keep_days(365)일 지난 신청 정리 (처리 전·승인 중인 것은 남김)
+  -- 4) 끝난 지 influencer_keep_days(365)일 지난 신청 정리 (처리 전/승인 중인 것은 남김)
   delete from public.influencer_applications
    where status not in ('pending', 'approved')
      and coalesce(revoked_at, ended_at) < now() - make_interval(days => coalesce(public.xp_rule('influencer_keep_days'), 365));
@@ -1086,8 +1086,8 @@ $$;
 -- ---------------------------------------------------------------------
 -- 11. 회원 관리: 신규 가입자 (운영자 전용, 정식 회원만)
 -- ---------------------------------------------------------------------
--- p_hours: 최근 몇 시간 안에 가입한 사람 (1~720, 기본 24) — 보여 주는 기간일 뿐 지우지 않는다.
--- 돌려주는 값: { total, hours, page, size, members: [{ id, nickname, created_at, providers, role }] } — 이메일·로그인 ID 없음
+-- p_hours: 최근 몇 시간 안에 가입한 사람 (1~720, 기본 24) - 보여 주는 기간일 뿐 지우지 않는다.
+-- 돌려주는 값: { total, hours, page, size, members: [{ id, nickname, created_at, providers, role }] } - 이메일/로그인 ID 없음
 create function public.admin_new_members_unchecked(p_hours integer, p_page integer, p_size integer)
 returns jsonb language plpgsql stable security definer set search_path = ''
 as $$
@@ -1103,7 +1103,7 @@ begin
     'members', coalesce((
       select jsonb_agg(jsonb_build_object(
                'id', x.id, 'nickname', x.nickname, 'created_at', x.created_at, 'role', x.role,
-               -- 가입 방식: provider 이름만 (구글·카카오). 로그인 ID·이메일은 읽지 않는다
+               -- 가입 방식: provider 이름만 (구글/카카오). 로그인 ID/이메일은 읽지 않는다
                'providers', coalesce((
                  select jsonb_agg(s.provider order by s.provider)
                    from (select distinct i.provider from auth.identities i where i.user_id = x.id and i.provider in ('google', 'kakao')) s
@@ -1130,7 +1130,7 @@ end;
 $$;
 
 -- ---------------------------------------------------------------------
--- 12. 사람 json 칸에 장인 유형·닉네임 상태 · 장인 빌드 라벨용 기여자 수
+-- 12. 사람 json 칸에 장인 유형/닉네임 상태 / 장인 빌드 라벨용 기여자 수
 -- ---------------------------------------------------------------------
 do $$
 declare
@@ -1174,7 +1174,7 @@ begin
   end loop;
 end $$;
 
--- 상대법의 빌드마다 시초를 뺀 기여자 수 {"빌드 id": 수} — 장인 빌드 라벨 "이후 N명이 수정했습니다" (build_contributors와 같은 기준·같은 공개 범위)
+-- 상대법의 빌드마다 시초를 뺀 기여자 수 {"빌드 id": 수} - 장인 빌드 라벨 "이후 N명이 수정했습니다" (build_contributors와 같은 기준/같은 공개 범위)
 create function public.build_editor_counts(p_counter bigint)
 returns jsonb language sql stable security definer set search_path = ''
 as $$
@@ -1207,7 +1207,7 @@ revoke execute on function public.extend_influencer_application_unchecked(bigint
 revoke execute on function public.revoke_influencer_unchecked(uuid, text) from public, anon, authenticated;
 revoke execute on function public.admin_set_nickname_unchecked(uuid, text, text) from public, anon, authenticated;
 revoke execute on function public.admin_new_members_unchecked(integer, integer, integer) from public, anon, authenticated;
--- nickname_key는 profiles 생성 칸이 쓰므로(회원이 닉네임을 바꿀 때 그 권한으로 계산) 실행 권한을 그대로 둔다 — 읽기만 하는 함수
+-- nickname_key는 profiles 생성 칸이 쓰므로(회원이 닉네임을 바꿀 때 그 권한으로 계산) 실행 권한을 그대로 둔다 - 읽기만 하는 함수
 
 revoke execute on function public.apply_influencer(text, text, text, text, text, text) from public, anon;
 revoke execute on function public.cancel_influencer_application(bigint) from public, anon;

@@ -11,8 +11,8 @@ with norm as (
          pg_catalog.translate(
            pg_catalog.translate(
              pg_catalog.regexp_replace(normalize(nickname, NFKC), '[\s\u00AD\u034F\u115F\u1160\u17B4\u17B5\u180E\u200B-\u200F\u2028-\u202F\u2060-\u206F\u3164\uFEFF\uFFA0\u0300-\u036F]', '', 'g'),
-             '[{<〔【〈《「『〖﹙⁽₍❨❪❬❮❰❲❴⟦⟨⟪⟬⦅〘〚﹛﹝＜', pg_catalog.repeat('(', 30)),
-           ']}>〕】〉》」』〗﹚⁾₎❩❫❭❯❱❳❵⟧⟩⟫⟭⦆〙〛﹜﹞＞', pg_catalog.repeat(')', 30)) as folded
+             E'[{<\u3014\u3010\u3008\u300A\u300C\u300E\u3016\uFE59\u207D\u208D\u2768\u276A\u276C\u276E\u2770\u2772\u2774\u27E6\u27E8\u27EA\u27EC\u2985\u3018\u301A\uFE5B\uFE5D\uFF1C', pg_catalog.repeat('(', 30)),
+           E']}>\u3015\u3011\u3009\u300B\u300D\u300F\u3017\uFE5A\u207E\u208E\u2769\u276B\u276D\u276F\u2771\u2773\u2775\u27E7\u27E9\u27EB\u27ED\u2986\u3019\u301B\uFE5C\uFE5E\uFF1E', pg_catalog.repeat(')', 30)) as folded
   from public.profiles
   where nickname is not null
 )
