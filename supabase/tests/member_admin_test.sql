@@ -64,7 +64,7 @@ select t.ok('최근 가입 순 (손님 → 브이 → 유저 → 감독 → 영�
   (select array_agg(m ->> 'nickname' order by o) from jsonb_array_elements(:'l'::jsonb -> 'members') with ordinality x(m, o)) = array['손님', '브이', '유저_하나', '감독', '영자']);
 select t.ok('손님도 나오고 is_guest로 구분', (select (m ->> 'is_guest')::boolean from jsonb_array_elements(:'l'::jsonb -> 'members') m where m ->> 'nickname' = '손님'));
 select t.ok('목록에는 이메일·로그인 ID 같은 칸이 없음',
-  (select bool_and(k in ('id', 'nickname', 'role', 'level', 'main_title', 'is_guest', 'created_at'))
+  (select bool_and(k in ('id', 'nickname', 'role', 'level', 'main_title', 'is_guest', 'created_at', 'influencer', 'nickname_state'))  -- 046: 장인 유형·닉네임 상태
      from jsonb_array_elements(:'l'::jsonb -> 'members') r, jsonb_object_keys(r) k));
 select t.ok('목록 전체에 이메일·로그인 ID 글자가 없음', :'l' !~ '(secret-u@x|SECRET-GOOGLE-ID|k-1)');
 select t.ok('닉네임 검색 (부분 일치·대소문자·공백 무시)', jsonb_array_length(admin_member_list('  유저  ') -> 'members') = 1);

@@ -70,7 +70,7 @@ set role authenticated;
 set request.jwt.claim.sub = :'OP';
 select t.ok('결과는 최대 10명', jsonb_array_length(admin_search_members('대량')) = 10);
 select t.ok('결과에는 이메일·로그인 ID 같은 칸이 없음',
-  (select bool_and(k in ('id', 'nickname', 'role', 'level', 'main_title', 'is_guest', 'created_at'))
+  (select bool_and(k in ('id', 'nickname', 'role', 'level', 'main_title', 'is_guest', 'created_at', 'influencer', 'nickname_state'))  -- 046: 장인 유형·닉네임 상태
      from jsonb_array_elements(admin_search_members('러')) r, jsonb_object_keys(r) k));
 reset role;
 
@@ -100,7 +100,7 @@ select t.ok('칭호: 얻은 칭호(글·제안으로 자동 지급된 것)', jso
 select t.ok('활동 수: 제안 2·글 1(삭제 제외)·빌드 0·댓글 2', (:'mi'::jsonb ->> 'proposals')::int = 2 and (:'mi'::jsonb ->> 'posts')::int = 1
   and (:'mi'::jsonb ->> 'builds')::int = 0 and (:'mi'::jsonb ->> 'comments')::int = 2);
 select t.ok('응답에 이메일·로그인 ID가 없음', :'mi' not like '%secret-u@x.com%' and :'mi' not like '%SECRET%' and :'mi' not like '%@%');
-select t.ok('응답 칸은 정해진 것뿐', (select bool_and(k in ('id', 'nickname', 'role', 'level', 'main_title', 'is_guest', 'created_at',
+select t.ok('응답 칸은 정해진 것뿐', (select bool_and(k in ('id', 'nickname', 'role', 'level', 'main_title', 'is_guest', 'created_at', 'influencer', 'nickname_state',  -- 046
   'providers', 'titles', 'proposals', 'posts', 'builds', 'comments', 'deleted_posts', 'deleted_comments')) from jsonb_object_keys(:'mi'::jsonb) k));
 select t.ok('지운 글 1·지운 댓글 0 (040)', (:'mi'::jsonb ->> 'deleted_posts')::int = 1 and (:'mi'::jsonb ->> 'deleted_comments')::int = 0);
 set role authenticated;

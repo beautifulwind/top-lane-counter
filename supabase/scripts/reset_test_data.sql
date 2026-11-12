@@ -5,6 +5,9 @@
 --       트린다미어 상대 말파이트 카운터 1개 — 지금 문서, 공개 빌드, 그 카운터를 만든 처음 제안 1개.
 -- (045: 새 표는 없다 — 게시판 신고 알림 report_received는 알림 표에 있어 아래 "알림"에서 함께 지워지고, 신고(reports)도 전부 지운다. 비우는 동안 웹 푸시 트리거를 꺼 두므로 휴대폰으로 안 나간다.
 --  신고를 지울 때는 알림 트리거가 돌지 않는다(insert에만 반응).)
+-- (046: 장인 인증 신청(influencer_applications)을 전부 지운다. 그 전에 처리 전 신청은 취소 처리하며 신청 전 닉네임으로 되돌리고
+--  (이전 닉네임을 아무도 안 쓰면 이전 것, 아니면 임시 닉네임), "닉네임 변경 예정"인 회원은 임시 닉네임 탑신병자#xxxxxx로 바꾸며,
+--  프로필의 장인 표시(influencer)를 지운다. 그 밖의 닉네임은 그대로다.)
 -- 지움: 그 밖의 카운터·문서·제안·빌드 전부, 빌드 추천·비추천과 그 기록, 자유게시판 글·댓글·추천, 문서 댓글, 신고, 오류 신고(043), 알림, 문의하기 문의·답변(032),
 --       빌드 수정 기록·기여자·등록 간격(038 — 남는 말파 공개 빌드마다 지금 내용으로 "이전" 기록 1줄을 새로 남김),
 --       경험치 기록, 숨김 기록, 운영진 처리 기록(moderation_log, 감독관 지정·해제 기록 포함 전부), 빌드·카운터 상태 기록, 완전 삭제 기록, 도배 방지 시각, 018 백업 표의 내용,
@@ -74,6 +77,18 @@ delete from public.post_comments;
 delete from public.posts;
 delete from public.doc_comments;
 delete from public.board_last_write;
+
+-- 1.1 (046) 장인 인증: 처리 전 신청 취소(신청 전 닉네임으로 되돌림) → 변경 예정 닉네임은 임시 닉네임 → 장인 표시 지움 → 신청 기록 비움 (046 실행 전이면 건너뜀)
+do $$
+begin
+  if to_regclass('public.influencer_applications') is not null then
+    perform public.influencer_close(id, 'cancelled', null, true, false) from public.influencer_applications where status = 'pending';
+    perform public.system_set_nickname(id, public.influencer_temp_nickname(), null, null, 'reset') from public.profiles where nickname_state = 'yielding';
+    update public.profiles set influencer = null, influencer_at = null where influencer is not null;
+    delete from public.influencer_applications;
+  end if;
+end;
+$$;
 
 -- ---------------------------------------------------------------------
 -- 2. 빌드 추천·비추천 (남는 빌드도 0표로)
@@ -194,6 +209,8 @@ union all select '붙은 사진', count(*) from public.board_attachments
 union all select '사진 정리 대기열 (다음 정리 때 파일 삭제)', count(*) from public.storage_trash
 union all select '문서 댓글', count(*) from public.doc_comments
 union all select '오류 신고 (043 실행 전이면 0)', case when to_regclass('public.wiki_reports') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.wiki_reports', false, true, '')))[1]::text::integer end
+union all select '장인 인증 신청 (046 실행 전이면 0)', case when to_regclass('public.influencer_applications') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.influencer_applications', false, true, '')))[1]::text::integer end
+union all select '  └ 장인 표시·인증 대기·변경 예정이 남은 프로필 (046, 0이어야 함)', case when not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'influencer') then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.profiles where influencer is not null or nickname_state is not null', false, true, '')))[1]::text::integer end
 union all select '알림', count(*) from public.notifications
 union all select '  └ 게시판 신고 알림 report_received (045, 0이어야 함)', count(*) from public.notifications where kind = 'report_received'
 union all select '문의 (032 실행 전이면 0)', case when to_regclass('public.inquiries') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.inquiries', false, true, '')))[1]::text::integer end

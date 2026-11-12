@@ -59,6 +59,13 @@ rows (ord, what, to_delete, to_keep, note) as (
   union all select 15.1, 'wiki_reports (상대법·빌드 오류 신고, 043)',
          case when to_regclass('public.wiki_reports') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.wiki_reports', false, true, '')))[1]::text::bigint end,
          0, '처리 전·처리된 것 모두 지움 (043 실행 전이면 0)'
+  union all select 15.2, 'influencer_applications (장인 인증 신청, 046)',
+         case when to_regclass('public.influencer_applications') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.influencer_applications', false, true, '')))[1]::text::bigint end,
+         0, '전부 지움 (046 실행 전이면 0). 처리 전 신청은 먼저 취소 처리해 신청 전 닉네임으로 되돌린다'
+  union all select 15.3, '  └ 장인 표시 / 인증 대기 / 닉네임 변경 예정 프로필 (046)', 0,
+         case when not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'influencer') then 0
+              else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.profiles where influencer is not null or nickname_state is not null', false, true, '')))[1]::text::bigint end,
+         '프로필은 남지만 장인 표시·상태는 지움 (변경 예정인 회원은 임시 닉네임으로)'
   union all select 16, 'hide_log (숨김 기록)', (select count(*) from public.hide_log), 0, null
   union all select 16.1, 'moderation_log (운영진 처리 기록)', (select count(*) from public.moderation_log), 0, '감독관 지정·해제 기록 포함 전부 지움 (역할 자체는 profiles에 그대로)'
   union all select 16.2, 'proposal_reviewing (검토 중 표시)', (select count(*) from public.proposal_reviewing), 0, '임시 표시라 모두 비움'

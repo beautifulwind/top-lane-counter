@@ -53,7 +53,7 @@ reset role;
 update nickname_changes set changed_at = now() - interval '30 days 1 minute' where user_id = :'D';
 set role authenticated;
 set request.jwt.claim.sub = :'D';
-select t.fails('겹치는 닉네임은 그대로 막힘', $$update public.profiles set nickname = '비' where id = auth.uid()$$, 'duplicate key');
+select t.fails('겹치는 닉네임은 그대로 막힘', $$update public.profiles set nickname = '비' where id = auth.uid()$$, '이미 사용 중인 닉네임');  -- 046: 비슷한 닉네임 검사 트리거가 먼저 막음 (오류 코드 23505 그대로)
 update public.profiles set nickname = '디삼' where id = auth.uid();
 select t.ok('30일이 지나면 다시 바꿀 수 있음', (select nickname = '디삼' from profiles where id = auth.uid())
   and (select count(*) = 2 from nickname_changes where user_id = auth.uid()));

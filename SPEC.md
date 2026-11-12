@@ -808,6 +808,7 @@ RLS 원칙:
 43. `supabase/migrations/043_wiki_reports_revert.sql` (오류 신고 `wiki_reports` · 운영자 빌드 수정 기록·되돌리기 · 감독관 빌드 숨기기 · `build_edit_check`. 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행. 확인 조회 `supabase/scripts/check_wiki_reports_revert.sql` — 실행 전·후. **실행 뒤 pg_cron 일정 등록 SQL을 따로 한 번**: `select cron.schedule('purge-wiki-reports', '0 20 * * *', $$select public.purge_wiki_reports()$$);` → 확인 조회 21번 1)
 44. (비움 — 탈퇴 처리용으로 예약. 045는 044 없이 043 다음에 실행해도 된다)
 45. `supabase/migrations/045_report_received_notify.sql` (게시판 신고 → 운영진 알림 `report_received`. 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행. 확인 조회 `supabase/scripts/check_report_received.sql` — 실행 전·후 → web-push 재배포 → 새 화면 push. **pg_cron 필요 없음**)
+46. `supabase/migrations/046_influencer.sql` (장인 인증 1단계 DB — 신청 표·닉네임 열쇠 인덱스·사칭 금지·알림·처리 기록·신규 가입자·하루 작업. **실행 전에 `supabase/scripts/check_influencer.sql` 1번 줄 "닉네임 열쇠 중복"이 0인지 확인**(겹치면 046이 멈춤). 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행하고 `check_influencer.sql`을 다시 실행(실행 후 정상 칸) → **pg_cron 일정 등록**: `select cron.schedule('influencer-daily', '0 3 * * *', $$select public.influencer_daily()$$);` (한국 시간 정오 — 신청자 알림이 새벽에 울리지 않게). 닉네임 인덱스 되돌리는 법은 파일 맨 위 설명)
 - **테스트 데이터 비우기** (마이그레이션 아님, 정식 공개 직전 등 필요할 때): `supabase/scripts/reset_test_data_preview.sql`(읽기만 — 지울·남을 개수)로 확인 → `supabase/scripts/reset_test_data.sql`. 계정(운영자 계정·운영자 모드 상태·테스트용 구글 계정 포함 — 계정은 하나도 지우지 않는다)·프로필·설정값과 트린다미어 상대 말파이트 카운터(지금 문서·공개 빌드·처음 제안)만 남기고, 문의·처리 기록(`moderation_log`, 감독관 지정·해제 기록 포함)·알림·`proposal_reviewing` 등은 모두 비우며, 말파 문서의 수정 기록은 지금 내용 1줄로 정리, 경험치·레벨·칭호는 알림 없이 다시 계산한다. SQL Editor가 RLS를 물으면 **"Run without RLS"**로 실행 ("Run and enable RLS"는 임시 표 `reset_keep`·`reset_admins` 때문에 에러). 운영자 계정이 없거나 끝에서 운영자 role·모드가 바뀌어 있으면 전부 되돌리고 멈춘다. 되돌릴 수 없으므로 순서는 ① 백업 확인 → ② preview → ③ reset → ④ 결과 표 확인.
 - 합쳐서 한 번에 돌리지 않는다: 파일마다 `begin … commit`이라 중간에 실패하면 앞부분만 반영되고, 다시 돌리면 "already exists"가 난다.
 - 새 마이그레이션(010 …)을 만들면 이 목록에 추가한다. `supabase/tests/run.sh`가 빈 DB에 같은 순서로 실행한 뒤 검사용 데이터(`tests/fixtures.sql`)를 넣고 검사한다 (`supabase/tests`는 실제 프로젝트에서 실행하지 않음).
@@ -945,7 +946,7 @@ RLS 원칙:
   - **시초·경험치**: 변화 없음(`author_id`는 바뀌지 않고, 빌드 +30·상대법 +100은 작성자·공개 여부로만 계산, 수정은 0).
   - **기여자**: 되돌린 범위(기준 기록 뒤)의 수정만 한 사람은 빠지고, 그 전에도 고친 사람(기여자 줄의 `first_at`이 범위의 첫 수정보다 앞섬)은 횟수만 준다. 예전에 되돌려져 빠졌던 수정은 세지 않는다. 되돌린 운영자는 기여자에 넣지 않는다.
 - **감독관 빌드 숨기기·다시 공개**: `hide_build`·`restore_build`가 `require_staff` + `require_moderate_build`(감독관: 공개 중인 상대법의 빌드, 시초가 일반 회원 또는 탈퇴, 본인 아님). 다시 공개는 마지막 숨김 처리자가 감독관일 때만(`require_restore_allowed`). 운영자·감독관 모두 처리 기록 `hide`·`restore`(대상 `build`)도 남긴다(빌드 상태 기록 `build_status_log`는 그대로). 감독관은 처리할 수 있는 숨긴 빌드를 읽는다(빌드 읽기 정책 추가, `can_see_hidden`). 상대법 숨기기·다시 공개·완전 삭제와 빌드 되돌리기·수정 기록은 운영자만.
-- **빌드 수정 권한** `build_edit_check(빌드, 사람)`: 공개 여부·비회원 규칙을 한 곳에 모았다(`edit_build`가 부름, 동작·문구 그대로). **나중에 빌드 잠금("작성자와 운영진만 수정", 인플루언서 빌드)**: `builds.edit_lock`(예: `'author_staff'`) 칸을 더하고 이 함수에 "잠겼고 작성자·운영진이 아니면 거부" 분기 하나만 더한다. 잠금 칸은 `wiki_snapshot`(수정 기록 내용)에 넣지 않아 되돌리기가 잠금을 바꾸지 않는다. 되돌리기는 운영자 전용이라 잠금과 충돌하지 않는다. 화면은 같은 판단으로 [빌드 수정] 버튼을 끈다.
+- **빌드 수정 권한** `build_edit_check(빌드, 사람)`: 공개 여부·비회원 규칙을 한 곳에 모았다(`edit_build`가 부름, 동작·문구 그대로). ~~나중에 빌드 잠금~~ → **만들지 않기로 함 (2026-11-12, 6-32)**: 장인이 만든 빌드도 패치가 바뀌면 다른 사람이 위키처럼 고쳐야 하므로 `edit_lock`·잠금 분기·[빌드 수정] 비활성은 없다. 이 함수는 043 그대로(정식 회원만 남의 빌드 수정, 게스트는 새 상대법·새 빌드·내 빌드 수정까지).
 - **하위 호환**: 있던 표·함수의 이름·인자·반환은 그대로(`hide_build`·`restore_build`·`edit_build`·`admin_pending_counts`는 같은 모양으로 다시 만듦 — 처리 대기 건수는 키 하나가 늘 뿐). 옛 화면은 모르는 알림 종류를 종 모양 + 문장으로 보여 주므로 043만 먼저 실행해도 안 깨진다.
 - **테스트 데이터 비우기**: `reset_test_data.sql`이 `wiki_reports`도 전부 비우고, `reset_test_data_preview.sql`에 개수 줄을 더했다.
 - **순서**: 043 실행 → `supabase/scripts/check_wiki_reports_revert.sql`(실행 전·후) → pg_cron 일정 등록 → (2단계) 새 화면 push·web-push 재배포.
@@ -983,3 +984,47 @@ RLS 원칙:
   - 045 실행 전에 쌓여 있던 처리 전 신고에는 알림을 소급해서 보내지 않는다(그 대상에 새 신고가 와도 "처음"이 아니라 알림 없음 — 신고 목록·처리 대기 건수로 처리).
 - **DB 검사**: `supabase/tests/report_received_test.sql`. 확인 조회 `supabase/scripts/check_report_received.sql`(맨 끝이 조회, 기존 알림 수·신고 수를 실행 전후 비교). `reset_test_data*.sql`은 새 표가 없어 지우는 범위는 그대로(알림·신고를 이미 전부 지움)이고, 미리보기·결과 표에 신고 알림 수 줄만 더했다.
 - **화면 검사**: `src/test/push.test.jsx`(알림 이동·푸시 문구·설정 문구)·`src/test/tone.test.js`(DB 문장·설정 문구 말투).
+
+### 6-32. 장인 인증 — 1단계 DB (2026-11-12, 046)
+> 화면에 보이는 글자는 모두 **"장인"**(약관·방침·신청 화면·알림·운영자 화면·푸시 설정·말풍선), 코드·DB 이름은 `influencer` 그대로. 조사는 `josa.js`. 말투는 다른 화면과 같은 "~합니다"체(2026-11-12 확인).
+- **결정(2026-11-12)**: Q1 인증된 사람만 간단한 공개 프로필 `/u/:id`(2단계) · Q2 겹치지 않았던 반려는 닉네임을 안 바꿈(운영자가 [닉네임도 되돌리기] 가능) · Q3 닉네임 변경 유예 3일 · Q4 장인은 닉네임 직접 변경 불가, 운영자가 바꿈 · Q5 되돌릴 때 이전 닉네임을 아무도 안 쓰면 이전 것, 아니면 임시 `탑신병자#xxxxxx` · Q8 가입 후 최소 기간 0일(`influencer_min_account_days`) · Q10 반려 후 7일, 180일 안에 3번 반려되면 180일 금지 · Q11 비슷한 글자 사칭 막기(`nickname_key`) · Q12 진홍 "장인" 글자 태그(원형 ✓ 없음) · Q13 장인 빌드 오류 신고를 작성자에게 알리지 않음. **빌드 수정 잠금은 만들지 않는다**(장인 빌드도 위키 — 6-30의 잠금 계획 취소). 유예 시작 때 미리 알림(`nickname_reset_soon`) 추가.
+- **유형과 인증 방식** (증빙 캡처·인증 코드·비공개 버킷은 만들지 않음):
+  | 유형 | 신청 칸 (모두 필수) | 확인 방법 |
+  |---|---|---|
+  | (a) 크리에이터 `creator` · 프로게이머 `pro` (티어 무관) | 희망 닉네임, 유형, 채널·방송 링크, 공식 이메일(채널 소개란·팀 공식 페이지에 공개된 것) | 운영자가 심사 화면에서 공개 페이지의 이메일과 같은지 보고, 그 주소로 사이트 밖에서 확인 메일(아래 문구)을 보낸다 → "본인입니다" 회신을 확인하고 승인·반려(메모 필수, "이메일 회신 확인") |
+  | (b) 그랜드마스터 이상 `grandmaster` (채널·SNS 없어도 됨) | 희망 닉네임, 유형, 라이엇 닉네임#태그, op.gg 링크 | 신청자가 운영자의 인증 전용 라이엇 계정으로 친구 요청 → 운영자는 **수락하지 않고** 보낸 사람 이름이 신청서와 같은지, op.gg 현재 티어가 그랜드마스터 이상인지 보고 승인·반려(메모 필수, "친구 요청 확인") |
+  - 확인 메일(운영자 심사 화면에 복사 버튼): 제목 「탑신병자 가입자 본인 확인 이메일입니다」 / 본문 「안녕하세요, 탑신병자입니다. 탑신병자에서 "(희망 닉네임)" 닉네임으로 장인 인증을 신청하신 본인이 맞으시면, 이 메일에 "본인입니다"라고 회신해 주세요. 신청하신 적이 없다면 이 메일을 무시하셔도 됩니다. 회신은 14일 안에 부탁드립니다. 감사합니다.」 (희망 닉네임은 신청서 값)
+  - 운영자 인증 계정 닉네임은 DB에 두지 않고 화면 문구 상수 한 곳에만(2단계). 알림 문장 속 `{운영자 닉네임}` 자리표시를 화면·푸시가 그 상수로 채운다(조사 `으로/로`).
+- **신청 표** `influencer_applications`: 상태 `pending`·`approved`·`rejected`·`expired`·`cancelled`·`withdrawn`(탈퇴)·`revoked`(해제). 14일(`influencer_review_days`) 안에 처리되지 않으면 만료, 운영자는 [만료일 7일 늘리기](`influencer_extend_days`). 유형별 필수 칸은 표 검사(check)로. 사람당 처리 전 1건·승인 1건. 같은 채널 주소(scheme·www·m.·쿼리·끝 `/` 무시, 소문자)·같은 라이엇 닉네임#태그(NFKC·소문자·공백 제거 뒤 sha256)로 처리 전·승인된 신청이 겹치지 않는다(부분 unique 인덱스). 반려·만료·취소·해제되면 바로 풀려 **다른 사람이 즉시 신청**할 수 있다(선점 방해 막기 — 신청 화면에 "이미 신청된 닉네임이면 문의해 주세요").
+  - **개인정보**: 공식 이메일·라이엇 닉네임#태그는 심사가 끝나면(승인·반려·만료·취소·탈퇴) 트리거가 바로 지운다. 승인된 (b)는 겹침 검사용 해시만 남고 해제·탈퇴 때 그것도 지운다. 읽기는 본인·운영자만(감독관 제외, RLS). 쓰기는 함수로만. 끝난 신청은 1년(`influencer_keep_days`) 뒤 정리, 탈퇴하면 사람 칸을 비우고 `withdrawn`.
+  - **다시 신청**: 운영자 반려 뒤 7일(`influencer_retry_days`), 180일(`influencer_reject_window_days`) 안에 운영자 반려 3번(`influencer_reject_limit`)이면 마지막 반려부터 180일(`influencer_ban_days`). 만료·취소는 세지 않는다. 운영자가 [바로 다시 신청 허용]으로 반려하면 7일 제한도 없고 3번에도 세지 않는다. 비회원·운영자 계정은 신청 불가(감독관은 가능).
+- **닉네임**:
+  - `nickname_key`(생성 칸): NFKC → 키릴·그리스 대문자 → 라틴 → 소문자 → 공백·보이지 않는 글자·구분 기호(`_ - . · ・ ‧ • ㆍ`) 지움 → 비슷한 글자(키릴·그리스 소문자, `i·I·1·|` → `l`, `0` → `o`) → `rn`→`m`, `vv`→`w`. 유일성 인덱스를 `lower(nickname)`에서 **부분 인덱스 2개**로 바꿨다: `profiles_nickname_key_unique`(상태 없음끼리), `profiles_nickname_key_pending`(인증 대기끼리). 트리거 `profiles_nickname_key`가 본인 변경 때 인증 대기·변경 예정인 사람의 닉네임까지 막는다(23505 「이미 사용 중인 닉네임입니다. 비슷한 닉네임도 쓸 수 없습니다.」). 이미 있는 닉네임은 그대로(046이 실행 전 겹침을 확인하고 겹치면 멈춤). 되돌리는 법은 046 파일 맨 위.
+  - **신청하면** 닉네임이 희망 닉네임으로 바뀌고 `nickname_state = 'pending'`(인증 대기). 다른 **보통 회원 1명**과만 잠깐 같은 닉네임일 수 있다(장인·변경 예정·인증 대기·운영진의 닉네임은 불가). 심사 중에는 본인이 닉네임을 못 바꾼다(취소하면 됨).
+  - **승인되면** 장인(`profiles.influencer` = 유형)이 보통 닉네임이 되고, 같은 닉네임을 쓰던 회원은 `yielding`(닉네임 변경 예정, `nickname_reset_at` = 3일 뒤) + 알림 `nickname_reset_soon`. 그 회원은 30일 제한 없이 바로 새 닉네임을 정할 수 있고, 3일이 지나면 하루 작업이 임시 닉네임으로 바꾸고 `nickname_reset`.
+  - **반려·만료·취소** 때 다른 사람과 겹쳐 있으면(또는 [닉네임도 되돌리기]) 되돌린다(Q5). 겹치지 않았으면 희망 닉네임 그대로.
+  - **장인은 직접 못 바꾼다**(「인증된 장인은 닉네임을 직접 바꿀 수 없습니다. 바꾸려면 [문의하기]로 운영자에게 알려 주세요.」) → 운영자 `admin_set_nickname(회원, 닉네임, 사유)`(비슷한 닉네임 거부, 처리 기록 `rename_member`). 해제되면 다시 직접 바꿀 수 있다.
+  - 변경 기록 `nickname_changes.kind`: `user`·`apply`(30일 제한에 셈) / `revert`·`reset`·`admin`(그 뒤에는 30일 제한 없이 바꿀 수 있음).
+  - **사칭 금지**(`check_nickname_reserved`): 기존 (운)·(감)에 더해 `[장인]`·`(장인)`(괄호 모양·띄어쓰기·보이지 않는 글자 변형 포함)이 든 닉네임과 `장인 `(띄어쓰기·`_ | · . : / ~ -`)으로 시작하는 닉네임 금지(23514). 신청서의 희망 닉네임도 같다. "장인정신"처럼 붙여 쓴 것은 된다. 기존 칭호에 "장인"은 없다(탑신병자·도구혐오자·단단묵직·백정주인·장군·비주류).
+- **알림** (DB 문장, 운영자 모드·푸시 규칙은 034·037 그대로):
+  | 종류 | 받는 사람 | 문장 | 푸시 |
+  |---|---|---|---|
+  | `influencer_applied` | 운영자(감독관 X) | 장인 인증 신청이 들어왔습니다. ({닉네임} · {유형}) — 유형: 크리에이터·프로게이머·그랜드마스터 이상 | `staff_new`, 모드를 끄면 가림 |
+  | `influencer_received` | 신청자(신청 직후) | (b) 신청이 접수됐습니다. 14일 안에 운영자 계정 {운영자 닉네임}으로 친구 요청을 보내 주세요. 요청이 도착하면 이 닉네임의 주인이 맞는지 확인합니다. 수락은 하지 않습니다. / (a) 신청이 접수됐습니다. 적어 주신 공식 이메일로 확인 메일을 보냅니다. 14일 안에 "본인입니다"라고 회신해 주세요. | `my_results` |
+  | `influencer_expiring` | 신청자(만료 3일 전, 한 신청에 한 번) | (b) 신청이 N일 뒤 만료됩니다. 아직 친구 요청을 보내지 않았다면 {운영자 닉네임}으로 보내 주세요. / (a) 신청이 N일 뒤 만료됩니다. 확인 메일에 아직 회신하지 않았다면 만료되기 전에 회신해 주세요. | `my_results` |
+  | `influencer_approved` | 신청자 | 장인 인증이 완료됐습니다. 이제 닉네임 앞에 "장인" 표시가 붙습니다. | `my_results` |
+  | `influencer_rejected` | 신청자 | 장인 인증이 반려됐습니다. 사유: {메모} · 7일 뒤 다시 신청할 수 있습니다. (바로 허용이면 「바로 다시 신청할 수 있습니다.」, 금지 중이면 「YYYY-MM-DD HH:MM부터 …」) + 되돌렸으면 닉네임 안내 | `my_results` |
+  | `influencer_expired` | 신청자 | N일 안에 확인이 끝나지 않아 신청이 만료됐습니다. 다시 신청할 수 있습니다. (N = 늘린 기간 포함) | `my_results` |
+  | `influencer_revoked` | 장인 | 장인 인증이 해제됐습니다. 사유: {메모} | `my_results` |
+  | `nickname_reset_soon` | 겹친 회원 | 운영 원칙에 따라 3일 뒤 닉네임이 임시 닉네임으로 바뀝니다. 그 전에 새 닉네임을 정해 주세요. | `my_results` |
+  | `nickname_reset` | 겹친 회원 | 운영 원칙에 따라 닉네임이 임시 닉네임으로 바뀌었습니다. 새 닉네임을 정해 주세요. | `my_results` |
+  | `link_removed` | 장인 (047) | 프로필에 올린 링크가 운영 원칙에 따라 삭제됐습니다. | `my_results` |
+  신청 메모·공식 이메일·라이엇 ID는 신청자 본인 알림에만 들어간다(운영자 알림은 닉네임·유형만 — DB 검사가 확인).
+- **함수**: 신청자 `apply_influencer(유형, 희망 닉네임, 채널, 이메일, 라이엇 ID, op.gg)`·`cancel_influencer_application(신청)`·`my_influencer_status()`(마지막 신청·다시 신청할 수 있는 때). 운영자 전용(`_unchecked` + `require_operator`, 운영자 모드를 끄면 거부) `admin_influencer_applications(pending|done, 쪽, 크기)`(겹친 회원·최근 반려 수 포함)·`approve_influencer(신청, 메모)`·`reject_influencer(신청, 메모, 닉네임도 되돌리기, 바로 다시 신청 허용)`·`extend_influencer_application(신청)`·`revoke_influencer(회원, 메모)`·`admin_set_nickname(회원, 닉네임, 사유)`. 처리 기록 `approve_influencer`·`reject_influencer`·`extend_influencer`·`revoke_influencer`·`rename_member`(대상 `influencer_application`·`user`). 처리 대기 건수에 `influencers`(감독관 0).
+- **하루 작업** `influencer_daily()`(pg_cron `influencer-daily`, 매일 한국 시간 12:00 `0 3 * * *`): 만료 처리 → 만료 3일 전 알림(`influencer_expiring_days`) → 유예가 끝난 변경 예정 닉네임 → 임시 닉네임 → 끝난 지 1년 지난 신청 정리. 돌려주는 값은 개수만.
+- **사람 json 칸**: `profiles.influencer`(유형)·`influencer_at`·`nickname_state`·`nickname_reset_at`(누구나 읽음, 직접 못 고침). 사람을 json으로 주는 함수 7개(`build_contributors`·`admin_build_revisions`·`board_page`·`open_reports_for_moderator`·`admin_member_list`·`admin_search_members`·`admin_member_info`)에 `influencer`·`nickname_state`. 화면의 `PERSON` 칸 목록에도 2단계에서 더한다. 장인 빌드 라벨용 `build_editor_counts(상대법)` = `{빌드 id: 시초를 뺀 기여자 수}`(누구나, 공개 범위는 `build_contributors`와 같음).
+- **회원 관리**: `admin_new_members(시간 기본 24, 쪽, 크기)` — 운영자 전용, 정식 회원만(비회원 제외), 돌려주는 값은 회원 번호(링크용)·닉네임·가입일·가입 방식(구글·카카오 이름만)·역할. 이메일·로그인 ID 없음. 시간은 1~720, 보여 주는 기간일 뿐 지우지 않는다. 기존 `admin_member_list`(검색·역할 거르기·쪽)·`admin_member_stats`는 그대로(감독관 목록은 역할 거르기).
+- **2단계(화면)에서 할 것**: 신청 화면((a)·(b) 안내문 — (b)는 "왜 친구 요청을 보내나요? → 이렇게 해 주세요(3단계, 운영자 계정 닉네임 + 복사 버튼) → 안심하세요"), 운영자 심사 화면(확인 메일 문구 복사, 겹친 회원, [만료일 늘리기], 반려 옵션 둘), **장인 표시** `InfluencerName`(진홍 "장인" 글자 태그 + 닉네임을 진홍 둥근 실선으로 감쌈, `UserName.jsx` 한 곳, 20자 닉네임도 폰에서 안 넘침, 말풍선 "인증된 장인(크리에이터·그랜드마스터 이상·프로게이머)"), "인증 대기"(회색 점선 + ⏳ + "인증 대기")·"닉네임 변경 예정"(회색 태그), **장인 빌드 라벨**(작성자=시초가 지금 장인이면 빌드 이름 앞 "장인 빌드", 이름이 없으면 "장인 빌드", 다른 사람이 고쳤으면 옆에 작게 "이후 N명이 수정했습니다" — 해제·탈퇴하면 사라짐), 시초 뱃지 제거, 빌드 화면의 레벨·칭호 숨김("장인" 태그는 보임), 회원 관리 기본 화면을 신규 가입자로, `/u/:id`, 방침(수집 항목·보관에 공식 이메일·라이엇 닉네임#태그 — 캡처 문구 없음)·약관(인증 절차 (a)·(b), 사칭 금지) 문구(시행일 그대로), 화면의 사칭 금지(`hasReservedMark`)도 DB와 같게.
+- **3단계(047)**: 장인 외부 링크 — 그 장인만 설정·수정, 빌드 내용(`wiki_snapshot`) 밖. 이번에는 알림 종류 `link_removed`만.
+- **하위 호환**: 있던 함수의 이름·인자·반환 모양은 그대로(사람 json에 키 둘, 처리 대기 건수에 키 하나). 옛 화면은 모르는 알림을 종 모양 + 문장으로 보여 준다. 중복 닉네임 오류는 그대로 23505라 지금 화면이 "이미 사용 중인 닉네임입니다."로 보여 준다.
+- **DB 검사**: `supabase/tests/influencer_test.sql`(129개). 바뀐 기존 검사: `account_test`(중복 오류 문구), `admin_convenience_test`(처리 대기 건수 키), `member_admin_test`·`member_info_test`(사람 칸). 확인 조회 `supabase/scripts/check_influencer.sql`(실행 전 겹침·흉내 닉네임, 기준값 — 경험치 합계 등 실행 전후 같음, 맨 끝이 조회). 테스트 데이터 비우기에 장인 신청·장인 표시 정리 추가.
