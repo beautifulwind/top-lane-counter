@@ -39,3 +39,45 @@ export async function getBuildLinks(counterRowId) {
   const { data, error } = await db().rpc('build_links', { p_counter: counterRowId });
   return error ? {} : (data ?? {});
 }
+
+// ---- 3b: 신고·삭제·허용 사이트 (047, 048) ----
+
+/** 링크 신고 (정식 회원, 내 링크 빼고). reason: spam | obscene | malicious | not_own | other(내용 필수) */
+export const reportLink = (linkId, reason, detail) =>
+  rpc('report_link', { p_link: linkId, p_reason: reason, p_detail: String(detail ?? '').trim() || null }, '신고하지 못했습니다.');
+
+/** 링크 삭제 (운영자는 전부, 감독관은 일반 장인의 링크만 — 048). 사유 필수, 올린 장인에게 알림이 간다 */
+export const removeLink = (linkId, note) => rpc('remove_link', { p_link: linkId, p_note: note }, '링크를 삭제하지 못했습니다.');
+
+/** 처리 전 링크 신고 (운영자만): { total, page, size, links: [{ id, url, host, build_id, visible, owner, build, reports }] } */
+export const getLinkReports = (page = 1, size = 20) =>
+  rpc('admin_link_reports', { p_page: page, p_size: size }, '링크 신고를 불러오지 못했습니다.');
+
+/** 처리 전 링크 신고 수 (운영자만). 못 불러오면 0 — 처리 대기 숫자에서만 빠진다 */
+export async function getLinkReportCount() {
+  try {
+    const { data, error } = await db().rpc('admin_link_reports', { p_page: 1, p_size: 1 });
+    return error ? 0 : Number(data?.total) || 0;
+  } catch {
+    return 0;
+  }
+}
+
+/** 링크 신고 기각 (운영자만, 메모 선택 — 링크는 그대로). 돌려주는 값: 기각한 신고 수 */
+export const dismissLinkReports = (linkId, note) =>
+  rpc('dismiss_link_reports', { p_link: linkId, p_note: String(note ?? '').trim() || null }, '신고를 기각하지 못했습니다.');
+
+/** 허용 사이트 목록 (누구나 읽음): [{ domain, label }] */
+export async function getLinkDomains() {
+  const { data, error } = await db().from('link_domains').select('domain, label').order('domain');
+  if (error) throw friendly(error, '허용 사이트를 불러오지 못했습니다.');
+  return data ?? [];
+}
+
+/** 허용 사이트 더하기 (운영자만). 돌려주는 값: 정리된 도메인 */
+export const addLinkDomain = (domain, label) =>
+  rpc('admin_add_link_domain', { p_domain: domain, p_label: label }, '사이트를 더하지 못했습니다.');
+
+/** 허용 사이트 빼기 (운영자만, 사유 필수). 그 사이트 링크는 지우지 않고 숨긴다. 돌려주는 값: 숨겨진 링크 수 */
+export const removeLinkDomain = (domain, note) =>
+  rpc('admin_remove_link_domain', { p_domain: domain, p_note: note }, '사이트를 빼지 못했습니다.');

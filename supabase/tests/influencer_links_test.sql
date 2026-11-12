@@ -172,7 +172,7 @@ select t.ok('푸시 묶음은 그대로 staff_new', push_group('report_received'
 set role authenticated;
 set request.jwt.claim.sub = :'MOD';
 select t.fails('감독관은 링크 신고 목록 불가', 'select admin_link_reports()', '운영자만');
-select t.fails('감독관은 링크 삭제 불가', format('select remove_link(%s, %L)', pg_temp.id('yt'), 'x'), '운영자만');
+-- 감독관의 링크 삭제는 048에서 일반 장인 링크만 허용 (검사는 link_moderation_test.sql)
 select t.fails('감독관은 기각 불가', format('select dismiss_link_reports(%s, %L)', pg_temp.id('yt'), 'x'), '운영자만');
 select t.fails('감독관은 허용 사이트 더하기 불가', $$select admin_add_link_domain('example.com', 'x')$$, '운영자만');
 select t.ok('감독관은 링크 표를 읽어도 0줄', (select count(*) = 0 from ext_links));

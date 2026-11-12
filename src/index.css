@@ -1117,6 +1117,9 @@ a.inf-link:hover .user-nick, a.inf-link:focus-visible .user-nick { text-decorati
 .link-list li { padding: 8px 0; border-bottom: 1px solid var(--line); }
 .link-list li:last-child { border-bottom: 0; }
 .build-link-row { margin: var(--gap-sm) 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+/* 3b: 링크 + ⋮ (신고·삭제). 폼은 다음 줄 전체 */
+.link-item { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.link-action-form { flex-basis: 100%; }
 .build-link-box {
   margin: var(--gap-md) 0; padding: var(--pad-box) var(--pad-card); border: 1px dashed var(--influencer-line); border-radius: var(--radius);
 }

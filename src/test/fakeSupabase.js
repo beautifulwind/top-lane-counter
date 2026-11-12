@@ -55,6 +55,7 @@ export const TABLES = {
   influencer_applications: [], // 046 장인 신청 (influencerRpc가 쓴다)
   ext_links: [], // 047 장인 외부 링크 (linkRpc가 쓴다)
   link_domains: LINK_DOMAINS(), // 047 허용 사이트 9개
+  link_reports: [], // 047 링크 신고 { id, link_id, reporter_id, reason, detail, status, created_at }
   // 014 경험치·칭호 (내 기록만 넣는다 — RLS 흉내는 테스트가 그렇게 넣는 것으로)
   xp_events: [],
   user_titles: [],
@@ -141,6 +142,7 @@ export function resetFake() {
   TABLES.influencer_applications = [];
   TABLES.ext_links = [];
   TABLES.link_domains = LINK_DOMAINS();
+  TABLES.link_reports = [];
   fakeState.influencerNextAt = null;
   TABLES.xp_events = [];
   TABLES.user_titles = [];
@@ -1073,9 +1075,10 @@ function LINK_DOMAINS() {
     ['twitch.tv', '트위치'], ['twitter.com', 'X (트위터 예전 주소)'], ['x.com', 'X'], ['youtu.be', '유튜브 (짧은 주소)'], ['youtube.com', '유튜브'],
   ].map(([domain, label]) => ({ domain, label }));
 }
-const LINK_RPCS = ['my_links', 'set_profile_links', 'set_build_link', 'public_profile', 'build_links'];
+const LINK_RPCS = ['my_links', 'set_profile_links', 'set_build_link', 'public_profile', 'build_links',
+  'report_link', 'remove_link', 'admin_link_reports', 'dismiss_link_reports', 'admin_add_link_domain', 'admin_remove_link_domain']; // 뒤 6개: 3b
 function linkRpc(name, args) {
-  const reading = ['my_links', 'public_profile', 'build_links'].includes(name);
+  const reading = ['my_links', 'public_profile', 'build_links', 'admin_link_reports'].includes(name);
   if (!reading) fakeState.rpcCalls.push({ name, args });
   if (fakeState.rpcError && !reading) return { data: null, error: { message: fakeState.rpcError, code: fakeState.rpcErrorCode ?? '42501' } };
   const links = TABLES.ext_links;
@@ -1127,6 +1130,72 @@ function linkRpc(name, args) {
         }),
         domains,
       }));
+    }
+    // ---- 3b: 신고(정식 회원) / 삭제(운영자 전부, 감독관은 일반 장인 링크만 — 048) / 운영자 전용 ----
+    const denied = (message) => ({ data: null, error: { message, code: '42501' } });
+    const linkOf = (id) => TABLES.ext_links.find((l) => l.id === id);
+    if (name === 'report_link') {
+      if (meRow.is_guest) return denied('비회원은 신고할 수 없습니다. 구글/카카오를 연결하면 할 수 있습니다.');
+      const l = linkOf(args.p_link);
+      if (!l || !visible(l)) throw '신고할 수 없는 링크입니다.';
+      if (l.owner_id === meRow.id) throw '내 링크는 신고할 수 없습니다.';
+      if (args.p_reason === 'other' && !args.p_detail) throw '기타 이유를 적어 주세요.';
+      if (TABLES.link_reports.some((r) => r.link_id === l.id && r.reporter_id === meRow.id)) throw '이미 신고한 링크입니다.';
+      TABLES.link_reports.push({ id: 7000 + TABLES.link_reports.length, link_id: l.id, reporter_id: meRow.id, reason: args.p_reason,
+        detail: args.p_detail, status: 'open', created_at: new Date().toISOString() });
+      return ok(null);
+    }
+    if (name === 'remove_link') {
+      if (!isStaffNow()) return denied(operatorModeOffNow() ? '운영자 모드를 켜야 할 수 있습니다.' : '운영자만 할 수 있습니다.');
+      const l = linkOf(args.p_link);
+      if (!l) throw '링크를 찾지 못했습니다. 이미 지워졌을 수 있습니다.';
+      if (!isAdminNow() && (prof(l.owner_id)?.role !== 'user' || l.owner_id === meRow.id)) return denied('운영진이 올린 링크는 운영자만 삭제할 수 있습니다.');
+      if (!String(args.p_note ?? '').trim()) throw '삭제 사유를 적어 주세요. (500자 이하)';
+      TABLES.ext_links = TABLES.ext_links.filter((x) => x.id !== l.id);
+      TABLES.link_reports = TABLES.link_reports.filter((r) => r.link_id !== l.id);
+      TABLES.notifications.push({ id: 8000 + TABLES.notifications.length, user_id: l.owner_id, kind: 'link_removed', read_at: null,
+        message: `${l.build_id == null ? '프로필에' : '빌드에'} 올린 링크가 운영 원칙에 따라 삭제됐습니다. 사유: ${args.p_note}`, created_at: new Date().toISOString() });
+      return ok(null);
+    }
+    if (['admin_link_reports', 'dismiss_link_reports', 'admin_add_link_domain', 'admin_remove_link_domain'].includes(name) && !isAdminNow()) {
+      return denied('운영자만 할 수 있습니다.');
+    }
+    if (name === 'admin_link_reports') {
+      const open = TABLES.link_reports.filter((r) => r.status === 'open');
+      const ids = [...new Set(open.map((r) => r.link_id))];
+      const person = (id) => { const p = prof(id); return p ? { id: p.id, nickname: p.nickname, influencer: p.influencer ?? null, nickname_state: null, role: p.role } : null; };
+      return ok(structuredClone({
+        total: ids.length, page: 1, size: args.p_size ?? 20,
+        links: ids.slice(0, args.p_size ?? 20).map((id) => {
+          const l = linkOf(id);
+          const b = l.build_id != null ? buildOf(l.build_id) : null;
+          return { ...shape(l), visible: visible(l), owner: person(l.owner_id),
+            build: b ? { id: b.id, counter_id: b.counter_id, seq: b.seq, name: b.name, status: b.status, target_champion: b.counter.target_champion, counter_champion: b.counter.counter_champion } : null,
+            reports: open.filter((r) => r.link_id === id).map((r) => ({ ...r, reporter: person(r.reporter_id) })) };
+        }),
+      }));
+    }
+    if (name === 'dismiss_link_reports') {
+      const open = TABLES.link_reports.filter((r) => r.link_id === args.p_link && r.status === 'open');
+      if (open.length === 0) throw '처리할 신고가 없습니다.';
+      open.forEach((r) => { r.status = 'dismissed'; });
+      return ok(open.length);
+    }
+    if (name === 'admin_add_link_domain') {
+      const dom = String(args.p_domain).toLowerCase().trim().replace(/^https?:\/\//, '').replace(/\/+$/, '').replace(/^www\./, '');
+      if (!String(args.p_label ?? '').trim()) throw '사이트 이름을 적어 주세요. (40자 이하)';
+      if (!/^([a-z0-9]([a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,24}$/.test(dom)) throw '도메인 모양이 올바르지 않습니다. (예: youtube.com)';
+      if (domains.some((d) => d.domain === dom)) throw '이미 허용된 사이트입니다.';
+      TABLES.link_domains = [...domains, { domain: dom, label: args.p_label.trim() }].sort((a, b) => a.domain.localeCompare(b.domain));
+      return ok(dom);
+    }
+    if (name === 'admin_remove_link_domain') {
+      if (!String(args.p_note ?? '').trim()) throw '빼는 사유를 적어 주세요. (500자 이하)';
+      if (!domains.some((d) => d.domain === args.p_domain)) throw '허용 목록에 없는 사이트입니다.';
+      const before = links.filter(visible).length;
+      TABLES.link_domains = domains.filter((d) => d.domain !== args.p_domain);
+      const stillAllowed = (host) => TABLES.link_domains.some((d) => host === d.domain || host.endsWith(`.${d.domain}`));
+      return ok(before - links.filter((l) => visible(l) && stillAllowed(l.host)).length);
     }
     if (!meRow.influencer) return { data: null, error: { message: '인증된 장인만 링크를 올릴 수 있습니다.', code: '42501' } };
     if (name === 'set_profile_links') {

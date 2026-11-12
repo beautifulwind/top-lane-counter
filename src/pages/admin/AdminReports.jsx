@@ -13,9 +13,12 @@ import NoteForm from '../../components/NoteForm';
 import { matchupTitle } from '../../lib/josa';
 import { FlagIcon } from '../../components/Icons';
 import WikiReportList from '../../components/WikiReportAdmin';
+import LinkReportList from '../../components/LinkReportAdmin';
+import { DismissForm } from '../../components/DismissForm';
 
 /**
- * 운영진: 신고 (/admin/reports). 탭 두 개 — "글·댓글 신고"(기본) / "오류 신고"(?tab=wiki, 043 상대법·빌드 내용 오류).
+ * 운영진: 신고 (/admin/reports). 탭 — "글·댓글 신고"(기본) / "오류 신고"(?tab=wiki, 043 상대법·빌드 내용 오류)
+ * / "링크 신고"(?tab=links, 047·048 장인 외부 링크 — 운영자만).
  * 글·댓글 신고: 자유게시판·문서 댓글. 같은 글·댓글의 신고는 한 줄로 묶는다.
  * [숨기기] = 메모 필수, 작성자에게 알림, 그 대상의 신고는 "처리됨" / [신고 기각] = 메모 선택, 글·댓글은 그대로
  * 자동 숨김은 없다 (운영자가 보고 정한다)
@@ -29,14 +32,17 @@ export default function AdminReports() {
 }
 
 function ReportsPage() {
+  const { isOperator } = useAuth();
   const [params, setParams] = useSearchParams();
-  const wiki = params.get('tab') === 'wiki';
+  // 'board'(기본) | 'wiki' | 'links'(운영자만 — 047·048 링크 신고 목록·기각은 운영자 전용)
+  const asked = params.get('tab');
+  const current = asked === 'wiki' || (asked === 'links' && isOperator) ? asked : 'board';
   const tab = (key, label) => {
-    const on = (key === 'wiki') === wiki;
+    const on = key === current;
     return (
       <button
         type="button" role="tab" aria-selected={on} className={`build-tab${on ? ' on' : ''}`}
-        onClick={() => setParams(key === 'wiki' ? { tab: 'wiki' } : {}, { replace: true })}
+        onClick={() => setParams(key === 'board' ? {} : { tab: key }, { replace: true })}
       >
         <span className="build-tab-name">{label}</span>
       </button>
@@ -49,8 +55,9 @@ function ReportsPage() {
       <div className="build-tabs" role="tablist" aria-label="신고 종류">
         {tab('board', '글·댓글 신고')}
         {tab('wiki', '오류 신고')}
+        {isOperator && tab('links', '링크 신고')}
       </div>
-      {wiki ? <WikiReportList /> : <ReportList />}
+      {current === 'wiki' ? <WikiReportList /> : current === 'links' ? <LinkReportList /> : <ReportList />}
     </article>
   );
 }
@@ -162,34 +169,5 @@ function ReportGroup({ group: g, champs, onDone }) {
         />
       )}
     </li>
-  );
-}
-
-/** 신고 기각: 메모는 선택 (작성자·신고자에게 가지 않고 기록만) */
-function DismissForm({ id, onSubmit, onCancel }) {
-  const [note, setNote] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
-  const submit = async (e) => {
-    e.preventDefault();
-    setBusy(true);
-    setError(null);
-    try {
-      await onSubmit(note.trim());
-    } catch (err) {
-      setError(err.message);
-      setBusy(false);
-    }
-  };
-  return (
-    <form className="note-form" onSubmit={submit} onKeyDown={(e) => e.key === 'Escape' && !busy && onCancel()}>
-      <label htmlFor={id}>기각 메모 (선택, 기록용 — 아무에게도 알림이 가지 않습니다)</label>
-      <textarea id={id} rows={2} maxLength={500} value={note} onChange={(e) => setNote(e.target.value)} />
-      <div className="note-form-actions">
-        <button type="submit" className="btn btn-small btn-op" disabled={busy}>{busy ? '처리하는 중…' : '기각 확정'}</button>
-        <button type="button" className="btn btn-small" onClick={onCancel} disabled={busy}>취소</button>
-      </div>
-      {error && <p className="form-error" role="alert">{error}</p>}
-    </form>
   );
 }

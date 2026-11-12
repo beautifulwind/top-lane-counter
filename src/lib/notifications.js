@@ -45,7 +45,7 @@ export const INFLUENCER_NOTICE = {
   influencer_revoked: { icon: 'ban', to: '/me/influencer' },
   nickname_reset_soon: { icon: 'bell', to: '/me/settings' },
   nickname_reset: { icon: 'bell', to: '/me/settings' },
-  link_removed: { icon: 'ban', to: '/me/influencer' }, // 047 외부 링크 (종류만 미리)
+  link_removed: { icon: 'ban', to: '/me/links' }, // 047·048 외부 링크 삭제 → 링크 관리 (3b)
 };
 const wikiPath = (n) => {
   const c = n.counter ?? n.build?.counter;

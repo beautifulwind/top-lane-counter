@@ -26,7 +26,7 @@ export function accountKind(auth) {
 
 /** 처리 대기 건수 풍선 설명: "제안 2 · 빌드 1 · 문의 3" (0인 것은 뺀다) */
 const pendingTitle = (c) =>
-  [['제안', c.proposals], ['빌드', c.builds], ['문의', c.inquiries], ['오류 신고', c.wiki_reports], ['장인 신청', c.influencers]].filter(([, n]) => n > 0).map(([l, n]) => `${l} ${n}`).join(' · ');
+  [['제안', c.proposals], ['빌드', c.builds], ['문의', c.inquiries], ['오류 신고', c.wiki_reports], ['장인 신청', c.influencers], ['링크 신고', c.link_reports]].filter(([, n]) => n > 0).map(([l, n]) => `${l} ${n}`).join(' · ');
 
 export const logout = () => signOut().catch((e) => alert(e.message));
 
@@ -54,9 +54,9 @@ function useUnreadCount(userId, pathname) {
 
 /**
  * 관리 메뉴의 처리 대기 건수 (운영진만, 033). 메뉴를 열 때마다 새로 센다 — 처리하고 돌아오면 줄어 있도록.
- * 돌려주는 값: null(안 보임/못 불러옴) | { proposals, builds, inquiries, wiki_reports, influencers, total }
+ * 돌려주는 값: null(안 보임/못 불러옴) | { proposals, builds, inquiries, wiki_reports, influencers, link_reports(운영자만), total }
  */
-function usePendingCounts(enabled, open) {
+function usePendingCounts(enabled, open, isOperator) {
   const [counts, setCounts] = useState(null);
   useEffect(() => {
     if (!enabled) {
@@ -65,9 +65,9 @@ function usePendingCounts(enabled, open) {
     }
     if (!open) return undefined;
     let alive = true;
-    getPendingCounts().then((c) => alive && setCounts(c && { ...c, total: c.proposals + c.builds + c.inquiries + c.wiki_reports + c.influencers }));
+    getPendingCounts(isOperator).then((c) => alive && setCounts(c && { ...c, total: c.proposals + c.builds + c.inquiries + c.wiki_reports + c.influencers + c.link_reports }));
     return () => { alive = false; };
-  }, [enabled, open]);
+  }, [enabled, open, isOperator]);
   return counts;
 }
 
@@ -90,7 +90,7 @@ export default function SiteMenu() {
   const installKindNow = useInstallKind(); // 'prompt'(안드로이드) | 'ios' | 숨김
   const [showIosGuide, setShowIosGuide] = useState(false);
   const [open, setOpen] = useState(false);
-  const pending = usePendingCounts(kind === 'moderator' || kind === 'operator', open);
+  const pending = usePendingCounts(kind === 'moderator' || kind === 'operator', open, kind === 'operator');
   const opener = useRef(null);
   const panel = useRef(null);
 

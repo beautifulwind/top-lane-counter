@@ -79,7 +79,7 @@ const INFLUENCER: Record<string, { title: string; url: string }> = {
   influencer_revoked: { title: '장인 인증', url: '/me/influencer' },
   nickname_reset_soon: { title: '닉네임 안내', url: '/me/settings' },
   nickname_reset: { title: '닉네임 안내', url: '/me/settings' },
-  link_removed: { title: '장인 프로필', url: '/me/influencer' },
+  link_removed: { title: '장인 링크', url: '/me/links' }, // 3b: 링크 관리로
 };
 const withoutOperatorId = (s: string) =>
   s.replaceAll('운영자 계정 {운영자 닉네임}으로', '운영자 계정으로').replaceAll('{운영자 닉네임}으로', '운영자 계정으로').replaceAll('{운영자 닉네임}', '운영자 계정');

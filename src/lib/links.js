@@ -63,3 +63,12 @@ export const LINK_REL = 'noopener noreferrer nofollow ugc';
 
 /** 이동 확인 창 문구 */
 export const LEAVE_TEXT = '탑신병자를 떠나 외부 사이트로 이동합니다. 주소를 확인하세요.';
+
+/** 링크 신고 이유 (047 report_link와 같은 값). 기타는 내용 필수 */
+export const LINK_REPORT_REASONS = {
+  spam: '광고·도박',
+  obscene: '음란·잔혹',
+  malicious: '악성·피싱 사이트',
+  not_own: '본인 채널이 아님(사칭)',
+  other: '기타',
+};

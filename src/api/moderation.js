@@ -1,4 +1,5 @@
 // 감독관 관리 (030, SPEC 6-18). 운영자만 쓰는 화면이고, 실제 권한 검사는 DB 함수·RLS가 한다.
+import { getLinkReportCount } from './links';
 import { db } from './supabase';
 
 const COLUMNS = 'id, nickname, role, level, main_title, is_guest, influencer, nickname_state';
@@ -33,16 +34,22 @@ export async function setModerator(userId, on, note) {
 }
 
 /**
- * 관리 메뉴의 처리 대기 건수 (033): { proposals, builds, inquiries, wiki_reports(043 오류 신고), influencers(046 장인 신청) }. 운영진만 부를 수 있고, 건수는 역할에 맞게 DB가 센다
- * (감독관은 자기가 처리할 수 있는 것만). 못 불러오면(아직 033 전이거나 네트워크) null — 메뉴는 숫자 없이 그대로 보여 준다
+ * 관리 메뉴의 처리 대기 건수 (033): { proposals, builds, inquiries, wiki_reports(043 오류 신고), influencers(046 장인 신청), link_reports(047 링크 신고) }.
+ * 운영진만 부를 수 있고, 건수는 역할에 맞게 DB가 센다 (감독관은 자기가 처리할 수 있는 것만).
+ * link_reports는 운영자(isOperator)일 때만 따로 센다(admin_link_reports 합계 — 링크 신고 목록은 운영자 전용). 감독관은 늘 0.
+ * 못 불러오면(아직 033 전이거나 네트워크) null — 메뉴는 숫자 없이 그대로 보여 준다
  */
-export async function getPendingCounts() {
+export async function getPendingCounts(isOperator = false) {
   try {
-    const { data, error } = await db().rpc('admin_pending_counts');
+    const [{ data, error }, linkReports] = await Promise.all([
+      db().rpc('admin_pending_counts'),
+      isOperator ? getLinkReportCount() : Promise.resolve(0),
+    ]);
     if (error || !data) return null;
     return {
       proposals: Number(data.proposals) || 0, builds: Number(data.builds) || 0, inquiries: Number(data.inquiries) || 0, wiki_reports: Number(data.wiki_reports) || 0,
       influencers: Number(data.influencers) || 0, // 046 장인 신청 (운영자만, 감독관은 0)
+      link_reports: linkReports, // 047 링크 신고 (운영자만, 감독관은 0)
     };
   } catch {
     return null;

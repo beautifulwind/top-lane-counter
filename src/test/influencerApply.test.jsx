@@ -304,6 +304,7 @@ const MESSAGES = {
 };
 const WHERE = {
   influencer_applied: '/admin/influencers', nickname_reset_soon: '/me/settings', nickname_reset: '/me/settings',
+  link_removed: '/me/links', // 3b: 링크 관리로
 };
 
 test.each(Object.keys(MESSAGES))('알림 %s: 아이콘·문장·누르면 갈 곳, 푸시도 같은 곳', (kind) => {
@@ -317,7 +318,7 @@ test.each(Object.keys(MESSAGES))('알림 %s: 아이콘·문장·누르면 갈 �
   const push = describePush(n);
   expect(push.url).toBe(to);
   expect(push.body).not.toMatch(/\{운영자 닉네임\}|OPERATOR/); // 잠금 화면에는 운영자 닉네임 대신 "운영자 계정"
-  expect(push.title).toBe(kind === 'influencer_applied' ? '운영진 알림' : kind.startsWith('nickname') ? '닉네임 안내' : kind === 'link_removed' ? '장인 프로필' : '장인 인증');
+  expect(push.title).toBe(kind === 'influencer_applied' ? '운영진 알림' : kind.startsWith('nickname') ? '닉네임 안내' : kind === 'link_removed' ? '장인 링크' : '장인 인증');
 });
 
 test('운영자 닉네임 자리표시: 화면은 값 뒤에 조사 없이, 푸시는 "운영자 계정으로", 반려 사유는 둘째 줄', () => {

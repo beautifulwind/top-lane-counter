@@ -23,6 +23,7 @@ import { patchMinor } from '../lib/buildContent';
 import { buildTitleText } from '../lib/wikiBuild';
 import BuildTitle from '../components/BuildTitle';
 import BuildLinkBox from '../components/BuildLinkBox';
+import LinkActions from '../components/LinkActions';
 import ExternalLink from '../components/ExternalLink';
 import { displayNickname } from '../lib/nickname';
 
@@ -314,7 +315,11 @@ function BuildPanel({ build, index, doc, data, path, isOperator, canHide, lastOn
       </p>
       {build.link && (
         // 047: 처음 만든 장인이 단 링크 (빌드 내용과 따로). 누르면 이동 확인 창
-        <p className="build-link-row"><span className="muted">장인 링크</span> <ExternalLink link={build.link} /></p>
+        <div className="build-link-row link-item">
+          <span className="muted">장인 링크</span> <ExternalLink link={build.link} />
+          {/* 3b: 신고(정식 회원) / 삭제(운영자 전부, 감독관은 일반 장인 링크만) */}
+          <LinkActions link={build.link} ownerId={build.author_id} owner={build.author} label="장인 링크 더보기" onDone={onLinkSaved} />
+        </div>
       )}
       {reportBox}
       {hiding && (

@@ -11,13 +11,13 @@ import UserName from './UserName';
 import NoteForm from './NoteForm';
 import { matchupTitle } from '../lib/josa';
 
-/** 운영자 페이지의 "자유게시판·댓글" 칸: 처리할 신고 수 → /admin/reports, 처리할 오류 신고 수(043) → /admin/reports?tab=wiki, 숨긴 글·댓글·문서 댓글 + [다시 공개] */
+/** 운영자 페이지의 "자유게시판·댓글" 칸: 처리할 신고 수 → /admin/reports, 처리할 오류 신고 수(043) → /admin/reports?tab=wiki, 처리할 링크 신고 수(047, 운영자만) → ?tab=links, 숨긴 글·댓글·문서 댓글 + [다시 공개] */
 export default function BoardAdmin() {
   const auth = useAuth();
   const [done, setDone] = useState(null);
   const { data, error, loading, retry } = useAsync(async () => {
-    const [reports, hidden, champs, pending] = await Promise.all([getOpenReports(auth.isModerator), getHiddenBoard(), getChampionMap(), getPendingCounts()]);
-    return { reports, hidden, champs, wikiReports: pending?.wiki_reports ?? null };
+    const [reports, hidden, champs, pending] = await Promise.all([getOpenReports(auth.isModerator), getHiddenBoard(), getChampionMap(), getPendingCounts(auth.isOperator)]);
+    return { reports, hidden, champs, wikiReports: pending?.wiki_reports ?? null, linkReports: pending?.link_reports ?? null };
   }, []);
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
@@ -41,6 +41,12 @@ export default function BoardAdmin() {
         <Link to="/admin/reports?tab=wiki" className="btn btn-op">
           처리할 오류 신고{data.wikiReports != null && ` ${data.wikiReports}건`}
         </Link>
+        {auth.isOperator && (
+          // 047·048: 링크 신고 목록·기각은 운영자만
+          <Link to="/admin/reports?tab=links" className="btn btn-op">
+            처리할 링크 신고{data.linkReports != null && ` ${data.linkReports}건`}
+          </Link>
+        )}
       </p>
       <div className="sub-head">
         <h3>숨긴 글·댓글</h3>

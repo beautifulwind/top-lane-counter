@@ -1,9 +1,11 @@
+import { useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { getPublicProfile } from '../api/links';
 import { getChampionMap } from '../api/ddragon';
 import { ErrorBox, Loading } from '../components/Status';
 import SectionHead from '../components/SectionHead';
 import ExternalLink from '../components/ExternalLink';
+import LinkActions from '../components/LinkActions';
 import { InfluencerName } from '../components/UserName';
 import { LayersIcon, LinkIcon } from '../components/Icons';
 import { INFLUENCER_KINDS } from '../lib/nickname';
@@ -19,6 +21,7 @@ import NotFound from './NotFound';
  */
 export default function PublicProfile() {
   const { id } = useParams();
+  const [notice, setNotice] = useState(null); // 신고·삭제 뒤 안내 (다시 읽어도 남는다)
   const { data, error, loading, retry } = useAsync(async () => {
     const [profile, champs] = await Promise.all([getPublicProfile(id), getChampionMap().catch(() => ({}))]);
     return { profile, champs };
@@ -29,6 +32,9 @@ export default function PublicProfile() {
   const { profile, champs } = data;
   if (!profile) return <NotFound />;
   const name = (c) => champs?.[c]?.name ?? c;
+  const done = (message) => { setNotice(message); retry(); };
+  // 3b: 링크 옆 ⋮ — 신고(정식 회원) / 삭제(운영진). 공개 프로필은 역할을 주지 않으므로 운영진의 링크인지는 DB가 가른다
+  const actions = (l) => <LinkActions link={l} ownerId={profile.id} label="링크 더보기" onDone={done} />;
 
   return (
     <article className="me-page public-profile">
@@ -39,6 +45,7 @@ export default function PublicProfile() {
         </h1>
         {INFLUENCER_KINDS[profile.influencer] && <p className="doc-sub">인증된 {INFLUENCER_KINDS[profile.influencer]}</p>}
       </header>
+      {notice && <p className="notice" role="status">{notice}</p>}
 
       <section className="me-section" aria-labelledby="pp-links">
         <SectionHead icon={LinkIcon} id="pp-links" count={profile.links.length}>링크</SectionHead>
@@ -46,7 +53,7 @@ export default function PublicProfile() {
           <p className="empty">올린 링크가 없습니다.</p>
         ) : (
           <ul className="link-list">
-            {profile.links.map((l) => <li key={l.id}><ExternalLink link={l} /></li>)}
+            {profile.links.map((l) => <li key={l.id} className="link-item"><ExternalLink link={l} />{actions(l)}</li>)}
           </ul>
         )}
         <p className="hint">장인이 올린 외부 사이트입니다. 탑신병자가 내용을 보증하지 않습니다.</p>
@@ -64,7 +71,7 @@ export default function PublicProfile() {
                   {matchupShort(name(b.counter_champion), name(b.target_champion))} · {b.name || `빌드 ${b.seq ?? ''}`.trim()}
                 </Link>
                 <small className="muted">{b.patch ? `패치 ${patchMinor(b.patch)} · ` : ''}{String(b.created_at).slice(0, 10)}</small>
-                {b.link && <ExternalLink link={b.link} />}
+                {b.link && <div className="link-item"><ExternalLink link={b.link} />{actions(b.link)}</div>}
               </li>
             ))}
           </ul>

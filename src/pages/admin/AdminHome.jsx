@@ -31,9 +31,10 @@ import { matchupTitle } from '../../lib/josa';
 import VoteTally from '../../components/VoteTally';
 import SectionHead from '../../components/SectionHead';
 import { InfluencerLink } from '../../components/InfluencerAdmin';
+import LinkDomainAdmin from '../../components/LinkDomainAdmin';
 import { APPROVAL_ENABLED } from '../../lib/features';
 import {
-  ClockIcon, CoinsIcon, DiceIcon, EyeOffIcon, HelpIcon, ImageIcon, LayersIcon, MessageIcon, SendIcon, ShieldIcon, TrashIcon, UsersIcon, SparklesIcon,
+  ClockIcon, CoinsIcon, DiceIcon, EyeOffIcon, HelpIcon, ImageIcon, LayersIcon, MessageIcon, SendIcon, ShieldIcon, TrashIcon, UsersIcon, SparklesIcon, LinkIcon,
 } from '../../components/Icons';
 
 /**
@@ -271,6 +272,11 @@ function PendingList() {
       <section className="section">
         <SectionHead icon={SparklesIcon}>장인 인증</SectionHead>
         <InfluencerLink />
+      </section>
+
+      <section className="section">
+        <SectionHead icon={LinkIcon}>장인 링크 허용 사이트</SectionHead>
+        <LinkDomainAdmin />
       </section>
 
       <section className="section">

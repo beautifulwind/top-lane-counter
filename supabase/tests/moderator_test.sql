@@ -63,7 +63,7 @@ create function pg_temp.op_only_calls() returns table (fn text, sql text) langua
            (select string_agg('null', ', ') from generate_series(1, p.pronargs)))
   from pg_proc p join pg_namespace n on n.oid = p.pronamespace
   where n.nspname = 'public' and (p.prosrc ~ 'require_operator\(\)' or p.prosrc ~ 'not public\.is_admin\(\)')
-    and p.proname not in ('require_operator')
+    and p.proname not in ('require_operator', 'remove_link')  -- 048: 링크 삭제는 감독관도 일반 장인 링크만 (검사는 link_moderation_test)
     and p.prorettype <> 'trigger'::regtype;
 $$;
 create temp table op_only as select * from pg_temp.op_only_calls();
