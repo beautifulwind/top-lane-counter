@@ -270,6 +270,11 @@ test('허용 사이트: 운영자 페이지에서 목록·더하기(도메인+�
   asOperator();
   start('/admin');
   const section = (await screen.findByRole('heading', { name: '장인 링크 허용 사이트' })).closest('section');
+  // 평소엔 접혀 있다: "허용 사이트 9개" + [모두 보기]만
+  expect(await within(section).findByText('허용 사이트 9개')).toBeTruthy();
+  expect(within(section).queryByRole('list', { name: '허용 사이트' })).toBeNull();
+  expect(within(section).queryByRole('button', { name: '사이트 더하기' })).toBeNull();
+  fireEvent.click(within(section).getByRole('button', { name: '모두 보기' }));
   const list = await within(section).findByRole('list', { name: '허용 사이트' });
   expect(within(list).getAllByRole('listitem')).toHaveLength(9);
 
@@ -292,6 +297,10 @@ test('허용 사이트: 운영자 페이지에서 목록·더하기(도메인+�
   expect(await within(section).findByText('허용 사이트에서 뺐습니다: 트위치 twitch.tv (숨겨진 링크 1개)')).toBeTruthy();
   expect(rpcCalls('admin_remove_link_domain')).toEqual([{ p_domain: 'twitch.tv', p_note: '정책 변경' }]);
   expect(TABLES.ext_links).toHaveLength(1); // 지우지 않고 숨김
+
+  fireEvent.click(await within(section).findByRole('button', { name: '접기' })); // 다시 누르면 접힌다
+  expect(within(section).queryByRole('list', { name: '허용 사이트' })).toBeNull();
+  expect(await within(section).findByText('허용 사이트 9개')).toBeTruthy();
 });
 
 test('허용 사이트: 감독관 화면에는 칸이 없다, 잘못된 도메인은 DB 이유 그대로', async () => {
@@ -304,6 +313,7 @@ test('허용 사이트: 감독관 화면에는 칸이 없다, 잘못된 도메�
   asOperator();
   start('/admin');
   const section = (await screen.findByRole('heading', { name: '장인 링크 허용 사이트' })).closest('section');
+  fireEvent.click(await within(section).findByRole('button', { name: '모두 보기' }));
   fireEvent.click(await within(section).findByRole('button', { name: '사이트 더하기' }));
   fireEvent.change(within(section).getByLabelText('도메인 (예: youtube.com)'), { target: { value: 'youtube.com' } });
   fireEvent.change(within(section).getByLabelText(/사이트 이름/), { target: { value: '유튜브' } });

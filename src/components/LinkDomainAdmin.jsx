@@ -8,10 +8,12 @@ import NoteForm from './NoteForm';
  * 운영자: 장인 링크 허용 사이트 (047 link_domains, SPEC 6-34 3b). 운영자 페이지 안의 칸.
  * [더하기] 도메인(예: youtube.com) + 사이트 이름 — 주소 모양은 DB가 정리·검사한다 (https:// · www. · 끝 / 는 떼어 줌)
  * [빼기] 사유 필수. 그 사이트 링크는 지우지 않고 숨긴다(다시 더하면 다시 보인다). 숨겨진 링크 수를 알려 준다
+ * 평소엔 접혀 있고 [모두 보기]를 누르면 목록·더하기·빼기가 펼쳐진다 (다시 누르면 접힘)
  * 하위 도메인도 같은 사이트로 친다 (m.youtube.com → youtube.com)
  */
 export default function LinkDomainAdmin() {
   const [done, setDone] = useState(null);
+  const [open, setOpen] = useState(false); // 평소엔 접어 둔다: "허용 사이트 N개" + [모두 보기]
   const [adding, setAdding] = useState(false);
   const [removing, setRemoving] = useState(null); // 빼는 중인 도메인
   const { data, error, loading, retry } = useAsync(() => getLinkDomains(), []);
@@ -28,6 +30,14 @@ export default function LinkDomainAdmin() {
       {loading && <Loading />}
       {error && <ErrorBox error={error} onRetry={retry} />}
       {data && (
+        <div className="row-actions">
+          <span>허용 사이트 {data.length}개</span>
+          <button type="button" className="btn btn-small" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+            {open ? '접기' : '모두 보기'}
+          </button>
+        </div>
+      )}
+      {data && open && (
         <ul className="proposal-list" aria-label="허용 사이트">
           {data.map((d) => (
             <li key={d.domain} className="proposal-row">
@@ -57,12 +67,12 @@ export default function LinkDomainAdmin() {
           {data.length === 0 && <li className="empty">허용 사이트가 없습니다. 장인이 링크를 올릴 수 없습니다.</li>}
         </ul>
       )}
-      {data && !adding && (
+      {data && open && !adding && (
         <div className="row-actions">
           <button type="button" className="btn btn-small btn-op" onClick={() => { setDone(null); setRemoving(null); setAdding(true); }}>사이트 더하기</button>
         </div>
       )}
-      {adding && <AddDomainForm onCancel={() => setAdding(false)} onDone={finished} />}
+      {open && adding && <AddDomainForm onCancel={() => setAdding(false)} onDone={finished} />}
     </>
   );
 }

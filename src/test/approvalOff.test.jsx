@@ -65,7 +65,7 @@ test('예전 제안·빌드 [고쳐서 다시 보내기] 주소 → 기록 보�
   expect(screen.queryByRole('link', { name: '수정' })).toBeNull();
 });
 
-test('마이페이지: 보낸 제안이 없으면 "내 제안" 구역이 없고, 있으면 예전 기록이라고 알려 준다', async () => {
+test('마이페이지: "내 제안" 구역은 없다 (예전 제안이 있어도), 내 빌드는 그대로', async () => {
   fakeLogin('u-old');
   start('/me');
   expect(await screen.findByRole('heading', { name: /내 빌드/ })).toBeDefined();
@@ -74,8 +74,9 @@ test('마이페이지: 보낸 제안이 없으면 "내 제안" 구역이 없고,
   cleanup();
   TABLES.edit_proposals.push(fakeProposal({ id: 502, proposer_id: 'u-old', status: 'approved' }));
   start('/me');
-  expect(await screen.findByRole('heading', { name: /내 제안/ })).toBeDefined();
-  expect(screen.getByText(/예전 승인 제도 때 보낸 제안 기록입니다/)).toBeDefined();
+  expect(await screen.findByRole('heading', { name: /내 빌드/ })).toBeDefined();
+  expect(screen.queryByRole('heading', { name: /내 제안/ })).toBeNull();
+  expect(screen.queryByText(/예전 승인 제도 때 보낸 제안 기록입니다/)).toBeNull();
 });
 
 test('내 공개 빌드 자세히: [빌드 수정]으로 바로 고칠 수 있다고 안내', async () => {

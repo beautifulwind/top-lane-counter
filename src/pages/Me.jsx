@@ -25,7 +25,7 @@ import { BellIcon, GearIcon, HelpIcon, LayersIcon, LinkIcon, SendIcon, SparklesI
 
 /**
  * 마이페이지 (/me): 맨 위 프로필 카드(닉네임·칭호 태그·Lv·경험치 막대 + [알림 보기]·[계정 설정]), 칭호판,
- * 내 제안·내 빌드 목록과 상태. 레벨·칭호는 MyRewards (SPEC 6장), 알림은 /notifications (027),
+ * 내 제안(승인 제도를 켰을 때만 — 039 뒤로 숨김)·내 빌드 목록과 상태. 레벨·칭호는 MyRewards (SPEC 6장), 알림은 /notifications (027),
  * 로그인 연결·닉네임 바꾸기·회원 탈퇴는 /me/settings (MySettings).
  */
 export default function Me() {
@@ -125,7 +125,7 @@ function MyActivity({ auth }) {
   const operator = auth.isOperatorAccount; // 운영자 모드를 꺼도 운영자 계정은 경험치·칭호가 없다 (DB 그대로)
   const { data, error, loading, retry } = useAsync(async () => {
     const [champs, proposals, builds, items, runes, spells, latest, rewards] = await Promise.all([
-      getChampionMap(), getMyProposals(userId), getMyBuilds(userId),
+      getChampionMap(), APPROVAL_ENABLED ? getMyProposals(userId) : [], getMyBuilds(userId),
       getItems(), getRunes(), getSummonerSpells(), getLatestVersion(),
       operator ? null : getMyRewards(userId),
     ]);
@@ -140,7 +140,7 @@ function MyActivity({ auth }) {
       {data && (
         <>
           {data.rewards && <MyTitles rewards={data.rewards} />}
-          {(APPROVAL_ENABLED || data.proposals.length > 0) && <MyProposals data={data} />}
+          {APPROVAL_ENABLED && <MyProposals data={data} />} {/* 039 뒤로 새 제안이 없어 모든 회원에게 숨김 (승인 제도를 다시 켜면 보임) */}
           <MyBuilds data={data} />
         </>
       )}
