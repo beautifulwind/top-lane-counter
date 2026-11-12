@@ -6,7 +6,7 @@ import RequireOperator from '../../components/RequireOperator';
 import { ErrorBox, Loading } from '../../components/Status';
 import { ACTION_LABEL, KIND_LABEL, ModeratorToggle, ROLE_LABEL } from '../../components/ModeratorAdmin';
 import UserName from '../../components/UserName';
-import { RenameMember, RevokeInfluencer } from '../../components/InfluencerAdmin';
+import { GrantInfluencer, RenameMember, RevokeInfluencer } from '../../components/InfluencerAdmin';
 import { UsersIcon } from '../../components/Icons';
 import { fmtDateTime } from '../../lib/format';
 import { matchupTitle } from '../../lib/josa';
@@ -84,6 +84,8 @@ function Info({ info, onDone }) {
       <ModeratorToggle member={info} onDone={onDone} />
       {info.role !== 'admin' && (
         <div className="row-actions" aria-label="장인·닉네임">
+          {/* 049: 장인이 아니면 [장인으로 직접 지정], 지정되면 같은 자리에 [인증 해제] */}
+          <GrantInfluencer member={info} onDone={onDone} />
           <RevokeInfluencer member={info} onDone={onDone} />
           <RenameMember member={info} onDone={onDone} />
         </div>

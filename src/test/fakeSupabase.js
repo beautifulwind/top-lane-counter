@@ -977,7 +977,8 @@ export function db() {
 // DB 함수처럼 흐름만 흉내 낸다 (규칙 자체는 supabase/tests/influencer_test.sql). 목록·내 상태는 화면이 알아서 부르므로 rpcCalls에 넣지 않는다.
 // fakeState.influencerNextAt = 다시 신청할 수 있는 때 (없으면 null), 오류는 fakeState.rpcError
 const INFLUENCER_RPCS = ['my_influencer_status', 'apply_influencer', 'cancel_influencer_application', 'admin_influencer_applications',
-  'approve_influencer', 'reject_influencer', 'extend_influencer_application', 'revoke_influencer', 'admin_set_nickname'];
+  'approve_influencer', 'reject_influencer', 'extend_influencer_application', 'revoke_influencer', 'admin_set_nickname',
+  'grant_influencer']; // 049
 const KIND_LABEL = { creator: '크리에이터', pro: '프로게이머', grandmaster: '그랜드마스터 이상' };
 function influencerRpc(name, args) {
   const listing = name === 'my_influencer_status' || name === 'admin_influencer_applications';
@@ -1053,6 +1054,26 @@ function influencerRpc(name, args) {
     a.expires_at = new Date(Date.parse(a.expires_at) + 7 * 86400000).toISOString();
     a.extended_count += 1;
     return ok(a.expires_at);
+  }
+  if (name === 'grant_influencer') {
+    // 049: 지정 줄(direct)을 승인 상태로 만들고 장인 표시. 거부 규칙은 DB 검사(direct_grant_test)와 같은 문구로 몇 가지만
+    const u = prof(args.p_user);
+    if (!u) return { data: null, error: { message: '회원을 찾지 못했습니다.', code: 'P0002' } };
+    if (u.is_guest) return { data: null, error: { message: '장인은 구글·카카오로 로그인한 정식 회원만 지정할 수 있습니다. 비회원은 지정할 수 없습니다.', code: '23514' } };
+    if (u.influencer) return { data: null, error: { message: '이미 인증된 장인입니다.', code: '23514' } };
+    if (u.nickname_state === 'pending') {
+      return { data: null, error: { message: '장인 인증 신청을 심사 중인 회원입니다. 운영자 페이지 [장인 인증] 심사 화면에서 그 신청을 승인해 주세요.', code: '23514' } };
+    }
+    const now = new Date().toISOString();
+    const id = apps.length + 1;
+    apps.push({
+      id, user_id: u.id, kind: args.p_kind, nickname: u.nickname, old_nickname: null, channel_url: null, official_email: null, riot_id: null,
+      opgg_url: null, status: 'approved', created_at: now, expires_at: now, extended_count: 0, ended_at: now, review_note: args.p_note,
+      retry_now: false, nickname_reverted: null, revoked_at: null, revoke_note: null, direct: true, reviewer: meRow.nickname,
+    });
+    Object.assign(u, { influencer: args.p_kind, influencer_at: now });
+    notify(u.id, 'influencer_approved', '장인 인증이 완료됐습니다. 이제 닉네임 앞에 "장인" 표시가 붙습니다.');
+    return ok(id);
   }
   if (name === 'revoke_influencer') {
     Object.assign(prof(args.p_user), { influencer: null, influencer_at: null });

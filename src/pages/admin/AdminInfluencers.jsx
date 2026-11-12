@@ -137,14 +137,15 @@ function ApplicationRow({ app: a, onDone }) {
         <span className="proposal-type">{kindLabel}</span>{' '}
         <strong>{a.nickname}</strong>
         {!pending && <>{' '}<span className="op-badge">{STATUS_LABEL[a.status] ?? a.status}</span></>}
+        {a.direct && <>{' '}<span className="op-badge">직접 지정</span></>}
       </div>
       <div className="proposal-meta">
         <span>
-          신청자:{' '}
+          {a.direct ? '지정한 회원' : '신청자'}:{' '}
           {a.user ? <Link to={`/admin/members/${a.user.id}`} className="op-link"><UserName profile={a.user} /></Link> : '탈퇴한 이용자'}
         </span>
         {a.old_nickname && a.old_nickname !== a.nickname && <span>신청 전 닉네임: {a.old_nickname}</span>}
-        <span>신청: {fmtDateTime(a.created_at)}</span>
+        <span>{a.direct ? '지정' : '신청'}: {fmtDateTime(a.created_at)}</span>
         {pending && <span>만료: {fmtDateTime(a.expires_at)}{a.extended_count > 0 && ` (${a.extended_count}번 늘림)`}</span>}
         {a.recent_rejections > 0 && <span>최근 180일 반려 {a.recent_rejections}번</span>}
       </div>
@@ -158,7 +159,9 @@ function ApplicationRow({ app: a, onDone }) {
         </p>
       )}
 
-      {byEmail(a.kind) ? <EmailCheck app={a} /> : <FriendCheck app={a} />}
+      {/* 049: 운영자가 직접 지정한 줄은 신청서(이메일·라이엇·링크)가 없다 */}
+      {a.direct ? <p className="hint">운영자가 신청·확인 절차 없이 직접 지정했습니다.</p>
+        : byEmail(a.kind) ? <EmailCheck app={a} /> : <FriendCheck app={a} />}
 
       {!pending && (
         <p className="hint">

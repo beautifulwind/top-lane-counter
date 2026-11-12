@@ -281,7 +281,7 @@ function PendingList() {
 
       <section className="section">
         <SectionHead icon={UsersIcon}>회원 관리</SectionHead>
-        <p className="hint">가입자 수, 신규 가입자(24시간), 닉네임 검색, 감독관 목록, 처리 기록. 회원을 누르면 감독관 지정·해제, 장인 인증 해제, 닉네임 바꾸기를 합니다.</p>
+        <p className="hint">가입자 수, 신규 가입자(24시간), 닉네임 검색, 감독관 목록, 처리 기록. 회원을 누르면 감독관 지정·해제, 장인 직접 지정·인증 해제, 닉네임 바꾸기를 합니다.</p>
         <div className="row-actions">
           <Link to="/admin/members" className="btn btn-small btn-op">회원 관리 열기</Link>
         </div>

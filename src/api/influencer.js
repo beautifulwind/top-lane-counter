@@ -72,6 +72,13 @@ export const rejectInfluencer = (id, note, { revertNickname = false, retryNow = 
 /** 만료일 7일 늘리기. 돌려주는 값: 새 만료 시각 */
 export const extendInfluencer = (id) => rpc('extend_influencer_application', { p_id: id }, '만료일을 늘리지 못했습니다.');
 
+/**
+ * 장인 직접 지정 (049, SPEC 6-35): 신청·확인 절차 없이 정식 회원을 바로 장인으로. kind = 'creator' | 'pro' | 'grandmaster', note 필수.
+ * 운영자만(감독관·운영자 모드 꺼짐 거부). 게스트·이미 장인·신청 처리 전인 회원은 DB가 거부. 닉네임은 그대로. 돌려주는 값: 지정 줄 번호
+ */
+export const grantInfluencer = (userId, kind, note) =>
+  rpc('grant_influencer', { p_user: userId, p_kind: kind, p_note: note }, '장인으로 지정하지 못했습니다.');
+
 /** 인증 해제 ("장인" 표시만 없앰, 닉네임은 그대로) */
 export const revokeInfluencer = (userId, note) => rpc('revoke_influencer', { p_user: userId, p_note: note }, '인증을 해제하지 못했습니다.');
 
