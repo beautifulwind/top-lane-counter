@@ -52,6 +52,8 @@ test('마이페이지 [장인 인증] → 신청 화면, 그랜드마스터: 친
   const guide = screen.getByLabelText('친구 요청 안내');
   for (const h of ['친구 요청을 보내는 이유', '이렇게 해 주세요', '안심하셔도 됩니다']) expect(within(guide).getByRole('heading', { name: h })).toBeDefined();
   expect(within(guide).getByText(OPERATOR_RIOT_ID)).toBeDefined();
+  expect(guide.textContent).toContain(`친구 요청을 보낼 운영자 인증 계정: ${OPERATOR_RIOT_ID}`);
+  expect(guide.textContent).not.toContain('(으)로');
   expect(guide.textContent).toMatch(/수락하지 않습니다/);
   fireEvent.click(within(guide).getByRole('button', { name: '운영자 라이엇 닉네임 복사' }));
   expect(writeText).toHaveBeenCalledWith(OPERATOR_RIOT_ID);
@@ -68,7 +70,7 @@ test('마이페이지 [장인 인증] → 신청 화면, 그랜드마스터: 친
 
   type('라이엇 닉네임#태그', '탑장인 # KR1');
   fireEvent.click(screen.getByRole('button', { name: '신청 보내기' }));
-  expect(await screen.findByText(`신청을 보냈습니다. 14일 안에 운영자 계정 ${OPERATOR_RIOT_ID}(으)로 친구 요청을 보내 주세요.`)).toHaveAttribute('role', 'status');
+  expect(await screen.findByText(`신청을 보냈습니다. 14일 안에 운영자 인증 계정에 친구 요청을 보내 주세요. 친구 요청을 보낼 운영자 인증 계정: ${OPERATOR_RIOT_ID}`)).toHaveAttribute('role', 'status');
   expect(rpcCalls('apply_influencer')).toEqual([{
     p_kind: 'grandmaster', p_nickname: '탑장인', p_channel_url: null, p_email: null, p_riot_id: '탑장인 # KR1', p_opgg_url: 'https://op.gg/summoners/kr/x',
   }]);
@@ -233,7 +235,7 @@ test('운영자: (b) 신청 — 라이엇 닉네임 복사·op.gg 링크, 운영
   expect(within(row).getByText('탑고수#KR1')).toBeDefined();
   expect(within(row).getByRole('button', { name: '라이엇 닉네임 복사' })).toBeDefined();
   expect(within(row).getByRole('link', { name: 'https://op.gg/summoners/kr/x' })).toHaveAttribute('rel', 'noopener noreferrer nofollow');
-  expect(row.textContent).toMatch(new RegExp(`${OPERATOR_RIOT_ID}의 받은 친구 요청`));
+  expect(row.textContent).toContain(`받은 친구 요청에서 위 이름을 찾습니다. 수락하지 않습니다. (운영자 인증 계정: ${OPERATOR_RIOT_ID})`);
   expect(row.textContent).toMatch(/수락하지 않습니다/);
   expect(row.textContent).toMatch(/승인하면 이 회원에게 미리 알림이 가고, 3일 뒤 임시 닉네임으로 바뀝니다/);
 
@@ -318,10 +320,13 @@ test.each(Object.keys(MESSAGES))('알림 %s: 아이콘·문장·누르면 갈 �
   expect(push.title).toBe(kind === 'influencer_applied' ? '운영진 알림' : kind.startsWith('nickname') ? '닉네임 안내' : kind === 'link_removed' ? '장인 프로필' : '장인 인증');
 });
 
-test('운영자 닉네임 자리표시: 화면은 상수 + 조사(으로/로), 푸시는 "운영자 계정으로", 반려 사유는 둘째 줄', () => {
-  expect(fillOperatorId('{운영자 닉네임}으로 보내 주세요.', '탑신병자#KR1')).toBe('탑신병자#KR1(으)로 보내 주세요.');
-  expect(fillOperatorId('{운영자 닉네임}으로 보내 주세요.', '운영탑')).toBe('운영탑으로 보내 주세요.');
-  expect(fillOperatorId('{운영자 닉네임}으로 보내 주세요.', '운영자')).toBe('운영자로 보내 주세요.');
+test('운영자 닉네임 자리표시: 화면은 값 뒤에 조사 없이, 푸시는 "운영자 계정으로", 반려 사유는 둘째 줄', () => {
+  expect(fillOperatorId(MESSAGES.influencer_received, '탑신병자#1188'))
+    .toMatch(/^신청이 접수됐습니다\. 14일 안에 운영자 인증 계정에 친구 요청을 보내 주세요\(친구 요청을 보낼 계정: 탑신병자#1188\)\. 요청이 도착하면/);
+  expect(fillOperatorId(MESSAGES.influencer_expiring, '탑신병자#1188'))
+    .toBe('신청이 3일 뒤 만료됩니다. 아직 친구 요청을 보내지 않았다면 운영자 인증 계정에 보내 주세요(친구 요청을 보낼 계정: 탑신병자#1188).');
+  expect(fillOperatorId('{운영자 닉네임}으로 가기', '탑신병자#1188')).toBe('운영자 인증 계정(탑신병자#1188)으로 가기');
+  for (const m of Object.values(MESSAGES)) expect(fillOperatorId(m)).not.toContain('(으)로');
   expect(describePush({ id: 1, kind: 'influencer_received', message: MESSAGES.influencer_received }).body)
     .toMatch(/^신청이 접수됐습니다\. 14일 안에 운영자 계정으로 친구 요청을 보내 주세요\./);
   expect(describePush({ id: 1, kind: 'influencer_expiring', message: MESSAGES.influencer_expiring }).body).toMatch(/운영자 계정으로 보내 주세요/);
@@ -334,7 +339,7 @@ test('알림 화면: 접수 알림을 누르면 신청 화면, 운영자 닉네�
   fakeLogin('u-old');
   TABLES.notifications.push({ id: 1, user_id: 'u-old', kind: 'influencer_received', message: MESSAGES.influencer_received, created_at: new Date().toISOString(), read_at: null });
   start('/notifications');
-  const link = await screen.findByRole('link', { name: new RegExp(`운영자 계정 ${OPERATOR_RIOT_ID}`) });
+  const link = await screen.findByRole('link', { name: new RegExp(`친구 요청을 보낼 계정: ${OPERATOR_RIOT_ID}`) });
   expect(link).toHaveAttribute('href', '/me/influencer');
 });
 

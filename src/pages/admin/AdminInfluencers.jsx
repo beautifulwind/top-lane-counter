@@ -265,7 +265,7 @@ function FriendCheck({ app: a }) {
       </p>
       {a.status === 'pending' && (
         <ol className="hint">
-          <li>운영자 인증 계정 <strong>{OPERATOR_RIOT_ID}</strong>의 받은 친구 요청에서 위 이름을 찾습니다. <strong>수락하지 않습니다.</strong></li>
+          <li>운영자 인증 계정에 로그인해 받은 친구 요청에서 위 이름을 찾습니다. <strong>수락하지 않습니다.</strong> (운영자 인증 계정: <strong>{OPERATOR_RIOT_ID}</strong>)</li>
           <li>op.gg에서 지금 티어가 그랜드마스터 이상인지 봅니다.</li>
           <li>둘 다 맞으면 승인(메모 "친구 요청 확인"), 요청이 없거나 이름·티어가 다르면 반려합니다.</li>
         </ol>

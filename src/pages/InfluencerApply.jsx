@@ -11,9 +11,9 @@ import SectionHead from '../components/SectionHead';
 import { SparklesIcon, SendIcon } from '../components/Icons';
 import { isGuest, useAuth } from '../lib/auth';
 import { fmtDateTime } from '../lib/format';
-import { josa, josaOf } from '../lib/josa';
+import { josaOf } from '../lib/josa';
 import { INFLUENCER_KINDS } from '../lib/nickname';
-import { KIND_CHOICES, OPERATOR_RIOT_ID, STATUS_LABEL, applicationProblem, byEmail } from '../lib/influencer';
+import { KIND_CHOICES, OPERATOR_RIOT_ID, STATUS_LABEL, applicationProblem, byEmail, operatorIdLabel } from '../lib/influencer';
 import { useAsync } from '../lib/useAsync';
 
 /**
@@ -191,9 +191,10 @@ function FriendGuide() {
       <ol>
         <li>라이엇 닉네임#태그와 op.gg 링크를 적어 신청서를 보냅니다.</li>
         <li>
-          14일 안에 롤 클라이언트에서 운영자 인증 계정 <strong className="riot-id">{OPERATOR_RIOT_ID}</strong>{' '}
-          <CopyButton text={OPERATOR_RIOT_ID} what="운영자 라이엇 닉네임" />{' '}
-          {josaOf(OPERATOR_RIOT_ID, '으로/로')} 친구 요청을 보냅니다.
+          14일 안에 롤 클라이언트에서 아래 운영자 인증 계정에 친구 요청을 보냅니다.
+          <br />
+          친구 요청을 보낼 운영자 인증 계정: <strong className="riot-id">{OPERATOR_RIOT_ID}</strong>{' '}
+          <CopyButton text={OPERATOR_RIOT_ID} what="운영자 라이엇 닉네임" />
         </li>
         <li>운영자가 요청을 보낸 이름이 신청서와 같은지, op.gg 티어가 그랜드마스터 이상인지 확인하고 결과를 알림으로 알려 드립니다.</li>
       </ol>
@@ -226,7 +227,7 @@ function ApplyForm({ current, onDone }) {
       await applyInfluencer(v);
       await onDone(byEmail(v.kind)
         ? '신청을 보냈습니다. 적어 주신 공식 이메일로 확인 메일이 갑니다. 14일 안에 "본인입니다"라고 회신해 주세요.'
-        : `신청을 보냈습니다. 14일 안에 운영자 계정 ${josa(OPERATOR_RIOT_ID, '으로/로')} 친구 요청을 보내 주세요.`);
+        : `신청을 보냈습니다. 14일 안에 운영자 인증 계정에 친구 요청을 보내 주세요. ${operatorIdLabel()}`);
     } catch (err) {
       setProblem(err.message);
       setBusy(false);

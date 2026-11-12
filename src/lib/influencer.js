@@ -1,5 +1,4 @@
 // 장인 인증 (046, SPEC 6-32 · 6-33) — 화면 문구 상수는 여기 한 곳에만 둔다. 화면 글자는 "장인", 코드 이름은 influencer.
-import { josa } from './josa';
 import { INFLUENCER_KINDS } from './nickname';
 
 /**
@@ -13,10 +12,18 @@ export const OPERATOR_RIOT_ID = '탑신병자#1188';
 /** 알림 문장 속 "{운영자 닉네임}" 자리표시 */
 export const OPERATOR_PLACEHOLDER = '{운영자 닉네임}';
 
-/** 알림 문장의 자리표시를 운영자 라이엇 닉네임으로 채운다 (조사 으로/로는 josa.js) */
+/** 운영자 라이엇 닉네임을 보여 주는 말 — 값 뒤에 조사를 붙이지 않는다 ("탑신병자#1188(으)로"처럼 보이지 않게) */
+export const operatorIdLabel = (id = OPERATOR_RIOT_ID) => `친구 요청을 보낼 운영자 인증 계정: ${id}`;
+
+/**
+ * 알림 문장의 자리표시를 운영자 라이엇 닉네임으로 채운다. DB(046)에 저장된 문장은 "{운영자 닉네임}으로"라서
+ * 알려진 두 문장은 조사 없는 표현으로 바꾸고, 그 밖에는 "운영자 인증 계정(값)으로"처럼 값 뒤에 조사가 오지 않게 한다.
+ */
 export const fillOperatorId = (message, id = OPERATOR_RIOT_ID) =>
   String(message ?? '')
-    .replaceAll(`${OPERATOR_PLACEHOLDER}으로`, josa(id, '으로/로'))
+    .replaceAll(`운영자 계정 ${OPERATOR_PLACEHOLDER}으로 친구 요청을 보내 주세요.`, `운영자 인증 계정에 친구 요청을 보내 주세요(친구 요청을 보낼 계정: ${id}).`)
+    .replaceAll(`${OPERATOR_PLACEHOLDER}으로 보내 주세요.`, `운영자 인증 계정에 보내 주세요(친구 요청을 보낼 계정: ${id}).`)
+    .replaceAll(`${OPERATOR_PLACEHOLDER}으로`, `운영자 인증 계정(${id})으로`)
     .replaceAll(OPERATOR_PLACEHOLDER, id);
 
 /** 유형 고르기 순서와 설명 */
