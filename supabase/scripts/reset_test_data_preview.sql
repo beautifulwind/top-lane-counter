@@ -66,6 +66,9 @@ rows (ord, what, to_delete, to_keep, note) as (
          case when not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'influencer') then 0
               else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.profiles where influencer is not null or nickname_state is not null', false, true, '')))[1]::text::bigint end,
          '프로필은 남지만 장인 표시·상태는 지움 (변경 예정인 회원은 임시 닉네임으로)'
+  union all select 15.4, 'ext_links + link_reports (장인 외부 링크 + 링크 신고, 047)',
+         case when to_regclass('public.ext_links') is null then 0 else (xpath('/row/c/text()', query_to_xml('select (select count(*) from public.ext_links) + (select count(*) from public.link_reports) as c', false, true, '')))[1]::text::bigint end,
+         0, '전부 지움 (047 실행 전이면 0). 허용 사이트 표 link_domains는 설정이라 남김'
   union all select 16, 'hide_log (숨김 기록)', (select count(*) from public.hide_log), 0, null
   union all select 16.1, 'moderation_log (운영진 처리 기록)', (select count(*) from public.moderation_log), 0, '감독관 지정·해제 기록 포함 전부 지움 (역할 자체는 profiles에 그대로)'
   union all select 16.2, 'proposal_reviewing (검토 중 표시)', (select count(*) from public.proposal_reviewing), 0, '임시 표시라 모두 비움'
