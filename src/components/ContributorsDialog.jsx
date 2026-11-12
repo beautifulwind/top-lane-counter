@@ -61,7 +61,7 @@ export default function ContributorsDialog({ build, title, onClose, opener }) {
           <ul className="contributor-list">
             {data.map((p, i) => (
               <li key={p.user_id ?? `gone-${i}`}>
-                {p.user_id ? <UserName profile={p} plain /> : <span className="muted">(탈퇴한 유저)</span>}
+                {p.user_id ? <UserName profile={p} plain linkTo={p.user_id} /> : <span className="muted">(탈퇴한 유저)</span>}
               </li>
             ))}
           </ul>

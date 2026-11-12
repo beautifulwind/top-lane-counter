@@ -91,6 +91,8 @@ const AdminMembers = lazyPage(() => import('./pages/admin/AdminMembers'));
 const AdminMember = lazyPage(() => import('./pages/admin/AdminMember'));
 const AdminInfluencers = lazyPage(() => import('./pages/admin/AdminInfluencers'));
 const InfluencerApply = lazyPage(() => import('./pages/InfluencerApply'));
+const MyLinks = lazyPage(() => import('./pages/MyLinks')); // 047 장인 링크 관리
+const PublicProfile = lazyPage(() => import('./pages/PublicProfile')); // 047 장인 공개 프로필
 const Resubmit = lazyPage(() => import('./pages/Resubmit'));
 const ResubmitBuild = lazyPage(() => import('./pages/ResubmitBuild'));
 const Privacy = lazyPage(() => import('./pages/Privacy'));
@@ -133,6 +135,8 @@ export function AppRoutes() {
           <Route path="me" element={<Me />} />
           <Route path="me/settings" element={<MySettings />} />
           <Route path="me/influencer" element={<InfluencerApply />} />
+          <Route path="me/links" element={<MyLinks />} />
+          <Route path="u/:id" element={<PublicProfile />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="inquiries" element={<Inquiries />} />
           <Route path="me/proposals/:id" element={<MyProposal />} />

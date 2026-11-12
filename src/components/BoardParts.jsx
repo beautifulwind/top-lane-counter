@@ -9,7 +9,7 @@ import NoteForm from './NoteForm';
 export function BoardByline({ row }) {
   return (
     <span className="post-meta">
-      {row.author ? <UserName profile={row.author} /> : <span>(탈퇴한 유저)</span>}
+      {row.author ? <UserName profile={row.author} linkTo={row.author_id} /> : <span>(탈퇴한 유저)</span>}
       <span>{fmtDateTime(row.created_at)}</span>
       {row.edited_at && <span className="edited" title={`${fmtDateTime(row.edited_at)}에 고침`}>수정됨</span>}
     </span>

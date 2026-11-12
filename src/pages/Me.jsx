@@ -79,6 +79,12 @@ function ProfileCard({ auth, rewards, loading }) {
           {!auth.isOperatorAccount && !auth.profile.is_guest && (
             <Link to="/me/influencer" className="btn btn-small me-settings-btn"><SparklesIcon size={16} /> 장인 인증</Link>
           )}
+          {auth.profile.influencer && (
+            <>
+              <Link to="/me/links" className="btn btn-small me-settings-btn"><LinkIcon size={16} /> 링크 관리</Link>
+              <Link to={`/u/${auth.user.id}`} className="btn btn-small me-settings-btn">내 공개 프로필</Link>
+            </>
+          )}
         </div>
       </div>
       {auth.isOperatorAccount ? (

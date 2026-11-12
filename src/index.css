@@ -1097,3 +1097,35 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
   margin: var(--gap-sm) 0; padding: var(--pad-box); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--paper);
   white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; font-size: var(--fs-sm);
 }
+
+/* 장인 외부 링크·공개 프로필 (047, SPEC 6-34) */
+a.inf-link { color: inherit; text-decoration: none; }
+a.inf-link:hover .user-nick, a.inf-link:focus-visible .user-nick { text-decoration: underline; }
+.ext-link {
+  display: inline-flex; align-items: center; flex-wrap: wrap; gap: 6px; max-width: 100%;
+  color: var(--text); text-decoration: none; overflow-wrap: anywhere;
+}
+.ext-link:hover .ext-text, .ext-link:focus-visible .ext-text { text-decoration: underline; }
+.ext-site {
+  display: inline-block; padding: 0 7px; border: 1px solid var(--line-hover); border-radius: var(--radius-tag); background: var(--raised);
+  color: var(--text-soft); font-size: var(--fs-xs); font-weight: 800; line-height: 18px; white-space: nowrap;
+}
+.ext-text { color: var(--brand-dark); overflow-wrap: anywhere; word-break: break-all; }
+.leave-site { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.leave-url { overflow-wrap: anywhere; word-break: break-all; white-space: normal; }
+.link-list { list-style: none; margin: 0; padding: 0; }
+.link-list li { padding: 8px 0; border-bottom: 1px solid var(--line); }
+.link-list li:last-child { border-bottom: 0; }
+.build-link-row { margin: var(--gap-sm) 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.build-link-box {
+  margin: var(--gap-md) 0; padding: var(--pad-box) var(--pad-card); border: 1px dashed var(--influencer-line); border-radius: var(--radius);
+}
+.build-link-box h3 { margin: 0 0 4px; font-size: var(--fs-md, 1rem); }
+.link-edit-row { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.link-edit-row input { flex: 1 1 220px; min-width: 0; }
+.link-problem { color: var(--warn); font-size: var(--fs-sm); margin: 2px 0 0; }
+.link-hidden-note { color: var(--muted); font-size: var(--fs-sm); }
+.site-list { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 0; padding: 0; list-style: none; }
+.profile-builds { list-style: none; margin: 0; padding: 0; }
+.profile-builds li { padding: 10px 0; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; }
+.profile-builds li:last-child { border-bottom: 0; }

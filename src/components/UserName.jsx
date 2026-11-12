@@ -1,3 +1,4 @@
+import { Link } from 'react-router-dom';
 import { titleName } from '../lib/titles';
 import { INFLUENCER_TIP, displayNickname } from '../lib/nickname';
 
@@ -15,16 +16,25 @@ export function TitleBadge({ titleKey }) {
  * - 닉네임 변경 예정(nickname_state = 'yielding'): 닉네임 뒤 회색 태그
  * 긴 닉네임(20자)도 폰에서 줄을 바꿔 넘치지 않는다 (index.css .inf-name·.nick-pending)
  */
-export function InfluencerName({ profile }) {
+export function InfluencerName({ profile, linkTo = null }) {
   const nick = <span className="user-nick">{displayNickname(profile)}</span>;
   if (profile?.influencer) {
-    return (
-      <span className="inf-name" title={INFLUENCER_TIP}>
+    const inner = (
+      <>
         <span className="inf-tag" aria-hidden="true">장인</span>
         <span className="sr-only">{INFLUENCER_TIP} </span>
         {nick}
-      </span>
+      </>
     );
+    // 047: 장인 공개 프로필로 가는 링크 (linkTo = 회원 id). 다른 링크 안에 있는 자리에서는 넘기지 않는다(링크 안의 링크 방지)
+    if (linkTo) {
+      return (
+        <Link to={`/u/${linkTo}`} className="inf-name inf-link" title={`${INFLUENCER_TIP} — 프로필 보기`}>
+          {inner}<span className="sr-only"> (프로필 보기)</span>
+        </Link>
+      );
+    }
+    return <span className="inf-name" title={INFLUENCER_TIP}>{inner}</span>;
   }
   if (profile?.nickname_state === 'pending') {
     return (
@@ -45,14 +55,15 @@ export function InfluencerName({ profile }) {
  * 비회원(020)은 닉네임 뒤에 "비회원" 표시
  * 운영자·감독관은 role을 보고 닉네임 앞에 똑같이 (운)을 붙인다: "Lv.0 (운)영자", "Lv.7 [칭호] (운)감독" (다른 역할 글자는 붙이지 않는다)
  * plain: 레벨·칭호를 빼고 닉네임(+ 장인 표시)만 — 빌드 작성자·기여자·수정 기록 (046)
+ * linkTo: 회원 id를 주면 장인일 때만 닉네임이 공개 프로필(/u/:id) 링크가 된다 (047). 줄 전체가 이미 링크인 자리(회원 목록 등)에는 주지 않는다
  */
-export default function UserName({ profile, plain = false }) {
+export default function UserName({ profile, plain = false, linkTo = null }) {
   const hasTitle = !plain && !!titleName(profile.main_title);
   return (
     <span className="user-name">
       {!plain && <><span className="user-lv">Lv.{profile.level}</span>{' '}</>}
       {hasTitle && <><TitleBadge titleKey={profile.main_title} />{' '}</>}
-      <InfluencerName profile={profile} />
+      <InfluencerName profile={profile} linkTo={linkTo} />
       {profile.is_guest && <>{' '}<span className="guest-badge">비회원</span></>}
     </span>
   );

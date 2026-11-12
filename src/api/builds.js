@@ -1,5 +1,6 @@
 // 빌드 접근 계층. 화면 컴포넌트는 이 모듈만 호출한다.
 // 권한은 DB가 막는다: 등록은 RLS + 검사 트리거(승인 대기로만), 투표는 vote_build(), 승인·거절·숨기기·다시 공개는 운영자 전용 함수.
+import { getBuildLinks } from './links';
 import { db } from './supabase';
 import { getItems, getLatestVersion, getRunes, getSummonerSpells } from './ddragon';
 import { START_GOLD_MAX, compareBuilds, toProposalBuild, toRow } from '../lib/buildContent';
@@ -56,9 +57,12 @@ export async function getBuilds(counterRowId, userId = null) {
       '내 투표를 불러오지 못했습니다.',
     );
   }
-  const editors = rows.length > 0 ? await getBuildEditorCounts(counterRowId) : {};
+  const [editors, links] = rows.length > 0 ? await Promise.all([getBuildEditorCounts(counterRowId), getBuildLinks(counterRowId)]) : [{}, {}];
   return rows
-    .map((b) => ({ ...shape(b), mine: votes.find((v) => v.build_id === b.id)?.value ?? null, editors: editors[b.id] ?? 0 }))
+    .map((b) => ({
+      ...shape(b), mine: votes.find((v) => v.build_id === b.id)?.value ?? null, editors: editors[b.id] ?? 0,
+      link: links[b.id] ?? null, // 047: 장인 빌드 링크 (공개된 것만)
+    }))
     .sort(compareBuilds);
 }
 

@@ -41,7 +41,7 @@ export function Icon({ entry, size = 32, round = false, fallback = '?' }) {
 
 /** 작성자 표시: 닉네임만(레벨·칭호 없이, 장인 표시는 보임 — 046) / 작성자가 없으면 탈퇴한 유저 */
 export function BuildAuthor({ build }) {
-  if (build.author) return <UserName profile={build.author} plain />;
+  if (build.author) return <UserName profile={build.author} plain linkTo={build.author_id} />;
   return '(탈퇴한 유저)';
 }
 

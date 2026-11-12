@@ -1,6 +1,7 @@
 // 테스트용 가짜 Supabase. src/api/supabase.js의 db()를 대신한다 (setupTests.js에서 연결).
 // 행 모양은 supabase/schema.sql + content.js의 select(관계 포함)가 돌려주는 모양을 따른다.
 import { hasReservedMark, mimicsInfluencer } from '../lib/nickname';
+import { hostOf, linkProblem } from '../lib/links';
 const runes = (keystone) => ({ primaryPath: 8000, keystone, primary: [9111, 9104, 8014], secondaryPath: 8100, secondary: [8143, 8106], shards: [5005, 5008, 5011] });
 const QUINN = { id: 1, target_champion: 'Darius', counter_champion: 'Quinn', status: 'approved' };
 const QUINN_DOC = {
@@ -52,6 +53,8 @@ export const TABLES = {
   build_votes: [],
   notifications: [],
   influencer_applications: [], // 046 장인 신청 (influencerRpc가 쓴다)
+  ext_links: [], // 047 장인 외부 링크 (linkRpc가 쓴다)
+  link_domains: LINK_DOMAINS(), // 047 허용 사이트 9개
   // 014 경험치·칭호 (내 기록만 넣는다 — RLS 흉내는 테스트가 그렇게 넣는 것으로)
   xp_events: [],
   user_titles: [],
@@ -136,6 +139,8 @@ export function resetFake() {
   TABLES.build_votes = [];
   TABLES.notifications = [];
   TABLES.influencer_applications = [];
+  TABLES.ext_links = [];
+  TABLES.link_domains = LINK_DOMAINS();
   fakeState.influencerNextAt = null;
   TABLES.xp_events = [];
   TABLES.user_titles = [];
@@ -521,6 +526,7 @@ async function rpc(name, args) {
   // 043: 목록은 화면이 알아서 부르는 것이라 rpcCalls에 넣지 않는다 (보내기·처리만 남긴다)
   if (['report_wiki', 'staff_wiki_reports', 'handle_wiki_report'].includes(name)) return wikiReportRpc(name, args);
   if (INFLUENCER_RPCS.includes(name)) return influencerRpc(name, args);
+  if (LINK_RPCS.includes(name)) return linkRpc(name, args);
   fakeState.rpcCalls.push({ name, args });
   if (fakeState.rpcError) return { data: null, error: { message: fakeState.rpcError, code: fakeState.rpcErrorCode ?? '42501' } };
   if (name === 'mark_all_notifications_read') {
@@ -1055,6 +1061,100 @@ function influencerRpc(name, args) {
   if (name === 'admin_set_nickname') {
     Object.assign(prof(args.p_user), { nickname: args.p_nickname });
     return ok(null);
+  }
+  return null;
+}
+
+// ---------------- 047 장인 외부 링크 + 공개 프로필 ----------------
+// 흐름만 흉내 낸다 (규칙 자체는 supabase/tests/influencer_links_test.sql). 읽기(내 링크·공개 프로필·빌드 링크)는 rpcCalls에 넣지 않는다.
+function LINK_DOMAINS() {
+  return [
+    ['afreecatv.com', '아프리카TV (숲 예전 주소)'], ['chzzk.naver.com', '치지직'], ['instagram.com', '인스타그램'], ['sooplive.co.kr', '숲'],
+    ['twitch.tv', '트위치'], ['twitter.com', 'X (트위터 예전 주소)'], ['x.com', 'X'], ['youtu.be', '유튜브 (짧은 주소)'], ['youtube.com', '유튜브'],
+  ].map(([domain, label]) => ({ domain, label }));
+}
+const LINK_RPCS = ['my_links', 'set_profile_links', 'set_build_link', 'public_profile', 'build_links'];
+function linkRpc(name, args) {
+  const reading = ['my_links', 'public_profile', 'build_links'].includes(name);
+  if (!reading) fakeState.rpcCalls.push({ name, args });
+  if (fakeState.rpcError && !reading) return { data: null, error: { message: fakeState.rpcError, code: fakeState.rpcErrorCode ?? '42501' } };
+  const links = TABLES.ext_links;
+  const domains = TABLES.link_domains;
+  const allowed = (host) => domains.some((d) => host === d.domain || host.endsWith(`.${d.domain}`));
+  const prof = (id) => TABLES.profiles.find((p) => p.id === id);
+  const buildOf = (id) => TABLES.builds.find((b) => b.id === id);
+  const visible = (l) => !!prof(l.owner_id)?.influencer && allowed(l.host)
+    && (l.build_id == null || (buildOf(l.build_id)?.status === 'approved' && buildOf(l.build_id)?.author_id === l.owner_id));
+  const shape = (l) => ({ id: l.id, url: l.url, host: l.host, build_id: l.build_id, sort: l.sort });
+  const parse = (u) => {
+    const problem = linkProblem(u, domains);
+    if (problem) throw problem;
+    const host = hostOf(u);
+    return { url: `https://${host}${u.trim().slice(8 + host.length)}`, host };
+  };
+  const nextId = () => 900 + links.length + Math.floor(Math.random() * 1e6);
+  const meRow = meNow();
+  try {
+    if (name === 'public_profile') {
+      const p = prof(args.p_user);
+      if (!p || !p.influencer || !p.nickname) return ok(null);
+      const builds = TABLES.builds.filter((b) => b.author_id === p.id && b.status === 'approved')
+        .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+      return ok(structuredClone({
+        id: p.id, nickname: p.nickname, influencer: p.influencer,
+        links: links.filter((l) => l.owner_id === p.id && l.build_id == null && visible(l)).sort((a, b) => a.sort - b.sort).map(shape),
+        build_count: builds.length,
+        builds: builds.slice(0, 10).map((b) => {
+          const l = links.find((x) => x.build_id === b.id && visible(x));
+          return { id: b.id, counter_id: b.counter_id, seq: b.seq, name: b.name, patch: b.patch, target_champion: b.counter.target_champion,
+            counter_champion: b.counter.counter_champion, created_at: b.created_at, link: l ? shape(l) : null };
+        }),
+      }));
+    }
+    if (name === 'build_links') {
+      return ok(Object.fromEntries(links.filter((l) => l.build_id != null && buildOf(l.build_id)?.counter_id === args.p_counter && visible(l))
+        .map((l) => [String(l.build_id), shape(l)])));
+    }
+    if (!meRow) return { data: null, error: { message: '로그인이 필요해요.', code: '42501' } };
+    if (name === 'my_links') {
+      return ok(structuredClone({
+        influencer: meRow.influencer ?? null, max: 5,
+        profile: links.filter((l) => l.owner_id === meRow.id && l.build_id == null).sort((a, b) => a.sort - b.sort).map((l) => ({ ...shape(l), visible: visible(l) })),
+        builds: links.filter((l) => l.owner_id === meRow.id && l.build_id != null).map((l) => {
+          const b = buildOf(l.build_id);
+          return { ...shape(l), visible: visible(l), counter_id: b.counter_id, seq: b.seq, name: b.name,
+            target_champion: b.counter.target_champion, counter_champion: b.counter.counter_champion };
+        }),
+        domains,
+      }));
+    }
+    if (!meRow.influencer) return { data: null, error: { message: '인증된 장인만 링크를 올릴 수 있습니다.', code: '42501' } };
+    if (name === 'set_profile_links') {
+      const parsed = args.p_urls.filter((u) => u.trim()).map(parse);
+      if (parsed.length > 5) throw '프로필 링크는 5개까지 올릴 수 있습니다.';
+      if (new Set(parsed.map((x) => x.url)).size < parsed.length) throw '같은 주소를 두 번 올릴 수 없습니다.';
+      const kept = links.filter((l) => !(l.owner_id === meRow.id && l.build_id == null && !parsed.some((x) => x.url === l.url)));
+      parsed.forEach((x, i) => {
+        const old = kept.find((l) => l.owner_id === meRow.id && l.build_id == null && l.url === x.url);
+        if (old) old.sort = i;
+        else kept.push({ id: nextId(), owner_id: meRow.id, build_id: null, url: x.url, host: x.host, sort: i });
+      });
+      TABLES.ext_links = kept;
+      return ok(kept.filter((l) => l.owner_id === meRow.id && l.build_id == null).sort((a, b) => a.sort - b.sort).map(shape));
+    }
+    if (name === 'set_build_link') {
+      const b = buildOf(args.p_build);
+      if (!b) throw '빌드를 찾지 못했습니다.';
+      if (b.author_id !== meRow.id) return { data: null, error: { message: '내가 처음 만든 빌드에만 링크를 달 수 있습니다.', code: '42501' } };
+      TABLES.ext_links = links.filter((l) => l.build_id !== b.id);
+      if (!args.p_url) return ok(null);
+      const x = parse(args.p_url);
+      const row = { id: nextId(), owner_id: meRow.id, build_id: b.id, url: x.url, host: x.host, sort: 0 };
+      TABLES.ext_links.push(row);
+      return ok(shape(row));
+    }
+  } catch (message) {
+    return { data: null, error: { message: String(message), code: '23514' } };
   }
   return null;
 }

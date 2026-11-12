@@ -22,6 +22,8 @@ import { matchupTitle } from '../lib/josa';
 import { patchMinor } from '../lib/buildContent';
 import { buildTitleText } from '../lib/wikiBuild';
 import BuildTitle from '../components/BuildTitle';
+import BuildLinkBox from '../components/BuildLinkBox';
+import ExternalLink from '../components/ExternalLink';
 import { displayNickname } from '../lib/nickname';
 
 const day = (ts) => (ts ? String(ts).slice(0, 10) : null);
@@ -194,6 +196,8 @@ export default function Matchup() {
           isOperator={isOperator}
           canHide={canModerate(auth, selected.author_id, selected.author)}
           lastOne={builds.length === 1}
+          canLink={!!auth.profile?.influencer && !!userId && selected.author_id === userId}
+          onLinkSaved={(message) => { setNotice(message); retry(); }}
           hiding={hiding === selected.id}
           setHiding={(v) => { setReporting(null); setHiding(v); }}
           reportItem={reportItem(selected.id)}
@@ -278,7 +282,7 @@ function BuildTabs({ builds, selected, onSelect, newTo }) {
 }
 
 /** 고른 빌드 한 벌: 이름·패치·최근 수정 → 한 줄 결론 → 룬·주문·아이템·선마·추천 → 레벨별 딜교법 → 특이사항 → [빌드 수정]·[수정 기록] */
-function BuildPanel({ build, index, doc, data, path, isOperator, canHide, lastOne, hiding, setHiding, onHidden, reportItem, reportBox }) {
+function BuildPanel({ build, index, doc, data, path, isOperator, canHide, lastOne, hiding, setHiding, onHidden, reportItem, reportBox, canLink, onLinkSaved }) {
   const [showPeople, setShowPeople] = useState(false);
   const peopleBtn = useRef(null);
   const label = buildTitleText(build, index);
@@ -308,6 +312,10 @@ function BuildPanel({ build, index, doc, data, path, isOperator, canHide, lastOn
         {build.patch && <>패치 {patchMinor(build.patch)}</>}
         {updated && <>{build.patch ? ' · ' : ''}최근 수정 {updated}</>}
       </p>
+      {build.link && (
+        // 047: 처음 만든 장인이 단 링크 (빌드 내용과 따로). 누르면 이동 확인 창
+        <p className="build-link-row"><span className="muted">장인 링크</span> <ExternalLink link={build.link} /></p>
+      )}
       {reportBox}
       {hiding && (
         <NoteForm
@@ -362,6 +370,7 @@ function BuildPanel({ build, index, doc, data, path, isOperator, canHide, lastOn
           </button>
         </div>
       </section>
+      {canLink && <BuildLinkBox build={build} onSaved={onLinkSaved} />}
       {showPeople && (
         <ContributorsDialog build={build} title={label} opener={peopleBtn} onClose={() => setShowPeople(false)} />
       )}
