@@ -113,8 +113,8 @@ export const STAT_SHARDS = {
   5005: { id: 5005, name: '공격 속도', icon: `${SHARD_IMG}/StatModsAttackSpeedIcon.png` },
   5007: { id: 5007, name: '스킬 가속', icon: `${SHARD_IMG}/StatModsCDRScalingIcon.png` },
   5010: { id: 5010, name: '이동 속도', icon: `${SHARD_IMG}/StatModsMovementSpeedIcon.png` },
-  5011: { id: 5011, name: '체력', icon: `${SHARD_IMG}/StatModsHealthPlusIcon.png` },
-  5001: { id: 5001, name: '성장 체력', icon: `${SHARD_IMG}/StatModsHealthScalingIcon.png` },
+  5011: { id: 5011, name: '체력', icon: `${SHARD_IMG}/StatModsHealthScalingIcon.png` },
+  5001: { id: 5001, name: '성장 체력', icon: `${SHARD_IMG}/StatModsHealthPlusIcon.png` },
   5013: { id: 5013, name: '강인함 및 둔화 저항', icon: `${SHARD_IMG}/StatModsTenacityIcon.png` },
 };
 export const SHARD_ROWS = [[5008, 5005, 5007], [5008, 5010, 5001], [5011, 5013, 5001]];
