@@ -1,4 +1,4 @@
-// 042: 운영자 회원 관리(/admin/members) — 가입자 수, 최근 가입 순 목록, 닉네임 검색, 등급 거르기, 회원 정보 페이지(글·댓글·고친 빌드·처리 이력·지운 글), 탈퇴한 이용자. 감독관·일반 회원·운영자 모드 끈 운영자에게는 안 보인다
+// 042·046: 운영자 회원 관리(/admin/members) — 가입자 수, 닉네임 검색(전체 회원은 검색으로만), 감독관 목록, 신규 가입자(24시간·정렬), 회원 정보 페이지(글·댓글·고친 빌드·처리 이력·지운 글), 탈퇴한 이용자. 감독관·일반 회원·운영자 모드 끈 운영자에게는 안 보인다
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -71,21 +71,70 @@ test('운영자: 가입자 수 — 총·정식·비회원, 구글·카카오, �
   expect(list.textContent).toContain('최근 7일 신규 가입 5명 (정식 회원 2명)');
 });
 
-test('운영자: 목록은 최근 가입 순, 이메일·로그인 ID 없음, 닉네임 일부로 검색, 등급 거르기', async () => {
+test('운영자 기본 화면 (046 정리): 가입자 수 + 검색창 + [감독관 목록 보기] + 신규 가입자(24시간)만, 전체 회원 목록은 없다', async () => {
   asOp();
+  fakeState.newMembers = [
+    { id: 'n-1', nickname: '가나다', created_at: '2026-11-12T01:00:00Z', role: 'user', providers: ['google'] },
+    { id: 'n-2', nickname: null, created_at: '2026-11-12T03:00:00Z', role: 'user', providers: ['kakao'] },
+    { id: 'n-3', nickname: '하하', created_at: '2026-11-11T23:00:00Z', role: 'user', providers: ['google', 'kakao'] },
+  ];
   start();
-  const list = await screen.findByRole('list', { name: '회원 목록' });
-  expect(within(list).getAllByRole('listitem').map((li) => li.getAttribute('aria-label'))).toEqual(['탑초보', '탑고수']); // 11-05가 11-01보다 최근
-  expect(list.textContent).not.toMatch(/@|로그인 ID:/);
-  expect(fakeState.memberCalls.find((c) => c.name === 'admin_member_list').args).toMatchObject({ p_query: null, p_role: null, p_page: 1, p_size: 20 });
+  expect(await screen.findByRole('list', { name: '가입자 수' })).toBeDefined();
+  expect(screen.getByLabelText('닉네임으로 회원 검색')).toBeDefined();
+  expect(screen.getByRole('button', { name: '감독관 목록 보기' })).toHaveAttribute('aria-expanded', 'false');
+  const fresh = await screen.findByRole('list', { name: '신규 가입자 목록' });
+  expect(screen.getByRole('heading', { name: '신규 가입자 (24시간)' })).toBeDefined();
+  const names = () => within(screen.getByRole('list', { name: '신규 가입자 목록' })).getAllByRole('listitem').map((li) => li.getAttribute('aria-label'));
+  expect(names()).toEqual(['(닉네임 정하기 전)', '가나다', '하하']); // 최근 가입 순
+  expect(fresh.textContent).toContain('구글·카카오');
+  expect(fresh.textContent).not.toMatch(/@|로그인 ID:/);
+  expect(rpc('admin_new_members')[0].args).toMatchObject({ p_hours: 24, p_page: 1, p_size: 50 });
+  // 정렬은 신규 가입자 목록에서만
+  fireEvent.change(screen.getByLabelText('정렬'), { target: { value: 'oldest' } });
+  expect(names()).toEqual(['하하', '가나다', '(닉네임 정하기 전)']);
+  fireEvent.change(screen.getByLabelText('정렬'), { target: { value: 'nickname' } });
+  expect(names()).toEqual(['가나다', '하하', '(닉네임 정하기 전)']);
+  // 전체 회원은 검색 전에는 부르지도 보이지도 않는다
+  expect(rpc('admin_member_list')).toEqual([]);
+  expect(screen.queryByRole('list', { name: '검색 결과' })).toBeNull();
+  expect(screen.queryByLabelText('등급으로 거르기')).toBeNull();
+  // 줄을 누르면 회원 정보
+  expect(within(fresh).getByRole('link', { name: '가나다 회원 정보' }).getAttribute('href')).toBe('/admin/members/n-1');
+});
 
-  fireEvent.change(screen.getByLabelText('닉네임으로 회원 검색'), { target: { value: ' 고수 ' } });
+test('운영자: 전체 회원은 검색으로만 — 부분 일치, 20명씩, 검색어가 비면 결과 없음', async () => {
+  asOp();
+  fakeState.members = Array.from({ length: 23 }, (_, i) => ({
+    id: `m-${i}`, nickname: `탑${String(i).padStart(2, '0')}`, role: 'user', level: 1, main_title: null, is_guest: false, created_at: `2026-10-${String(i + 1).padStart(2, '0')}T00:00:00Z`,
+  }));
+  start();
+  const box = await screen.findByLabelText('닉네임으로 회원 검색');
+  fireEvent.click(screen.getByRole('button', { name: '검색' })); // 빈 검색어
+  expect(await screen.findByText('닉네임을 한 글자 이상 적어 주세요.')).toBeDefined();
+  expect(rpc('admin_member_list')).toEqual([]);
+  fireEvent.change(box, { target: { value: ' 탑 ' } });
   fireEvent.click(screen.getByRole('button', { name: '검색' }));
-  await vi.waitFor(() => expect(within(screen.getByRole('list', { name: '회원 목록' })).getAllByRole('listitem').length).toBe(1));
-  expect(rpc('admin_member_list').at(-1).args.p_query).toBe('고수');
+  const list = await screen.findByRole('list', { name: '검색 결과' });
+  expect(within(list).getAllByRole('listitem').length).toBe(20);
+  expect(screen.getByText('「탑」 검색 결과 23명 · 최근 가입 순')).toBeDefined();
+  expect(rpc('admin_member_list').at(-1).args).toMatchObject({ p_query: '탑', p_role: null, p_page: 1, p_size: 20 });
+  fireEvent.click(screen.getByRole('button', { name: '다음' }));
+  await vi.waitFor(() => expect(within(screen.getByRole('list', { name: '검색 결과' })).getAllByRole('listitem').length).toBe(3));
+  expect(rpc('admin_member_list').at(-1).args.p_page).toBe(2);
+});
 
-  fireEvent.change(screen.getByLabelText('등급으로 거르기'), { target: { value: 'moderator' } });
-  expect(await screen.findByText('찾은 회원이 없습니다.')).toBeDefined();
+test('운영자: [감독관 목록 보기] = 역할 거르기(moderator)', async () => {
+  asOp();
+  fakeState.members = [
+    { id: 'u-1', nickname: '탑고수', role: 'user', level: 5, main_title: null, is_guest: false, created_at: '2026-11-01T00:00:00Z' },
+    { id: 'u-m', nickname: '감독님', role: 'moderator', level: 3, main_title: null, is_guest: false, created_at: '2026-11-02T00:00:00Z' },
+  ];
+  start();
+  fireEvent.click(await screen.findByRole('button', { name: '감독관 목록 보기' }));
+  const list = await screen.findByRole('list', { name: '감독관 목록' });
+  expect(within(list).getAllByRole('listitem').map((li) => li.getAttribute('aria-label'))).toEqual(['감독님']);
+  expect(rpc('admin_member_list').at(-1).args).toMatchObject({ p_query: null, p_role: 'moderator', p_page: 1 });
+  expect(within(list).queryByRole('button', { name: /감독관 (지정|해제)/ })).toBeNull(); // 지정·해제는 회원 정보에서
 });
 
 test('운영자: 없는 닉네임은 안내만', async () => {
@@ -99,6 +148,8 @@ test('운영자: 없는 닉네임은 안내만', async () => {
 test('운영자: 회원을 누르면 회원 정보 — 기본 정보·활동 수·글·댓글·고친 빌드·처리 이력 (이메일·로그인 ID 없음)', async () => {
   asOp();
   start();
+  fireEvent.change(await screen.findByLabelText('닉네임으로 회원 검색'), { target: { value: '고수' } });
+  fireEvent.click(screen.getByRole('button', { name: '검색' }));
   fireEvent.click(await screen.findByRole('link', { name: '탑고수 회원 정보' }));
   const info = await screen.findByRole('list', { name: '탑고수 회원 정보' });
   expect(info.textContent).toContain('가입 방식 구글, 카카오');

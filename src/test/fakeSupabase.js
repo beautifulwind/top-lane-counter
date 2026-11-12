@@ -165,6 +165,7 @@ export function resetFake() {
   fakeState.memberStats = { total: 0, members: 0, guests: 0, google: 0, kakao: 0, both: 0, new_7d: 0, new_7d_members: 0 };
   fakeState.members = [];
   fakeState.memberInfo = {};
+  fakeState.newMembers = [];
   fakeState.memberDetail = {};
   fakeState.buildRevisions = {};
   fakeState.revertRemoved = 0;
@@ -456,7 +457,7 @@ async function rpc(name, args) {
     if (fakeState.pendingCounts === 'error') return { data: null, error: { message: 'function admin_pending_counts() does not exist', code: '42883' } };
     return { data: { proposals: 0, builds: 0, inquiries: 0, wiki_reports: 0, influencers: 0, ...fakeState.pendingCounts }, error: null };
   }
-  if (['admin_member_stats', 'admin_search_members', 'admin_member_info', 'admin_member_list', 'admin_member_detail', 'admin_deleted_writings'].includes(name)) {
+  if (['admin_member_stats', 'admin_search_members', 'admin_member_info', 'admin_member_list', 'admin_member_detail', 'admin_deleted_writings', 'admin_new_members'].includes(name)) {
     // 036: 운영자 전용 (감독관·일반 회원·운영자 모드 끈 운영자는 거부). 화면이 알아서 부르는 것이라 rpcCalls에는 넣지 않는다.
     // fakeState.memberStats = 숫자들, fakeState.members = 프로필 줄들 (검색은 부분 일치, 최대 10명), fakeState.memberInfo = { id: 정보 }
     if (!isAdminNow()) return { data: null, error: { message: '운영자만 할 수 있습니다.', code: '42501' } };
@@ -477,7 +478,19 @@ async function rpc(name, args) {
       const page = args.p_page ?? 1;
       return { data: { total: all.length, page, size, members: all.slice((page - 1) * size, page * size) }, error: null };
     }
+    if (name === 'admin_new_members') {
+      // 046: fakeState.newMembers = 신규 가입자 줄들 (DB처럼 최근 가입 순으로 돌려준다)
+      const all = [...(fakeState.newMembers ?? [])].sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+      const size = Math.min(args.p_size ?? 20, 50);
+      const page = args.p_page ?? 1;
+      return { data: { total: all.length, hours: args.p_hours ?? 24, page, size, members: all.slice((page - 1) * size, page * size) }, error: null };
+    }
     if (name === 'admin_member_detail') {
+      // 테스트가 넣은 값이 없으면 프로필 표에서 간단히 만든다 (감독관 지정 뒤 다시 읽으면 바뀐 등급이 보인다)
+      const p = TABLES.profiles.find((x) => x.id === args.p_user);
+      if (!fakeState.memberDetail[args.p_user] && p) {
+        return { data: { info: { providers: ['google'], titles: [], posts: 0, comments: 0, matchups: 0, builds: 0, xp: 0, created_at: '2026-11-01T00:00:00Z', is_guest: false, ...p }, posts: [], comments: [], edited_builds: [], moderation: [] }, error: null };
+      }
       const d = fakeState.memberDetail[args.p_user];
       if (!d) return { data: null, error: { message: '회원을 찾지 못했습니다.', code: 'P0002' } };
       return { data: d, error: null };

@@ -74,6 +74,30 @@ test('개인정보처리방침 (037): 휴대폰 알림 수집 항목·삭제 시
   expect(text).toContain('브라우저 푸시 서비스: Google LLC');
 });
 
+test('방침·약관 (046 장인 인증): 수집·보관·공개 범위, 인증 절차, 사칭 금지 / 시행일은 그대로', async () => {
+  const before = { ...LEGAL };
+  start('/privacy');
+  await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' });
+  const privacy = document.querySelector('article.legal').textContent;
+  expect(privacy).toContain('공식 이메일과 라이엇 닉네임#태그는 심사가 끝나면 삭제하고, 중복 신청 방지를 위한 암호화 값(해시)은 인증이 유지되는 동안 보관한 뒤 해제·탈퇴 때 삭제합니다.');
+  expect(privacy).toContain('신청한 본인과 운영자만 보며, 감독관과 다른 이용자에게는 공개하지 않습니다');
+  expect(privacy).toContain('끝난 날(해제는 해제한 날)부터 1년');
+  expect(privacy).not.toContain('시초');
+  expect(privacy).not.toContain('캡처');
+  cleanup();
+  start('/terms');
+  await screen.findByRole('heading', { level: 1, name: '이용약관' });
+  const apply = screen.getByRole('heading', { name: '제4조의2 (장인 인증)' }).closest('section').textContent;
+  expect(apply).toContain('크리에이터·프로게이머(이메일 회신)');
+  expect(apply).toContain('그랜드마스터 이상(친구 요청)');
+  expect(apply).toContain('운영자는 요청을 수락하지 않고');
+  expect(apply).not.toContain('캡처');
+  const nick = screen.getByRole('heading', { name: '제4조 (닉네임)' }).closest('section').textContent;
+  expect(nick).toContain('“[장인]”·“(장인)”이 들어간 닉네임');
+  expect(nick).toContain('“장인 ”으로 시작하는 닉네임');
+  expect(LEGAL).toEqual(before);
+});
+
 test('이용약관 (021): 실존 인물·고인 비하, 혐오 표현, 신상 공개 금지 / 실존 인물 이름 닉네임은 허용', async () => {
   start('/terms');
   await screen.findByRole('heading', { level: 1, name: '이용약관' });

@@ -100,6 +100,30 @@ export async function getMemberList({ query = '', role = null, page = 1, size = 
 }
 
 /**
+ * 신규 가입자 (046, 운영자 전용): 최근 hours시간(기본 24, 1~720)에 가입한 정식 회원(비회원 제외), 최근 가입 순.
+ * 돌려주는 값: { total, hours, page, size, members: [{ id, nickname(정하기 전이면 null), created_at, role, providers: ['google'|'kakao'] }] }
+ * 이메일·로그인 ID는 오지 않는다. 기간은 보여 주는 범위일 뿐 아무것도 지우지 않는다
+ */
+export async function getNewMembers({ hours = 24, page = 1, size = 50 } = {}) {
+  const { data, error } = await db().rpc('admin_new_members', { p_hours: hours, p_page: page, p_size: size });
+  if (error) throw korean(error, '신규 가입자를 불러오지 못했습니다.');
+  return data;
+}
+
+/** 신규 가입자 전부 (정렬을 화면에서 하려고 50명씩 이어 받음 — 최대 500명) */
+export async function getAllNewMembers(hours = 24) {
+  const members = [];
+  let total = 0;
+  for (let page = 1; page <= 10; page += 1) {
+    const r = await getNewMembers({ hours, page, size: 50 });
+    total = r?.total ?? 0;
+    members.push(...(r?.members ?? []));
+    if (members.length >= total || (r?.members ?? []).length === 0) break;
+  }
+  return { total, members };
+}
+
+/**
  * 회원 정보 페이지 (042, 운영자 전용): { info, posts, comments, edited_builds, moderation }.
  * 탈퇴했거나 없는 회원이면 code가 'P0002'인 오류 — 화면은 "탈퇴한 이용자"로 보여 준다
  */

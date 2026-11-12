@@ -189,13 +189,19 @@ test('운영자 /admin/members 회원 관리: 찾아서 메모 쓰고 감독관 
   asOp();
   TABLES.profiles.push({ id: 'u-new', nickname: '새감독', role: 'user', xp: 0, level: 2, main_title: null });
   TABLES.profiles.push({ id: 'u-g', nickname: '비회원손님', role: 'user', xp: 0, level: 1, main_title: null, is_guest: true });
+  start('/admin/members/u-g');
+  expect(await screen.findByText('비회원은 감독관으로 지정할 수 없습니다.')).toBeDefined();
+  cleanup();
+  start('/admin/members/u-op');
+  await screen.findByRole('list', { name: '영자 회원 정보' });
+  expect(screen.queryByRole('button', { name: /영자 감독관/ })).toBeNull(); // 운영자 본인은 지정 대상 아님
+  cleanup();
+  // 검색 → 줄을 누르면 회원 정보 → 거기서 지정·해제 (046 정리)
   start('/admin/members');
   expect(await screen.findByRole('heading', { name: /회원 관리/ })).toBeDefined();
-  const list = await screen.findByRole('list', { name: '회원 목록' });
-  expect(within(list).queryByRole('button', { name: /영자 감독관/ })).toBeNull(); // 운영자 본인은 지정 대상 아님
-  expect(within(within(list).getByRole('listitem', { name: '비회원손님' })).getByText('비회원은 감독관으로 지정할 수 없습니다.')).toBeDefined();
-  fireEvent.change(screen.getByLabelText('닉네임으로 회원 검색'), { target: { value: '새감' } });
+  fireEvent.change(await screen.findByLabelText('닉네임으로 회원 검색'), { target: { value: '새감' } });
   fireEvent.click(screen.getByRole('button', { name: '검색' }));
+  fireEvent.click(await screen.findByRole('link', { name: '새감독 회원 정보' }));
   fireEvent.click(await screen.findByRole('button', { name: '새감독 감독관 지정' }));
   expect(screen.getByText(/처리 기록은 탈퇴 후에도 남습니다/)).toBeDefined();
   const ok = screen.getByRole('button', { name: '지정 확정' });
@@ -204,7 +210,7 @@ test('운영자 /admin/members 회원 관리: 찾아서 메모 쓰고 감독관 
   fireEvent.click(ok);
   expect(await screen.findByText('새감독: 감독관 지정했습니다.')).toBeDefined();
   expect(rpcs('set_moderator')).toEqual([{ p_user: 'u-new', p_on: true, p_note: '신고 처리 부탁' }]);
-  expect((await screen.findByRole('list', { name: '처리 기록' })).textContent).toContain('감독관 지정');
+  expect(TABLES.profiles.find((p) => p.id === 'u-new').role).toBe('moderator');
   fireEvent.click(await screen.findByRole('button', { name: '새감독 감독관 해제' }));
   fireEvent.change(screen.getByLabelText('해제 메모 (필수, 그 사람에게 보입니다)'), { target: { value: '활동 종료' } });
   fireEvent.click(screen.getByRole('button', { name: '해제 확정' }));
@@ -217,10 +223,10 @@ test('운영자: 예전 /admin/moderators 주소는 감독관만 거른 회원 �
   TABLES.profiles.push({ id: 'u-m2', nickname: '기존감독', role: 'moderator', xp: 0, level: 2, main_title: null });
   TABLES.profiles.push({ id: 'u-new', nickname: '그냥회원', role: 'user', xp: 0, level: 2, main_title: null });
   start('/admin/moderators');
-  const list = await screen.findByRole('list', { name: '회원 목록' });
+  const list = await screen.findByRole('list', { name: '감독관 목록' });
   expect(within(list).getAllByRole('listitem').length).toBe(1);
   expect(within(list).getByText(/기존감독/)).toBeDefined();
-  expect(screen.getByLabelText('등급으로 거르기').value).toBe('moderator');
+  expect(screen.getByRole('button', { name: '감독관 목록 닫기' })).toHaveAttribute('aria-expanded', 'true');
 });
 
 test('감독관 알림: 지정은 탈퇴 후 기록 안내 + 메모, 해제는 메모', () => {
