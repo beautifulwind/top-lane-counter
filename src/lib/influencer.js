@@ -8,7 +8,7 @@ import { INFLUENCER_KINDS } from './nickname';
  * DB에는 두지 않는다 (알림 문장에는 "{운영자 닉네임}" 자리표시만 저장되고 화면이 이 값으로 채운다).
  * 휴대폰 잠금 화면 알림(web-push)은 이 값을 모르므로 "운영자 계정으로"라고만 보낸다 — 누르면 신청 화면에서 이 값을 본다.
  */
-export const OPERATOR_RIOT_ID = 'OPERATOR_RIOT_ID';
+export const OPERATOR_RIOT_ID = '탑신병자#1188';
 
 /** 알림 문장 속 "{운영자 닉네임}" 자리표시 */
 export const OPERATOR_PLACEHOLDER = '{운영자 닉네임}';
