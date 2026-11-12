@@ -64,7 +64,7 @@ test('운영자: 상대법 화면 ⋮ [상대법 숨기기] → 그 자리에 �
   fireEvent.click(ok);
   expect(await screen.findByText('숨겼습니다: 퀸으로 다리우스 이기는 법')).toBeDefined();
   expect(where()).toBe('/champion/Darius');
-  expect(fakeState.rpcCalls).toEqual([{ name: 'hide_counter', args: { p_counter_id: 1, p_reason: '잘못 승인했습니다' } }]);
+  expect(fakeState.rpcCalls.filter((c) => c.name !== 'build_editor_counts')).toEqual([{ name: 'hide_counter', args: { p_counter_id: 1, p_reason: '잘못 승인했습니다' } }]);
   expect(window.confirm).not.toHaveBeenCalled();
 });
 

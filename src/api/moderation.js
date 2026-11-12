@@ -1,7 +1,7 @@
 // 감독관 관리 (030, SPEC 6-18). 운영자만 쓰는 화면이고, 실제 권한 검사는 DB 함수·RLS가 한다.
 import { db } from './supabase';
 
-const COLUMNS = 'id, nickname, role, level, main_title, is_guest';
+const COLUMNS = 'id, nickname, role, level, main_title, is_guest, influencer, nickname_state';
 
 async function run(query, fallback) {
   const { data, error } = await query;

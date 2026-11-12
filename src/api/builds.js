@@ -5,7 +5,7 @@ import { getItems, getLatestVersion, getRunes, getSummonerSpells } from './ddrag
 import { START_GOLD_MAX, compareBuilds, toProposalBuild, toRow } from '../lib/buildContent';
 import { toWikiPayload } from '../lib/wikiBuild';
 
-const PERSON = 'nickname, role, level, main_title, is_guest';
+const PERSON = 'nickname, role, level, main_title, is_guest, influencer, nickname_state'; // 046: 장인 표시·인증 대기·닉네임 변경 예정
 const BUILD_FIELDS =
   'id, counter_id, author_id, proposal_id, runes, summoner_spells, starting_items, core_items, max_skill, patch, ' +
   'up_count, down_count, status, created_at, version, edited_at, ' +
@@ -56,9 +56,16 @@ export async function getBuilds(counterRowId, userId = null) {
       '내 투표를 불러오지 못했습니다.',
     );
   }
+  const editors = rows.length > 0 ? await getBuildEditorCounts(counterRowId) : {};
   return rows
-    .map((b) => ({ ...shape(b), mine: votes.find((v) => v.build_id === b.id)?.value ?? null }))
+    .map((b) => ({ ...shape(b), mine: votes.find((v) => v.build_id === b.id)?.value ?? null, editors: editors[b.id] ?? 0 }))
     .sort(compareBuilds);
+}
+
+/** 빌드마다 처음 만든 분을 뺀 기여자 수 {빌드 id: N} (046, 장인 빌드 "이후 N명이 수정했습니다"). 못 읽으면 빈 값 — 라벨만 빠진다 */
+async function getBuildEditorCounts(counterRowId) {
+  const { data, error } = await db().rpc('build_editor_counts', { p_counter: counterRowId });
+  return error ? {} : (data ?? {});
 }
 
 /** 빌드 등록 → 승인 대기. patch = 지금 Data Dragon 버전 */

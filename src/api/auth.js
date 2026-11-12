@@ -1,5 +1,5 @@
 // 로그인·프로필 접근 계층. 화면 컴포넌트는 이 모듈만 호출한다.
-import { hasReservedMark } from '../lib/nickname';
+import { INFLUENCER_MARK_MESSAGE, hasReservedMark, mimicsInfluencer } from '../lib/nickname';
 import { db } from './supabase';
 import { dropBrowserPush, forgetDevicePush } from './push';
 import { ALREADY_MEMBER_TEXT } from '../lib/guest';
@@ -247,13 +247,16 @@ const RESERVED_NICKNAME_MESSAGE = '닉네임에는 (운)·(감)을 쓸 수 없�
 
 const PROFILE_COLUMNS_OLD = 'id, nickname, role, xp, level, main_title, is_guest';
 // operator_mode = 운영자 모드 (034). 034 실행 전 DB에는 이 칸이 없으므로 그때는 옛 칸만 읽는다 (모드 = 켜짐으로 본다)
-const PROFILE_COLUMNS = `${PROFILE_COLUMNS_OLD}, operator_mode`;
-const missingModeColumn = (error) => error?.code === '42703' || /operator_mode/.test(error?.message ?? '');
+const PROFILE_COLUMNS_MODE = `${PROFILE_COLUMNS_OLD}, operator_mode`;
+// 046: 장인(influencer)·인증 대기/닉네임 변경 예정(nickname_state, nickname_reset_at). 046 전 DB면 위 칸으로 한 번 더
+const PROFILE_COLUMNS = `${PROFILE_COLUMNS_MODE}, influencer, nickname_state, nickname_reset_at`;
+const missingColumn = (error) => error?.code === '42703' || /does not exist/.test(error?.message ?? '');
 
-/** 프로필 칸을 골라 읽는 요청(run(칸 목록))을 보낸다. operator_mode 칸이 아직 없으면 옛 칸으로 한 번 더 */
+/** 프로필 칸을 골라 읽는 요청(run(칸 목록))을 보낸다. 새 칸이 아직 없으면 옛 칸으로 다시 */
 async function withProfileColumns(run) {
-  const res = await run(PROFILE_COLUMNS);
-  return missingModeColumn(res.error) ? run(PROFILE_COLUMNS_OLD) : res;
+  let res = await run(PROFILE_COLUMNS);
+  if (missingColumn(res.error)) res = await run(PROFILE_COLUMNS_MODE);
+  return missingColumn(res.error) ? run(PROFILE_COLUMNS_OLD) : res;
 }
 
 /** 내 프로필 (첫 로그인 시 DB 트리거가 만든다. nickname이 null이면 닉네임 설정 전) */
@@ -282,6 +285,7 @@ export function nicknameProblem(raw) {
   if (!nickname) return '닉네임을 입력해 주세요.';
   if ([...nickname].length > NICKNAME_MAX) return `닉네임은 ${NICKNAME_MAX}자 이하로 정해 주세요.`;
   if (hasReservedMark(nickname)) return RESERVED_NICKNAME_MESSAGE;
+  if (mimicsInfluencer(nickname)) return INFLUENCER_MARK_MESSAGE;
   return null;
 }
 
@@ -295,9 +299,11 @@ export async function saveNickname(userId, raw) {
     .select(cols)
     .maybeSingle());
   if (error) {
-    if (error.code === '23505') throw new Error('이미 사용 중인 닉네임입니다. 다른 닉네임을 정해 주세요.');
+    if (error.code === '23505') throw new Error('이미 사용 중인 닉네임입니다. 비슷한 닉네임도 쓸 수 없습니다.');
+    if (error.code === '42501' && /장인/.test(error.message ?? '')) throw new Error(error.message); // 046: 장인·인증 대기는 직접 못 바꿈
     if (error.code === 'P0001') throw new Error(error.message); // 30일에 한 번 (DB 문구에 다음 날짜가 들어 있다)
     if (error.code === '23514' && /\(운\)/.test(error.message ?? '')) throw new Error(RESERVED_NICKNAME_MESSAGE);
+    if (error.code === '23514' && /장인/.test(error.message ?? '')) throw new Error(INFLUENCER_MARK_MESSAGE);
     if (error.code === '23514') throw new Error(`닉네임은 앞뒤 공백 없이 1~${NICKNAME_MAX}자로 정해 주세요.`);
     throw new Error(`닉네임을 저장하지 못했습니다. (${error.message})`);
   }
@@ -310,13 +316,17 @@ export async function saveNickname(userId, raw) {
 /** 닉네임 변경 규칙: 마지막으로 바꾼 때와 다음에 바꿀 수 있는 때 (처음 정한 것은 변경이 아님). 기록은 본인만 읽는다 */
 export async function getNicknameRule(userId) {
   const [changes, rule] = await Promise.all([
-    db().from('nickname_changes').select('changed_at').eq('user_id', userId).order('changed_at', { ascending: false }).limit(1),
+    db().from('nickname_changes').select('*').eq('user_id', userId).order('changed_at', { ascending: false }).limit(20),
     db().from('xp_rules').select('value').eq('key', 'nickname_change_days').maybeSingle(),
   ]);
   if (changes.error || rule.error) throw new Error('닉네임 변경 정보를 불러오지 못했습니다.');
   const days = rule.data?.value ?? 30;
-  const last = changes.data?.[0]?.changed_at ?? null;
-  const next = last ? new Date(Date.parse(last) + days * 86400000).toISOString() : null;
+  // 046: 본인이 바꾼 것(user)·신청(apply)만 30일 제한에 센다. 마지막 변경이 운영자·되돌림·임시 닉네임(admin·revert·reset)이면 바로 바꿀 수 있다 (DB keep_nickname과 같음)
+  const counted = (c) => !c.kind || c.kind === 'user' || c.kind === 'apply';
+  const rows = changes.data ?? [];
+  const free = rows.length > 0 && !counted(rows[0]);
+  const last = rows.find(counted)?.changed_at ?? null;
+  const next = last && !free ? new Date(Date.parse(last) + days * 86400000).toISOString() : null;
   return { days, last, next };
 }
 

@@ -20,7 +20,8 @@ import { AlertIcon, LayersIcon, ThumbIcon, TrendingUpIcon } from '../components/
 import NotFound from './NotFound';
 import { matchupTitle } from '../lib/josa';
 import { patchMinor } from '../lib/buildContent';
-import { buildLabel } from '../lib/wikiBuild';
+import { buildTitleText } from '../lib/wikiBuild';
+import BuildTitle from '../components/BuildTitle';
 import { displayNickname } from '../lib/nickname';
 
 const day = (ts) => (ts ? String(ts).slice(0, 10) : null);
@@ -202,7 +203,7 @@ export default function Matchup() {
               auth={auth}
               counterId={data.matchup.counter.id}
               buildId={selected.id}
-              what={buildLabel(selected, index)}
+              what={buildTitleText(selected, index)}
               onCancel={() => setReporting(null)}
               onDone={reported}
             />
@@ -222,7 +223,7 @@ export default function Matchup() {
 }
 
 /**
- * 빌드 탭: 가로로 넘긴다 (폰). 이름(없으면 "빌드 N") + 추천 수. ←→·Home·End로 옮기면 바로 그 빌드가 보인다.
+ * 빌드 탭: 가로로 넘긴다 (폰). 이름(없으면 "빌드 N", 장인 빌드면 앞에 "장인 빌드") + 추천 수. ←→·Home·End로 옮기면 바로 그 빌드가 보인다.
  */
 function BuildTabs({ builds, selected, onSelect, newTo }) {
   const refs = useRef({});
@@ -263,7 +264,7 @@ function BuildTabs({ builds, selected, onSelect, newTo }) {
               className={on ? 'build-tab on' : 'build-tab'}
               onClick={() => onSelect(b.id)}
             >
-              <span className="build-tab-name">{buildLabel(b, i)}</span>{' '}
+              <span className="build-tab-name"><BuildTitle build={b} index={i} /></span>{' '}
               <span className="build-tab-ups">
                 <ThumbIcon size={14} /><span className="sr-only">추천 </span>{b.up}
               </span>
@@ -280,7 +281,7 @@ function BuildTabs({ builds, selected, onSelect, newTo }) {
 function BuildPanel({ build, index, doc, data, path, isOperator, canHide, lastOne, hiding, setHiding, onHidden, reportItem, reportBox }) {
   const [showPeople, setShowPeople] = useState(false);
   const peopleBtn = useRef(null);
-  const label = buildLabel(build, index);
+  const label = buildTitleText(build, index);
   // 038 뒤 공개된 빌드는 글이 다 채워져 있다. 혹시 비어 있으면 예전 문서 내용으로
   const summary = build.summary ?? doc?.summary ?? null;
   const notes = build.level_notes ?? doc?.level_notes ?? null;
@@ -300,7 +301,7 @@ function BuildPanel({ build, index, doc, data, path, isOperator, canHide, lastOn
   return (
     <div id="build-panel" role="tabpanel" aria-labelledby={`build-tab-${build.id}`} className="build-panel">
       <div className="title-row">
-        <h3 className="build-name">{label}</h3>
+        <h3 className="build-name"><BuildTitle build={build} index={index} editors /></h3>
         <MoreMenu items={menu} label={`${label} 더보기`} />
       </div>
       <p className="doc-sub">
@@ -334,7 +335,7 @@ function BuildPanel({ build, index, doc, data, path, isOperator, canHide, lastOn
         </ol>
       </nav>
 
-      <BuildCard build={build} {...data} interactive origin />
+      <BuildCard build={build} {...data} interactive />
 
       <section className="section" id="levels">
         <SectionHead icon={TrendingUpIcon} num={2}>레벨별 딜교법</SectionHead>

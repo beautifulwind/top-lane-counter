@@ -98,7 +98,7 @@ test('되돌리기: 지금 → 되돌린 뒤 비교, 사유 필수 → revert_bu
   expect(await screen.findByText('v2 시점으로 되돌렸습니다. 지금 버전 v4 · 기여자에서 1명을 뺐습니다.')).toBeDefined();
   expect(fakeState.rpcCalls).toContainEqual({ name: 'revert_build', args: { p_build: 102, p_revision: 12, p_version: 3, p_note: '훼손 복구' } });
   const top = await screen.findByRole('listitem', { name: 'v4 되돌림 (v2 시점으로)' });
-  expect(top.textContent).toMatch(/되돌린 분: Lv\.0 \(운\)영자/);
+  expect(top.textContent).toMatch(/되돌린 분: \(운\)영자/); // 빌드 기록은 레벨·칭호 없이 닉네임만 (046)
   expect(top.textContent).toMatch(/지금 내용/);
 });
 

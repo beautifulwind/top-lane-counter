@@ -1,6 +1,6 @@
 // 테스트용 가짜 Supabase. src/api/supabase.js의 db()를 대신한다 (setupTests.js에서 연결).
 // 행 모양은 supabase/schema.sql + content.js의 select(관계 포함)가 돌려주는 모양을 따른다.
-import { hasReservedMark } from '../lib/nickname';
+import { hasReservedMark, mimicsInfluencer } from '../lib/nickname';
 const runes = (keystone) => ({ primaryPath: 8000, keystone, primary: [9111, 9104, 8014], secondaryPath: 8100, secondary: [8143, 8106], shards: [5005, 5008, 5011] });
 const QUINN = { id: 1, target_champion: 'Darius', counter_champion: 'Quinn', status: 'approved' };
 const QUINN_DOC = {
@@ -157,6 +157,7 @@ export function resetFake() {
   fakeState.insertError = null;
   fakeState.rpcCalls = [];
   fakeState.contributors = {};
+  fakeState.editorCounts = {};
   fakeState.memberCalls = [];
   fakeState.memberStats = { total: 0, members: 0, guests: 0, google: 0, kakao: 0, both: 0, new_7d: 0, new_7d_members: 0 };
   fakeState.members = [];
@@ -355,6 +356,15 @@ function query(table) {
       }
       if (patch.nickname && hasReservedMark(patch.nickname)) { // 029 트리거 흉내
         return { data: null, error: { code: '23514', message: '닉네임에는 (운)·(감)을 쓸 수 없습니다.' } };
+      }
+      if (patch.nickname && mimicsInfluencer(patch.nickname)) { // 046 트리거 흉내
+        return { data: null, error: { code: '23514', message: '닉네임에는 [장인]·(장인)을 쓸 수 없고, "장인 "으로 시작할 수 없습니다.' } };
+      }
+      const cur = TABLES[table].find((r) => r.id === me);
+      if (patch.nickname && cur?.nickname && patch.nickname !== cur.nickname) { // 046 keep_nickname 흉내
+        if (cur.influencer) return { data: null, error: { code: '42501', message: '인증된 장인은 닉네임을 직접 바꿀 수 없습니다. 바꾸려면 [문의하기]로 운영자에게 알려 주세요.' } };
+        if (cur.nickname_state === 'pending') return { data: null, error: { code: '42501', message: '장인 인증 신청을 심사하는 동안에는 닉네임을 바꿀 수 없습니다. 신청을 취소하면 바꿀 수 있습니다.' } };
+        if (cur.nickname_state === 'yielding') Object.assign(patch, { nickname_state: null, nickname_reset_at: null });
       }
       const nick = patch.nickname?.toLowerCase();
       if (nick && TABLES[table].some((r) => r.id !== me && r.nickname?.toLowerCase() === nick)) {
@@ -643,6 +653,9 @@ function wikiRpc(name, args) {
     if (args.p_version !== b.version) return { data: null, error: { code: 'TL412', message: '다른 분이 먼저 수정했습니다. 최신 내용을 확인해 주세요.' } };
     Object.assign(b, pickBuild(args.p_build), { version: b.version + 1, updated_at: new Date().toISOString() });
     return ok(b.version);
+  }
+  if (name === 'build_editor_counts') { // 046: fakeState.editorCounts = { 빌드id: N } (없으면 0)
+    return ok(fakeState.editorCounts ?? {});
   }
   if (name === 'build_contributors') {
     const b = TABLES.builds.find((x) => x.id === args.p_build);

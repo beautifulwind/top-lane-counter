@@ -25,11 +25,11 @@ test('닉네임 표시: 대표 칭호가 없으면 칭호 자리 없이 "Lv.3 �
   expect(container.querySelector('.user-title')).toBeNull();
 });
 
-test('상대법 빌드: 승인된 것만 탭으로, 추천 많은 순, 작성자는 레벨·칭호와 함께', async () => {
+test('상대법 빌드: 승인된 것만 탭으로, 추천 많은 순, 작성자는 레벨·칭호 없이 닉네임만 (046)', async () => {
   start('/champion/Darius/counter/Quinn');
   await screen.findByText(/퀸으로 다리우스 이기는 법/);
   expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['빌드 2 추천 5', '빌드 3 추천 2', '빌드 1 추천 1', '빌드 5 추천 0']);
-  expect(document.querySelector('.build-author').textContent).toMatch(/^Lv\.7 단단묵직 탑고수/);
+  expect(document.querySelector('.build-author').textContent).toBe('탑고수');
   expect(screen.queryByText(/대기중/)).toBeNull();
   expect(screen.queryByText(/대표 칭호 없음/)).toBeNull();
   expect(screen.getByText('패치 99.1')).toBeDefined(); // 앞 두 자리만 표시 (구버전 글자는 화면에 없다)

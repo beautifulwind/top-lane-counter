@@ -168,7 +168,7 @@ test('수정 기록: 버전 목록과 지금 버전 표시, 예전 버전 비교
   fireEvent.change(within(v1).getByLabelText(/되돌리기 메모/), { target: { value: '처음 버전이 정확합니다' } });
   fireEvent.click(within(v1).getByRole('button', { name: '되돌리기 확정' }));
   expect(await screen.findByText('1번 버전으로 되돌렸습니다.')).toBeDefined();
-  expect(fakeState.rpcCalls).toEqual([{ name: 'revert_doc', args: { p_revision_id: 5, p_note: '처음 버전이 정확합니다' } }]);
+  expect(fakeState.rpcCalls.filter((c) => c.name !== 'build_editor_counts')).toEqual([{ name: 'revert_doc', args: { p_revision_id: 5, p_note: '처음 버전이 정확합니다' } }]);
 });
 
 test('대기 목록 줄에서 바로: [승인]·[거절]은 그 자리에 메모 입력, 메모를 써야 확정 (확인 창 없음)', async () => {

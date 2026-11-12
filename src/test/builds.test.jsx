@@ -114,7 +114,8 @@ test('빌드 탭: 추천 많은 순(같으면 점수), 처음엔 맨 앞 빌드,
   expect(screen.getByRole('tab', { name: /^빌드 3/ })).toHaveAttribute('aria-selected', 'true');
   expect(screen.getByRole('tabpanel')).toHaveAccessibleName('빌드 3 추천 8');
   expect(document.querySelectorAll('.build-author')).toHaveLength(1); // 고른 빌드 하나만 보인다
-  expect(within(card('칭호없음')).getByText('시초(처음 만든 사람)')).toBeDefined(); // 작성자 = 시초
+  expect(card('칭호없음').querySelector('.origin-badge')).toBeNull(); // 시초 뱃지는 없앴다 (046) — 닉네임만
+  expect(card('칭호없음').querySelector('.build-author').textContent).toBe('칭호없음');
   fireEvent.click(screen.getByRole('tab', { name: /^정복자 딜교형/ }));
   expect(where()).toBe(`${MATCHUP}?build=102`);
   expect(screen.getByRole('heading', { name: '정복자 딜교형' })).toBeDefined();

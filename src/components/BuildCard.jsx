@@ -6,7 +6,6 @@ import { canWrite, isGuest, useAuth } from '../lib/auth';
 import GuestHint from './GuestHint';
 import { patchMinor } from '../lib/buildContent';
 import UserName from './UserName';
-import { OriginBadge } from './ContributorsDialog';
 import { ThumbIcon } from './Icons';
 
 export function Icon({ entry, size = 32, round = false, fallback = '?' }) {
@@ -40,25 +39,23 @@ export function Icon({ entry, size = 32, round = false, fallback = '?' }) {
   return img(entry.name);
 }
 
-/** 작성자 표시: 닉네임 / 작성자가 없으면 탈퇴한 유저 */
+/** 작성자 표시: 닉네임만(레벨·칭호 없이, 장인 표시는 보임 — 046) / 작성자가 없으면 탈퇴한 유저 */
 export function BuildAuthor({ build }) {
-  if (build.author) return <UserName profile={build.author} />;
+  if (build.author) return <UserName profile={build.author} plain />;
   return '(탈퇴한 유저)';
 }
 
 /**
  * 빌드 카드 (상대법 화면·등록 미리보기·운영자 화면 공용).
  * interactive: 추천/비추천 누르기 (상대법 화면에서만). 아니면 숫자만 보인다.
- * origin: 작성자 옆에 시초 뱃지 (상대법 화면: 빌드를 처음 만든 사람)
  */
-export default function BuildCard({ build, items, runes, spells, interactive = false, origin = false }) {
+export default function BuildCard({ build, items, runes, spells, interactive = false }) {
   const r = build.runes;
   return (
     <article className="build" aria-label={`빌드: ${displayNickname(build.author, '(탈퇴한 유저)')}`}>
       <div className="build-head">
         <span className="build-author">
           <BuildAuthor build={build} />
-          {origin && build.author && <>{' '}<OriginBadge /></>}
         </span>
         {build.patch && (
           <span className="badge">{`패치 ${patchMinor(build.patch)}`}</span>

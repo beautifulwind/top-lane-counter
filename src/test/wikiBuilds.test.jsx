@@ -122,7 +122,7 @@ test('빌드 이름은 20자까지', async () => {
 
 // ---------------- [수정 기록]: 기여자 팝업 ----------------
 
-test('[수정 기록] → 기여자 팝업: 시초 먼저(뱃지는 닉네임과 따로 그린 칸), 탈퇴한 유저, Esc로 닫으면 버튼으로 초점', async () => {
+test('[수정 기록] → 기여자 팝업: 처음 만든 분 먼저, 닉네임만(레벨·칭호·시초 뱃지 없음, 046), 탈퇴한 유저, Esc로 닫으면 버튼으로 초점', async () => {
   fakeState.contributors[102] = [
     { user_id: 'u-102', nickname: '탑고수', role: 'user', is_guest: false, level: 7, main_title: 'solid_heavy', is_origin: true },
     { user_id: 'u-9', nickname: '시초', role: 'user', is_guest: true, level: 2, main_title: null, is_origin: false },
@@ -135,11 +135,9 @@ test('[수정 기록] → 기여자 팝업: 시초 먼저(뱃지는 닉네임과
   expect(rpcCalls('build_contributors')).toEqual([{ p_build: 102 }]);
   const rows = await within(dialog).findAllByRole('listitem');
   expect(rows.map((r) => r.textContent)).toEqual([
-    'Lv.7 단단묵직 탑고수 시초시초(처음 만든 사람)', 'Lv.2 시초 비회원', '(탈퇴한 유저)',
+    '탑고수', '시초 비회원', '(탈퇴한 유저)',
   ]);
-  // 닉네임이 "시초"여도 뱃지(테두리 칸)는 진짜 시초에게만
-  expect(dialog.querySelectorAll('.origin-badge')).toHaveLength(1);
-  expect(within(rows[0]).getByTitle('이 빌드를 처음 만든 사람')).toBeDefined();
+  expect(dialog.querySelectorAll('.origin-badge, .title-badge, .user-lv')).toHaveLength(0);
   expect(document.activeElement).toBe(within(dialog).getByRole('button', { name: '닫기' }));
   fireEvent.keyDown(dialog, { key: 'Escape' });
   expect(screen.queryByRole('dialog')).toBeNull();

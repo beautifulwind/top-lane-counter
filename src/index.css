@@ -1029,11 +1029,30 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
 .build-panel { margin-top: var(--gap-md); }
 .build-name { margin: 0; font-size: var(--fs-xl); }
 
-/* 시초 뱃지: 닉네임 글자와 따로 그린 칸 (닉네임으로 흉내 낼 수 없다) */
-.origin-badge {
-  display: inline-block; margin-left: 4px; padding: 0 7px; border: 1px solid var(--brand); border-radius: var(--radius-tag);
-  background: var(--soft); color: var(--brand-dark); font-size: var(--fs-xs); font-weight: 900; line-height: 18px; vertical-align: middle; white-space: nowrap;
+
+/* 장인 표시 (046, SPEC 6-33): 닉네임 글자와 따로 그린 칸이라 닉네임으로 흉내 낼 수 없다.
+   inline + box-decoration-break: 20자 닉네임도 폰에서 줄을 바꿔 감싼 테두리가 넘치지 않는다 */
+.inf-name {
+  display: inline; padding: 0 6px 0 2px; border: 1.5px solid var(--influencer-line); border-radius: 999px;
+  -webkit-box-decoration-break: clone; box-decoration-break: clone; overflow-wrap: anywhere; word-break: break-all;
 }
+.inf-tag, .inf-build-tag {
+  display: inline-block; margin-right: 4px; padding: 0 6px; border-radius: 999px; background: var(--influencer-soft);
+  color: var(--influencer); font-size: var(--fs-xs); font-weight: 900; line-height: 18px; vertical-align: middle; white-space: nowrap;
+}
+.inf-build-tag { margin-right: 2px; border: 1px solid var(--influencer-line); }
+.inf-build-edits { color: var(--muted); font-size: var(--fs-xs); font-weight: 600; white-space: nowrap; }
+.build-name .inf-build-edits { font-size: var(--fs-sm); }
+.nick-pending {
+  display: inline; padding: 0 6px; border: 1.5px dashed var(--line-hover); border-radius: 999px; color: var(--muted);
+  -webkit-box-decoration-break: clone; box-decoration-break: clone; overflow-wrap: anywhere; word-break: break-all;
+}
+.nick-pending-tag { font-size: var(--fs-xs); font-weight: 700; white-space: nowrap; }
+.nick-yield-tag {
+  display: inline-block; padding: 0 7px; border: 1px solid var(--line-hover); border-radius: var(--radius-tag); background: var(--raised);
+  color: var(--muted); font-size: var(--fs-xs); font-weight: 800; line-height: 18px; vertical-align: middle; white-space: nowrap;
+}
+.user-name { overflow-wrap: anywhere; }
 
 /* 기여자 팝업 */
 .dialog-backdrop {

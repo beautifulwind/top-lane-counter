@@ -13,7 +13,7 @@ import { GUEST_UPGRADE_TEXT } from '../lib/guest';
 import GuestLinkDialog from '../components/GuestLinkDialog';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
-import { TitleBadge } from '../components/UserName';
+import { InfluencerName, TitleBadge } from '../components/UserName';
 import { titleName } from '../lib/titles';
 import BuildCard from '../components/BuildCard';
 import DiffView from '../components/DiffView';
@@ -21,7 +21,6 @@ import MyTitles, { LevelBar } from '../components/MyRewards';
 import { matchupTitle } from '../lib/josa';
 import VoteTally from '../components/VoteTally';
 import SectionHead from '../components/SectionHead';
-import { displayNickname } from '../lib/nickname';
 import { BellIcon, GearIcon, HelpIcon, LayersIcon, LinkIcon, SendIcon, UserIcon } from '../components/Icons';
 
 /**
@@ -55,7 +54,7 @@ function ProfileName({ profile }) {
   return (
     <span className="user-name">
       {titleName(profile.main_title) && <><TitleBadge titleKey={profile.main_title} />{' '}</>}
-      <span className="user-nick">{displayNickname(profile)}</span>
+      <InfluencerName profile={profile} />
       {profile.is_guest && <>{' '}<span className="guest-badge">비회원</span></>}
     </span>
   );

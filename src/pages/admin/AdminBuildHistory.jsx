@@ -12,7 +12,6 @@ import RequireOperator from '../../components/RequireOperator';
 import DiffView from '../../components/DiffView';
 import UserName from '../../components/UserName';
 import NoteForm from '../../components/NoteForm';
-import { OriginBadge } from '../../components/ContributorsDialog';
 
 /**
  * 운영자: 빌드 수정 기록 자세히 (/admin/builds/:id/history, 043 · SPEC 6-30).
@@ -32,7 +31,7 @@ const STATUS = { approved: '공개', hidden: '숨김', pending: '승인 대기',
 /** 회원 정보로 가는 닉네임 (탈퇴했으면 글자만) */
 function Person({ person, none = '탈퇴한 이용자' }) {
   if (!person) return <span>{none}</span>;
-  return <Link to={`/admin/members/${person.id}`} className="op-link"><UserName profile={person} /></Link>;
+  return <Link to={`/admin/members/${person.id}`} className="op-link"><UserName profile={person} plain /></Link>;
 }
 
 function History() {
@@ -120,7 +119,7 @@ function History() {
         {b.counter_status !== 'approved' && ' · 숨긴 상대법'}
       </p>
       <p className="proposal-meta">
-        <span>처음 만든 분: <Person person={b.author} />{b.author && <>{' '}<OriginBadge /></>}</span>
+        <span>처음 만든 분: <Person person={b.author} /></span>
         {b.is_first && <span>이 상대법의 첫 빌드</span>}
       </p>
       <p className="hint">

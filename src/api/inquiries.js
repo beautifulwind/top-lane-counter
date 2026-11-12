@@ -17,7 +17,7 @@ export const INQUIRY_ANSWER_MAX = 2000;
 export const INQUIRY_DAILY_MAX = 3;
 
 const FIELDS = 'id, user_id, category, body, created_at, answer, answered_at';
-const STAFF_FIELDS = `${FIELDS}, user:profiles!inquiries_user_id_fkey(nickname, role, level, main_title, is_guest)`;
+const STAFF_FIELDS = `${FIELDS}, user:profiles!inquiries_user_id_fkey(nickname, role, level, main_title, is_guest, influencer, nickname_state)`;
 const STAFF_LIMIT = 200;
 
 function friendly(error, fallback) {

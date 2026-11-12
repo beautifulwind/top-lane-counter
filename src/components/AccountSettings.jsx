@@ -75,7 +75,15 @@ function NicknameChange({ auth }) {
   const [formError, setFormError] = useState(null);
   const [done, setDone] = useState(null);
   const current = auth.profile.nickname;
-  const locked = rule?.next && Date.parse(rule.next) > Date.now();
+  // 046: 장인은 직접 못 바꾸고(운영자가 바꿈), 인증 대기 중에도 못 바꾼다. 닉네임 변경 예정이면 30일 제한 없이 바로 바꾼다
+  const { influencer, nickname_state: state, nickname_reset_at: resetAt } = auth.profile;
+  const yielding = state === 'yielding';
+  const blocked = influencer
+    ? '인증된 장인은 닉네임을 직접 바꿀 수 없습니다. 바꾸려면 [문의하기]로 운영자에게 알려 주세요.'
+    : state === 'pending'
+      ? '장인 인증 신청을 심사하는 동안에는 닉네임을 바꿀 수 없습니다. 신청을 취소하면 바꿀 수 있습니다.'
+      : null;
+  const locked = !!blocked || (!yielding && rule?.next && Date.parse(rule.next) > Date.now());
 
   const close = () => {
     setOpen(false);
@@ -109,8 +117,15 @@ function NicknameChange({ auth }) {
         <>
           <p className="lead">
             지금 닉네임: <strong>{current}</strong>. 닉네임은 {rule.days}일에 한 번 바꿀 수 있습니다.
-            {locked && <> 다음에는 <strong>{fmtDateTime(rule.next)}</strong>부터 바꿀 수 있습니다.</>}
+            {!blocked && !yielding && locked && <> 다음에는 <strong>{fmtDateTime(rule.next)}</strong>부터 바꿀 수 있습니다.</>}
           </p>
+          {blocked && <p className="hint">{blocked}</p>}
+          {yielding && (
+            <p className="warn" role="note">
+              장인 인증을 받은 분과 같은 닉네임이라 {resetAt ? <><strong>{fmtDateTime(resetAt)}</strong>에</> : '곧'} 임시 닉네임으로 바뀝니다.
+              그 전에 새 닉네임을 정해 주세요. 지금은 {rule.days}일 제한 없이 바로 바꿀 수 있습니다.
+            </p>
+          )}
           {!open && !locked && (
             <button type="button" className="btn btn-small" onClick={() => { setValue(current); setOpen(true); setDone(null); }}>
               닉네임 바꾸기

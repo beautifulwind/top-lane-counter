@@ -25,7 +25,7 @@ export const REPORT_REASON_HINTS = {
 /** 사진을 붙일 수 없는 곳(문서 댓글)의 신고에는 사진 사유를 빼고 보여 준다 */
 export const PHOTO_REPORT_REASONS = ['obscene'];
 
-const PERSON = 'nickname, role, level, main_title, is_guest';
+const PERSON = 'nickname, role, level, main_title, is_guest, influencer, nickname_state'; // 046: 장인 표시·인증 대기·닉네임 변경 예정
 const POST_FIELDS =
   'id, author_id, title, body, status, hidden_note, hidden_at, edited_at, edit_grace_until, deleted_at, comment_count, up_count, created_at';
 const COMMENT_FIELDS = 'id, post_id, author_id, body, status, hidden_note, hidden_at, edited_at, edit_grace_until, created_at';

@@ -4,7 +4,7 @@ import { db, restConfig } from './supabase';
 import { cleanDoc } from '../lib/docContent';
 import { proposalBuildBlock, toProposalBuild } from '../lib/buildContent';
 
-const PERSON = 'nickname, role, level, main_title, is_guest';
+const PERSON = 'nickname, role, level, main_title, is_guest, influencer, nickname_state'; // 046: 장인 표시·인증 대기·닉네임 변경 예정
 const PROPOSAL_COLUMNS =
   'id, proposer_id, type, target_champion, counter_champion, counter_id, content, status, reject_reason, reviewed_at, created_at, base_revision_id, ' +
   'revoke_reason, revoked_at, approve_note, revision_note, revision_requested_at, resubmitted_at, build, approved_content, approved_build, ' +

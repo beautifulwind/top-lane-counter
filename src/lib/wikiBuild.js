@@ -40,3 +40,10 @@ export const sameWikiBuild = (a, b) =>
 
 /** 탭·제목에 보일 빌드 이름: 이름이 없으면 "빌드 N" (N = 상대법 안 번호) */
 export const buildLabel = (b, index = 0) => b.name || `빌드 ${b.seq ?? index + 1}`;
+
+/** 장인 빌드 (046): 처음 만든 분(작성자)이 지금 인증된 장인이면. 해제·탈퇴하면 author가 바뀌어 저절로 사라진다 */
+export const isInfluencerBuild = (b) => !!b?.author?.influencer;
+
+/** 글자로 쓰는 빌드 이름 (안내 문장·읽는 이름): 장인 빌드면 "장인 빌드 이름"(이름이 없으면 "장인 빌드") */
+export const buildTitleText = (b, index = 0) =>
+  (isInfluencerBuild(b) ? (b.name ? `장인 빌드 ${b.name}` : '장인 빌드') : buildLabel(b, index));

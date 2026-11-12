@@ -93,6 +93,11 @@
   --title-general: #46ecd5;      --title-general-soft: #163733;       --title-general-line: rgba(70, 236, 213, .6);       /* 장군: 청록 8.7 */
   --title-offmeta: #f4a8ff;      --title-offmeta-soft: #392a3b;      --title-offmeta-line: rgba(244, 168, 255, .6);      /* 비주류: 자주빛 분홍 7.6 */
 
+  /* 장인 (046, SPEC 6-33): 진홍. 칭호 "백정주인"(옅은 장밋빛)보다 짙고 선명하게 — 닉네임을 감싸는 둥근 실선 + "장인" 글자 태그 */
+  --influencer: #ff4f6d;         /* 카드 위 5.6, 장인 태그 바탕 위 4.8 */
+  --influencer-soft: #3d1a22;    /* "장인" 태그·"장인 빌드" 바탕 */
+  --influencer-line: rgba(255, 79, 109, .8);
+
   /* 카카오 디자인 가이드: 배경 #FEE500, 글자·심볼 검정(85%) — 다크에서도 그대로 */
   --kakao: #FEE500;
   --kakao-hover: #F5DC00;
