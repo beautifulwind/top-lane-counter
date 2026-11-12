@@ -1074,3 +1074,26 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
 .form-error p { margin: 0; }
 .notice.caution { border-color: var(--warn-line); background: var(--warn-soft); }
 .notice p { margin: 0 0 var(--gap-sm); }
+
+/* 장인 인증 신청·심사 (046, SPEC 6-33) */
+.inf-steps { display: flex; flex-wrap: wrap; gap: var(--gap-sm); list-style: none; margin: 0 0 var(--gap-md); padding: 0; }
+.inf-steps li {
+  padding: 2px 10px; border: 1px solid var(--line-hover); border-radius: 999px; color: var(--muted); font-size: var(--fs-sm); font-weight: 700;
+}
+.inf-steps li.done { color: var(--text-soft); }
+.inf-steps li.now { border-color: var(--influencer-line); background: var(--influencer-soft); color: var(--influencer); }
+.inf-guide, .inf-check { margin: var(--gap-md) 0; padding: var(--pad-box) var(--pad-card); border: 1px solid var(--line); border-radius: var(--radius); background: var(--field); }
+.inf-guide h3 { margin: var(--gap-md) 0 4px; font-size: var(--fs-md, 1rem); }
+.inf-guide h3:first-child { margin-top: 0; }
+.inf-guide p, .inf-guide ol, .inf-guide ul, .inf-check p { margin: 0 0 var(--gap-sm); line-height: 1.6; overflow-wrap: anywhere; }
+.inf-form { display: flex; flex-direction: column; gap: var(--gap-sm); max-width: 560px; }
+.inf-form fieldset { margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: var(--gap-xs); }
+.inf-form legend { margin-bottom: 4px; font-weight: 700; }
+.inf-form .check-row .hint { display: block; }
+.riot-id { overflow-wrap: anywhere; }
+.copy-wrap { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; vertical-align: middle; }
+.copy-manual { display: block; width: 100%; margin-top: 4px; font: inherit; }
+.mail-preview {
+  margin: var(--gap-sm) 0; padding: var(--pad-box); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--paper);
+  white-space: pre-wrap; overflow-wrap: anywhere; font-family: inherit; font-size: var(--fs-sm);
+}

@@ -4,8 +4,8 @@ import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { expect, test } from 'vitest';
 
-// "~요"로 끝나도 괜찮은 낱말: 부탁("주세요"·"하세요"·"보세요"·"두세요")과 "~요"로 끝나는 명사
-const ALLOWED = new Set(['주세요', '하세요', '보세요', '두세요', '필요', '중요']);
+// "~요"로 끝나도 괜찮은 낱말: 부탁("주세요"·"하세요"·"보세요"·"두세요")과 "~요"로 끝나는 명사, 인사("안녕하세요" — 장인 확인 메일 문구, 046)
+const ALLOWED = new Set(['주세요', '하세요', '보세요', '두세요', '필요', '중요', '안녕하세요']);
 
 function files(dir) {
   return readdirSync(dir).flatMap((name) => {

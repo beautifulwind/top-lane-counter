@@ -21,7 +21,7 @@ import MyTitles, { LevelBar } from '../components/MyRewards';
 import { matchupTitle } from '../lib/josa';
 import VoteTally from '../components/VoteTally';
 import SectionHead from '../components/SectionHead';
-import { BellIcon, GearIcon, HelpIcon, LayersIcon, LinkIcon, SendIcon, UserIcon } from '../components/Icons';
+import { BellIcon, GearIcon, HelpIcon, LayersIcon, LinkIcon, SendIcon, SparklesIcon, UserIcon } from '../components/Icons';
 
 /**
  * 마이페이지 (/me): 맨 위 프로필 카드(닉네임·칭호 태그·Lv·경험치 막대 + [알림 보기]·[계정 설정]), 칭호판,
@@ -76,6 +76,9 @@ function ProfileCard({ auth, rewards, loading }) {
           <NotificationsLink userId={auth.user.id} />
           <Link to="/me/settings" className="btn btn-small me-settings-btn"><GearIcon size={16} /> 계정 설정</Link>
           <Link to="/inquiries" className="btn btn-small me-settings-btn"><HelpIcon size={16} /> 문의 내역</Link>
+          {!auth.isOperatorAccount && !auth.profile.is_guest && (
+            <Link to="/me/influencer" className="btn btn-small me-settings-btn"><SparklesIcon size={16} /> 장인 인증</Link>
+          )}
         </div>
       </div>
       {auth.isOperatorAccount ? (

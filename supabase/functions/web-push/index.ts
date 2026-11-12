@@ -65,7 +65,24 @@ const STAFF: Record<string, (n: PushNotice) => string> = {
   error_reported: () => '/admin/reports?tab=wiki',
   // 045: 게시판 신고(글·댓글·문서 댓글) → 신고 화면 "글·댓글 신고" 탭 (기본 탭)
   report_received: () => '/admin/reports',
+  // 046: 새 장인 인증 신청 (운영자만) → 장인 인증 심사 화면
+  influencer_applied: () => '/admin/influencers',
 };
+// 046 장인 인증 (신청자·겹친 회원, 푸시 묶음 my_results): 화면의 INFLUENCER_NOTICE(src/lib/notifications.js)와 같은 주소.
+// 운영자 라이엇 닉네임은 화면 상수(src/lib/influencer.js OPERATOR_RIOT_ID)에만 있으므로 잠금 화면에는 "운영자 계정으로"라고만 보낸다
+const INFLUENCER: Record<string, { title: string; url: string }> = {
+  influencer_received: { title: '장인 인증', url: '/me/influencer' },
+  influencer_expiring: { title: '장인 인증', url: '/me/influencer' },
+  influencer_approved: { title: '장인 인증', url: '/me/influencer' },
+  influencer_rejected: { title: '장인 인증', url: '/me/influencer' },
+  influencer_expired: { title: '장인 인증', url: '/me/influencer' },
+  influencer_revoked: { title: '장인 인증', url: '/me/influencer' },
+  nickname_reset_soon: { title: '닉네임 안내', url: '/me/settings' },
+  nickname_reset: { title: '닉네임 안내', url: '/me/settings' },
+  link_removed: { title: '장인 프로필', url: '/me/influencer' },
+};
+const withoutOperatorId = (s: string) =>
+  s.replaceAll('운영자 계정 {운영자 닉네임}으로', '운영자 계정으로').replaceAll('{운영자 닉네임}으로', '운영자 계정으로').replaceAll('{운영자 닉네임}', '운영자 계정');
 function matchupUrl(n: PushNotice): string {
   if (!n.target_champion || !n.counter_champion) return '/notifications';
   const path = `/champion/${encodeURIComponent(n.target_champion)}/counter/${encodeURIComponent(n.counter_champion)}`;
@@ -82,6 +99,8 @@ export function describePush(n: PushNotice): { title: string; body: string; url:
     const url = n.proposal_id ? `/me/proposals/${n.proposal_id}` : n.build_id ? `/me/builds/${n.build_id}` : '/notifications';
     return { title: r.title, body: n.message ? cut(`${r.memo}: ${n.message}`) : '눌러서 확인해 주세요.', url, tag };
   }
+  const inf = INFLUENCER[n.kind];
+  if (inf) return { title: inf.title, body: cut(withoutOperatorId(n.message ?? '눌러서 확인해 주세요.')), url: inf.url, tag };
   const s = STAFF[n.kind];
   if (s) return { title: '운영진 알림', body: cut(n.message ?? '새 알림이 있습니다.'), url: s(n), tag };
   return { title: '탑신병자', body: cut(n.message ?? '새 알림이 있습니다.'), url: '/notifications', tag };

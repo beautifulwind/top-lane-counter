@@ -51,6 +51,7 @@ export const TABLES = {
   counter_deletions: [],
   build_votes: [],
   notifications: [],
+  influencer_applications: [], // 046 장인 신청 (influencerRpc가 쓴다)
   // 014 경험치·칭호 (내 기록만 넣는다 — RLS 흉내는 테스트가 그렇게 넣는 것으로)
   xp_events: [],
   user_titles: [],
@@ -134,6 +135,8 @@ export function resetFake() {
   TABLES.counter_deletions = [];
   TABLES.build_votes = [];
   TABLES.notifications = [];
+  TABLES.influencer_applications = [];
+  fakeState.influencerNextAt = null;
   TABLES.xp_events = [];
   TABLES.user_titles = [];
   TABLES.offmeta_champions = [];
@@ -451,7 +454,7 @@ async function rpc(name, args) {
     if (!isStaffNow()) return { data: null, error: { message: '운영진만 할 수 있습니다.', code: '42501' } };
     fakeState.pendingCountsAsked += 1;
     if (fakeState.pendingCounts === 'error') return { data: null, error: { message: 'function admin_pending_counts() does not exist', code: '42883' } };
-    return { data: { proposals: 0, builds: 0, inquiries: 0, wiki_reports: 0, ...fakeState.pendingCounts }, error: null };
+    return { data: { proposals: 0, builds: 0, inquiries: 0, wiki_reports: 0, influencers: 0, ...fakeState.pendingCounts }, error: null };
   }
   if (['admin_member_stats', 'admin_search_members', 'admin_member_info', 'admin_member_list', 'admin_member_detail', 'admin_deleted_writings'].includes(name)) {
     // 036: 운영자 전용 (감독관·일반 회원·운영자 모드 끈 운영자는 거부). 화면이 알아서 부르는 것이라 rpcCalls에는 넣지 않는다.
@@ -504,6 +507,7 @@ async function rpc(name, args) {
   }
   // 043: 목록은 화면이 알아서 부르는 것이라 rpcCalls에 넣지 않는다 (보내기·처리만 남긴다)
   if (['report_wiki', 'staff_wiki_reports', 'handle_wiki_report'].includes(name)) return wikiReportRpc(name, args);
+  if (INFLUENCER_RPCS.includes(name)) return influencerRpc(name, args);
   fakeState.rpcCalls.push({ name, args });
   if (fakeState.rpcError) return { data: null, error: { message: fakeState.rpcError, code: fakeState.rpcErrorCode ?? '42501' } };
   if (name === 'mark_all_notifications_read') {
@@ -946,4 +950,98 @@ const storage = {
 
 export function db() {
   return { from: query, auth, rpc, functions, storage };
+}
+
+// ---------------- 046 장인 인증 ----------------
+// DB 함수처럼 흐름만 흉내 낸다 (규칙 자체는 supabase/tests/influencer_test.sql). 목록·내 상태는 화면이 알아서 부르므로 rpcCalls에 넣지 않는다.
+// fakeState.influencerNextAt = 다시 신청할 수 있는 때 (없으면 null), 오류는 fakeState.rpcError
+const INFLUENCER_RPCS = ['my_influencer_status', 'apply_influencer', 'cancel_influencer_application', 'admin_influencer_applications',
+  'approve_influencer', 'reject_influencer', 'extend_influencer_application', 'revoke_influencer', 'admin_set_nickname'];
+const KIND_LABEL = { creator: '크리에이터', pro: '프로게이머', grandmaster: '그랜드마스터 이상' };
+function influencerRpc(name, args) {
+  const listing = name === 'my_influencer_status' || name === 'admin_influencer_applications';
+  if (!listing) fakeState.rpcCalls.push({ name, args });
+  if (fakeState.rpcError) return { data: null, error: { message: fakeState.rpcError, code: fakeState.rpcErrorCode ?? '42501' } };
+  const meRow = meNow();
+  const apps = TABLES.influencer_applications;
+  const prof = (id) => TABLES.profiles.find((p) => p.id === id);
+  const notify = (userId, kind, message) => TABLES.notifications.push({
+    id: 7000 + TABLES.notifications.length, user_id: userId, kind, message, created_at: new Date().toISOString(), read_at: null,
+  });
+  if (name === 'my_influencer_status') {
+    if (!meRow) return { data: null, error: { message: '로그인해 주세요.', code: '42501' } };
+    const last = [...apps].reverse().find((a) => a.user_id === meRow.id) ?? null;
+    return ok({
+      influencer: meRow.influencer ?? null, influencer_at: meRow.influencer_at ?? null, nickname_state: meRow.nickname_state ?? null,
+      nickname_reset_at: meRow.nickname_reset_at ?? null, is_guest: !!meRow.is_guest, next_apply_at: fakeState.influencerNextAt,
+      application: last && structuredClone(last),
+    });
+  }
+  if (name === 'apply_influencer') {
+    const id = apps.length + 1;
+    const now = Date.now();
+    apps.push({
+      id, user_id: meRow.id, kind: args.p_kind, nickname: args.p_nickname, old_nickname: meRow.nickname, channel_url: args.p_channel_url,
+      official_email: args.p_email, riot_id: args.p_riot_id, opgg_url: args.p_opgg_url, status: 'pending',
+      created_at: new Date(now).toISOString(), expires_at: new Date(now + 14 * 86400000).toISOString(), extended_count: 0,
+      ended_at: null, review_note: null, retry_now: false, nickname_reverted: null, revoked_at: null, revoke_note: null,
+    });
+    Object.assign(meRow, { nickname: args.p_nickname, nickname_state: 'pending' });
+    notify(meRow.id, 'influencer_received', args.p_kind === 'grandmaster'
+      ? '신청이 접수됐습니다. 14일 안에 운영자 계정 {운영자 닉네임}으로 친구 요청을 보내 주세요. 요청이 도착하면 이 닉네임의 주인이 맞는지 확인합니다. 수락은 하지 않습니다.'
+      : '신청이 접수됐습니다. 적어 주신 공식 이메일로 확인 메일을 보냅니다. 14일 안에 "본인입니다"라고 회신해 주세요.');
+    return ok(id);
+  }
+  const a = apps.find((x) => x.id === args.p_id);
+  const end = (status, extra = {}) => Object.assign(a, { status, ended_at: new Date().toISOString(), official_email: null, riot_id: null, ...extra });
+  if (name === 'cancel_influencer_application') {
+    end('cancelled');
+    Object.assign(prof(a.user_id), { nickname_state: null });
+    return ok(null);
+  }
+  if (!isAdminNow()) return { data: null, error: { message: '운영자만 할 수 있습니다.', code: '42501' } };
+  if (name === 'admin_influencer_applications') {
+    const want = (x) => (x.status === 'pending') === (args.p_status === 'pending');
+    const rows = apps.filter(want).map((x) => {
+      const u = prof(x.user_id);
+      const o = u && TABLES.profiles.find((p) => p.id !== u.id && p.nickname && p.nickname.toLowerCase() === u.nickname?.toLowerCase());
+      return {
+        ...structuredClone(x), kind_label: KIND_LABEL[x.kind], reviewer: x.reviewer ?? null, recent_rejections: 0,
+        user: u ? { id: u.id, nickname: u.nickname, role: u.role, level: u.level, main_title: u.main_title ?? null, is_guest: !!u.is_guest,
+          influencer: u.influencer ?? null, nickname_state: u.nickname_state ?? null } : null,
+        overlap: x.status === 'pending' && o ? { id: o.id, nickname: o.nickname, role: o.role } : null,
+      };
+    });
+    const size = args.p_size ?? 20;
+    const page = args.p_page ?? 1;
+    return ok({ total: rows.length, page, size, items: rows.slice((page - 1) * size, page * size) });
+  }
+  if (name === 'approve_influencer') {
+    end('approved', { review_note: args.p_note, reviewer: meRow.nickname });
+    Object.assign(prof(a.user_id), { influencer: a.kind, influencer_at: new Date().toISOString(), nickname_state: null });
+    return ok(null);
+  }
+  if (name === 'reject_influencer') {
+    const u = prof(a.user_id);
+    const back = args.p_revert_nickname ? a.old_nickname : null;
+    end('rejected', { review_note: args.p_note, retry_now: !!args.p_retry_now, nickname_reverted: back, reviewer: meRow.nickname });
+    Object.assign(u, { nickname_state: null }, back ? { nickname: back } : {});
+    return ok(null);
+  }
+  if (name === 'extend_influencer_application') {
+    a.expires_at = new Date(Date.parse(a.expires_at) + 7 * 86400000).toISOString();
+    a.extended_count += 1;
+    return ok(a.expires_at);
+  }
+  if (name === 'revoke_influencer') {
+    Object.assign(prof(args.p_user), { influencer: null, influencer_at: null });
+    apps.filter((x) => x.user_id === args.p_user && x.status === 'approved')
+      .forEach((x) => Object.assign(x, { status: 'revoked', revoked_at: new Date().toISOString(), revoke_note: args.p_note }));
+    return ok(null);
+  }
+  if (name === 'admin_set_nickname') {
+    Object.assign(prof(args.p_user), { nickname: args.p_nickname });
+    return ok(null);
+  }
+  return null;
 }

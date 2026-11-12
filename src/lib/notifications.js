@@ -3,6 +3,7 @@
 import { TYPE_LABEL, fmtDateTime } from './format';
 import { matchupTitle } from './josa';
 import { TITLES } from './titles';
+import { fillOperatorId } from './influencer';
 
 // 제안·빌드 알림: 제목, 메모 이름
 const DECISION = {
@@ -31,6 +32,20 @@ const STAFF_NEW = {
   error_reported: { icon: 'flag', label: (n) => (n.build_id ? '빌드' : '상대법'), to: () => '/admin/reports?tab=wiki' },
   // 045: 게시판 신고 — 글·댓글·문서 댓글 (운영진, 같은 대상의 처음 신고만) → 신고 화면 "글·댓글 신고" 탭(기본 탭). 문서 댓글만 둘째 줄에 매치업
   report_received: { icon: 'flag', label: '문서 댓글', to: () => '/admin/reports' },
+};
+// 046 장인 인증: DB 문장이 곧 제목(" 사유: …"는 둘째 줄). 운영자 새 신청 → 심사 화면, 신청자 → 신청 화면, 닉네임 바뀜 → 계정 설정.
+// 접수·만료 전 알림의 "{운영자 닉네임}"은 lib/influencer.js 상수로 채운다
+export const INFLUENCER_NOTICE = {
+  influencer_applied: { icon: 'flag', to: '/admin/influencers' },
+  influencer_received: { icon: 'flag', to: '/me/influencer' },
+  influencer_expiring: { icon: 'bell', to: '/me/influencer' },
+  influencer_approved: { icon: 'check', to: '/me/influencer' },
+  influencer_rejected: { icon: 'ban', to: '/me/influencer' },
+  influencer_expired: { icon: 'ban', to: '/me/influencer' },
+  influencer_revoked: { icon: 'ban', to: '/me/influencer' },
+  nickname_reset_soon: { icon: 'bell', to: '/me/settings' },
+  nickname_reset: { icon: 'bell', to: '/me/settings' },
+  link_removed: { icon: 'ban', to: '/me/influencer' }, // 047 외부 링크 (종류만 미리)
 };
 const wikiPath = (n) => {
   const c = n.counter ?? n.build?.counter;
@@ -117,6 +132,11 @@ export function describeNotification(n, name = (id) => id) {
       detail: memo ? `메모: ${memo}` : null,
       to: n.kind.startsWith('doc_comment') ? docLink : postLink,
     };
+  }
+  const inf = INFLUENCER_NOTICE[n.kind];
+  if (inf) {
+    const [title, reason] = fillOperatorId(n.message).split(' 사유: ');
+    return { icon: inf.icon, title, subject: null, detail: reason ? `사유: ${reason}` : null, to: inf.to };
   }
   return { icon: 'bell', title: n.message ?? '알림', to: null }; // 모르는 종류 (새 종류가 생겼을 때)
 }

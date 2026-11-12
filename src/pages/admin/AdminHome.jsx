@@ -30,9 +30,10 @@ import MediaUsage from '../../components/MediaUsage';
 import { matchupTitle } from '../../lib/josa';
 import VoteTally from '../../components/VoteTally';
 import SectionHead from '../../components/SectionHead';
+import { InfluencerLink } from '../../components/InfluencerAdmin';
 import { APPROVAL_ENABLED } from '../../lib/features';
 import {
-  ClockIcon, CoinsIcon, DiceIcon, EyeOffIcon, HelpIcon, ImageIcon, LayersIcon, MessageIcon, SendIcon, ShieldIcon, TrashIcon, UsersIcon,
+  ClockIcon, CoinsIcon, DiceIcon, EyeOffIcon, HelpIcon, ImageIcon, LayersIcon, MessageIcon, SendIcon, ShieldIcon, TrashIcon, UsersIcon, SparklesIcon,
 } from '../../components/Icons';
 
 /**
@@ -265,6 +266,11 @@ function PendingList() {
       <section className="section">
         <SectionHead icon={HelpIcon}>문의</SectionHead>
         <InquiryAdmin />
+      </section>
+
+      <section className="section">
+        <SectionHead icon={SparklesIcon}>장인 인증</SectionHead>
+        <InfluencerLink />
       </section>
 
       <section className="section">

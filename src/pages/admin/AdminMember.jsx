@@ -6,10 +6,12 @@ import RequireOperator from '../../components/RequireOperator';
 import { ErrorBox, Loading } from '../../components/Status';
 import { ACTION_LABEL, KIND_LABEL, ModeratorToggle, ROLE_LABEL } from '../../components/ModeratorAdmin';
 import UserName from '../../components/UserName';
+import { RenameMember, RevokeInfluencer } from '../../components/InfluencerAdmin';
 import { UsersIcon } from '../../components/Icons';
 import { fmtDateTime } from '../../lib/format';
 import { matchupTitle } from '../../lib/josa';
 import { titleName } from '../../lib/titles';
+import { INFLUENCER_KINDS } from '../../lib/nickname';
 import { useAsync } from '../../lib/useAsync';
 
 const PROVIDER_LABEL = { google: '구글', kakao: '카카오' };
@@ -71,7 +73,7 @@ function Info({ info, onDone }) {
       <ul className="log-list" aria-label={`${info.nickname} 회원 정보`}>
         <li>가입일 {fmtDateTime(info.created_at)}</li>
         <li>가입 방식 {joinedWith(info)}</li>
-        <li>등급 {ROLE_LABEL[info.role] ?? info.role}</li>
+        <li>등급 {ROLE_LABEL[info.role] ?? info.role}{info.influencer && ` · 장인 (${INFLUENCER_KINDS[info.influencer] ?? info.influencer})`}{info.nickname_state === 'pending' && ' · 장인 인증 대기'}{info.nickname_state === 'yielding' && ' · 닉네임 변경 예정'}</li>
         <li>레벨 {info.level} · 경험치 {info.xp}{info.main_title ? ` · 대표 칭호 ${titleName(info.main_title)}` : ''}</li>
         <li>얻은 칭호 {titles.length ? titles.join(', ') : '없음'}</li>
         <li>활동 글 {info.posts}개 · 댓글 {info.comments}개 · 상대법 {info.matchups}개 · 빌드 {info.builds}개</li>
@@ -80,6 +82,12 @@ function Info({ info, onDone }) {
         )}
       </ul>
       <ModeratorToggle member={info} onDone={onDone} />
+      {info.role !== 'admin' && (
+        <div className="row-actions" aria-label="장인·닉네임">
+          <RevokeInfluencer member={info} onDone={onDone} />
+          <RenameMember member={info} onDone={onDone} />
+        </div>
+      )}
     </section>
   );
 }
