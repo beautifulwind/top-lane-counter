@@ -722,6 +722,7 @@ RLS 원칙:
   - 구글: 이메일, 이름, 프로필 사진 / 카카오: 이메일(필수 동의), 닉네임, 프로필 사진 — 모두 Supabase `auth.users`에 저장, 화면에는 직접 정한 사이트 닉네임만 씀
   - 이용 중 생기는 정보: 제안과 처리 메모, 문서 수정 기록, 빌드(내용·상태·메모)와 빌드 추천/비추천 기록, 자유게시판 글·댓글·추천·신고, 매치업 문서 댓글, 글·댓글을 고치기 시작한 시각(고치기 유예), 알림, 숨김·삭제 기록, 로그인 시각·접속 기록
   - 탈퇴 시: 계정·닉네임·제안·알림·문의와 답변·내 표(추천/비추천)·공개되지 않은 내 빌드(대기·거절·재검토 중)·자유게시판 글(다른 사람 댓글이 달린 글은 내용을 비우고 안 보이게 남김, 1년 뒤 정리)·댓글·추천·신고·문서 댓글은 삭제, 반영된 문서와 수정 기록·공개(숨김 포함) 빌드·투표 기록·운영자 기록은 작성자 표시만 지움(`on delete set null`)
+  - 탈퇴 시 (055 뒤): 빌드 추천·비추천과 글 추천은 지우지 않고 누른 사람만 비워 수를 유지, 장인 인증 신청 기록은 식별 칸(희망·옛 닉네임, 채널·op.gg, 메모 등)을 지우고 유형·상태·시각만 1년, 처리 기록은 대상 회원 칸을 비우고 "탈퇴한 이용자"(메모의 닉네임·링크 주소도 지움, 처리한 사람·종류·시각은 1년), 탈퇴한 장인의 닉네임은 30일 예약(비슷한 닉네임 포함, 닉네임 원문은 보관 안 함) — 6-42. **방침·약관 문구는 아직 이 내용으로 안 고침(화면 단계에서)**
 
 ### 회원 탈퇴 기능 (017에서 만듦 — 6-8)
 `/me`의 [탈퇴] (닉네임 입력 확인, 운영자 불가). 남기는 기록은 작성자 표시만 지우는 구조 그대로, 경험치·칭호는 함께 삭제. 방침 8·9번과 약관 제9조를 이에 맞게 고쳤다. 버튼을 쓸 수 없는 경우(로그인이 안 됨 등)에는 운영자 이메일로 요청 → 운영자가 Supabase 대시보드(Authentication → Users)에서 지운다.
@@ -813,10 +814,11 @@ RLS 원칙:
 41. `supabase/migrations/041_terms_sangdaebeop.sql` (화면 용어 "카운터" → "상대법" — 함수의 오류·알림 문구. 확인 조회 `supabase/scripts/check_terms_sangdaebeop.sql` — 실행 전·후)
 42. `supabase/migrations/042_member_admin_new_post_notify.sql` (회원 목록·회원 정보 조회 · 새 글 알림 `post_created`. 확인 조회 `supabase/scripts/check_member_admin.sql` → web-push 재배포 → 새 화면 push)
 43. `supabase/migrations/043_wiki_reports_revert.sql` (오류 신고 `wiki_reports` · 운영자 빌드 수정 기록·되돌리기 · 감독관 빌드 숨기기 · `build_edit_check`. 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행. 확인 조회 `supabase/scripts/check_wiki_reports_revert.sql` — 실행 전·후. **실행 뒤 pg_cron 일정 등록 SQL을 따로 한 번**: `select cron.schedule('purge-wiki-reports', '0 20 * * *', $$select public.purge_wiki_reports()$$);` → 확인 조회 21번 1)
-44. (비움 — 탈퇴 처리용으로 예약. 045는 044 없이 043 다음에 실행해도 된다)
+44. (비움 — 탈퇴 처리용으로 예약했던 번호. 탈퇴 정리는 055로 만들었다(044라는 이름이면 046~054보다 먼저 실행되어 멈춤). 045는 044 없이 043 다음에 실행해도 된다)
 45. `supabase/migrations/045_report_received_notify.sql` (게시판 신고 → 운영진 알림 `report_received`. 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행. 확인 조회 `supabase/scripts/check_report_received.sql` — 실행 전·후 → web-push 재배포 → 새 화면 push. **pg_cron 필요 없음**)
 46. `supabase/migrations/046_influencer.sql` (장인 인증 1단계 DB — 신청 표·닉네임 열쇠 인덱스·사칭 금지·알림·처리 기록·신규 가입자·하루 작업. **실행 전에 `supabase/scripts/check_influencer.sql` 1번 줄 "닉네임 열쇠 중복"이 0인지 확인**(겹치면 046이 멈춤). 지금 배포된 화면과도 동작하므로 이 SQL을 먼저 실행하고 `check_influencer.sql`을 다시 실행(실행 후 정상 칸) → **pg_cron 일정 등록**: `select cron.schedule('influencer-daily', '0 3 * * *', $$select public.influencer_daily()$$);` (한국 시간 정오 — 신청자 알림이 새벽에 울리지 않게). 닉네임 인덱스 되돌리는 법은 파일 맨 위 설명)
 50. `supabase/migrations/050_influencer_follow.sql` (장인 팔로우 DB — 표 3개·알림 종류 `followed_build_created`·푸시 묶음 `follow_builds`·함수·트리거 2개. 지금 배포된 화면과도 동작한다. 순서: `supabase/scripts/check_follow.sql`(실행 전, 2~4번 값 적어 두기) → 050 실행 → `check_follow.sql`(실행 후) → **pg_cron 일정 등록**: `select cron.schedule('follow-notify', '* * * * *', $$select public.follow_notify_dispatch()$$);` → `check_follow.sql` 21번이 1. 되돌리기는 파일 맨 위)
+55. `supabase/migrations/055_withdrawal.sql` (회원 탈퇴 정리 — 6-42. **실행 전 `supabase/scripts/check_withdraw_before.sql`**(1~5번 정상, 6~7번 "한 번 정리" 줄 수와 9~13번 값을 적어 둠) → 055 실행(NOTICE 두 줄의 줄 수가 6번·7번 합계와 같은지) → `check_withdraw_after.sql`(1~14번 정상, 15~19번을 적어 둔 값과 비교). 지금 배포된 화면과도 동작. 새 pg_cron 없음(닉네임 예약 정리는 기존 `influencer-daily`), Edge Function 재배포 없음. 되돌리는 법은 파일 맨 위)
 - **테스트 데이터 비우기** (마이그레이션 아님, 정식 공개 직전 등 필요할 때): `supabase/scripts/reset_test_data_preview.sql`(읽기만 — 지울·남을 개수)로 확인 → `supabase/scripts/reset_test_data.sql`. 계정(운영자 계정·운영자 모드 상태·테스트용 구글 계정 포함 — 계정은 하나도 지우지 않는다)·프로필·설정값과 트린다미어 상대 말파이트 카운터(지금 문서·공개 빌드·처음 제안)만 남기고, 문의·처리 기록(`moderation_log`, 감독관 지정·해제 기록 포함)·알림·`proposal_reviewing` 등은 모두 비우며, 말파 문서의 수정 기록은 지금 내용 1줄로 정리, 경험치·레벨·칭호는 알림 없이 다시 계산한다. SQL Editor가 RLS를 물으면 **"Run without RLS"**로 실행 ("Run and enable RLS"는 임시 표 `reset_keep`·`reset_admins` 때문에 에러). 운영자 계정이 없거나 끝에서 운영자 role·모드가 바뀌어 있으면 전부 되돌리고 멈춘다. 되돌릴 수 없으므로 순서는 ① 백업 확인 → ② preview → ③ reset → ④ 결과 표 확인.
 - 합쳐서 한 번에 돌리지 않는다: 파일마다 `begin … commit`이라 중간에 실패하면 앞부분만 반영되고, 다시 돌리면 "already exists"가 난다.
 - 새 마이그레이션(010 …)을 만들면 이 목록에 추가한다. `supabase/tests/run.sh`가 빈 DB에 같은 순서로 실행한 뒤 검사용 데이터(`tests/fixtures.sql`)를 넣고 검사한다 (`supabase/tests`는 실제 프로젝트에서 실행하지 않음).
@@ -1234,3 +1236,20 @@ RLS 원칙:
 - **되돌리기**: `054_title_badge.sql` 맨 위(한정판 대표 칭호는 비워지고 한정판 `equippable`은 모두 false — 053 제약 때문). 로컬에서 053과 스키마 같음·되돌린 뒤 다시 실행 가능 확인. 확인 조회 `check_title_badge_before.sql` / `check_title_badge_after.sql`(회원 칭호 줄 수·종류별 수·대표 칭호 수·대표 칭호별 수·도감 줄 수가 같아야 함).
 - **검사**: DB `supabase/tests/title_badge_test.sql`(36개), `title_catalog_test.sql`의 장착 제약 줄을 054 기준으로. 화면 `src/test/titleBadge.test.jsx`(가짜 DB 한정판 3개 — 그림·색만·비밀 — 비로그인 게시판·댓글·문서 댓글 배지, 마이페이지 장착/해제, 회원 관리). 가짜 DB `public_title_info`, 대표 칭호 숨김 조건, 회수 때 대표 칭호 비우기.
 - **방침·약관**: 이번에 안 고침(바꿀 곳 목록만 따로).
+
+### 6-42. 회원 탈퇴 정리 — DB (2026-11-13, 055)
+> 044는 탈퇴용으로 예약했던 번호지만 비워 두고 055로 만들었다(044 이름이면 새 DB에서 046~054보다 먼저 실행되어 장인·팔로우 표가 없어 멈춤). 화면·방침·약관 문구는 다음 단계.
+- **공통 안쪽 함수** `withdraw_account_unchecked(회원)` (아무도 직접 못 부름): 운영자 거부 → 카카오 ID 찾기 → `auth.users` 삭제 → 카카오 ID 돌려줌. `delete_my_account`(탈퇴·비회원 기록 지우기), `kakao_unlinked`(카카오만 연결 → 'deleted'), `cleanup_guest_accounts`(한 명씩)가 모두 이것을 부른다. 함수 이름·인자·권한은 그대로라 Edge Function 재배포 없음.
+- **정리 함수** `withdraw_cleanup(회원)`: 프로필 삭제 직전 트리거 `profiles_anonymize_on_delete`(이름 순으로 게시판 정리보다 먼저)가 부른다 → **대시보드(Authentication → Users)에서 지워도 같은 정리**.
+  - 인증된 장인이면 닉네임 키(`nickname_key`)를 `nickname_holds`에 30일(`xp_rules.influencer_nickname_hold_days`) 예약. 일반 회원·비회원은 안 함.
+  - 처리 기록(`moderation_log`)에서 이 회원이 대상인 줄 — 대상 회원(`target_kind = 'user'`), 이 회원의 장인 신청, 이 회원의 링크(지금 링크 id 또는 이 회원이 썼던 닉네임과 같은 대상 닉네임) — 의 `target_id`를 비우고 `target_nickname`을 "탈퇴한 이용자"로. 메모는 `moderation_note_scrub`: 닉네임 바꾸기의 "옛 → 새 · "를 지우고 사유만(형식이 다르면 메모 전체를 지움), 링크 처리 메모 맨 앞의 링크 주소를 지움, 남은 메모의 이 회원 닉네임(2자 이상 — 지금·변경 기록·신청의 희망/옛/되돌린 닉네임)을 "탈퇴한 이용자"로. 처리한 사람·종류·시각은 그대로 1년(035).
+- **장인 인증 신청**: `user_id`가 비워지면(on delete set null) 신청 표 트리거가 희망·옛·되돌린 닉네임, 채널 URL/키, op.gg, 공식 이메일, 라이엇 ID/해시, 심사·해제 메모, 처리한 운영진을 지운다. 처리 전·승인 줄은 `withdrawn`. 남는 칸은 유형·상태·직접 지정 여부·시각·늘린 횟수 — 끝난 날부터 1년 뒤 `influencer_daily`가 지우는 것은 그대로. `nickname`은 빈칸 허용, 표 제약 `influencer_applications_fields`에 "user_id가 비면 식별 칸도 모두 비어 있고 처리 전이 아님", `influencer_applications_nickname_kept`(회원 신청은 닉네임 필수).
+- **닉네임 예약** `nickname_holds(nickname_key, hold_until)`: RLS 켬·정책 없음·anon/authenticated 권한 없음. `check_nickname_key`가 예약된 키를 막는다 — 직접 바꾸기뿐 아니라 시스템 경로(장인 신청 희망 닉네임, 운영자 닉네임 바꾸기)도. 문구 "최근 탈퇴한 장인의 닉네임이라 지금은 쓸 수 없습니다. 비슷한 닉네임도 쓸 수 없습니다."(23505). 임시 닉네임도 예약 키를 피함. 기간이 지난 줄은 `influencer_daily` 5단계가 지움(돌려주는 값 `nickname_holds_purged`, **새 pg_cron 없음**). 탈퇴한 장인에게 닉네임을 양보하던(`yielding`) 회원은 예전처럼 유예가 끝나면 임시 닉네임으로 바뀐다.
+- **추천·비추천** (`build_votes`, `post_votes`): 탈퇴해도 지우지 않고 `user_id`만 비움(on delete set null) → 빌드·글 추천 수 유지. 기본 키는 새 `id`, 한 사람 한 표는 유일 제약 `(build_id|post_id, user_id)`(빈칸끼리는 겹쳐도 됨). `apply_build_vote`는 누른 사람만 바뀐 UPDATE를 건너뛰어 빌드를 건드리지 않음 → 작성자 경험치·칭호 다시 계산(`builds_rewards`)이 돌지 않고 **남의 칭호 회수·알림 없음**. 읽기 정책(내 표만·운영자는 전부), `vote_build`·`vote_post`(글 추천 수는 `count(*)`로 익명 포함), 비회원 막기 트리거는 그대로 동작. 같은 사람이 다시 가입해 또 누르는 것은 막지 않는다(재가입 식별값을 보관하지 않음).
+- **그대로**: 처리 전 신고가 걸린 글·댓글과 숨김 기록(`hide_log`)은 지금처럼 탈퇴 때 바로 지움. 재가입 제재 회피는 막지 않음.
+- **한 번 정리**(055 실행 때): 이미 탈퇴한 회원의 신청 기록(`user_id`가 빈 줄)의 식별 칸, 계정이 없는 대상의 처리 기록(회원 / `user_id`가 빈 신청 / 대상 닉네임을 지금 쓰는 회원도 남은 회원의 변경 기록도 없는 링크) — 줄 수는 NOTICE와 확인 스크립트.
+- **확인**: `supabase/scripts/check_withdraw_before.sql` / `check_withdraw_after.sql`. 테스트 데이터 비우기 스크립트에 `nickname_holds` 추가(익명 추천은 기존 추천 비우기에 포함).
+- **되돌리기**: `055_withdrawal.sql` 맨 위(익명 추천 줄과 탈퇴로 비운 신청 줄은 지우고 수는 그대로, 비운 칸은 되살릴 수 없음). 로컬에서 054와 스키마 같음(pg_dump 비교) 확인.
+- **검사**: DB `supabase/tests/withdraw_test.sql`(63개 — 장인 + 팔로워 + 링크 + 한정판 대표 칭호 + 빌드·글 추천을 가진 회원의 탈퇴를 처음부터 끝까지, 카카오·대시보드·비회원 정리 경로, 예약과 비슷한 닉네임, `influencer_daily` 정리, 권한). `builds_test.sql`의 투표자 탈퇴 줄을 "표는 익명으로 남고 수 유지"로, `notice_test`·`new_followers_test`의 설정값 개수 검사를 "그 마이그레이션이 더하지 않음"으로. 가짜 DB(`src/test/fakeSupabase.js`): delete-account 흉내가 탈퇴 정리(`fakeWithdraw`)를 하고 프로필 닉네임 저장이 예약을 막음, 화면 검사 `account.test.jsx` 1개.
+- **다음 단계(화면)에서 할 것**: 닉네임 저장의 23505를 모두 "이미 사용 중"으로 바꾸는 `saveNickname`(`src/api/auth.js`)이 예약 문구를 그대로 보이게, 장인 신청·운영자 닉네임 바꾸기 화면도 같은 문구, 처리 기록·회원 정보·장인 관리 화면에서 `target_id`가 빈 줄과 `nickname`이 빈 신청 줄을 "탈퇴한 이용자"로, 탈퇴 안내 목록(장인·링크·팔로워·한정판 칭호·추천 익명 보관), "(탈퇴한 유저)"/"탈퇴한 이용자" 통일, 방침·약관 문구와 시행일.
+

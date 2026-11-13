@@ -126,3 +126,29 @@ test('탈퇴 실패: 서버 문구를 보여 주고 그대로 남는다', async 
   fireEvent.click(within(del).getByRole('button', { name: '취소' }));
   expect(within(del).queryByRole('textbox')).toBeNull();
 });
+
+test('탈퇴(055 가짜 DB): 장인이 탈퇴하면 추천은 익명으로 남고, 그 닉네임은 다른 회원이 못 쓴다', async () => {
+  fakeLogin('u-jang', { nickname: '장인님', influencer: 'pro', influencer_at: '2026-11-01T00:00:00Z' });
+  TABLES.build_votes.push({ build_id: 102, user_id: 'u-jang', value: 1 });
+  TABLES.moderation_log.push({ id: 1, actor_nickname: '영자', actor_role: 'admin', action: 'grant_influencer', target_kind: 'user', target_id: 'u-jang', target_nickname: '장인님', note: '프로게이머' });
+  start('/me/settings');
+  const del = await screen.findByRole('region', { name: '회원 탈퇴' });
+  fireEvent.click(within(del).getByRole('button', { name: '탈퇴' }));
+  fireEvent.change(within(del).getByRole('textbox'), { target: { value: '장인님' } });
+  fireEvent.click(within(del).getByRole('button', { name: '탈퇴 확정' }));
+  expect(await screen.findByText(/탈퇴했습니다/)).toBeDefined();
+  expect(TABLES.profiles.some((p) => p.id === 'u-jang')).toBe(false);
+  expect(TABLES.build_votes).toEqual([{ build_id: 102, user_id: null, value: 1 }]);
+  expect(TABLES.moderation_log[0]).toMatchObject({ target_id: null, target_nickname: '탈퇴한 이용자', actor_nickname: '영자' });
+  cleanup();
+
+  fakeLogin('u-old');
+  start('/me/settings');
+  const nick = await screen.findByRole('region', { name: '닉네임 바꾸기' });
+  fireEvent.click(await within(nick).findByRole('button', { name: '닉네임 바꾸기' }));
+  fireEvent.change(within(nick).getByLabelText('새 닉네임'), { target: { value: '장인님' } });
+  fireEvent.click(within(nick).getByRole('button', { name: '고친 내용 저장' }));
+  // DB(와 가짜)는 23505 "최근 탈퇴한 장인의 닉네임…"을 돌려주지만 화면(saveNickname)은 23505를 모두 "이미 사용 중"으로 바꾼다 - 화면 단계에서 고칠 것
+  expect(await within(nick).findByRole('alert')).toHaveProperty('textContent', '이미 사용 중인 닉네임입니다. 비슷한 닉네임도 쓸 수 없습니다.');
+  expect(TABLES.profiles.find((p) => p.id === 'u-old').nickname).not.toBe('장인님');
+});

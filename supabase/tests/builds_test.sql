@@ -233,8 +233,9 @@ select t.ok('알림 종류 검사', (select count(*) = 0 from notifications wher
 -- ===== 10. 탈퇴(계정 삭제) =====
 -- 유저(b): 공개 빌드 b1(추천 2), 거절 b2·b3 / 유저2(d): b1에 추천
 delete from auth.users where id = '00000000-0000-0000-0000-00000000000d';
-select t.ok('투표한 사람 탈퇴: 표는 지워지고 수 반영, 투표 기록은 이름만 비움',
-  (select up_count = 1 from builds where id = (select v from ids where k = 'b1'))
+select t.ok('투표한 사람 탈퇴(055): 표는 누른 사람만 비우고 수 유지, 투표 기록은 이름만 비움',
+  (select up_count = 2 from builds where id = (select v from ids where k = 'b1'))
+  and (select count(*) = 1 from build_votes where build_id = (select v from ids where k = 'b1') and user_id is null)
   and (select count(*) = 4 from build_vote_log where build_id = (select v from ids where k = 'b1') and voter_id is null));
 delete from auth.users where id = '00000000-0000-0000-0000-00000000000b';
 select t.ok('작성자 탈퇴: 거절·대기 빌드는 지워짐', (select count(*) = 0 from builds where id in (select v from ids where k in ('b2', 'b3'))));

@@ -89,6 +89,8 @@ export const TABLES = {
   posts: [],
   post_comments: [],
   post_votes: [],
+  moderation_log: [], // 처리 기록 (resetFake도 비움)
+  nickname_holds: [], // 055 탈퇴한 장인 닉네임 예약 { nickname_key, hold_until } (delete-account 흉내가 넣는다)
   reports: [],
   // 043 오류 신고 (화면은 함수로만 읽고 쓴다)
   wiki_reports: [],
@@ -180,6 +182,7 @@ export function resetFake() {
   TABLES.posts = [];
   TABLES.post_comments = [];
   TABLES.post_votes = [];
+  TABLES.nickname_holds = [];
   TABLES.reports = [];
   TABLES.wiki_reports = [];
   TABLES.moderation_log = [];
@@ -413,6 +416,10 @@ function query(table) {
         if (cur.nickname_state === 'pending') return { data: null, error: { code: '42501', message: '장인 인증 신청을 심사하는 동안에는 닉네임을 바꿀 수 없습니다. 신청을 취소하면 바꿀 수 있습니다.' } };
         if (cur.nickname_state === 'yielding') Object.assign(patch, { nickname_state: null, nickname_reset_at: null });
       }
+      // 055 check_nickname_key 흉내: 탈퇴한 장인의 닉네임은 30일 동안 (비슷한 닉네임 포함) 못 씀
+      if (patch.nickname && cur?.nickname !== patch.nickname && heldNickname(patch.nickname)) {
+        return { data: null, error: { code: '23505', message: '최근 탈퇴한 장인의 닉네임이라 지금은 쓸 수 없습니다. 비슷한 닉네임도 쓸 수 없습니다.' } };
+      }
       const nick = patch.nickname?.toLowerCase();
       if (nick && TABLES[table].some((r) => r.id !== me && r.nickname?.toLowerCase() === nick)) {
         return { data: null, error: { code: '23505', message: 'duplicate key value violates unique constraint' } };
@@ -434,9 +441,41 @@ const functions = {
       const message = fakeState.functionError;
       return { data: null, error: { message: 'Edge Function returned a non-2xx status code', context: { json: async () => ({ error: message }) } } };
     }
+    if (name === 'delete-account') fakeWithdraw(fakeState.session?.user.id);
     return { data: { ok: true }, error: null };
   },
 };
+
+// 055 흉내: 닉네임 비교 키 (진짜 nickname_key는 더 많은 비슷한 글자를 묶는다 - 화면 검사에는 공백/대소문자면 충분)
+const holdKey = (name) => String(name ?? '').toLowerCase().replace(/[\s_.-]/g, '');
+const heldNickname = (name) => TABLES.nickname_holds.some((h) => h.nickname_key === holdKey(name) && new Date(h.hold_until) > new Date());
+
+// 055 탈퇴 흉내 (withdraw_account_unchecked + withdraw_cleanup + on delete 규칙 중 화면에 보이는 것):
+// 장인이면 닉네임 30일 예약, 처리 기록의 대상은 "탈퇴한 이용자"(target_id 비움), 추천/비추천은 누른 사람만 비움(수 유지),
+// 장인 신청 기록은 식별 칸을 비우고 상태 withdrawn(처리 전/승인), 프로필/팔로우/링크/칭호는 지움
+export function fakeWithdraw(userId) {
+  const prof = TABLES.profiles.find((p) => p.id === userId);
+  if (!prof) return;
+  if (prof.influencer && prof.nickname) {
+    TABLES.nickname_holds.push({ nickname_key: holdKey(prof.nickname), hold_until: new Date(Date.now() + 30 * 86400000).toISOString() });
+  }
+  TABLES.moderation_log.forEach((m) => {
+    if (m.target_kind === 'user' && m.target_id === userId) Object.assign(m, { target_id: null, target_nickname: '탈퇴한 이용자' });
+  });
+  TABLES.build_votes.forEach((v) => { if (v.user_id === userId) v.user_id = null; });
+  TABLES.post_votes.forEach((v) => { if (v.user_id === userId) v.user_id = null; });
+  TABLES.influencer_applications.forEach((a) => {
+    if (a.user_id !== userId) return;
+    Object.assign(a, {
+      user_id: null, status: ['pending', 'approved'].includes(a.status) ? 'withdrawn' : a.status, nickname: null, old_nickname: null,
+      nickname_reverted: null, channel_url: null, official_email: null, riot_id: null, opgg_url: null, review_note: null, revoke_note: null,
+    });
+  });
+  TABLES.influencer_follows = TABLES.influencer_follows.filter((f) => f.follower_id !== userId && f.influencer_id !== userId);
+  TABLES.ext_links = TABLES.ext_links.filter((l) => l.owner_id !== userId);
+  TABLES.user_titles = TABLES.user_titles.filter((t) => t.user_id !== userId);
+  TABLES.profiles = TABLES.profiles.filter((p) => p.id !== userId);
+}
 
 const auth = {
   // 진짜 supabase-js처럼: code 교환 실패는 던지지 않고 { error }로만 돌려준다

@@ -41,7 +41,7 @@ reset role;
 select t.ok('알림 종류에 notice_posted (있던 종류 그대로)', (select pg_get_constraintdef(oid) like '%notice_posted%'
   and pg_get_constraintdef(oid) like '%followed_build_created%' and pg_get_constraintdef(oid) like '%link_removed%' from pg_constraint
   where conname = 'notifications_kind_check' and conrelid = 'public.notifications'::regclass));
-select t.ok('설정값 늘지 않음 (63)', (select count(*) from xp_rules) = 63);
+select t.ok('설정값 늘지 않음 (051은 xp_rules에 더하지 않음)', not exists (select 1 from xp_rules where note like '%(051)%'));
 
 -- ===== 2. 함수 권한 =====
 set role anon;

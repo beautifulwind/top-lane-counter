@@ -52,7 +52,7 @@ select t.ok('트리거 함수도 아무도 못 부름', not has_function_privile
 select t.ok('알림 종류에 new_followers (있던 종류 그대로)', (select pg_get_constraintdef(oid) like '%new_followers%'
   and pg_get_constraintdef(oid) like '%notice_posted%' and pg_get_constraintdef(oid) like '%followed_build_created%' from pg_constraint
   where conname = 'notifications_kind_check' and conrelid = 'public.notifications'::regclass));
-select t.ok('설정값 늘지 않음 (63)', (select count(*) from xp_rules) = 63);
+select t.ok('설정값 늘지 않음 (052는 xp_rules에 더하지 않음)', not exists (select 1 from xp_rules where note like '%(052)%'));
 
 -- ===== 2. 하루 묶음: 지금도 팔로우 중인 사람만, 숫자만 =====
 select pg_temp.fol(:'U', :'W', true);
