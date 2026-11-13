@@ -2,13 +2,15 @@ import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { getChampionMap } from '../api/ddragon';
 import { getNotifications, markAllNotificationsRead } from '../api/notifications';
+import { getMyTitleBook } from '../api/rewards';
 import { useAuth } from '../lib/auth';
 import { describeNotification, noticeTime } from '../lib/notifications';
 import { fmtDateTime } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
+import TitleMedal, { titleColorClass, titleColorStyle } from '../components/TitleMedal';
 import {
-  BanIcon, BellIcon, CheckCircleIcon, EyeIcon, EyeOffIcon, FlagIcon, LayersIcon, MedalIcon, MessageIcon, TrendingUpIcon, UsersIcon,
+  BanIcon, BellIcon, CheckCircleIcon, EyeIcon, EyeOffIcon, FlagIcon, LayersIcon, MessageIcon, TrendingUpIcon, UsersIcon,
 } from '../components/Icons';
 
 const ICONS = {
@@ -36,8 +38,9 @@ export default function Notifications() {
 
 function NotificationList({ userId }) {
   const { data, error, loading, retry } = useAsync(async () => {
-    const [champs, page] = await Promise.all([getChampionMap(), getNotifications(userId)]);
-    return { champs, ...page };
+    // 칭호 알림의 훈장은 도감(한정판 포함)에서 — 못 읽어도 알림은 보인다(예전 6개 훈장으로)
+    const [champs, page, book] = await Promise.all([getChampionMap(), getNotifications(userId), getMyTitleBook().then((b) => b.items, () => [])]);
+    return { champs, book, ...page };
   }, [userId]);
   // [더 보기]로 이어 붙인 알림 (처음 목록을 다시 불러오면 비운다)
   const [extra, setExtra] = useState({ base: null, rows: [], more: false });
@@ -74,7 +77,7 @@ function NotificationList({ userId }) {
   return (
     <>
       <ul className="noti-list" aria-label="알림 목록">
-        {rows.map((n) => <NotificationRow key={n.id} n={n} fresh={isNew(n)} name={name} />)}
+        {rows.map((n) => <NotificationRow key={n.id} n={n} fresh={isNew(n)} name={name} book={data.book} />)}
       </ul>
       {ext.more && (
         <div className="actions center">
@@ -87,13 +90,16 @@ function NotificationList({ userId }) {
   );
 }
 
-function NotificationRow({ n, fresh, name }) {
-  const d = describeNotification(n, name);
+function NotificationRow({ n, fresh, name, book }) {
+  const d = describeNotification(n, name, book);
   const Icon = ICONS[d.icon];
   const body = (
     <>
-      <span className={`noti-icon ${d.icon}${d.titleKey ? ` title-color ${d.titleKey}` : ''}`} aria-hidden="true">
-        {d.icon === 'medal' ? <MedalIcon titleKey={d.titleKey} size={26} /> : <Icon size={20} />}
+      <span
+        className={`noti-icon ${d.icon}${d.titleKey ? ` title-color ${titleColorClass(d.titleItem)}` : ''}`}
+        style={d.icon === 'medal' ? titleColorStyle(d.titleItem) : undefined} aria-hidden="true"
+      >
+        {d.icon === 'medal' ? <TitleMedal item={d.titleItem} box={[26, 29]} /> : <Icon size={20} />}
       </span>
       <span className="noti-body">
         <span className="noti-title">

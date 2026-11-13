@@ -6,7 +6,7 @@ import { approvedWithEdits, getMyProposals } from '../api/proposals';
 import { getUnreadCount } from '../api/notifications';
 import { getMyBuilds } from '../api/builds';
 import { APPROVAL_ENABLED } from '../lib/features';
-import { getMyRewards } from '../api/rewards';
+import { getMyRewards, getMyTitleBook } from '../api/rewards';
 import { BUILD_STATUS_LABEL, STATUS_LABEL, TYPE_LABEL, fmtDateTime } from '../lib/format';
 import { isGuest, useAuth } from '../lib/auth';
 import { GUEST_UPGRADE_TEXT } from '../lib/guest';
@@ -124,12 +124,13 @@ function MyActivity({ auth }) {
   const userId = auth.user.id;
   const operator = auth.isOperatorAccount; // 운영자 모드를 꺼도 운영자 계정은 경험치·칭호가 없다 (DB 그대로)
   const { data, error, loading, retry } = useAsync(async () => {
-    const [champs, proposals, builds, items, runes, spells, latest, rewards] = await Promise.all([
+    const [champs, proposals, builds, items, runes, spells, latest, rewards, book] = await Promise.all([
       getChampionMap(), APPROVAL_ENABLED ? getMyProposals(userId) : [], getMyBuilds(userId),
       getItems(), getRunes(), getSummonerSpells(), getLatestVersion(),
       operator ? null : getMyRewards(userId),
+      getMyTitleBook(), // 운영자 계정도 도감을 본다 (칭호가 없어 전부 흐리게)
     ]);
-    return { champs, proposals, builds, rewards, game: { items, runes, spells, latest } };
+    return { champs, proposals, builds, rewards, book, game: { items, runes, spells, latest } };
   }, [userId, operator]);
 
   return (
@@ -139,7 +140,7 @@ function MyActivity({ auth }) {
       {error && <ErrorBox error={error} onRetry={retry} />}
       {data && (
         <>
-          {data.rewards && <MyTitles rewards={data.rewards} />}
+          <MyTitles book={data.book} />
           {APPROVAL_ENABLED && <MyProposals data={data} />} {/* 039 뒤로 새 제안이 없어 모든 회원에게 숨김 (승인 제도를 다시 켜면 보임) */}
           <MyBuilds data={data} />
         </>

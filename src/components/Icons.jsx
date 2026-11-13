@@ -184,7 +184,19 @@ const MEDAL_GLYPH = {
 };
 const MEDAL_TIER = { tool_hater: 1, solid_heavy: 2, butcher_owner: 3 };
 
-export const MedalIcon = ({ titleKey, size = 52 }) => {
+// 도감에서 새로 생긴 칭호(그림 파일 없음)의 공통 그림: 별, 비밀 칭호(아직 못 얻음)는 물음표
+const GENERIC_GLYPH = (
+  <path d="M24 21.5l2.2 4.6 5 .6-3.7 3.4 1 5-4.5-2.5-4.5 2.5 1-5-3.7-3.4 5-.6z" />
+);
+const SECRET_GLYPH = (
+  <>
+    <path d="M20 26.5a4.2 4.2 0 1 1 6.2 3.7c-1.5.9-2.2 1.8-2.2 3.3" />
+    <circle cx="24" cy="38" r="1.2" fill="currentColor" stroke="none" />
+  </>
+);
+
+/** size = 가로 너비(px). 칭호판 훈장은 높이 40px쯤이 되도록 호출하는 쪽이 정한다. secret = 비밀 칭호를 아직 못 얻음 */
+export const MedalIcon = ({ titleKey, size = 52, secret = false }) => {
   const tier = MEDAL_TIER[titleKey] ?? 0;
   return (
     <svg
@@ -193,7 +205,7 @@ export const MedalIcon = ({ titleKey, size = 52 }) => {
     >
       <path className="medal-ribbon" d="M14 2h8l4 11h-8zM34 2h-8l-4 11h8z" />
       <circle className="medal-disc" cx="24" cy="29" r="15" />
-      {MEDAL_GLYPH[titleKey]}
+      {secret ? SECRET_GLYPH : (MEDAL_GLYPH[titleKey] ?? GENERIC_GLYPH)}
       {tier > 0 && (
         <g fill="currentColor" stroke="none">
           {Array.from({ length: tier }, (_, i) => <circle key={i} cx={24 + (i - (tier - 1) / 2) * 6} cy="50" r="1.8" />)}

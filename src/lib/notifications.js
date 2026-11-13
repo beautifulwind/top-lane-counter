@@ -86,8 +86,16 @@ const BOARD_ICON = {
   post_deleted: 'ban', comment_deleted: 'ban', doc_comment_deleted: 'ban',
 };
 
-/** 칭호 알림 문장("칭호 '장군'을 얻었습니다…")에서 칭호 키 */
-const titleKeyIn = (message) => Object.keys(TITLES).find((k) => message?.includes(`'${TITLES[k]}'`)) ?? null;
+/**
+ * 칭호 알림 문장("칭호 '장군'을 얻었습니다…")에서 칭호 한 줄. 도감(my_title_book의 items)에서 이름으로 찾고(한정판 포함),
+ * 도감을 못 읽었거나 이름이 가려진 칭호(비밀)면 예전 고정 목록(TITLES)으로. 못 찾으면 null
+ */
+const titleIn = (message, book = []) => {
+  const found = book.find((t) => t.name && message?.includes(`'${t.name}'`));
+  if (found) return found;
+  const k = Object.keys(TITLES).find((key) => message?.includes(`'${TITLES[key]}'`));
+  return k ? { key: k, kind: 'activity', icon: null, color: null } : null;
+};
 
 /** 문의 답변 알림 문장("\"오류 신고\" 문의에 답변이…")에서 분류 이름 */
 const inquiryCategoryIn = (message) => {
@@ -96,10 +104,10 @@ const inquiryCategoryIn = (message) => {
 };
 
 /**
- * n = getNotifications()의 한 줄, name = 챔피언 id → 이름.
- * 돌려주는 값: { icon, title, subject(매치업 등, 없으면 null), detail(메모 등), to(없으면 null), titleKey(칭호 훈장) }
+ * n = getNotifications()의 한 줄, name = 챔피언 id → 이름, titleBook = 칭호 도감 줄들(없으면 []).
+ * 돌려주는 값: { icon, title, subject(매치업 등, 없으면 null), detail(메모 등), to(없으면 null), titleKey·titleItem(칭호 훈장, 도감 줄) }
  */
-export function describeNotification(n, name = (id) => id) {
+export function describeNotification(n, name = (id) => id, titleBook = []) {
   const matchup = (c) => (c ? matchupTitle(name(c.counter_champion), name(c.target_champion)) : null);
   const d = DECISION[n.kind];
   if (d) {
@@ -127,7 +135,8 @@ export function describeNotification(n, name = (id) => id) {
   }
   if (n.kind === 'level_up' || n.kind === 'level_down') return { icon: 'level', title: n.message, to: '/me' };
   if (n.kind === 'title_earned' || n.kind === 'title_revoked') {
-    return { icon: 'medal', title: n.message, to: '/me', titleKey: titleKeyIn(n.message) };
+    const t = titleIn(n.message, titleBook);
+    return { icon: 'medal', title: n.message, to: '/me', titleKey: t?.key ?? null, titleItem: t };
   }
   if (n.kind === 'inquiry_answered') return { icon: 'comment', title: '문의에 답변이 도착했습니다', subject: null, detail: inquiryCategoryIn(n.message), to: '/inquiries' };
   if (n.kind === 'error_report_handled') {

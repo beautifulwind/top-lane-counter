@@ -15,6 +15,7 @@ export const ACTION_LABEL = {
   grant_moderator: '감독관 지정', revoke_moderator: '감독관 해제',
   revert: '빌드 되돌리기', resolve_report: '오류 신고 처리', dismiss_report: '오류 신고 기각', // 043
   grant_influencer: '장인 직접 지정', // 049
+  grant_title: '칭호 지급', revoke_title: '칭호 회수', // 053
 };
 export const KIND_LABEL = {
   post: '글', comment: '댓글', doc_comment: '문서 댓글', proposal: '제안', inquiry: '문의', build: '빌드', wiki_report: '오류 신고',

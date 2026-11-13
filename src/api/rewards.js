@@ -30,6 +30,16 @@ export async function getMyRewards(userId) {
   return { ...me, titles, levels, rules: Object.fromEntries(rules.map((r) => [r.key, r.value])) };
 }
 
+/**
+ * 칭호 도감 (053 my_title_book, 운영자 계정 포함): { influencer, influencer_at, main_title, items: [{ key, kind, equippable, secret, name, description,
+ * how_to, icon, color, starts_at, ends_at, period, owned, earned_at }] }. 순서·{n} 숫자·비밀 칭호 가리기는 DB가 한다.
+ */
+export async function getMyTitleBook() {
+  const { data, error } = await db().rpc('my_title_book');
+  if (error) throw friendly(error, '칭호 도감을 불러오지 못했습니다.');
+  return { ...data, items: data?.items ?? [] };
+}
+
 /** 대표 칭호 고르기 (null = 없음). DB가 "내가 가진 칭호"인지 확인한다. 바뀐 프로필을 돌려준다 */
 export function setMainTitle(userId, titleKey) {
   return run(
