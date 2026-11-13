@@ -113,13 +113,15 @@ test('규칙: 강타가 든 빌드는 buildProblem이 막는다', () => {
   expect(buildProblem(b)).toBe('강타는 고를 수 없습니다. 다른 소환사 주문을 골라 주세요.');
 });
 
-test('빌드 입력: 핵심 템트리는 끌어서 순서 바꾸기 안내, [빼기]는 X 아이콘 버튼', async () => {
+test('빌드 입력: 핵심 템트리 안내는 "가야 하는 순서대로 적어 주세요."만 (056), 끌기 손잡이, [빼기]는 X 아이콘 버튼', async () => {
   fakeLogin('u-old');
   start(`${MATCHUP}/build/new`);
   await screen.findByRole('heading', { name: /새 빌드/ });
   fillBuild();
   pick(SKILL_GROUP, '선마 Q');
-  expect(screen.getByText(/끌어서 순서 바꾸기 \(폰은 꾹 눌러 끌기\)/)).toBeDefined();
+  expect(screen.getByText('가야 하는 순서대로 적어 주세요.')).toBeDefined();
+  expect(screen.queryByText(/끌어서 순서 바꾸기 \(폰은/)).toBeNull();
+  expect(within(screen.getByRole('list', { name: '고른 핵심 템트리' })).getByRole('button', { name: '강철판 장화 (끌어서 순서 바꾸기)' })).toBeDefined();
   const core = screen.getByRole('list', { name: '고른 핵심 템트리' });
   const x = within(core).getByRole('button', { name: '강철판 장화 빼기' });
   expect(x.textContent).toBe('');

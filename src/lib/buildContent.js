@@ -3,7 +3,8 @@ import { SHARD_ROWS } from '../api/ddragon';
 import { isCoreItem } from './itemKinds';
 
 export const SKILLS = ['Q', 'W', 'E'];
-export const ITEM_LIMITS = { starting: [1, 4], core: [3, 6] };
+// 시작 아이템 1~4개(중복 가능), 핵심 템트리 1~10개(056: 같은 아이템 여러 번 가능 — DB clean_build와 같음)
+export const ITEM_LIMITS = { starting: [1, 4], core: [1, 10] };
 /** 시작 아이템 합계 상한 기본값. 실제 값은 DB xp_rules.starting_gold_max (game.startGoldMax) */
 export const START_GOLD_MAX = 500;
 
@@ -68,7 +69,6 @@ export function buildProblem(b, game) {
   if (b.starting_items.length < sMin || b.starting_items.length > sMax) return `시작 아이템은 ${sMin}~${sMax}개 골라 주세요.`;
   const [cMin, cMax] = ITEM_LIMITS.core;
   if (b.core_items.length < cMin || b.core_items.length > cMax) return `핵심 템트리는 ${cMin}~${cMax}개 골라 주세요.`;
-  if (new Set(b.core_items).size !== b.core_items.length) return '핵심 템트리에 같은 아이템이 두 번 들어 있습니다.';
   if (!SKILLS.includes(b.max_skill)) return '선마(첫 번째로 마스터할 스킬)를 골라 주세요.';
   if (game) {
     const unknown = unknownParts(b, game);
@@ -94,15 +94,14 @@ export function unknownParts(b, { items, runes, spells }) {
 }
 
 /**
- * 핵심 템트리 종류 (028): 지금 상점의 전설·서사·신발만, 전설은 1개 이상 (없으면 null).
+ * 핵심 템트리 아이템 (056): 지금 상점에 있으면 종류 상관없이 (없으면 null). 전설 1개 이상 규칙은 없다.
  * DB(check_core_items)는 핵심 템트리를 새로 넣거나 바꿀 때만 검사한다 — 그대로 승인되는 예전 빌드는 통과.
  */
 export function coreItemProblem(ids, items) {
   const wrong = ids.filter((id) => !isCoreItem(items[id]));
   if (wrong.length > 0) {
-    return `핵심 템트리에 넣을 수 없는 아이템이 있습니다: ${wrong.map((id) => items[id]?.name ?? id).join(', ')} (전설·서사·신발만)`;
+    return `핵심 템트리에 지금 상점에 없는 아이템이 있습니다: ${wrong.map((id) => items[id]?.name ?? id).join(', ')}`;
   }
-  if (!ids.some((id) => items[id]?.kind === 'legendary')) return '핵심 템트리에 전설 아이템을 1개 이상 넣어 주세요.';
   return null;
 }
 

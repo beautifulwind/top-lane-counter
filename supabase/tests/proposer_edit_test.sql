@@ -45,7 +45,7 @@ select t.fails('고친 글도 같은 규칙으로 검사',
 select t.fails('새 카운터 제안은 빌드 필수',
   format($$select edit_my_proposal(%s, %L, null)$$, (select v from ids where k = 'p'), :'doc2'), '빌드도 함께');
 select t.fails('고친 빌드도 같은 규칙으로 검사',
-  format($$select edit_my_proposal(%s, %L, %L)$$, (select v from ids where k = 'p'), :'doc2', t.build(array['6631','3047'])), '3~6개');
+  format($$select edit_my_proposal(%s, %L, %L)$$, (select v from ids where k = 'p'), :'doc2', t.build('{}'::text[])), '1~10개');
 
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 select t.fails('남의 제안은 고칠 수 없음',
@@ -133,7 +133,7 @@ select t.ok('빌드도 처음 버전 1', (select version = 1 and edited_at is nu
 select t.fails('그대로는 고칠 수 없음',
   format($$select edit_my_build(%s, %L)$$, (select v from ids where k = 'b'), t.build(array['3071','3047','3053'], '99.1.1')), '고친 내용이 없습니다');
 select t.fails('같은 규칙으로 검사',
-  format($$select edit_my_build(%s, %L)$$, (select v from ids where k = 'b'), t.build(array['3071'])), '3~6개');
+  format($$select edit_my_build(%s, %L)$$, (select v from ids where k = 'b'), t.build(array['6631','6631','6631','6631','6631','6631','6631','6631','6631','6631','6631'])), '1~10개');
 -- 유저2의 빌드가 먼저 공개됨
 set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000d';
 select pg_temp.add_build(array['3181','3047','3053']);

@@ -43,6 +43,10 @@ const DATA = {
     7103: item('시험용 시작템 3', 400),
     7104: item('시험용 시작템 4', 400),
     8001: item('칼바람 전용', 1000, { maps: { 11: false, 12: true } }),
+    // 056: 핵심 템트리는 상점 아이템 전부 (기본·장신구·서포터템도). 시작 아이템 골드 상한(500)보다 비싸게 둬서 시작 목록은 그대로
+    3070: item('여신의 눈물', 650, { into: ['3004'] }),
+    3340: item('투명 와드', 600, { tags: ['Trinket'] }),
+    3865: item('세계 지도집', 600, { tags: ['GoldPer'] }),
   } },
   'summoner.json': { data: {
     SummonerFlash: spell('SummonerFlash', '점멸'), SummonerTeleport: spell('SummonerTeleport', '순간이동'),

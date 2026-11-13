@@ -197,7 +197,7 @@ test('새 빌드: 상점에서 못 사는 아이템·협곡에 없는 주문은 
   expect(within(found).getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['무한의 대검']);
 });
 
-test('새 빌드: 보조 룬은 같은 줄이면 바뀌고, 2개를 넘으면 먼저 고른 것이 빠진다 / 핵심 템트리는 중복 불가', async () => {
+test('새 빌드: 보조 룬은 같은 줄이면 바뀌고, 2개를 넘으면 먼저 고른 것이 빠진다 / 핵심 템트리도 중복 가능 (056)', async () => {
   asUser();
   start(`${MATCHUP}/build/new`);
   await screen.findByRole('heading', { name: /새 빌드/ });
@@ -212,7 +212,9 @@ test('새 빌드: 보조 룬은 같은 줄이면 바뀌고, 2개를 넘으면 �
   pick(group, '궁극의 사냥꾼'); // 3개째 → 먼저 고른 것(비열한 한 방)이 빠짐
   expect(pressed()).toEqual(['좀비 와드', '궁극의 사냥꾼']);
   pick('핵심 템트리 고르기', '선혈포식자');
-  expect(within(screen.getByRole('group', { name: '핵심 템트리 고르기' })).getByRole('button', { name: '선혈포식자' })).toBeDisabled();
+  expect(within(screen.getByRole('group', { name: '핵심 템트리 고르기' })).getByRole('button', { name: '선혈포식자' })).toBeEnabled();
+  pick('핵심 템트리 고르기', '선혈포식자');
+  expect(within(screen.getByRole('list', { name: '고른 핵심 템트리' })).getAllByRole('button', { name: '선혈포식자 빼기' })).toHaveLength(2);
   pick('시작 아이템 고르기', '체력 물약');
   expect(within(screen.getByRole('group', { name: '시작 아이템 고르기' })).getByRole('button', { name: '체력 물약' })).toBeEnabled();
 });

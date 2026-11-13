@@ -1054,6 +1054,7 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
   flex: none; display: flex; align-items: center; gap: 8px; min-height: var(--tap-min); max-width: 220px; padding: 0 14px;
   border: 1px solid var(--line-hover); border-radius: 999px; background: var(--raised); color: var(--text);
   font: inherit; font-weight: 700; cursor: pointer; scroll-snap-align: start;
+  position: relative; /* 안의 .sr-only(절대 위치)가 가로 스크롤 칸 밖으로 나가 320px 화면을 넓히지 않게 */
 }
 .build-tab.on { border-color: var(--brand); background: var(--soft); color: var(--brand-dark); }
 .build-tab-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

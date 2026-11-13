@@ -9,7 +9,7 @@ import { matchesQuery } from '../lib/chosung';
 import { ITEM_LIMITS, NO_SPELLS, SKILLS, buildProblem, startGold, startGoldMax } from '../lib/buildContent';
 import BuildCard, { Icon } from './BuildCard';
 import { XIcon } from './Icons';
-import { CORE_KINDS, isCoreItem } from '../lib/itemKinds';
+import { CORE_ORDER } from '../lib/itemKinds';
 
 /**
  * 빌드 입력 (룬·주문·아이템·스킬 + 미리보기). 빌드 등록·새 카운터 제안·다시 제출 공용.
@@ -37,15 +37,13 @@ export default function BuildFields({ game, value: build, onChange, author }) {
       <ItemPicker
         id="core"
         title="핵심 템트리"
-        hint={`${ITEM_LIMITS.core[0]}~${ITEM_LIMITS.core[1]}개, 사는 순서대로 · 전설·서사·신발 (전설 1개 이상) · 끌어서 순서 바꾸기 (폰은 꾹 눌러 끌기)`}
+        hint="가야 하는 순서대로 적어 주세요."
         items={game.items}
         value={build.core_items}
         max={ITEM_LIMITS.core[1]}
-        distinct
         movable
-        allow={isCoreItem}
         initialCount={15}
-        kindOrder={CORE_KINDS}
+        kindOrder={CORE_ORDER}
         onChange={(core_items) => set({ core_items })}
       />
       <SkillPicker value={build} onChange={set} />
@@ -203,8 +201,9 @@ const OVER_MS = 2000;
 /**
  * 아이템 고르기: 이 칸에서 고를 수 있는 아이템을 하나의 목록으로. 처음에는 initialCount개만, [더보기]로 나머지를 펼치고 [접기]로 되돌린다.
  * 검색(초성 포함)은 더보기와 상관없이 항상 전체에서. 종류 거르기 버튼은 없다.
- * 순서: kindOrder가 있으면 그 종류 순(핵심 템트리: 전설 → 서사 → 신발) 안에서 order(비싼 순/싼 순), 없으면 order만.
- * allow: 이 칸에 넣을 수 있는 아이템인가 (핵심 템트리 = 전설·서사·신발).
+ * 순서: kindOrder가 있으면 그 종류 순(핵심 템트리: 전설 → 서사 → 신발 → 기본 → 나머지) 안에서 order(비싼 순/싼 순), 없으면 order만.
+ * allow: 이 칸에 넣을 수 있는 아이템인가 (없으면 상점 아이템 전부).
+ * distinct: 같은 아이템을 한 번만 (지금은 쓰는 칸 없음 — 시작 아이템·핵심 템트리 모두 중복 가능).
  * goldMax: 시작 아이템처럼 골드 합계 상한이 있으면 그 값 (그보다 비싼 아이템은 목록에 없다).
  * 합계를 넘기는 아이템을 누르면 넣지 않고 "N골드를 넘습니다"를 잠깐 보여 준다 (022: 합계·남은 골드 안내는 숨김).
  * movable: 끌어서 순서 바꾸기 (PC는 마우스로 끌기, 폰은 꾹 눌러 끌기, 키보드는 Space 후 화살표)
@@ -222,7 +221,12 @@ function ItemPicker({
   }, []);
   const budget = goldMax !== null;
   const total = budget ? startGold(value, items) : 0;
-  const rank = (it) => (kindOrder ? kindOrder.indexOf(it.kind) : 0);
+  // kindOrder에 없는 종류는 맨 뒤 (핵심 템트리: 소모품·장신구·서포터템)
+  const rank = (it) => {
+    if (!kindOrder) return 0;
+    const i = kindOrder.indexOf(it.kind);
+    return i === -1 ? kindOrder.length : i;
+  };
   const byOrder = (a, b) =>
     (rank(a) - rank(b)) || (order === 'cheap' ? a.gold - b.gold : b.gold - a.gold) || a.name.localeCompare(b.name, 'ko');
   // 이 칸에서 고를 수 있는 아이템 전부 (지금 상점에 있는 것)

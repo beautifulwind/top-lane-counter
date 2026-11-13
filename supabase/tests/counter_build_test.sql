@@ -29,7 +29,7 @@ set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.fails('빌드 없는 새 카운터 제안 불가', $$select pg_temp.propose('Garen', null)$$, '빌드가 꼭 있어야');
 select t.fails('빌드 칸이 객체가 아님', $$select pg_temp.propose('Garen', '[]')$$, '빌드(룬·주문·아이템·스킬)를 채워');
 select t.fails('빌드 룬이 틀림', $$select pg_temp.propose('Garen', t.build() || '{"runes":{}}')$$, '특성(룬)을 모두');
-select t.fails('빌드 핵심 템트리 2개', $$select pg_temp.propose('Garen', t.build(array['6631','3047']))$$, '3~6개');
+select t.fails('빌드 핵심 템트리 0개', $$select pg_temp.propose('Garen', t.build('{}'::text[]))$$, '1~10개');
 select t.fails('빌드 주문 문자 아님', $$select pg_temp.propose('Garen', t.build() || '{"summoner_spells":[1,2]}')$$, '소환사 주문 형식');
 select t.fails('빌드 선마 없음', $$select pg_temp.propose('Garen', t.build() - 'max_skill')$$, '선마(첫 번째로 마스터할 스킬)');
 select t.fails('빌드 선마 R', $$select pg_temp.propose('Garen', t.build() || '{"max_skill":"R"}')$$, '선마(첫 번째로 마스터할 스킬)');
@@ -106,7 +106,7 @@ set request.jwt.claim.sub = '00000000-0000-0000-0000-00000000000b';
 select t.fails('빌드 없이 다시 제출 불가', format($$select resubmit_proposal(%s, %L, null)$$, (select v from ids where k = 'garen_p'), :'doc2'), '빌드도 함께');
 select t.fails('글·빌드 둘 다 그대로면 불가 (패치만 달라도)',
   format($$select resubmit_proposal(%s, (select content from edit_proposals where id = %1$s), t.build(patch => '16.22.1'))$$, (select v from ids where k = 'garen_p')), '고친 내용이 없습니다');
-select t.fails('다시 제출 빌드도 검사', format($$select resubmit_proposal(%s, %L, t.build(array['1']))$$, (select v from ids where k = 'garen_p'), :'doc'), '3~6개');
+select t.fails('다시 제출 빌드도 검사', format($$select resubmit_proposal(%s, %L, t.build(array['6631','6631','6631','6631','6631','6631','6631','6631','6631','6631','6631']))$$, (select v from ids where k = 'garen_p'), :'doc'), '1~10개');
 -- 빌드만 고침
 select resubmit_proposal((select v from ids where k = 'garen_p'), (select content from edit_proposals where id = (select v from ids where k = 'garen_p')), t.build(array['6631','3047','3075']));
 select t.ok('다시 제출: 대기 + 고친 빌드 저장',

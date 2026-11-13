@@ -61,9 +61,10 @@ select t.fails('주문: 같은 것 두 번', $$select pg_temp.add(spells => arra
 select t.fails('주문: 이상한 이름', $$select pg_temp.add(spells => array['SummonerFlash','<script>'])$$, '소환사 주문을 2개');
 select t.fails('시작 아이템: 0개', $$select pg_temp.add(starting => '{}')$$, '시작 아이템은 1~4개');
 select t.fails('시작 아이템: 5개', $$select pg_temp.add(starting => array['1055','2003','2003','2003','2003'])$$, '1~4개');
-select t.fails('핵심 템트리: 2개', $$select pg_temp.add(core => array['6631','3047'])$$, '핵심 템트리는 3~6개');
-select t.fails('핵심 템트리: 7개', $$select pg_temp.add(core => array['1','2','3','4','5','6','7'])$$, '3~6개');
-select t.fails('핵심 템트리: 중복', $$select pg_temp.add(core => array['6631','3047','6631'])$$, '같은 아이템이 두 번');
+select t.fails('핵심 템트리: 0개', $$select pg_temp.add(core => '{}')$$, '핵심 템트리는 1~10개');
+select t.fails('핵심 템트리: 11개 (056: 10개까지)', $$select pg_temp.add(core => array['1','2','3','4','5','6','7','8','9','10','11'])$$, '1~10개');
+-- 056: 핵심 템트리 중복은 허용 (등록 성공 검사는 core_items_test.sql). 같은 아이템 11번은 칸 수로 막힘
+select t.fails('핵심 템트리: 같은 아이템 11번', $$select pg_temp.add(core => array['6631','6631','6631','6631','6631','6631','6631','6631','6631','6631','6631'])$$, '1~10개');
 select t.fails('아이템: 숫자가 아님', $$select pg_temp.add(core => array['6631','3047','abc'])$$, '형식이 잘못');
 select t.fails('선마: R', $$select pg_temp.add(skill => 'R')$$, '선마(첫 번째로 마스터할 스킬)');
 select t.fails('선마: 두 개', $$select pg_temp.add(skill => 'QE')$$, '선마(첫 번째로 마스터할 스킬)');

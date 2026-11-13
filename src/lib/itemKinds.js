@@ -3,8 +3,8 @@
 // basic 기본템(재료 없음: 롱소드·도란템·여신의 눈물) · consumable 소모품 · trinket 장신구 · support 서포터 퀘스트템
 export const ITEM_KINDS = ['legendary', 'epic', 'boots', 'basic', 'consumable', 'trinket', 'support'];
 
-/** 핵심 템트리에 넣을 수 있는 종류 (전설은 1개 이상 — buildProblem·DB check_core_items) */
-export const CORE_KINDS = ['legendary', 'epic', 'boots']; // 고르기 목록 순서도 이 순서 (전설 → 서사 → 신발)
+/** 핵심 템트리 고르기 목록 순서 (056): 전설 → 서사 → 신발 → 기본 → 나머지(소모품·장신구·서포터템). 종류 제한은 없다 */
+export const CORE_ORDER = ['legendary', 'epic', 'boots', 'basic'];
 
 /**
  * 아이템 하나의 종류. data = item.json의 data 전체, shopIds = 소환사의 협곡 상점 아이템 id 모음.
@@ -23,6 +23,6 @@ export function itemKind(it, data, shopIds) {
   return 'legendary';
 }
 
-/** 핵심 템트리에 넣을 수 있는 아이템인가 (지금 상점에 있고 전설·서사·신발) */
-export const isCoreItem = (it) => !!it && it.shop && CORE_KINDS.includes(it.kind);
+/** 핵심 템트리에 넣을 수 있는 아이템인가 (056: 지금 상점에 있으면 종류 상관없이 — DB check_core_items는 가격표에 있는지만 본다) */
+export const isCoreItem = (it) => !!it && !!it.shop;
 

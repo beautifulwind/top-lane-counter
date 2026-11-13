@@ -42,7 +42,7 @@ select t.fails('고친 글도 같은 규칙으로 검사 (6레벨 빠짐)',
   format($$select approve_proposal(%s, '메모', '{"summary":"x","level_notes":{"1":"a","2":"b","3":"c"}}', null, t.pv(%1$s))$$, (select v from ids where k = 'garen_p')),
   '6레벨 딜교법은 꼭');
 select t.fails('고친 빌드도 같은 규칙으로 검사',
-  format($$select approve_proposal(%s, '메모', null, %L, t.pv(%1$s))$$, (select v from ids where k = 'garen_p'), t.build(array['6631','3047'])), '3~6개');
+  format($$select approve_proposal(%s, '메모', null, %L, t.pv(%1$s))$$, (select v from ids where k = 'garen_p'), t.build('{}'::text[])), '1~10개');
 select approve_proposal((select v from ids where k = 'garen_p'), '오타와 6레벨을 보충했습니다', :'fixed',
                         t.build(array['6631','3047','3053','3065'], '99.1.1'), t.pv((select v from ids where k = 'garen_p'))) as garen \gset
 insert into ids values ('garen', :garen);

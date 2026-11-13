@@ -57,7 +57,8 @@ select t.fails('6레벨 빠지면 불가', format($$select create_matchup('Dariu
   t.build() || '{"summary":"s","level_notes":{"1":"a","2":"b","3":"c"}}'::jsonb), '6레벨');
 select t.fails('이름 21자 불가', format($$select create_matchup('Darius', 'Garen', %L)$$,
   t.build() || :'doc'::jsonb || jsonb_build_object('name', repeat('가', 21))), '20자');
-select t.fails('핵심 템트리 검사 (전설 없음)', format($$select create_matchup('Darius', 'Garen', %L)$$, t.build(array['3047','1055','2003']) || :'doc'::jsonb), '');
+-- 056: 전설 없어도 되고(기본템/소모품 가능), 가격표에 없는 아이템만 막음
+select t.fails('핵심 템트리 검사 (가격표에 없는 아이템)', format($$select create_matchup('Darius', 'Garen', %L)$$, t.build(array['3047','1055','999999']) || :'doc'::jsonb), '종류를 모르는 핵심 템트리 아이템');
 select create_matchup('Darius', 'Garen', t.build() || :'doc'::jsonb || '{"name":"  "}'::jsonb) as m \gset
 insert into ids values ('m1', (:'m'::jsonb ->> 'counter_id')::bigint), ('b1', (:'m'::jsonb ->> 'build_id')::bigint);
 reset role;
@@ -139,8 +140,10 @@ select t.fails('바뀐 내용 없음', format('select edit_build(%s, 2, %L)', (s
   t.build() || '{"summary":"고친 요약","level_notes":{"1":"a","2":"b","3":"c","6":"d"},"lane_cautions":"주의"}'::jsonb), '바뀐 내용이 없습니다');
 select t.fails('다른 공개 빌드와 똑같게 고치기 불가', format('select edit_build(%s, 2, %L)', (select v from ids where k = 'b1'),
   t.build(array['3071','3047','3053']) || :'doc'::jsonb), '똑같은 빌드');
-select t.fails('핵심 템트리 검사', format('select edit_build(%s, 2, %L)', (select v from ids where k = 'b1'),
-  t.build(array['3047','1055','2003']) || :'doc'::jsonb), '');
+select t.fails('핵심 템트리 검사 (056: 가격표에 없는 아이템)', format('select edit_build(%s, 2, %L)', (select v from ids where k = 'b1'),
+  t.build(array['3047','1055','999999']) || :'doc'::jsonb), '종류를 모르는 핵심 템트리 아이템');
+select t.fails('핵심 템트리 11칸', format('select edit_build(%s, 2, %L)', (select v from ids where k = 'b1'),
+  t.build(array['3047','3047','3047','3047','3047','3047','3047','3047','3047','3047','3047']) || :'doc'::jsonb), '1~10개');
 select t.ok('아이템을 고치면 지금 패치로', edit_build((select v from ids where k = 'b1'), 2,
   t.build(array['6610','3047','3053'], '16.22.1') || '{"summary":"고친 요약","level_notes":{"1":"a","2":"b","3":"c","6":"d"},"lane_cautions":"주의"}'::jsonb) = 3);
 select t.fails('수정 간격 10초', format('select edit_build(%s, %s, %L)', (select v from ids where k = 'b2'), t.bv((select v from ids where k = 'b2')),
