@@ -136,12 +136,13 @@ test('공개 프로필: 닉네임·장인 표시·링크·최근 빌드(빌드 �
   expect(h1.querySelector('.inf-tag').textContent).toBe('장인');
   expect(h1.textContent).toContain('탑고수');
   expect(screen.getByText('인증된 프로게이머')).toBeTruthy();
-  const linkList = screen.getByRole('heading', { name: '링크' }).closest('section');
+  // 050: 링크는 위쪽(닉네임 아래)에 작게
+  const linkList = screen.getByRole('list', { name: '링크' });
   expect(within(linkList).getAllByRole('link').map((a) => a.textContent.replace(/\s*\(외부 사이트, 새 창\)$/, '')))
     .toEqual(['유튜브 youtube.com/@toptop', '치지직 chzzk.naver.com/live/toptop']);
-  expect(within(linkList).getByText(/탑신병자가 내용을 보증하지 않습니다/)).toBeTruthy();
+  expect(linkList.closest('header').textContent).toMatch(/탑신병자가 내용을 보증하지 않습니다/);
   const builds = screen.getByRole('heading', { name: '처음 만든 빌드' }).closest('section');
-  const go = within(builds).getByRole('link', { name: /퀸으로 다리우스 · 빌드 2/ });
+  const go = within(builds).getByRole('link', { name: /퀸으로 다리우스\s*빌드 2/ });
   expect(go.getAttribute('href')).toBe('/champion/Darius/counter/Quinn?build=102');
   expect(within(builds).getByRole('link', { name: /youtu\.be\/build102/ })).toBeTruthy();
   expect(document.body.textContent).not.toContain('secret@x.com');

@@ -56,6 +56,7 @@ export const TABLES = {
   ext_links: [], // 047 장인 외부 링크 (linkRpc가 쓴다)
   link_domains: LINK_DOMAINS(), // 047 허용 사이트 9개
   link_reports: [], // 047 링크 신고 { id, link_id, reporter_id, reason, detail, status, created_at }
+  influencer_follows: [], // 050 팔로우 { follower_id, influencer_id, created_at } (followRpc가 쓴다)
   // 014 경험치·칭호 (내 기록만 넣는다 — RLS 흉내는 테스트가 그렇게 넣는 것으로)
   xp_events: [],
   user_titles: [],
@@ -143,6 +144,8 @@ export function resetFake() {
   TABLES.ext_links = [];
   TABLES.link_domains = LINK_DOMAINS();
   TABLES.link_reports = [];
+  TABLES.influencer_follows = [];
+  fakeState.followStatusCalls = [];
   fakeState.influencerNextAt = null;
   TABLES.xp_events = [];
   TABLES.user_titles = [];
@@ -529,6 +532,7 @@ async function rpc(name, args) {
   if (['report_wiki', 'staff_wiki_reports', 'handle_wiki_report'].includes(name)) return wikiReportRpc(name, args);
   if (INFLUENCER_RPCS.includes(name)) return influencerRpc(name, args);
   if (LINK_RPCS.includes(name)) return linkRpc(name, args);
+  if (FOLLOW_RPCS.includes(name)) return followRpc(name, args);
   fakeState.rpcCalls.push({ name, args });
   if (fakeState.rpcError) return { data: null, error: { message: fakeState.rpcError, code: fakeState.rpcErrorCode ?? '42501' } };
   if (name === 'mark_all_notifications_read') {
@@ -1245,6 +1249,67 @@ function linkRpc(name, args) {
     }
   } catch (message) {
     return { data: null, error: { message: String(message), code: '23514' } };
+  }
+  return null;
+}
+
+// ---- 050 장인 팔로우 (SPEC 6-36): DB 함수와 같은 규칙만 흉내 낸다 ----
+const FOLLOW_RPCS = ['follow_influencer', 'unfollow_influencer', 'follow_status', 'influencer_builds', 'influencer_followers', 'influencer_follower_count'];
+function followRpc(name, args) {
+  const writing = ['follow_influencer', 'unfollow_influencer'].includes(name);
+  if (writing) fakeState.rpcCalls.push({ name, args });
+  if (name === 'follow_status') fakeState.followStatusCalls.push(args.p_users);
+  if (fakeState.rpcError && writing) return { data: null, error: { message: fakeState.rpcError, code: fakeState.rpcErrorCode ?? '42501' } };
+  const prof = (id) => TABLES.profiles.find((p) => p.id === id);
+  const isInf = (id) => !!prof(id)?.influencer;
+  const count = (id) => TABLES.influencer_follows.filter((f) => f.influencer_id === id).length;
+  const meRow = meNow();
+  if (name === 'influencer_builds' || name === 'influencer_follower_count') {
+    const p = prof(args.p_user);
+    if (!p || !p.influencer || !p.nickname) return ok(null);
+    if (name === 'influencer_follower_count') return ok(count(p.id));
+    const all = TABLES.builds.filter((b) => b.author_id === p.id && b.status === 'approved')
+      .sort((a, b) => String(b.updated_at ?? b.created_at).localeCompare(String(a.updated_at ?? a.created_at)) || b.id - a.id);
+    const page = Math.max(1, args.p_page ?? 1);
+    return ok(structuredClone({
+      influencer: { id: p.id, nickname: p.nickname, influencer: p.influencer }, follower_count: count(p.id), total: all.length, page, size: 20,
+      items: all.slice((page - 1) * 20, page * 20).map((b) => ({
+        id: b.id, counter_id: b.counter_id, seq: b.seq, name: b.name, patch: b.patch, summary: b.summary,
+        target_champion: b.counter.target_champion, counter_champion: b.counter.counter_champion, up_count: b.up_count, down_count: b.down_count,
+        created_at: b.created_at, updated_at: b.updated_at ?? b.created_at, editor_count: 0,
+        author: { id: p.id, nickname: p.nickname, influencer: p.influencer },
+        link: (() => { const l = TABLES.ext_links.find((x) => x.build_id === b.id); return l ? { id: l.id, url: l.url, host: l.host, build_id: l.build_id, sort: l.sort } : null; })(),
+      })),
+    }));
+  }
+  if (!meRow) return { data: null, error: { message: 'permission denied for function ' + name, code: '42501' } };
+  if (name === 'follow_status') {
+    return ok(Object.fromEntries([...new Set(args.p_users ?? [])].map((u) => [u, isInf(u) && TABLES.influencer_follows.some((f) => f.follower_id === meRow.id && f.influencer_id === u)])));
+  }
+  if (name === 'influencer_followers') {
+    if (!isInf(args.p_user)) return { data: null, error: { message: '인증된 장인을 찾지 못했습니다.', code: 'P0002' } };
+    const all = TABLES.influencer_follows.filter((f) => f.influencer_id === args.p_user)
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+    const page = Math.max(1, args.p_page ?? 1);
+    return ok(structuredClone({
+      follower_count: all.length, total: all.length, page, size: 20,
+      items: all.slice((page - 1) * 20, page * 20).map((f) => {
+        const u = prof(f.follower_id);
+        return { id: f.follower_id, nickname: u?.nickname ?? null, influencer: u?.influencer ?? null, nickname_state: u?.nickname_state ?? null, followed_at: f.created_at };
+      }),
+    }));
+  }
+  if (name === 'follow_influencer') {
+    if (!isInf(args.p_user)) return { data: null, error: { message: '인증된 장인만 팔로우할 수 있습니다.', code: 'P0002' } };
+    if (args.p_user === meRow.id) return { data: null, error: { message: '나 자신은 팔로우할 수 없습니다.', code: '23514' } };
+    if (!TABLES.influencer_follows.some((f) => f.follower_id === meRow.id && f.influencer_id === args.p_user)) {
+      TABLES.influencer_follows.push({ follower_id: meRow.id, influencer_id: args.p_user, created_at: new Date().toISOString() });
+    }
+    return ok({ following: true, follower_count: count(args.p_user) });
+  }
+  if (name === 'unfollow_influencer') {
+    TABLES.influencer_follows = TABLES.influencer_follows.filter((f) => !(f.follower_id === meRow.id && f.influencer_id === args.p_user));
+    return ok({ following: false, follower_count: count(args.p_user) });
   }
   return null;
 }

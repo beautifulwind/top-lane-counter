@@ -238,7 +238,7 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="r
 
 .build { border: 1px solid var(--line); border-radius: var(--radius); padding: var(--pad-card); margin-bottom: var(--gap-lg); background: var(--paper); }
 .build-head { display: flex; justify-content: space-between; align-items: center; gap: var(--gap-sm); margin-bottom: var(--gap-md); }
-.build-author { font-weight: 600; }
+.build-author { font-weight: 600; display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; min-width: 0; }
 /* 태그 (모서리 6px): 옅은 색 바탕 + 색 테두리 + 밝은 글자 — 예전 앱의 "정석 탑"·"극상성" 모양 */
 .badge { display: inline-block; font-size: var(--fs-xs); font-weight: 800; line-height: 20px; padding: 0 8px; border: 1px solid var(--soft-line); border-radius: var(--radius-tag); background: var(--soft); color: var(--brand-light); white-space: nowrap; }
 .badge.old { background: var(--warn-soft); border-color: var(--warn-line); color: var(--warn-light); }
@@ -1132,3 +1132,27 @@ a.inf-link:hover .user-nick, a.inf-link:focus-visible .user-nick { text-decorati
 .profile-builds { list-style: none; margin: 0; padding: 0; }
 .profile-builds li { padding: 10px 0; border-bottom: 1px solid var(--line); display: flex; flex-direction: column; gap: 4px; }
 .profile-builds li:last-child { border-bottom: 0; }
+
+/* ---- 050 장인 팔로우 (SPEC 6-36) ---- */
+.follow { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; max-width: 100%; }
+.follow-msg { flex-basis: 100%; margin: 0; font-weight: 400; }
+.follow-btn.on { background: var(--raised); color: var(--influencer); border-color: var(--influencer-line); }
+.follow-btn.plus { min-width: 40px; font-weight: 900; }
+.inf-hero-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--gap-sm) var(--gap-md); }
+.inf-hero-top .doc-title { min-width: 0; }
+.inf-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 0; }
+.inf-links { font-size: var(--fs-sm); }
+.inf-links li { padding: 4px 0; border-bottom: 0; }
+.inf-hero .hint { margin: 0; }
+.inf-build-list li { padding: 8px 0; }
+.inf-build-card { display: flex; align-items: center; gap: var(--gap-md); min-width: 0; color: var(--text); padding: 6px 0; }
+.inf-build-card:hover .inf-build-matchup, .inf-build-card:focus-visible .inf-build-matchup { text-decoration: underline; }
+.inf-build-champs { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.inf-build-champs .vs { color: var(--muted); font-size: var(--fs-xs); font-weight: 800; }
+.inf-champ { width: 36px; height: 36px; border-radius: 50%; }
+.inf-build-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.inf-build-matchup { color: var(--brand-dark); overflow-wrap: anywhere; }
+.inf-build-name { overflow-wrap: anywhere; }
+.follower-list { list-style: none; margin: 0; padding: 0; }
+.follower-list li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px var(--gap-md); padding: 8px 0; border-bottom: 1px solid var(--line); }
+.follower-list li:last-child { border-bottom: 0; }

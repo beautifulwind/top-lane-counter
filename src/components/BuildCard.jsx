@@ -48,14 +48,16 @@ export function BuildAuthor({ build }) {
 /**
  * 빌드 카드 (상대법 화면·등록 미리보기·운영자 화면 공용).
  * interactive: 추천/비추천 누르기 (상대법 화면에서만). 아니면 숫자만 보인다.
+ * authorExtra: 작성자 닉네임 옆에 붙일 것 (050: 상대법 화면의 장인 [+] 팔로우 버튼)
  */
-export default function BuildCard({ build, items, runes, spells, interactive = false }) {
+export default function BuildCard({ build, items, runes, spells, interactive = false, authorExtra = null }) {
   const r = build.runes;
   return (
     <article className="build" aria-label={`빌드: ${displayNickname(build.author, '(탈퇴한 유저)')}`}>
       <div className="build-head">
         <span className="build-author">
           <BuildAuthor build={build} />
+          {authorExtra}
         </span>
         {build.patch && (
           <span className="badge">{`패치 ${patchMinor(build.patch)}`}</span>

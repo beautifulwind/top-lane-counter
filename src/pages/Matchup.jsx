@@ -26,6 +26,8 @@ import BuildLinkBox from '../components/BuildLinkBox';
 import LinkActions from '../components/LinkActions';
 import ExternalLink from '../components/ExternalLink';
 import { displayNickname } from '../lib/nickname';
+import FollowButton from '../components/FollowButton';
+import { getFollowStatus } from '../api/follow';
 
 const day = (ts) => (ts ? String(ts).slice(0, 10) : null);
 
@@ -59,6 +61,18 @@ export default function Matchup() {
     },
     [targetId, counterId, userId],
   );
+  // 050: 장인 [+] 팔로우 상태 — 빌드 목록의 장인 작성자를 한 번에 묻는다(follow_status). { 장인 id: true/false }
+  const [follows, setFollows] = useState({});
+  const loadedBuilds = data?.builds;
+  useEffect(() => {
+    setFollows({});
+    if (!userId || !loadedBuilds) return undefined;
+    const ids = loadedBuilds.filter((b) => b.author?.influencer && b.author_id && b.author_id !== userId).map((b) => b.author_id);
+    if (ids.length === 0) return undefined;
+    let alive = true;
+    getFollowStatus(ids).then((m) => alive && setFollows(m));
+    return () => { alive = false; };
+  }, [loadedBuilds, userId]);
 
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
@@ -198,6 +212,10 @@ export default function Matchup() {
           canHide={canModerate(auth, selected.author_id, selected.author)}
           lastOne={builds.length === 1}
           canLink={!!auth.profile?.influencer && !!userId && selected.author_id === userId}
+          follow={selected.author?.influencer && selected.author_id && selected.author_id !== userId ? {
+            following: !!follows[selected.author_id],
+            onChange: (r) => setFollows((m) => ({ ...m, [selected.author_id]: !!r?.following })),
+          } : null}
           onLinkSaved={(message) => { setNotice(message); retry(); }}
           hiding={hiding === selected.id}
           setHiding={(v) => { setReporting(null); setHiding(v); }}
@@ -283,7 +301,7 @@ function BuildTabs({ builds, selected, onSelect, newTo }) {
 }
 
 /** 고른 빌드 한 벌: 이름·패치·최근 수정 → 한 줄 결론 → 룬·주문·아이템·선마·추천 → 레벨별 딜교법 → 특이사항 → [빌드 수정]·[수정 기록] */
-function BuildPanel({ build, index, doc, data, path, isOperator, canHide, lastOne, hiding, setHiding, onHidden, reportItem, reportBox, canLink, onLinkSaved }) {
+function BuildPanel({ build, index, doc, data, path, isOperator, canHide, lastOne, hiding, setHiding, onHidden, reportItem, reportBox, canLink, onLinkSaved, follow }) {
   const [showPeople, setShowPeople] = useState(false);
   const peopleBtn = useRef(null);
   const label = buildTitleText(build, index);
@@ -348,7 +366,13 @@ function BuildPanel({ build, index, doc, data, path, isOperator, canHide, lastOn
         </ol>
       </nav>
 
-      <BuildCard build={build} {...data} interactive />
+      <BuildCard
+        build={build} {...data} interactive
+        authorExtra={follow && (
+          // 050: 장인이 처음 만든 빌드의 작성자 옆 [+] (내 빌드·장인 아닌 작성자는 없음). 닉네임을 누르면 장인 페이지 — 그대로
+          <>{' '}<FollowButton plus id={build.author_id} nickname={build.author?.nickname} following={follow.following} onChange={follow.onChange} /></>
+        )}
+      />
 
       <section className="section" id="levels">
         <SectionHead icon={TrendingUpIcon} num={2}>레벨별 딜교법</SectionHead>

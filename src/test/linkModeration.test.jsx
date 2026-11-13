@@ -161,7 +161,7 @@ test('링크 삭제: 운영자는 공개 프로필 링크도 삭제, 운영자 �
   fireEvent.click(screen.getByRole('button', { name: '링크 삭제 확정' }));
   expect(await screen.findByText('링크를 삭제했습니다. 올린 장인에게 알림이 갔습니다.')).toBeTruthy();
   expect(rpcCalls('remove_link')).toEqual([{ p_link: l.id, p_note: '사칭 채널' }]);
-  expect(await screen.findByText('올린 링크가 없습니다.')).toBeTruthy();
+  await waitFor(() => expect(screen.queryByRole('list', { name: '링크' })).toBeNull()); // 050: 링크가 없으면 장인 페이지 위쪽 링크 줄이 사라진다
   cleanup();
 
   addLink('u-102', 'https://www.youtube.com/@again');
