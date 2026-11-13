@@ -78,6 +78,9 @@ rows (ord, what, to_delete, to_keep, note) as (
   union all select 15.7, 'new_follower_counted (새 팔로워 알림에서 센 기록, 052)',
          case when to_regclass('public.new_follower_counted') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.new_follower_counted', false, true, '')))[1]::text::bigint end,
          0, '전부 지움 (052 실행 전이면 0). 푸시 설정의 new_followers 칸은 그대로'
+  union all select 15.8, 'user_titles 중 한정판 칭호 (운영자가 준 것, 053)',
+         case when to_regclass('public.title_catalog') is null then 0 else (xpath('/row/c/text()', query_to_xml($q$select count(*) as c from public.user_titles t join public.title_catalog c on c.key = t.title_key where c.kind = 'limited'$q$, false, true, '')))[1]::text::bigint end,
+         0, '전부 지움 (053 실행 전이면 0). 칭호 도감 표 title_catalog는 설정이라 남김'
   union all select 16, 'hide_log (숨김 기록)', (select count(*) from public.hide_log), 0, null
   union all select 16.1, 'moderation_log (운영진 처리 기록)', (select count(*) from public.moderation_log), 0, '감독관 지정·해제 기록 포함 전부 지움 (역할 자체는 profiles에 그대로)'
   union all select 16.2, 'proposal_reviewing (검토 중 표시)', (select count(*) from public.proposal_reviewing), 0, '임시 표시라 모두 비움'

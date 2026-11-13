@@ -30,6 +30,28 @@ const INITIAL_BUILDS = () => [
     build(105, { nickname: '영자', role: 'admin', level: 0, main_title: null }), // 운영자가 쓴 빌드 (점수 0)
 ];
 
+/** 053 칭호 도감 처음 7줄 (migrations/053_title_catalog.sql과 같음). 한정판 줄 모양은 fakeLimitedTitle */
+const TITLE_CATALOG = () => [
+  ['top_addict', '탑신병자', '처음으로 승인받은 기여 {n}개 또는 탑신병자 커뮤니티 글·댓글·문서 댓글 1개', 10],
+  ['tool_hater', '도구혐오자', '상대법 관련 승인 {n}개', 20],
+  ['solid_heavy', '단단묵직', '상대법 관련 승인 {n}개', 30],
+  ['butcher_owner', '백정주인', '상대법 관련 승인 {n}개', 40],
+  ['general', '장군', '공개 중인 내 빌드들의 추천 합계 {n}', 50],
+  ['offmeta', '비주류', '비주류 픽 매치업 기여 승인 {n}개', 60],
+].map(([key, name, how_to, sort_order]) => ({
+  key, name, description: null, how_to, kind: 'activity', equippable: true, starts_at: null, ends_at: null,
+  secret: false, hidden: false, sort_order, icon: null, color: null,
+})).concat([{
+  key: 'influencer', name: '장인', description: null, kind: 'influencer', equippable: false, starts_at: null, ends_at: null,
+  how_to: '장인 인증을 받으면 표시됩니다(대표 칭호로는 고를 수 없음). 크리에이터: 채널에 공개된 공식 이메일로 본인 확인 / 프로게이머: 팀 공식 이메일로 본인 확인 / 그랜드마스터 이상: 라이엇 친구 요청과 op.gg 티어로 확인. [마이페이지] 맨 위 [장인 인증]에서 신청합니다.',
+  secret: false, hidden: false, sort_order: 100, icon: null, color: null,
+}]);
+/** 테스트에서 쓰는 한정판 칭호 한 줄 (TABLES.title_catalog.push로 넣는다) */
+export const fakeLimitedTitle = (key, extra = {}) => ({
+  key, name: key, description: null, how_to: `${key} 얻는 방법`, kind: 'limited', equippable: false, starts_at: null, ends_at: null,
+  secret: false, hidden: false, sort_order: 1000, icon: null, color: null, ...extra,
+});
+
 export const TABLES = {
   builds: INITIAL_BUILDS(),
   counters: [
@@ -61,6 +83,8 @@ export const TABLES = {
   xp_events: [],
   user_titles: [],
   offmeta_champions: [],
+  // 053 칭호 도감 (DB에서는 직접 못 읽음 — my_title_book으로만. 테스트가 한정판 줄을 더 넣는다)
+  title_catalog: TITLE_CATALOG(),
   // 015 탑신병자 커뮤니티 (author = select가 돌려주는 관계 모양)
   posts: [],
   post_comments: [],
@@ -151,6 +175,7 @@ export function resetFake() {
   fakeState.influencerNextAt = null;
   TABLES.xp_events = [];
   TABLES.user_titles = [];
+  TABLES.title_catalog = TITLE_CATALOG();
   TABLES.offmeta_champions = [];
   TABLES.posts = [];
   TABLES.post_comments = [];
@@ -270,6 +295,7 @@ function visibleRows(table) {
     return isStaffNow() ? all : all.filter((c) => c.status === 'visible' && c.counter?.status === 'approved');
   }
   if (table === 'moderation_log') return isAdminNow() ? rows : [];
+  if (table === 'title_catalog') return []; // 053: 직접 못 읽음 (화면은 my_title_book)
   // 038: 챔피언 목록이 counters → builds(요약·추천)를 같이 읽는다 (RLS: 공개 빌드는 누구나)
   if (table === 'counters') return rows.map((c) => ({ ...c, builds: TABLES.builds.filter((b) => b.counter_id === c.id) }));
   if (table === 'push_subscriptions' || table === 'push_settings') return rows.filter((r) => r.user_id === fakeState.session?.user.id);
@@ -367,6 +393,10 @@ function query(table) {
       // RLS 흉내: 내 행만 수정 / DB 제약 흉내: 닉네임 중복(대소문자 무시) 금지
       const me = fakeState.session?.user.id;
       rows = rows.filter((r) => r.id === me);
+      // 053 트리거 흉내: 대표 칭호는 장착할 수 있는 칭호(활동 칭호)만 (profiles_main_title_equippable)
+      if (patch.main_title && !TABLES.title_catalog.some((c) => c.key === patch.main_title && c.equippable)) {
+        return { data: null, error: { code: '23514', message: '이 칭호는 대표 칭호로 고를 수 없습니다.' } };
+      }
       // DB 제약 흉내: 대표 칭호는 내가 가진 칭호만 (profiles_main_title_owned)
       if (patch.main_title && !TABLES.user_titles.some((t) => t.user_id === me && t.title_key === patch.main_title)) {
         return { data: null, error: { code: '23503', message: 'violates foreign key constraint "profiles_main_title_owned"' } };
@@ -536,6 +566,7 @@ async function rpc(name, args) {
   if (INFLUENCER_RPCS.includes(name)) return influencerRpc(name, args);
   if (LINK_RPCS.includes(name)) return linkRpc(name, args);
   if (FOLLOW_RPCS.includes(name)) return followRpc(name, args);
+  if (TITLE_RPCS.includes(name)) return titleRpc(name, args);
   fakeState.rpcCalls.push({ name, args });
   if (fakeState.rpcError) return { data: null, error: { message: fakeState.rpcError, code: fakeState.rpcErrorCode ?? '42501' } };
   if (name === 'mark_all_notifications_read') {
@@ -1266,6 +1297,81 @@ function linkRpc(name, args) {
     return { data: null, error: { message: String(message), code: '23514' } };
   }
   return null;
+}
+
+// ---- 053 칭호 도감 (SPEC 6-39): DB 함수와 같은 규칙만 흉내 낸다 ----
+const TITLE_RPCS = ['my_title_book', 'grant_title', 'revoke_title'];
+const josa = (word, a, b) => {
+  const code = word.charCodeAt(word.length - 1) - 0xac00;
+  return code >= 0 && code <= 11171 && code % 28 !== 0 ? a : b;
+};
+function titleRpc(name, args) {
+  const meRow = meNow();
+  const err = (message, code) => ({ data: null, error: { message, code } });
+  if (name === 'my_title_book') {
+    // 화면이 알아서 부르는 것이라 rpcCalls에는 넣지 않는다
+    if (!meRow) return err('로그인이 필요합니다.', '42501');
+    const rule = (key) => TABLES.xp_rules.find((r) => r.key === `title_${key}`)?.value;
+    const now = Date.now();
+    const grp = { activity: 1, influencer: 2, limited: 3 };
+    const items = TABLES.title_catalog.filter((c) => !c.hidden)
+      .sort((a, b) => grp[a.kind] - grp[b.kind] || a.sort_order - b.sort_order || a.key.localeCompare(b.key))
+      .map((c) => {
+        const row = TABLES.user_titles.find((t) => t.user_id === meRow.id && t.title_key === c.key);
+        const owned = c.kind === 'influencer' ? !!meRow.influencer : !!row;
+        const shown = !c.secret || owned;
+        let period = null;
+        if (c.kind === 'limited') {
+          if (c.starts_at && Date.parse(c.starts_at) > now) period = 'upcoming';
+          else if (c.ends_at && Date.parse(c.ends_at) <= now) period = 'ended';
+          else period = 'open';
+        }
+        return {
+          key: c.key, kind: c.kind, equippable: c.equippable, secret: c.secret,
+          name: shown ? c.name : null, description: shown ? c.description : null,
+          how_to: shown ? c.how_to.replace('{n}', String(rule(c.key) ?? '?')) : null,
+          icon: shown ? c.icon : null, color: c.color, starts_at: c.starts_at, ends_at: c.ends_at, period, owned,
+          earned_at: c.kind === 'influencer' ? (meRow.influencer_at ?? null) : (row?.earned_at ?? null),
+        };
+      });
+    return ok(structuredClone({
+      influencer: meRow.influencer ?? null, influencer_at: meRow.influencer_at ?? null, main_title: meRow.main_title ?? null, items,
+    }));
+  }
+  fakeState.rpcCalls.push({ name, args });
+  if (fakeState.rpcError) return err(fakeState.rpcError, fakeState.rpcErrorCode ?? '42501');
+  if (!isAdminNow()) return err('운영자만 할 수 있어요.', '42501');
+  const granting = name === 'grant_title';
+  const note = (args.p_note ?? '').trim();
+  if (!note || note.length > 500) return err(granting ? '지급 메모를 적어 주세요. (500자 이하)' : '회수 사유를 적어 주세요. (500자 이하)', '22023');
+  const c = TABLES.title_catalog.find((x) => x.key === args.p_key);
+  if (!c) return err('칭호를 찾지 못했습니다.', 'P0002');
+  if (c.kind !== 'limited') {
+    return err(granting ? '한정판 칭호만 직접 줄 수 있습니다. (활동 칭호는 조건을 채우면 저절로 받고, 장인 칭호는 장인 인증으로 표시됩니다)'
+      : '한정판 칭호만 직접 회수할 수 있습니다. (활동 칭호는 조건이 깨지면 저절로 회수됩니다)', '23514');
+  }
+  const u = TABLES.profiles.find((p) => p.id === args.p_user);
+  if (!u) return err('회원을 찾지 못했습니다.', 'P0002');
+  const has = TABLES.user_titles.some((t) => t.user_id === u.id && t.title_key === c.key);
+  if (granting) {
+    if (u.role === 'admin') return err('운영자 계정에는 칭호를 줄 수 없습니다.', '23514');
+    if (has) return err('이미 가진 칭호입니다.', '23505');
+    TABLES.user_titles.push({ user_id: u.id, title_key: c.key, earned_at: new Date().toISOString() });
+  } else {
+    if (!has) return err('이 회원은 그 칭호를 가지고 있지 않습니다.', 'P0002');
+    TABLES.user_titles = TABLES.user_titles.filter((t) => !(t.user_id === u.id && t.title_key === c.key));
+  }
+  TABLES.notifications.push({
+    id: 7000 + TABLES.notifications.length, user_id: u.id, kind: granting ? 'title_earned' : 'title_revoked', read_at: null,
+    message: granting ? `칭호 '${c.name}'${josa(c.name, '을', '를')} 얻었습니다. [마이페이지] 칭호 칸에서 볼 수 있습니다.`
+      : `칭호 '${c.name}'${josa(c.name, '이', '가')} 회수됐습니다. 사유: ${note}`,
+    created_at: new Date().toISOString(),
+  });
+  TABLES.moderation_log.unshift({
+    id: TABLES.moderation_log.length + 1, actor_nickname: meRow.nickname, actor_role: 'admin', action: name,
+    target_kind: 'user', target_id: u.id, target_nickname: u.nickname, note: `${c.name} · ${note}`, created_at: new Date().toISOString(),
+  });
+  return ok(null);
 }
 
 // ---- 050 장인 팔로우 (SPEC 6-36): DB 함수와 같은 규칙만 흉내 낸다 ----

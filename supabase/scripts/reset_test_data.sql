@@ -13,6 +13,8 @@
 --  푸시 설정의 follow_builds 칸은 계정 설정이라 그대로다.)
 -- (051: 공지 알림 대기 줄(notice_notify_queue)을 전부 지운다. 공지 글은 자유게시판 글과 함께, 공지 알림은 알림과 함께 지워진다.
 --  052: 새 팔로워 알림에서 센 기록(new_follower_counted)을 전부 지운다. 푸시 설정의 notice·new_followers 칸은 계정 설정이라 그대로다.)
+-- (053: 운영자가 준 한정판 칭호(user_titles 중 title_catalog.kind = 'limited')를 전부 지운다. 칭호 도감 표(title_catalog)는 설정이라 남긴다.
+--  활동 칭호는 끝의 다시 계산이 정하고, 장인 칭호는 장인 표시(influencer)를 따른다.)
 -- 지움: 그 밖의 카운터·문서·제안·빌드 전부, 빌드 추천·비추천과 그 기록, 자유게시판 글·댓글·추천, 문서 댓글, 신고, 오류 신고(043), 알림, 문의하기 문의·답변(032),
 --       빌드 수정 기록·기여자·등록 간격(038 — 남는 말파 공개 빌드마다 지금 내용으로 "이전" 기록 1줄을 새로 남김),
 --       경험치 기록, 숨김 기록, 운영진 처리 기록(moderation_log, 감독관 지정·해제 기록 포함 전부), 빌드·카운터 상태 기록, 완전 삭제 기록, 도배 방지 시각, 018 백업 표의 내용,
@@ -108,6 +110,9 @@ begin
   end if;
   if to_regclass('public.new_follower_counted') is not null then
     delete from public.new_follower_counted;
+  end if;
+  if to_regclass('public.title_catalog') is not null then  -- 053: 한정판 칭호 (도감 표는 남김)
+    delete from public.user_titles t using public.title_catalog c where c.key = t.title_key and c.kind = 'limited';
   end if;
 end;
 $$;

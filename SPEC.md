@@ -1199,3 +1199,13 @@ RLS 원칙:
 - **Edge Function web-push 재배포 필요**(051·052 둘 다 — 재배포 전에는 제목 「탑신병자」 + DB 문장, 누르면 알림 목록).
 - **검사**: DB `supabase/tests/new_followers_test.sql`(34개 — 표 RLS·권한, 지금도 팔로우 중인 사람만·취소 제외·같은 날 팔로우/취소/다시 = 1명, 이름 없음, 다시 돌아도·되풀이해도 안 늘어남, 다음 날 새 사람만, 25시간 창, 30일 기록 정리·다시 셈, 인증 해제·장인 아님·탈퇴 제외, 읽음·모두 읽음, 푸시 기본 꺼짐·켠 사람만·휴대폰 알림 요청). 화면 `src/test/noticeFollowers.test.jsx`.
 - **방침·약관 (051·052, 시행일 그대로)**: 개인정보처리방침 1 수집 항목(휴대폰 알림 종류에 「공지」·「새 팔로워」, 팔로우 줄에 새 팔로워 알림에서 이미 센 장인·팔로워와 센 시각 30일 보관), 3 이용 목적(장인에게 하루 한 번 새 팔로워 수만 — 누가 팔로우했는지는 알리지 않음, 「공지」 항목 신설 — 가입자 모두(비회원 포함)에게 알림), 4 보유 기간(팔로우 기록 문단에 센 기록은 30일 뒤 삭제, 인증 해제·탈퇴·게스트 정리 때 바로 삭제). 이용약관 제4조의3에 새 팔로워 알림 한 줄(하루 한 번, 숫자만, 하루 안에 취소한 팔로우는 세지 않음, 휴대폰 알림은 처음에 꺼짐 — [계정 설정] 「새 팔로워」). 화면 검사 `noticeFollowers.test.jsx`에 1개, `followAdmin.test.jsx` 알림 종류 줄 고침.
+
+### 6-39. 칭호 도감 — 1단계 DB (2026-11-13, 053)
+> 마이페이지 칭호 칸을 "도감"으로: 활동 칭호 6개 + 장인(표시만) + 한정판(운영자 지급). 화면은 2단계.
+- **표 `title_catalog`**: key, name, description, how_to, kind(`activity`/`influencer`/`limited`), equippable(활동만 true — check), starts_at/ends_at(한정판만), secret, hidden, sort_order, icon(파일 이름만, `public/titles/`), color(`#RRGGBB`). 처음 7줄(활동 6 + 장인 1), 한정판 0개 — 나중에 INSERT. RLS 켬·정책 없음·권한 회수(직접 읽기·쓰기 불가). 설정 데이터라 테스트 데이터 비우기에서 남김(한정판 칭호 줄만 지움).
+- **연결**: `user_titles.title_key` → `title_catalog(key)` 외래 키, 장인 칭호 줄은 트리거로 막음(장인은 `profiles.influencer`로 표시). 대표 칭호는 장착 가능한 칭호만(트리거 `profiles_main_title_equippable`, 가진 칭호인지는 예전 외래 키).
+- **`sync_rewards`**: 회수 반복문 한 줄만 바꿔 `kind = 'activity'`만 회수 — 한정판은 건드리지 않음. 활동 칭호 조건·알림 문장 그대로. `title_name()`은 도감 표에서 이름(없으면 키), stable.
+- **`my_title_book()`** (로그인한 회원, 운영자 포함): 순서 활동 → 장인 → 한정판(그 안에서 sort_order), hidden 빠짐. 줄마다 owned·earned_at(장인은 인증일), period(한정판: upcoming/open/ended), how_to의 `{n}`은 지금 `xp_rules` 숫자. 비밀 칭호를 못 얻었으면 name·description·how_to·icon이 null(화면 "???").
+- **`grant_title` / `revoke_title`(p_user, p_key, p_note)**: 운영자(모드 켬)만, 한정판만, 메모 필수(500자). 운영자 계정에는 못 줌. 알림 `title_earned`(「칭호 'X'을 얻었습니다. [마이페이지] 칭호 칸에서 볼 수 있습니다.」) / `title_revoked`(「… 회수됐습니다. 사유: …」), 처리 기록 `grant_title`/`revoke_title`(메모 = 「칭호 이름 · 메모」). 받은 칭호는 기간이 끝나도 유지.
+- **되돌리기**: `053_title_catalog.sql` 맨 위 (로컬에서 052와 스키마 같음·다시 실행 가능 확인). 확인 조회 `check_title_catalog_before.sql` / `check_title_catalog_after.sql`(칭호 줄 수·칭호별 수·대표 칭호 수가 같아야 함).
+- **검사**: DB `supabase/tests/title_catalog_test.sql`(69개). 가짜 DB `title_catalog`·`fakeLimitedTitle`·`my_title_book`/`grant_title`/`revoke_title`.
