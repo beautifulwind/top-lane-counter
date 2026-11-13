@@ -1,4 +1,4 @@
-import { Navigate, useLocation } from 'react-router-dom';
+import { Link, Navigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../lib/auth';
 import { Loading } from './Status';
 
@@ -23,6 +23,10 @@ function Gate({ allowed, children }) {
       <article>
         <h1 className="doc-title">운영자 페이지</h1>
         <p className="empty">운영자만 볼 수 있습니다.</p>
+        {/* 050: 운영자 계정인데 운영자 모드를 꺼 둔 경우 — 어디서 켜는지 안내 */}
+        {auth.isOperatorAccount && !auth.isOperator && (
+          <p className="hint">운영자 모드가 꺼져 있습니다. <Link to="/me/settings">계정 설정</Link>에서 운영자 모드를 켜면 볼 수 있습니다.</p>
+        )}
       </article>
     );
   }

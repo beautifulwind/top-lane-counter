@@ -85,3 +85,10 @@ export const revokeInfluencer = (userId, note) => rpc('revoke_influencer', { p_u
 /** 운영자가 회원 닉네임 바꾸기 (장인은 직접 못 바꾸므로) */
 export const adminSetNickname = (userId, nickname, note) =>
   rpc('admin_set_nickname', { p_user: userId, p_nickname: String(nickname ?? '').trim(), p_note: note }, '닉네임을 바꾸지 못했습니다.');
+
+/**
+ * 운영자 장인 목록 (050, 운영자만 — 운영자 모드를 끄면 DB가 거부). 최근 인증 순, 쪽 단위.
+ * { total, page, size, items: [{ id, nickname, influencer, kind_label, direct, influencer_at, follower_count }] }
+ */
+export const getInfluencerList = (page = 1, size = 20) =>
+  rpc('admin_influencer_list', { p_page: page, p_size: size }, '장인 목록을 불러오지 못했습니다.');

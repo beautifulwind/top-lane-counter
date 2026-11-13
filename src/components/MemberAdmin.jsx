@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { getAllNewMembers, getMemberList, getMemberStats } from '../api/moderation';
+import { getInfluencerList } from '../api/influencer';
+import { INFLUENCER_KINDS } from '../lib/nickname';
+import { InfluencerName } from './UserName';
 import { fmtDateTime } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from './Status';
@@ -19,7 +22,7 @@ const SORTS = {
 
 /**
  * 운영자: 회원 관리 (042 → 046 정리, /admin/members, SPEC 6-33 2c).
- * 기본 화면 = 가입자 수 + 닉네임 검색창 + [감독관 목록 보기] + 신규 가입자(24시간) 목록. 처리 기록은 맨 아래 접힌 칸.
+ * 기본 화면 = 가입자 수 + 닉네임 검색창 + [감독관 목록 보기]·[장인 목록 보기](050) + 신규 가입자(24시간) 목록. 처리 기록은 맨 아래 접힌 칸.
  * 전체 회원은 검색으로만 본다(부분 일치, 20명씩, 검색어가 비면 결과 없음 — admin_member_list). 감독관 목록 = admin_member_list 역할 거르기.
  * 줄을 누르면 회원 정보(/admin/members/:id)로 가서 감독관 지정·해제, 장인 해제·닉네임 바꾸기를 한다. 이메일·로그인 ID는 DB가 돌려주지 않는다.
  */
@@ -33,7 +36,7 @@ export default function MemberAdmin() {
         이메일·로그인 ID는 볼 수 없습니다.
       </p>
       <MemberSearch />
-      <ModeratorList startOpen={params.get('role') === 'moderator'} />
+      <StaffLists startModerators={params.get('role') === 'moderator'} />
       <NewMembers />
       <ModerationLog />
     </>
@@ -112,25 +115,39 @@ function MemberSearch() {
 }
 
 /** [감독관 목록 보기]: admin_member_list의 역할 거르기(moderator). 예전 /admin/moderators 주소는 열린 채로 온다 */
-function ModeratorList({ startOpen }) {
-  const [open, setOpen] = useState(startOpen);
+/** [감독관 목록 보기]·[장인 목록 보기] (050) 버튼을 한 줄에 나란히, 목록은 그 아래에 */
+function StaffLists({ startModerators }) {
+  const [mods, setMods] = useState(startModerators);
+  const [infs, setInfs] = useState(false);
+  useEffect(() => { if (startModerators) setMods(true); }, [startModerators]);
+  return (
+    <section className="section" aria-label="감독관·장인">
+      <div className="row-actions">
+        <button type="button" className="btn btn-small btn-op" aria-expanded={mods} onClick={() => setMods((v) => !v)}>
+          {mods ? '감독관 목록 닫기' : '감독관 목록 보기'}
+        </button>
+        <button type="button" className="btn btn-small btn-op" aria-expanded={infs} onClick={() => setInfs((v) => !v)}>
+          {infs ? '장인 목록 닫기' : '장인 목록 보기'}
+        </button>
+      </div>
+      {mods && <ModeratorList />}
+      {infs && <InfluencerList />}
+    </section>
+  );
+}
+
+function ModeratorList() {
   const [page, setPage] = useState(1);
-  useEffect(() => { if (startOpen) setOpen(true); }, [startOpen]);
   const { data, error, loading, retry } = useAsync(
-    () => (open ? getMemberList({ role: 'moderator', page, size: PAGE_SIZE }) : Promise.resolve(null)),
-    [open, page],
+    () => getMemberList({ role: 'moderator', page, size: PAGE_SIZE }),
+    [page],
   );
   const pages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
   return (
-    <section className="section" aria-label="감독관">
-      <div className="row-actions">
-        <button type="button" className="btn btn-small btn-op" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
-          {open ? '감독관 목록 닫기' : '감독관 목록 보기'}
-        </button>
-      </div>
-      {open && loading && !data && <Loading />}
-      {open && error && <ErrorBox error={error} onRetry={retry} />}
-      {open && data && (
+    <div aria-label="감독관">
+      {loading && !data && <Loading />}
+      {error && <ErrorBox error={error} onRetry={retry} />}
+      {data && (
         <>
           <p className="hint">감독관 {data.total}명</p>
           {data.members.length === 0 ? (
@@ -143,7 +160,52 @@ function ModeratorList({ startOpen }) {
           <Pager page={page} pages={pages} setPage={setPage} />
         </>
       )}
-    </section>
+    </div>
+  );
+}
+
+/**
+ * [장인 목록 보기] (050): admin_influencer_list — 최근 인증 순 20명씩. 줄 = 닉네임(장인 표시) · 유형 · 직접 지정/신청 승인 · 인증일 · 팔로워 수.
+ * 줄을 누르면 회원 정보(/admin/members/:id)에서 인증 해제·닉네임 바꾸기. 운영자 모드를 끄면 이 화면 자체가 안내만 보여 준다(RequireOperator).
+ */
+function InfluencerList() {
+  const [page, setPage] = useState(1);
+  const { data, error, loading, retry } = useAsync(
+    () => getInfluencerList(page, PAGE_SIZE),
+    [page],
+  );
+  const pages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
+  return (
+    <div aria-label="장인">
+      {loading && !data && <Loading />}
+      {error && <ErrorBox error={error} onRetry={retry} />}
+      {data && (
+        <>
+          <p className="hint">인증된 장인 {data.total}명 · 최근 인증 순</p>
+          {data.items.length === 0 ? (
+            <p className="empty">인증된 장인이 없습니다.</p>
+          ) : (
+            <ul className="proposal-list" aria-label="장인 목록">
+              {data.items.map((m) => (
+                <li key={m.id} className="proposal-row" aria-label={m.nickname ?? '(닉네임 없음)'}>
+                  <div className="proposal-meta">
+                    <Link to={`/admin/members/${m.id}`} className="op-link" aria-label={`${m.nickname} 회원 정보`}>
+                      <InfluencerName profile={m} />
+                    </Link>
+                    {' '}
+                    <small className="hint">
+                      {m.kind_label ?? INFLUENCER_KINDS[m.influencer] ?? m.influencer} · {m.direct ? '직접 지정' : '신청 승인'}
+                      {' · '}인증 {fmtDateTime(m.influencer_at).slice(0, 10)} · 팔로워 {Number(m.follower_count ?? 0).toLocaleString()}명
+                    </small>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+          <Pager page={page} pages={pages} setPage={setPage} />
+        </>
+      )}
+    </div>
   );
 }
 

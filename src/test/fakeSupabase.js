@@ -1257,7 +1257,7 @@ function linkRpc(name, args) {
 
 // ---- 050 장인 팔로우 (SPEC 6-36): DB 함수와 같은 규칙만 흉내 낸다 ----
 const FOLLOW_RPCS = ['follow_influencer', 'unfollow_influencer', 'follow_status', 'influencer_builds', 'influencer_followers', 'influencer_follower_count',
-  'search_influencers', 'followed_builds', 'my_following'];
+  'search_influencers', 'followed_builds', 'my_following', 'admin_influencer_list'];
 function followRpc(name, args) {
   const writing = ['follow_influencer', 'unfollow_influencer'].includes(name);
   if (writing) fakeState.rpcCalls.push({ name, args });
@@ -1280,6 +1280,23 @@ function followRpc(name, args) {
     };
   };
   const pageOf = (all, page) => all.slice((Math.max(1, page ?? 1) - 1) * 20, Math.max(1, page ?? 1) * 20);
+  if (name === 'admin_influencer_list') {
+    fakeState.memberCalls.push({ name, args });
+    if (!isAdminNow()) return { data: null, error: { message: '운영자만 할 수 있습니다.', code: '42501' } };
+    const LABEL = { creator: '크리에이터', pro: '프로게이머', grandmaster: '그랜드마스터 이상' };
+    const all = TABLES.profiles.filter((p) => p.influencer)
+      .sort((a, b) => String(b.influencer_at ?? '').localeCompare(String(a.influencer_at ?? '')) || String(a.id).localeCompare(String(b.id)));
+    const size = Math.min(Math.max(args.p_size ?? 20, 1), 50);
+    const page = Math.max(1, args.p_page ?? 1);
+    return ok(structuredClone({
+      total: all.length, page, size,
+      items: all.slice((page - 1) * size, page * size).map((p) => ({
+        id: p.id, nickname: p.nickname, influencer: p.influencer, kind_label: LABEL[p.influencer] ?? p.influencer,
+        direct: TABLES.influencer_applications.some((a) => a.user_id === p.id && a.status === 'approved' && a.direct),
+        influencer_at: p.influencer_at ?? null, follower_count: count(p.id),
+      })),
+    }));
+  }
   if (name === 'search_influencers') {
     fakeState.searchCalls = [...(fakeState.searchCalls ?? []), args.p_query];
     const q = String(args.p_query ?? '').trim();
