@@ -47,6 +47,20 @@ export const INFLUENCER_NOTICE = {
   nickname_reset: { icon: 'bell', to: '/me/settings' },
   link_removed: { icon: 'ban', to: '/me/links' }, // 047·048 외부 링크 삭제 → 링크 관리 (3b)
 };
+// 050 팔로우한 장인의 새 빌드: DB 문장 "팔로우한 장인 {닉네임}의 새 빌드가 (N개 )올라왔습니다."에서 닉네임·개수를 읽어 제목을 만든다.
+// web-push(supabase/functions/web-push/index.ts followedBuildTitle)와 같은 규칙 — 테스트가 둘을 맞춰 본다
+export const FOLLOWED_BUILD_MESSAGE = /^팔로우한 장인 (.+)의 새 빌드가 (?:(\d+)개 )?올라왔습니다\.?$/;
+/** 돌려주는 값: { nickname, count, title } (문장 모양이 다르면 nickname null, 제목은 DB 문장 그대로) */
+export function followedBuildTitle(message) {
+  const m = FOLLOWED_BUILD_MESSAGE.exec(String(message ?? '').trim());
+  if (!m) return { nickname: null, count: 1, title: message || '팔로우한 장인의 새 빌드가 올라왔습니다' };
+  const count = m[2] ? Number(m[2]) : 1;
+  return {
+    nickname: m[1], count,
+    title: count > 1 ? `${m[1]} 님의 새 빌드가 ${count}개 올라왔습니다` : `${m[1]} 님이 새 빌드를 올렸습니다`,
+  };
+}
+
 const wikiPath = (n) => {
   const c = n.counter ?? n.build?.counter;
   if (!c) return null;
@@ -131,6 +145,18 @@ export function describeNotification(n, name = (id) => id) {
       subject: n.counter ? matchup(n.counter) : null,
       detail: memo ? `메모: ${memo}` : null,
       to: n.kind.startsWith('doc_comment') ? docLink : postLink,
+    };
+  }
+  if (n.kind === 'followed_build_created') {
+    // 050: 누르면 그 장인 페이지(빌드의 작성자). 빌드가 숨겨져 작성자를 모르면 공개 중인 상대법으로, 그것도 아니면 링크 없음
+    const c = n.build?.counter ?? n.counter;
+    const author = n.build?.author_id ?? null;
+    return {
+      icon: 'build',
+      title: followedBuildTitle(n.message).title,
+      subject: c ? `[빌드] ${matchup(c)}` : null,
+      detail: null,
+      to: author ? `/u/${author}` : n.counter?.status === 'approved' ? wikiPath(n) : null,
     };
   }
   const inf = INFLUENCER_NOTICE[n.kind];

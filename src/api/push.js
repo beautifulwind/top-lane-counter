@@ -102,11 +102,11 @@ export async function dropBrowserPush() {
   await sub?.unsubscribe().catch(() => {});
 }
 
-export const PUSH_DEFAULTS = { staff_new: true, my_results: true };
+export const PUSH_DEFAULTS = { staff_new: true, my_results: true, follow_builds: true }; // follow_builds: 050 팔로우한 장인의 새 빌드
 
-/** 알림 종류별 켜기/끄기 (줄이 없으면 둘 다 켜짐) */
+/** 알림 종류별 켜기/끄기 (줄이 없으면 모두 켜짐) */
 export async function getPushSettings(userId) {
-  const { data, error } = await db().from('push_settings').select('staff_new, my_results').eq('user_id', userId).maybeSingle();
+  const { data, error } = await db().from('push_settings').select('staff_new, my_results, follow_builds').eq('user_id', userId).maybeSingle();
   if (error) {
     if (missingTable(error)) return { ...PUSH_DEFAULTS };
     throw friendly(error, '알림 설정을 불러오지 못했습니다.');
@@ -114,13 +114,16 @@ export async function getPushSettings(userId) {
   return { ...PUSH_DEFAULTS, ...(data ?? {}) };
 }
 
-/** settings = { staff_new, my_results } 전체. 저장된 값을 돌려준다 */
+/** settings = { staff_new, my_results, follow_builds } 전체. 저장된 값을 돌려준다 */
 export async function savePushSettings(userId, settings) {
-  const row = { user_id: userId, staff_new: settings.staff_new, my_results: settings.my_results, updated_at: new Date().toISOString() };
+  const row = {
+    user_id: userId, staff_new: settings.staff_new, my_results: settings.my_results,
+    follow_builds: settings.follow_builds ?? true, updated_at: new Date().toISOString(),
+  };
   const { error } = await db().from('push_settings').upsert(row, { onConflict: 'user_id' });
   if (error) {
     if (missingTable(error)) throw new Error('알림 기능이 아직 준비 중입니다. 잠시 뒤 다시 시도해 주세요.');
     throw friendly(error, '알림 설정을 저장하지 못했습니다.');
   }
-  return { staff_new: row.staff_new, my_results: row.my_results };
+  return { staff_new: row.staff_new, my_results: row.my_results, follow_builds: row.follow_builds };
 }

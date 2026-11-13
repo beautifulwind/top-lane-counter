@@ -635,6 +635,7 @@ a.noti-main:hover { text-decoration: none; background: var(--raised); }
 .noti-icon { flex: none; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: var(--field); color: var(--muted); }
 .noti-icon.check, .noti-icon.shown { color: var(--brand-dark); }
 .noti-icon.ban, .noti-icon.hidden { color: var(--warn); }
+.noti-icon.build { color: var(--influencer); } /* 050 팔로우한 장인의 새 빌드 */
 .noti-icon.title-color { color: var(--t); background: transparent; }
 .noti-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--gap-xs); }
 .noti-title { font-weight: 600; overflow-wrap: anywhere; }

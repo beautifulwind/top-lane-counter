@@ -25,6 +25,8 @@ export type PushNotice = {
   counter_id?: number | null; target_champion?: string | null; counter_champion?: string | null;
   // 042 push_targets가 더 준다 (새 글 알림이 그 글로 가도록). 옛 DB면 없다
   post_id?: number | null;
+  // 050 팔로우한 장인의 새 빌드: 빌드를 만든 장인 (handlePush가 deps.buildAuthor로 채운다 — DB push_targets는 그대로)
+  author_id?: string | null;
 };
 export type PushTarget = { id: number; endpoint: string; p256dh: string; auth: string };
 export type PushDeps = {
@@ -32,6 +34,8 @@ export type PushDeps = {
   forget(ids: number[]): Result<number>;
   /** 한 기기로 보내기. 실패하면 statusCode가 붙은 오류를 던진다 (web-push와 같은 모양) */
   send(target: PushTarget, payload: string): Promise<unknown>;
+  /** 050: 빌드를 만든 사람 id (팔로우한 장인의 새 빌드 알림이 장인 페이지로 가도록). 없으면 상대법으로 */
+  buildAuthor?(buildId: number): Result<string>;
 };
 
 const CORS = {
@@ -81,6 +85,15 @@ const INFLUENCER: Record<string, { title: string; url: string }> = {
   nickname_reset: { title: '닉네임 안내', url: '/me/settings' },
   link_removed: { title: '장인 링크', url: '/me/links' }, // 3b: 링크 관리로
 };
+// 050 팔로우한 장인의 새 빌드 (푸시 묶음 follow_builds): 화면 followedBuildTitle(src/lib/notifications.js)과 같은 규칙.
+// DB 문장 "팔로우한 장인 {닉네임}의 새 빌드가 (N개 )올라왔습니다."에서 닉네임·개수를 읽는다. 누르면 그 장인 페이지
+const FOLLOWED_BUILD_MESSAGE = /^팔로우한 장인 (.+)의 새 빌드가 (?:(\d+)개 )?올라왔습니다\.?$/;
+export function followedBuildTitle(message: string | null): string {
+  const m = FOLLOWED_BUILD_MESSAGE.exec(String(message ?? '').trim());
+  if (!m) return message || '팔로우한 장인의 새 빌드가 올라왔습니다';
+  const count = m[2] ? Number(m[2]) : 1;
+  return count > 1 ? `${m[1]} 님의 새 빌드가 ${count}개 올라왔습니다` : `${m[1]} 님이 새 빌드를 올렸습니다`;
+}
 const withoutOperatorId = (s: string) =>
   s.replaceAll('운영자 계정 {운영자 닉네임}으로', '운영자 계정으로').replaceAll('{운영자 닉네임}으로', '운영자 계정으로').replaceAll('{운영자 닉네임}', '운영자 계정');
 function matchupUrl(n: PushNotice): string {
@@ -98,6 +111,10 @@ export function describePush(n: PushNotice): { title: string; body: string; url:
   if (r) {
     const url = n.proposal_id ? `/me/proposals/${n.proposal_id}` : n.build_id ? `/me/builds/${n.build_id}` : '/notifications';
     return { title: r.title, body: n.message ? cut(`${r.memo}: ${n.message}`) : '눌러서 확인해 주세요.', url, tag };
+  }
+  if (n.kind === 'followed_build_created') {
+    const url = n.author_id ? `/u/${encodeURIComponent(n.author_id)}` : matchupUrl(n);
+    return { title: followedBuildTitle(n.message), body: '눌러서 새 빌드를 확인해 주세요.', url, tag };
   }
   const inf = INFLUENCER[n.kind];
   if (inf) return { title: inf.title, body: cut(withoutOperatorId(n.message ?? '눌러서 확인해 주세요.')), url: inf.url, tag };
@@ -135,7 +152,14 @@ export async function handlePush(req: Request, env: Env, deps: PushDeps): Promis
   const subs = data?.subscriptions ?? [];
   if (!data?.notification || subs.length === 0) return json({ ok: true, sent: 0 }, 200);
 
-  const payload = JSON.stringify(describePush(data.notification));
+  let notice = data.notification;
+  if (notice.kind === 'followed_build_created' && notice.build_id && deps.buildAuthor) {
+    // 050: 장인 페이지 주소를 만들려고 빌드 작성자를 읽는다. 못 읽으면 상대법으로 (알림은 그대로 보낸다)
+    const a = await deps.buildAuthor(notice.build_id).catch((e) => ({ data: null, error: { message: String(e) } }));
+    if (a.error) console.error('web-push: 빌드 작성자 조회 실패', a.error.message);
+    if (a.data) notice = { ...notice, author_id: a.data };
+  }
+  const payload = JSON.stringify(describePush(notice));
   let sent = 0;
   let failed = 0;
   const gone: number[] = [];
@@ -174,6 +198,10 @@ if (typeof Deno !== 'undefined') {
     handlePush(req, Deno.env, {
       targets: (id) => admin.rpc('push_targets', { p_notification_id: id }),
       forget: (ids) => admin.rpc('push_forget', { p_ids: ids }),
+      buildAuthor: async (buildId) => {
+        const { data, error } = await admin.from('builds').select('author_id').eq('id', buildId).maybeSingle();
+        return { data: (data?.author_id as string | null) ?? null, error };
+      },
       send: (s, payload) => {
         if (!ready) return Promise.reject(new Error('VAPID 비밀 값 없음'));
         return webpush.sendNotification(

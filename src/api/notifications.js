@@ -32,7 +32,8 @@ const FIELDS = [
   'id, kind, message, created_at, read_at, proposal_id, build_id, post_id, counter_id',
   'counter:counters!notifications_counter_id_fkey(target_champion, counter_champion, status)',
   'proposal:edit_proposals!notifications_proposal_id_fkey(type, target_champion, counter_champion)',
-  'build:builds!notifications_build_id_fkey(counter:counters!builds_counter_id_fkey(target_champion, counter_champion))',
+  // author_id: 050 팔로우한 장인의 새 빌드 알림 → 그 장인 페이지 (숨겨진 빌드는 RLS가 빼서 null)
+  'build:builds!notifications_build_id_fkey(author_id, counter:counters!builds_counter_id_fkey(target_champion, counter_champion))',
   'post:posts!notifications_post_id_fkey(title)',
 ].join(', ');
 
