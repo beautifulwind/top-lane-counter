@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { setMainTitle } from '../api/rewards';
 import { useAuth } from '../lib/auth';
+import { rememberTitle } from '../lib/titles';
 import { levelProgress } from '../lib/levels';
 import { fmtDate, fmtDateTime } from '../lib/format';
 import { SparklesIcon } from './Icons';
@@ -131,6 +132,7 @@ function TitleBoard({ activity, special, current }) {
     setError(null);
     try {
       const profile = await setMainTitle(auth.user.id, key);
+      if (key) rememberTitle(all.find((t) => t.key === key)); // 054: 비밀·새 한정판도 닉네임 옆 배지에 바로
       if (profile) auth.setProfile(profile);
     } catch (e) {
       setError(e.message);

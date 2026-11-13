@@ -14,7 +14,6 @@ import GuestLinkDialog from '../components/GuestLinkDialog';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
 import { InfluencerName, TitleBadge } from '../components/UserName';
-import { titleName } from '../lib/titles';
 import BuildCard from '../components/BuildCard';
 import DiffView from '../components/DiffView';
 import MyTitles, { LevelBar } from '../components/MyRewards';
@@ -53,7 +52,7 @@ export default function Me() {
 function ProfileName({ profile }) {
   return (
     <span className="user-name">
-      {titleName(profile.main_title) && <><TitleBadge titleKey={profile.main_title} />{' '}</>}
+      <TitleBadge titleKey={profile.main_title} space />
       <InfluencerName profile={profile} />
       {profile.is_guest && <>{' '}<span className="guest-badge">비회원</span></>}
     </span>

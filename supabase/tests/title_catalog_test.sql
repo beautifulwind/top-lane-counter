@@ -36,9 +36,10 @@ select t.ok('title_name: 예전 이름 그대로 + 장인 + 없는 키는 키 �
   title_name('top_addict') = '탑신병자' and title_name('tool_hater') = '도구혐오자' and title_name('solid_heavy') = '단단묵직'
   and title_name('butcher_owner') = '백정주인' and title_name('general') = '장군' and title_name('offmeta') = '비주류'
   and title_name('influencer') = '장인' and title_name('nope') = 'nope');
-select t.fails('한정판은 장착 가능으로 못 넣음',
-  $$insert into title_catalog (key, name, how_to, kind, equippable, sort_order) values ('lim_x', 'x', 'x', 'limited', true, 1000)$$,
-  'title_catalog_equip_activity_only');
+-- 054부터 한정판은 장착 가능으로 넣을 수 있고 장인만 막힌다 (title_badge_test.sql)
+select t.fails('장인 종류는 장착 가능으로 못 넣음',
+  $$insert into title_catalog (key, name, how_to, kind, equippable, sort_order) values ('inf_x', 'x', 'x', 'influencer', true, 1000)$$,
+  'title_catalog_equip_kind');
 select t.fails('기간은 한정판만',
   $$insert into title_catalog (key, name, how_to, kind, equippable, sort_order, starts_at) values ('act_x', 'x', 'x', 'activity', true, 70, now())$$,
   'title_catalog_period_limited_only');

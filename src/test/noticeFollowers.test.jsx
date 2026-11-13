@@ -232,7 +232,7 @@ describe('web-push: 공지·새 팔로워', () => {
 
 // ---------------- 방침·약관 ----------------
 
-test('방침·약관 (051 공지·052 새 팔로워): 수집 항목·이용 목적·보관 기간, 제4조의3 / 시행일은 그대로', async () => {
+test('방침·약관 (051 공지·052 새 팔로워): 수집 항목·이용 목적·보관 기간, 제4조의3 / 시행일 2026-11-13', async () => {
   const before = { ...LEGAL };
   start('/privacy');
   await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' });
@@ -249,5 +249,5 @@ test('방침·약관 (051 공지·052 새 팔로워): 수집 항목·이용 목�
   expect(sec).toContain('누가 팔로우했는지는 알리지 않으며');
   expect(sec).toContain('휴대폰 알림은 처음에 꺼져 있고 [계정 설정]의 “새 팔로워”에서 켤 수 있습니다');
   expect(LEGAL).toEqual(before);
-  expect(LEGAL.effectiveDate).toBe('2026-11-09');
+  expect(LEGAL.effectiveDate).toBe('2026-11-13');
 });

@@ -40,6 +40,16 @@ export async function getMyTitleBook() {
   return { ...data, items: data?.items ?? [] };
 }
 
+/**
+ * 닉네임 옆 칭호 배지용 공개 정보 (054 public_title_info, 비로그인도): [{ key, kind, name, icon, color }].
+ * 활동 + 한정판(숨김 빼고, 비밀은 누군가 대표로 단 것만). 소개·얻는 방법은 없다.
+ */
+export async function getPublicTitleInfo() {
+  const { data, error } = await db().rpc('public_title_info');
+  if (error) throw friendly(error, '칭호 정보를 불러오지 못했습니다.');
+  return Array.isArray(data) ? data : [];
+}
+
 /** 대표 칭호 고르기 (null = 없음). DB가 "내가 가진 칭호"인지 확인한다. 바뀐 프로필을 돌려준다 */
 export function setMainTitle(userId, titleKey) {
   return run(

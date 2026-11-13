@@ -1,12 +1,30 @@
 import { Link } from 'react-router-dom';
-import { titleName } from '../lib/titles';
+import { titleInfo, useTitleInfo } from '../lib/titles';
 import { INFLUENCER_TIP, displayNickname } from '../lib/nickname';
+import TitleMedal, { BUILTIN_TITLE, titleColorClass, titleColorStyle } from './TitleMedal';
 
-/** 칭호 배지 (022): 테두리·색이 있는 작은 칸 — 사이트 이름 "탑신병자"와 구분된다. 색은 칭호마다 다르다 (tokens.css) */
-export function TitleBadge({ titleKey }) {
-  const name = titleName(titleKey);
-  if (!name) return null;
-  return <span className={`title-badge ${titleKey}`} title={`칭호 '${name}'`}>{name}</span>;
+/**
+ * 칭호 배지 (022, 054): 테두리·색이 있는 작은 칸 — 사이트 이름 "탑신병자"와 구분된다.
+ * 이름·그림·색은 앱이 켜질 때 한 번 읽은 칭호 정보(054 public_title_info)에서. 모르는 키·숨김 칭호는 배지를 그리지 않는다.
+ * - 기존 6개 활동 칭호(그림·색 없음): 예전 그대로 글자 칸 + 칭호색(tokens.css)
+ * - 그 밖(한정판 등): 높이 22px 칸에 작은 훈장 + 이름. icon이 있으면 그림 파일, 없으면 공통 훈장에 color
+ * space: 배지 뒤에 띄어쓰기 한 칸 (배지가 없으면 띄어쓰기도 없음)
+ */
+export function TitleBadge({ titleKey, space = false }) {
+  useTitleInfo();
+  const item = titleInfo(titleKey);
+  if (!item) return null;
+  const tip = `칭호 '${item.name}'`;
+  const plain = BUILTIN_TITLE(item) && !item.icon && !item.color;
+  const badge = plain
+    ? <span className={`title-badge ${item.key}`} title={tip}>{item.name}</span>
+    : (
+      <span className={['title-badge', 'title-badge-art', titleColorClass(item)].filter(Boolean).join(' ')} style={titleColorStyle(item)} title={tip}>
+        <span className="title-badge-medal" aria-hidden="true"><TitleMedal item={item} box={[18, 18]} /></span>
+        {item.name}
+      </span>
+    );
+  return space ? <>{badge}{' '}</> : badge;
 }
 
 /**
@@ -58,11 +76,10 @@ export function InfluencerName({ profile, linkTo = null }) {
  * linkTo: 회원 id를 주면 장인일 때만 닉네임이 공개 프로필(/u/:id) 링크가 된다 (047). 줄 전체가 이미 링크인 자리(회원 목록 등)에는 주지 않는다
  */
 export default function UserName({ profile, plain = false, linkTo = null }) {
-  const hasTitle = !plain && !!titleName(profile.main_title);
   return (
     <span className="user-name">
       {!plain && <><span className="user-lv">Lv.{profile.level}</span>{' '}</>}
-      {hasTitle && <><TitleBadge titleKey={profile.main_title} />{' '}</>}
+      {!plain && <TitleBadge titleKey={profile.main_title} space />}
       <InfluencerName profile={profile} linkTo={linkTo} />
       {profile.is_guest && <>{' '}<span className="guest-badge">비회원</span></>}
     </span>

@@ -393,8 +393,8 @@ function query(table) {
       // RLS 흉내: 내 행만 수정 / DB 제약 흉내: 닉네임 중복(대소문자 무시) 금지
       const me = fakeState.session?.user.id;
       rows = rows.filter((r) => r.id === me);
-      // 053 트리거 흉내: 대표 칭호는 장착할 수 있는 칭호(활동 칭호)만 (profiles_main_title_equippable)
-      if (patch.main_title && !TABLES.title_catalog.some((c) => c.key === patch.main_title && c.equippable)) {
+      // 053·054 트리거 흉내: 대표 칭호는 장착할 수 있고 숨김이 아닌 칭호만 (profiles_main_title_equippable, 054부터 한정판도 칭호마다)
+      if (patch.main_title && !TABLES.title_catalog.some((c) => c.key === patch.main_title && c.equippable && !c.hidden)) {
         return { data: null, error: { code: '23514', message: '이 칭호는 대표 칭호로 고를 수 없습니다.' } };
       }
       // DB 제약 흉내: 대표 칭호는 내가 가진 칭호만 (profiles_main_title_owned)
@@ -1300,7 +1300,7 @@ function linkRpc(name, args) {
 }
 
 // ---- 053 칭호 도감 (SPEC 6-39): DB 함수와 같은 규칙만 흉내 낸다 ----
-const TITLE_RPCS = ['my_title_book', 'grant_title', 'revoke_title'];
+const TITLE_RPCS = ['my_title_book', 'grant_title', 'revoke_title', 'public_title_info'];
 const josa = (word, a, b) => {
   const code = word.charCodeAt(word.length - 1) - 0xac00;
   return code >= 0 && code <= 11171 && code % 28 !== 0 ? a : b;
@@ -1308,6 +1308,14 @@ const josa = (word, a, b) => {
 function titleRpc(name, args) {
   const meRow = meNow();
   const err = (message, code) => ({ data: null, error: { message, code } });
+  if (name === 'public_title_info') {
+    // 054: 비로그인도. 활동 + 한정판, 숨김 빼고, 비밀은 누군가 대표로 단 것만. 앱이 켜질 때 알아서 부르므로 rpcCalls에는 넣지 않는다
+    const grp = { activity: 1, limited: 3 };
+    return ok(structuredClone(TABLES.title_catalog
+      .filter((c) => c.kind !== 'influencer' && !c.hidden && (!c.secret || TABLES.profiles.some((p) => p.main_title === c.key)))
+      .sort((a, b) => grp[a.kind] - grp[b.kind] || a.sort_order - b.sort_order || a.key.localeCompare(b.key))
+      .map((c) => ({ key: c.key, kind: c.kind, name: c.name, icon: c.icon, color: c.color }))));
+  }
   if (name === 'my_title_book') {
     // 화면이 알아서 부르는 것이라 rpcCalls에는 넣지 않는다
     if (!meRow) return err('로그인이 필요합니다.', '42501');
@@ -1360,6 +1368,7 @@ function titleRpc(name, args) {
   } else {
     if (!has) return err('이 회원은 그 칭호를 가지고 있지 않습니다.', 'P0002');
     TABLES.user_titles = TABLES.user_titles.filter((t) => !(t.user_id === u.id && t.title_key === c.key));
+    if (u.main_title === c.key) u.main_title = null; // 외래 키 profiles_main_title_owned (on delete set null) 흉내
   }
   TABLES.notifications.push({
     id: 7000 + TABLES.notifications.length, user_id: u.id, kind: granting ? 'title_earned' : 'title_revoked', read_at: null,

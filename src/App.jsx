@@ -22,6 +22,7 @@ import { AuthProvider, useAuth } from './lib/auth';
 import { RequireLogin } from './components/RequireOperator';
 import { Loading } from './components/Status';
 import { CHUNK_RELOAD_KEY } from './lib/reloadGuard';
+import { loadTitleInfo } from './lib/titles';
 
 const RELOAD_KEY = CHUNK_RELOAD_KEY;
 
@@ -137,6 +138,8 @@ function OldPath({ to }) {
 }
 
 export function AppRoutes() {
+  // 054: 닉네임 옆 칭호 배지(이름·그림·색)를 앱이 켜질 때 한 번 읽어서 모든 화면이 재사용한다 (비로그인도)
+  useEffect(() => { loadTitleInfo(); }, []);
   return (
     <AuthProvider>
       <ScrollToTop />

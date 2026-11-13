@@ -301,6 +301,14 @@ kbd {
 }
 /* 페이지 제목(마이페이지 닉네임) 안: 제목 글꼴을 물려받지 않고(위 font-family) 한 단계 크게 */
 .doc-title .title-badge { font-size: var(--fs-sm); line-height: 22px; padding: 0 8px; }
+/* 054 한정판 등 도감 칭호 배지: 높이 22px 칸에 18px 훈장(그림 파일 또는 공통 훈장에 칭호색) + 이름. 기존 6개 글자 칸과 같은 줄 높이로 맞춘다 */
+.title-badge-art {
+  display: inline-flex; align-items: center; gap: 2px; box-sizing: border-box; height: 22px; padding: 0 7px 0 2px; line-height: 20px;
+}
+.title-badge-medal { display: inline-flex; flex: none; width: 18px; height: 18px; align-items: center; justify-content: center; }
+.title-badge-medal .medal-icon { display: block; max-width: 18px; max-height: 18px; }
+.title-badge-medal img.medal-img { object-fit: contain; }
+.doc-title .title-badge-art { height: 22px; line-height: 20px; padding: 0 8px 0 2px; }
 .title-badge.top_addict, .medal.top_addict, .medal-pop.top_addict, .title-color.top_addict { --t: var(--title-top_addict); --t-soft: var(--title-top_addict-soft); --t-line: var(--title-top_addict-line); }
 .title-badge.tool_hater, .medal.tool_hater, .medal-pop.tool_hater, .title-color.tool_hater { --t: var(--title-tool_hater); --t-soft: var(--title-tool_hater-soft); --t-line: var(--title-tool_hater-line); }
 .title-badge.solid_heavy, .medal.solid_heavy, .medal-pop.solid_heavy, .title-color.solid_heavy { --t: var(--title-solid_heavy); --t-soft: var(--title-solid_heavy-soft); --t-line: var(--title-solid_heavy-line); }

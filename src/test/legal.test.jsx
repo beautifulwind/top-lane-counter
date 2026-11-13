@@ -74,7 +74,7 @@ test('개인정보처리방침 (037): 휴대폰 알림 수집 항목·삭제 시
   expect(text).toContain('브라우저 푸시 서비스: Google LLC');
 });
 
-test('방침·약관 (046 장인 인증): 수집·보관·공개 범위, 인증 절차, 사칭 금지 / 시행일은 그대로', async () => {
+test('방침·약관 (046 장인 인증): 수집·보관·공개 범위, 인증 절차, 사칭 금지 / 시행일 2026-11-13', async () => {
   const before = { ...LEGAL };
   start('/privacy');
   await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' });
@@ -141,12 +141,14 @@ test('지금 legal.js에는 빈칸이 없다 (배포 전 체크)', async () => {
   expect(screen.getByText(/대한민국\(서울\), AWS ap-northeast-2/)).toBeDefined();
 });
 
-test('칭호 도감 문구: 약관 제4조의4, 방침의 수집·처리 기록·공개 정보, 시행일은 그대로', async () => {
+test('칭호 도감 문구: 약관 제4조의4, 방침의 수집·처리 기록·공개 정보, 시행일 2026-11-13', async () => {
   start('/terms');
   await screen.findByRole('heading', { level: 1, name: '이용약관' });
   const sec = screen.getByRole('heading', { name: '제4조의4 (칭호 도감)' }).closest('section');
   expect(sec.textContent).toMatch(/활동 칭호.*장인 칭호.*한정판 칭호/s);
   expect(sec.textContent).toMatch(/운영자가 직접 지급하고 회수/);
+  expect(sec.textContent).toMatch(/대표 칭호로 고를 수 있는 것은 활동 칭호와, 운영자가 대표로 쓸 수 있게 정한 한정판 칭호입니다\./);
+  expect(sec.textContent).toMatch(/회수되거나 대표로 쓸 수 없게 바뀌면 대표 칭호가 비워집니다/);
   expect(sec.textContent).toMatch(/기간이 끝나도 이미 받은 칭호는 유지/);
   expect(sec.textContent).toMatch(/부정한 방법으로 칭호를 얻은 것이 확인되면/);
   expect(screen.getByRole('heading', { name: '제7조 (운영자의 조치)' }).closest('section').textContent).toMatch(/제4조의4에 따라 한정판 칭호를 지급하거나 회수/);
@@ -154,9 +156,10 @@ test('칭호 도감 문구: 약관 제4조의4, 방침의 수집·처리 기록�
   start('/privacy');
   await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' });
   const text = document.querySelector('article').textContent;
+  expect(text).toMatch(/고른 대표 칭호\(활동 칭호와, 운영자가 대표로 쓸 수 있게 정한 한정판 칭호도 대표로 고를 수 있습니다/);
   expect(text).toMatch(/장인 칭호는 따로 기록하지 않고 장인 인증 상태로 표시/);
   expect(text).toMatch(/한정판 칭호 지급·회수.*메모는 최대 500자/);
   expect(text).toMatch(/한정판 칭호와 장인 칭호\(장인 표시\)도 다른 이용자에게 보일 수 있습니다/);
   expect(text).toMatch(/한정판 칭호 지급: 운영자가 한정판 칭호를 지급하거나 회수/);
-  expect(LEGAL.effectiveDate).toBe('2026-11-09');
+  expect(LEGAL.effectiveDate).toBe('2026-11-13');
 });

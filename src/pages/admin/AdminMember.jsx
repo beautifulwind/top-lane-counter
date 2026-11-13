@@ -10,7 +10,7 @@ import { GrantInfluencer, RenameMember, RevokeInfluencer } from '../../component
 import { UsersIcon } from '../../components/Icons';
 import { fmtDateTime } from '../../lib/format';
 import { matchupTitle } from '../../lib/josa';
-import { titleName } from '../../lib/titles';
+import { titleName, useTitleInfo } from '../../lib/titles';
 import { INFLUENCER_KINDS } from '../../lib/nickname';
 import { useAsync } from '../../lib/useAsync';
 
@@ -65,6 +65,7 @@ function MemberPage() {
 }
 
 function Info({ info, onDone }) {
+  useTitleInfo(); // 054: 칭호 이름은 앱이 처음 읽은 칭호 정보에서 (한정판 포함, 모르는 키는 키 그대로)
   const titles = (info.titles ?? []).map(titleName);
   return (
     <section className="section" aria-label="기본 정보">
