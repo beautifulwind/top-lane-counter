@@ -94,6 +94,14 @@ export function followedBuildTitle(message: string | null): string {
   const count = m[2] ? Number(m[2]) : 1;
   return count > 1 ? `${m[1]} 님의 새 빌드가 ${count}개 올라왔습니다` : `${m[1]} 님이 새 빌드를 올렸습니다`;
 }
+// 051 공지 (푸시 묶음 notice): 화면(src/lib/notifications.js NOTICE_TITLE·noticeSubject)과 같은 제목. 본문은 공지 제목, 누르면 그 공지
+// 052 장인 새 팔로워 (푸시 묶음 new_followers, 기본 꺼짐): 본문은 DB 문장 그대로(숫자만, 누가 팔로우했는지 없음), 누르면 내 팔로워 목록
+export const NOTICE_TITLE = '새 공지가 올라왔습니다';
+export const NEW_FOLLOWERS_PATH = '/me/followers';
+export function noticeSubject(message: string | null): string | null {
+  const m = /「(.*)」\s*$/.exec(String(message ?? '').trim());
+  return m ? m[1] : null;
+}
 const withoutOperatorId = (s: string) =>
   s.replaceAll('운영자 계정 {운영자 닉네임}으로', '운영자 계정으로').replaceAll('{운영자 닉네임}으로', '운영자 계정으로').replaceAll('{운영자 닉네임}', '운영자 계정');
 function matchupUrl(n: PushNotice): string {
@@ -115,6 +123,13 @@ export function describePush(n: PushNotice): { title: string; body: string; url:
   if (n.kind === 'followed_build_created') {
     const url = n.author_id ? `/u/${encodeURIComponent(n.author_id)}` : matchupUrl(n);
     return { title: followedBuildTitle(n.message), body: '눌러서 새 빌드를 확인해 주세요.', url, tag };
+  }
+  if (n.kind === 'notice_posted') {
+    const subject = noticeSubject(n.message);
+    return { title: NOTICE_TITLE, body: cut(subject ? `「${subject}」` : '눌러서 공지를 확인해 주세요.'), url: n.post_id ? `/board/${n.post_id}` : '/notifications', tag };
+  }
+  if (n.kind === 'new_followers') {
+    return { title: '새 팔로워', body: cut(n.message ?? '오늘 새 팔로워가 생겼습니다.'), url: NEW_FOLLOWERS_PATH, tag };
   }
   const inf = INFLUENCER[n.kind];
   if (inf) return { title: inf.title, body: cut(withoutOperatorId(n.message ?? '눌러서 확인해 주세요.')), url: inf.url, tag };

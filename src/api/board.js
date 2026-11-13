@@ -60,7 +60,8 @@ async function rpc(name, args, fallback) {
   return data;
 }
 
-/** 목록: { total, size, rows: [{ id, title, status, comment_count, up_count, created_at, edited_at, author }] } (최신순) */
+/** 목록: { total, size, rows: [{ id, title, status, is_notice, comment_count, up_count, created_at, edited_at, author }], notices } (최신순).
+ *  051: is_notice = 공지, notices = 1쪽(검색 없음)에서 맨 위에 고정할 최근 공지 3개 (051 실행 전 DB면 없음) */
 export const getBoardPage = (q, page) =>
   rpc('board_page', { p_q: q || null, p_page: page, p_size: PAGE_SIZE }, '글 목록을 불러오지 못했습니다.');
 
@@ -89,6 +90,9 @@ export async function getPost(id, userId = null) {
 /** 글쓰기 → 새 글 id. media = 올린 사진 경로 (보이는 순서) */
 export const createPost = (title, body, media = []) =>
   rpc('create_post', { p_title: title, p_body: body, p_media: media }, '글을 올리지 못했습니다.');
+/** 051 공지 올리기 (운영자만 — DB가 확인) → 새 글 id. notify = [알림 보내기] (끄면 알림 없이 공지만) */
+export const createNotice = (title, body, media = [], notify = true) =>
+  rpc('create_notice', { p_title: title, p_body: body, p_media: media, p_notify: notify }, '공지를 올리지 못했습니다.');
 /** media: 경로 목록이면 그 목록으로 바꾸고, null이면 사진은 그대로 */
 export const editPost = (id, title, body, media = null) =>
   rpc('edit_post', { p_id: id, p_title: title, p_body: body, p_media: media }, '글을 고치지 못했습니다.');

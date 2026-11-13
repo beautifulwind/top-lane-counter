@@ -61,6 +61,17 @@ export function followedBuildTitle(message) {
   };
 }
 
+// 051 공지: DB 문장 "새 공지가 올라왔습니다. 「공지 제목(20자까지)」". 제목은 고정, 둘째 줄은 지금 공지 제목(못 읽으면 문장 속 제목).
+// 052 장인 새 팔로워(하루 묶음): DB 문장 "오늘 새 팔로워 N명이 생겼습니다."가 곧 제목, 누르면 내 장인 페이지의 팔로워 목록.
+// web-push(supabase/functions/web-push/index.ts)와 같은 제목·주소 — 테스트가 둘을 맞춰 본다
+export const NOTICE_TITLE = '새 공지가 올라왔습니다';
+export const NEW_FOLLOWERS_PATH = '/me/followers';
+/** 공지 알림 문장에서 「」 안의 공지 제목 (없으면 null) */
+export function noticeSubject(message) {
+  const m = /「(.*)」\s*$/.exec(String(message ?? '').trim());
+  return m ? m[1] : null;
+}
+
 const wikiPath = (n) => {
   const c = n.counter ?? n.build?.counter;
   if (!c) return null;
@@ -158,6 +169,14 @@ export function describeNotification(n, name = (id) => id) {
       detail: null,
       to: author ? `/u/${author}` : n.counter?.status === 'approved' ? wikiPath(n) : null,
     };
+  }
+  if (n.kind === 'notice_posted') {
+    // 051: 숨겨지거나 지워진 공지는 글을 읽지 못하므로(RLS) 이동 없음
+    const subject = n.post?.title ?? noticeSubject(n.message);
+    return { icon: 'bell', title: NOTICE_TITLE, subject: subject ? `「${subject}」` : null, detail: null, to: n.post && n.post_id ? `/board/${n.post_id}` : null };
+  }
+  if (n.kind === 'new_followers') {
+    return { icon: 'users', title: String(n.message ?? '오늘 새 팔로워가 생겼습니다').replace(/\.$/, ''), subject: null, detail: null, to: NEW_FOLLOWERS_PATH };
   }
   const inf = INFLUENCER_NOTICE[n.kind];
   if (inf) {

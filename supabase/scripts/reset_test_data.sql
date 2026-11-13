@@ -11,6 +11,8 @@
 -- (047: 장인 외부 링크(ext_links)와 링크 신고(link_reports)를 전부 지운다. 허용 사이트 표(link_domains)는 설정이라 남긴다.)
 -- (050: 장인 팔로우(influencer_follows)·팔로우 호출 횟수(follow_rate)·새 빌드 알림 대기 줄(follow_notify_queue)을 전부 지운다.
 --  푸시 설정의 follow_builds 칸은 계정 설정이라 그대로다.)
+-- (051: 공지 알림 대기 줄(notice_notify_queue)을 전부 지운다. 공지 글은 자유게시판 글과 함께, 공지 알림은 알림과 함께 지워진다.
+--  052: 새 팔로워 알림에서 센 기록(new_follower_counted)을 전부 지운다. 푸시 설정의 notice·new_followers 칸은 계정 설정이라 그대로다.)
 -- 지움: 그 밖의 카운터·문서·제안·빌드 전부, 빌드 추천·비추천과 그 기록, 자유게시판 글·댓글·추천, 문서 댓글, 신고, 오류 신고(043), 알림, 문의하기 문의·답변(032),
 --       빌드 수정 기록·기여자·등록 간격(038 — 남는 말파 공개 빌드마다 지금 내용으로 "이전" 기록 1줄을 새로 남김),
 --       경험치 기록, 숨김 기록, 운영진 처리 기록(moderation_log, 감독관 지정·해제 기록 포함 전부), 빌드·카운터 상태 기록, 완전 삭제 기록, 도배 방지 시각, 018 백업 표의 내용,
@@ -100,6 +102,12 @@ begin
     delete from public.follow_notify_queue;
     delete from public.influencer_follows;
     delete from public.follow_rate;
+  end if;
+  if to_regclass('public.notice_notify_queue') is not null then
+    delete from public.notice_notify_queue;
+  end if;
+  if to_regclass('public.new_follower_counted') is not null then
+    delete from public.new_follower_counted;
   end if;
 end;
 $$;
@@ -227,6 +235,7 @@ union all select '장인 인증 신청 (046 실행 전이면 0)', case when to_r
 union all select '  └ 장인 표시·인증 대기·변경 예정이 남은 프로필 (046, 0이어야 함)', case when not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'influencer') then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.profiles where influencer is not null or nickname_state is not null', false, true, '')))[1]::text::integer end
 union all select '장인 외부 링크 / 링크 신고 (047 실행 전이면 0)', case when to_regclass('public.ext_links') is null then 0 else (xpath('/row/c/text()', query_to_xml('select (select count(*) from public.ext_links) + (select count(*) from public.link_reports) as c', false, true, '')))[1]::text::integer end
 union all select '장인 팔로우 / 호출 횟수 / 알림 대기 줄 (050 실행 전이면 0)', case when to_regclass('public.influencer_follows') is null then 0 else (xpath('/row/c/text()', query_to_xml('select (select count(*) from public.influencer_follows) + (select count(*) from public.follow_rate) + (select count(*) from public.follow_notify_queue) as c', false, true, '')))[1]::text::integer end
+union all select '공지 알림 대기 줄 / 새 팔로워 센 기록 (051·052 실행 전이면 0)', (case when to_regclass('public.notice_notify_queue') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.notice_notify_queue', false, true, '')))[1]::text::integer end) + (case when to_regclass('public.new_follower_counted') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.new_follower_counted', false, true, '')))[1]::text::integer end)
 union all select '알림', count(*) from public.notifications
 union all select '  └ 게시판 신고 알림 report_received (045, 0이어야 함)', count(*) from public.notifications where kind = 'report_received'
 union all select '문의 (032 실행 전이면 0)', case when to_regclass('public.inquiries') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.inquiries', false, true, '')))[1]::text::integer end

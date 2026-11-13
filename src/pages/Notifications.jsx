@@ -8,12 +8,13 @@ import { fmtDateTime } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
 import {
-  BanIcon, BellIcon, CheckCircleIcon, EyeIcon, EyeOffIcon, FlagIcon, LayersIcon, MedalIcon, MessageIcon, TrendingUpIcon,
+  BanIcon, BellIcon, CheckCircleIcon, EyeIcon, EyeOffIcon, FlagIcon, LayersIcon, MedalIcon, MessageIcon, TrendingUpIcon, UsersIcon,
 } from '../components/Icons';
 
 const ICONS = {
   check: CheckCircleIcon, ban: BanIcon, hidden: EyeOffIcon, shown: EyeIcon, flag: FlagIcon,
   comment: MessageIcon, level: TrendingUpIcon, bell: BellIcon, build: LayersIcon, // build: 050 팔로우한 장인의 새 빌드
+  users: UsersIcon, // users: 052 장인 새 팔로워
 };
 
 /**

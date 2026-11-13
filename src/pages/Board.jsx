@@ -11,6 +11,7 @@ import { ChevronIcon, ImageIcon, MessageIcon, PencilIcon, SearchIcon, ThumbIcon 
 /**
  * 자유게시판 목록 (/board): 최신순 20개씩, 제목·본문 검색. 검색어·쪽은 주소(?q=&page=)에 남는다.
  * 읽기는 누구나, 글쓰기는 로그인 + 닉네임 (승인 없이 바로 올라감, SPEC 6-5)
+ * 051: 공지는 [공지] 표시. 1쪽(검색 없음)에는 최근 공지 3개를 목록 위에 따로 고정한다(아래 목록에도 제자리에 그대로).
  */
 export default function Board() {
   const auth = useAuth();
@@ -72,32 +73,44 @@ export default function Board() {
       {data && data.rows.length === 0 && (
         <p className="empty">{q ? '검색에 맞는 글이 없습니다.' : '아직 글이 없습니다. 첫 글을 써 보세요!'}</p>
       )}
+      {data?.notices?.length > 0 && (
+        <ul className="post-list pinned-notices" aria-label="공지">
+          {data.notices.map((p) => <PostRow key={p.id} p={p} />)}
+        </ul>
+      )}
       {data && data.rows.length > 0 && (
         <ul className="post-list" aria-label="글 목록">
-          {data.rows.map((p) => (
-            <li key={p.id} className={p.status === 'hidden' ? 'post-row hidden-row' : 'post-row'}>
-              <Link to={`/board/${p.id}`} className="post-link">
-                <span className="post-title-line">
-                  {p.status === 'hidden' && <span className="op-badge">숨김</span>}
-                  <span className="post-title">{p.title}</span>
-                  {p.media_count > 0 && <span className="post-media" role="img" aria-label="사진 있음" title="사진 있음"><ImageIcon size={16} /></span>}
-                </span>
-                <span className="post-meta">
-                  {p.author ? <UserName profile={p.author} /> : <span>(탈퇴한 유저)</span>}
-                  <span>{fmtDateTime(p.created_at)}</span>
-                </span>
-                <span className="post-stats">
-                  {p.comment_count > 0 && <span className="post-count" aria-label={`댓글 ${p.comment_count}개`}><MessageIcon size={14} /> {p.comment_count}</span>}
-                  {p.up_count > 0 && <span className="post-up" aria-label={`추천 ${p.up_count}`}><ThumbIcon size={14} /> {p.up_count}</span>}
-                </span>
-                <span className="chev" aria-hidden="true"><ChevronIcon size={18} /></span>
-              </Link>
-            </li>
-          ))}
+          {data.rows.map((p) => <PostRow key={p.id} p={p} />)}
         </ul>
       )}
       {data && pages > 1 && <Pager page={page} pages={pages} onGo={(n) => go(q, n)} />}
     </article>
+  );
+}
+
+/** 목록 한 줄 (공지·숨김 표시, 제목, 사진, 글쓴이·시각, 댓글·추천 수) */
+function PostRow({ p }) {
+  const cls = ['post-row', p.status === 'hidden' && 'hidden-row', p.is_notice && 'notice-row'].filter(Boolean).join(' ');
+  return (
+    <li className={cls}>
+      <Link to={`/board/${p.id}`} className="post-link">
+        <span className="post-title-line">
+          {p.is_notice && <span className="notice-badge">공지</span>}
+          {p.status === 'hidden' && <span className="op-badge">숨김</span>}
+          <span className="post-title">{p.title}</span>
+          {p.media_count > 0 && <span className="post-media" role="img" aria-label="사진 있음" title="사진 있음"><ImageIcon size={16} /></span>}
+        </span>
+        <span className="post-meta">
+          {p.author ? <UserName profile={p.author} /> : <span>(탈퇴한 유저)</span>}
+          <span>{fmtDateTime(p.created_at)}</span>
+        </span>
+        <span className="post-stats">
+          {p.comment_count > 0 && <span className="post-count" aria-label={`댓글 ${p.comment_count}개`}><MessageIcon size={14} /> {p.comment_count}</span>}
+          {p.up_count > 0 && <span className="post-up" aria-label={`추천 ${p.up_count}`}><ThumbIcon size={14} /> {p.up_count}</span>}
+        </span>
+        <span className="chev" aria-hidden="true"><ChevronIcon size={18} /></span>
+      </Link>
+    </li>
   );
 }
 

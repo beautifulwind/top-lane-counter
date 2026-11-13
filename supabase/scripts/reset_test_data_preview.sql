@@ -72,6 +72,12 @@ rows (ord, what, to_delete, to_keep, note) as (
   union all select 15.5, 'influencer_follows + follow_rate + follow_notify_queue (장인 팔로우 / 호출 횟수 / 알림 대기 줄, 050)',
          case when to_regclass('public.influencer_follows') is null then 0 else (xpath('/row/c/text()', query_to_xml('select (select count(*) from public.influencer_follows) + (select count(*) from public.follow_rate) + (select count(*) from public.follow_notify_queue) as c', false, true, '')))[1]::text::bigint end,
          0, '전부 지움 (050 실행 전이면 0). 푸시 설정의 follow_builds 칸은 그대로'
+  union all select 15.6, 'notice_notify_queue (공지 알림 대기 줄, 051)',
+         case when to_regclass('public.notice_notify_queue') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.notice_notify_queue', false, true, '')))[1]::text::bigint end,
+         0, '전부 지움 (051 실행 전이면 0). 공지 글은 자유게시판 글과 함께 지워진다. 푸시 설정의 notice 칸은 그대로'
+  union all select 15.7, 'new_follower_counted (새 팔로워 알림에서 센 기록, 052)',
+         case when to_regclass('public.new_follower_counted') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.new_follower_counted', false, true, '')))[1]::text::bigint end,
+         0, '전부 지움 (052 실행 전이면 0). 푸시 설정의 new_followers 칸은 그대로'
   union all select 16, 'hide_log (숨김 기록)', (select count(*) from public.hide_log), 0, null
   union all select 16.1, 'moderation_log (운영진 처리 기록)', (select count(*) from public.moderation_log), 0, '감독관 지정·해제 기록 포함 전부 지움 (역할 자체는 profiles에 그대로)'
   union all select 16.2, 'proposal_reviewing (검토 중 표시)', (select count(*) from public.proposal_reviewing), 0, '임시 표시라 모두 비움'

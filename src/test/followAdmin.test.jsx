@@ -103,7 +103,7 @@ test('방침·약관 (050 팔로우): 저장 목적·보관 기간·공개 범�
   expect(privacy).toContain('팔로우를 취소하거나, 그 장인의 인증이 해제되거나, 팔로우한 사람 또는 장인이 탈퇴하거나, 오래 쓰지 않은 비회원(게스트) 계정이 정리되면 바로 지웁니다.');
   expect(privacy).toContain('팔로워 수는 누구나');
   expect(privacy).toContain('팔로워 목록은 로그인한 이용자(비회원 포함)에게');
-  expect(privacy).toContain('팔로우한 장인의 새 빌드)');
+  expect(privacy).toContain('팔로우한 장인의 새 빌드·'); // 051·052에서 뒤에 공지·새 팔로워가 붙음
   expect(privacy).toContain('장인 목록에서 장인의 닉네임·유형·직접 지정 여부·인증일·팔로워 수를 조회');
   cleanup();
   start('/terms');

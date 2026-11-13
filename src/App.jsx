@@ -1,5 +1,5 @@
 import { Suspense, lazy, useEffect } from 'react';
-import { BrowserRouter, Navigate, Route, Routes, useLocation, useParams, useSearchParams } from 'react-router-dom';
+import { BrowserRouter, Link, Navigate, Route, Routes, useLocation, useParams, useSearchParams } from 'react-router-dom';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
 import Home from './pages/Home';
@@ -18,7 +18,8 @@ import BoardPost from './pages/BoardPost';
 import BoardWrite from './pages/BoardWrite';
 import MyProposal from './pages/MyProposal';
 import MyBuild from './pages/MyBuild';
-import { AuthProvider } from './lib/auth';
+import { AuthProvider, useAuth } from './lib/auth';
+import { RequireLogin } from './components/RequireOperator';
 import { Loading } from './components/Status';
 import { CHUNK_RELOAD_KEY } from './lib/reloadGuard';
 
@@ -110,6 +111,26 @@ function ScrollToTop() {
 }
 
 /** 옛 주소를 새 주소로 바꿔 보낸다 (뒤로 가기에 옛 주소가 남지 않게 replace) */
+/** 052 새 팔로워 알림이 가는 곳 /me/followers → 내 장인 페이지의 팔로워 목록(/u/내 id?followers=1). 장인이 아니면 안내만 */
+function MyFollowers() {
+  return (
+    <RequireLogin>
+      <MyFollowersInner />
+    </RequireLogin>
+  );
+}
+function MyFollowersInner() {
+  const auth = useAuth();
+  if (auth.profile?.influencer) return <Navigate to={`/u/${auth.user.id}?followers=1`} replace />;
+  return (
+    <article>
+      <h1 className="doc-title">내 팔로워</h1>
+      <p className="empty">장인 인증이 해제돼 팔로워 목록이 없습니다.</p>
+      <p><Link to="/me">← 마이페이지</Link></p>
+    </article>
+  );
+}
+
 function OldPath({ to }) {
   const { id } = useParams();
   return <Navigate to={to(id)} replace />;
@@ -138,6 +159,7 @@ export function AppRoutes() {
           <Route path="me/influencer" element={<InfluencerApply />} />
           <Route path="me/links" element={<MyLinks />} />
           <Route path="u/:id" element={<PublicProfile />} />
+          <Route path="me/followers" element={<MyFollowers />} />
           <Route path="following" element={<Following />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="inquiries" element={<Inquiries />} />

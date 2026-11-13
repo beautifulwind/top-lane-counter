@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { BODY_MAX, TITLE_MAX, beginEdit, createPost, editPost, getPost } from '../api/board';
+import { BODY_MAX, TITLE_MAX, beginEdit, createNotice, createPost, editPost, getPost } from '../api/board';
 import { fmtTime } from '../lib/editWindow';
 import { isGuest, useAuth } from '../lib/auth';
 import { finishMedia } from '../api/media';
@@ -15,6 +15,7 @@ import { PencilIcon } from '../components/Icons';
 /**
  * 글쓰기 (/board/new) · 고치기 (/board/:id/edit). 로그인 + 닉네임 필요 (닉네임은 Layout이 먼저 보낸다)
  * 고치기는 쓴 뒤 정해진 시간 안에만 (SPEC 6-7). 화면을 열 때 DB에 알려(begin_edit) 마감 전이면 유예를 받는다.
+ * 051: 운영자(운영자 모드 켜짐)는 새 글에서 [공지로 올리기] → [알림 보내기](기본 켬). 고치기에는 없다(고쳐도 알림은 다시 가지 않는다).
  */
 export default function BoardWrite() {
   return (
@@ -63,6 +64,10 @@ function PostForm({ post = null, deadline = null }) {
   const [body, setBody] = useState(post?.body ?? '');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
+  const canNotice = !post && auth.isOperator;
+  const [asNotice, setAsNotice] = useState(false);
+  const [notify, setNotify] = useState(true);
+  const notice = canNotice && asNotice;
   const t = title.trim().length;
   const b = body.trim().length;
   // 사진만 올리는 글도 된다 (제목은 꼭)
@@ -79,8 +84,10 @@ function PostForm({ post = null, deadline = null }) {
         await editPost(post.id, title, body, sameMedia(media, post.media) ? null : paths);
         navigate(`/board/${post.id}`, { replace: true, state: { done: '글을 고쳤습니다.' } });
       } else {
-        const newId = await createPost(title, body, paths);
-        navigate(`/board/${newId}`, { replace: true, state: { done: '글을 올렸습니다.' } });
+        const newId = notice ? await createNotice(title, body, paths, notify) : await createPost(title, body, paths);
+        const done = !notice ? '글을 올렸습니다.'
+          : notify ? '공지를 올렸습니다. 가입자에게 알림을 차례로 보냅니다.' : '공지를 올렸습니다. 알림은 보내지 않았습니다.';
+        navigate(`/board/${newId}`, { replace: true, state: { done } });
       }
     } catch (err) {
       setError(err.message);
@@ -114,10 +121,35 @@ function PostForm({ post = null, deadline = null }) {
             id="post-media" items={media} onChange={setMedia} max={rules.postMax} gifMax={rules.postGifMax} rules={rules} disabled={busy} dropRef={formRef}
           />
         )}
+        {canNotice && (
+          <fieldset className="notice-options" disabled={busy}>
+            <legend>공지 (운영자만)</legend>
+            <label className="check-row">
+              <input type="checkbox" checked={asNotice} onChange={(e) => setAsNotice(e.target.checked)} />
+              <span>
+                공지로 올리기
+                <small className="hint">목록 맨 위에 고정됩니다.</small>
+              </span>
+            </label>
+            {asNotice && (
+              <label className="check-row">
+                <input type="checkbox" checked={notify} onChange={(e) => setNotify(e.target.checked)} />
+                <span>
+                  알림 보내기
+                  <small className="hint">
+                    {notify
+                      ? '가입자 모두(게스트 포함)의 알림함에 쌓이고, 휴대폰 알림을 켠 사람에게는 휴대폰 알림도 갑니다. 고쳐도 알림은 다시 가지 않습니다.'
+                      : '알림 없이 공지만 올라갑니다.'}
+                  </small>
+                </span>
+              </label>
+            )}
+          </fieldset>
+        )}
         {error && <p className="form-error" role="alert">{error}</p>}
         <div className="actions">
           <button type="submit" className="btn btn-primary" disabled={!ready || busy}>
-            {busy ? (post ? '저장하는 중…' : '올리는 중…') : post ? '고친 내용 저장' : '글 올리기'}
+            {busy ? (post ? '저장하는 중…' : '올리는 중…') : post ? '고친 내용 저장' : notice ? '공지 올리기' : '글 올리기'}
           </button>
           <Link to={post ? `/board/${post.id}` : '/board'} className="btn">취소</Link>
         </div>

@@ -738,6 +738,13 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
 .post-meta .edited { font-size: var(--fs-xs); }
 .hidden-row { background: var(--op-soft); }
 .op-badge { flex: none; display: inline-block; padding: 0 8px; border-radius: 999px; background: var(--op); color: var(--on-op); font-size: var(--fs-xs); font-weight: 700; line-height: 20px; }
+/* 051 공지: [공지] 알약 + 1쪽 위에 고정한 공지 목록 (아래 글 목록과 띄움) */
+.notice-badge { flex: none; display: inline-block; padding: 0 8px; border-radius: 999px; background: var(--brand); color: var(--on-brand); font-size: var(--fs-xs); font-weight: 800; line-height: 20px; }
+.notice-row .post-title { font-weight: 700; }
+.pinned-notices { border-color: var(--soft-line); }
+.pinned-notices + .post-list { margin-top: var(--gap-md); }
+.notice-options { border: 1px solid var(--line); border-radius: var(--radius); margin: var(--gap-md) 0 0; padding: var(--gap-sm) var(--gap-md); min-width: 0; display: flex; flex-direction: column; gap: var(--gap-sm); }
+.notice-options legend { font-weight: 600; font-size: var(--fs-sm); padding: 0 4px; }
 .pager { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--gap-sm); margin: var(--gap-xl) 0; }
 .pager .btn { min-width: 40px; min-height: 40px; justify-content: center; }
 .pager .btn.current { background: var(--brand); border-color: var(--brand); color: var(--on-brand); }

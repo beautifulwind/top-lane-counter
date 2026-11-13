@@ -15,17 +15,18 @@ import { BellIcon } from './Icons';
 export default function PushSettings({ auth }) {
   const support = currentPushSupport();
   const staffAccount = auth.isOperatorAccount || auth.isModerator;
+  const influencer = Boolean(auth.profile?.influencer); // 052 새 팔로워 칸은 장인에게만
   return (
     <section className="me-section" aria-labelledby="push-settings">
       <SectionHead icon={BellIcon} id="push-settings">휴대폰 알림</SectionHead>
       <p className="lead">
         {APPROVAL_ENABLED
           ? `켜 두면 ${staffAccount ? '새 제안·문의·오류 신고·새 신고나 ' : ''}내 제안의 처리 결과를 휴대폰 잠금 화면 알림으로 받습니다.`
-          : `켜 두면 ${staffAccount ? (auth.isOperatorAccount ? '새 상대법·새 빌드·새 글·새 문의·새 오류 신고·새 신고·새 장인 신청이나 ' : '새 문의·새 오류 신고·새 신고나 ') : ''}숨겨졌던 내 상대법·빌드가 다시 공개된 소식, 장인 인증 결과, 팔로우한 장인의 새 빌드를 휴대폰 잠금 화면 알림으로 받습니다.`}
+          : `켜 두면 ${staffAccount ? (auth.isOperatorAccount ? '새 상대법·새 빌드·새 글·새 문의·새 오류 신고·새 신고·새 장인 신청이나 ' : '새 문의·새 오류 신고·새 신고나 ') : ''}숨겨졌던 내 상대법·빌드가 다시 공개된 소식, 장인 인증 결과, 팔로우한 장인의 새 빌드, 새 공지를 휴대폰 잠금 화면 알림으로 받습니다.`}
         알림을 누르면 그 내용을 볼 수 있는 화면으로 갑니다.
       </p>
       {support === 'ok' ? <DeviceSwitch userId={auth.user.id} /> : <p className="hint push-help" role="note">{PUSH_HELP[support]}</p>}
-      <PushKinds userId={auth.user.id} staffAccount={staffAccount} operatorAccount={auth.isOperatorAccount} operatorOff={auth.isOperatorAccount && !auth.isOperator} />
+      <PushKinds userId={auth.user.id} influencer={influencer} staffAccount={staffAccount} operatorAccount={auth.isOperatorAccount} operatorOff={auth.isOperatorAccount && !auth.isOperator} />
     </section>
   );
 }
@@ -68,7 +69,7 @@ function DeviceSwitch({ userId }) {
   );
 }
 
-function PushKinds({ userId, staffAccount, operatorAccount, operatorOff }) {
+function PushKinds({ userId, influencer, staffAccount, operatorAccount, operatorOff }) {
   const loaded = useAsync(() => getPushSettings(userId), [userId]);
   const [saved, setData] = useState(null); // 바꾼 뒤의 값
   const settings = saved ?? loaded.data;
@@ -122,6 +123,21 @@ function PushKinds({ userId, staffAccount, operatorAccount, operatorOff }) {
           <small className="hint">같은 장인의 새 빌드는 3시간에 한 번만 알려 줍니다.</small>
         </span>
       </label>
+      <label className="check-row">
+        <input type="checkbox" checked={settings.notice !== false} onChange={(e) => change('notice', e.target.checked)} />
+        {/* 051: 푸시 묶음 notice (기본 켜짐). 운영자가 [알림 보내기]를 켜고 올린 공지만 */}
+        <span>공지: 운영자가 새 공지를 올렸을 때</span>
+      </label>
+      {influencer && (
+        <label className="check-row">
+          <input type="checkbox" checked={settings.new_followers === true} onChange={(e) => change('new_followers', e.target.checked)} />
+          {/* 052: 푸시 묶음 new_followers (기본 꺼짐). 알림 목록에는 켜고 끄기와 관계없이 쌓인다 */}
+          <span>
+            새 팔로워
+            <small className="hint">하루에 한 번(낮 12시) 그날 새로 생긴 팔로워 수만 알려 줍니다. 꺼 두어도 알림 목록에는 쌓입니다.</small>
+          </span>
+        </label>
+      )}
       {saveError && <p className="form-error" role="alert">{saveError}</p>}
     </fieldset>
   );

@@ -147,6 +147,7 @@ export function resetFake() {
   TABLES.influencer_follows = [];
   fakeState.followStatusCalls = [];
   fakeState.searchCalls = [];
+  fakeState.noticeQueue = []; // 051 create_notice가 [알림 보내기]를 켜고 올린 공지 id
   fakeState.influencerNextAt = null;
   TABLES.xp_events = [];
   TABLES.user_titles = [];
@@ -820,13 +821,25 @@ function boardRpc(name, args) {
       if (q) rows = rows.filter((p) => !p.deleted_at && (p.title.toLowerCase().includes(q) || p.body.toLowerCase().includes(q)));
       rows = [...rows].sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : b.id - a.id));
       const from = (args.p_page - 1) * args.p_size;
-      return ok({
-        total: rows.length, size: args.p_size,
-        rows: rows.slice(from, from + args.p_size).map((p) => ({
-          id: p.id, title: p.title, status: p.status, deleted: p.deleted_at != null, comment_count: p.comment_count,
-          up_count: p.up_count, created_at: p.created_at, edited_at: p.edited_at, author: p.author, media_count: p.media?.length ?? 0,
-        })),
+      const row = (p) => ({
+        id: p.id, title: p.title, status: p.status, deleted: p.deleted_at != null, comment_count: p.comment_count,
+        up_count: p.up_count, created_at: p.created_at, edited_at: p.edited_at, author: p.author, media_count: p.media?.length ?? 0,
+        is_notice: Boolean(p.is_notice),
       });
+      // 051: 1쪽(검색 없음)에는 최근 공지 3개를 따로 (숨긴 공지는 RLS대로 운영진만)
+      const notices = args.p_page === 1 && !q ? rows.filter((p) => p.is_notice && !p.deleted_at).slice(0, 3).map(row) : [];
+      return ok({ total: rows.length, size: args.p_size, rows: rows.slice(from, from + args.p_size).map(row), notices });
+    }
+    case 'create_notice': {
+      // 051: 운영자(운영자 모드 켜짐)만. 알림 대기 줄 대신 fakeState.noticeQueue에 남긴다
+      if (!isAdminNow()) return fail('운영자만 할 수 있습니다.');
+      const id = 700 + TABLES.posts.length;
+      TABLES.posts.push(fakePost(id, {
+        author_id: me(), author: person(me()), title: args.p_title.trim(), body: args.p_body.trim(), created_at: new Date().toISOString(),
+        media: mediaRows(args.p_media), is_notice: true,
+      }));
+      if (args.p_notify !== false) fakeState.noticeQueue = [...(fakeState.noticeQueue ?? []), id];
+      return ok(id);
     }
     case 'create_post': {
       if (fakeState.boardError) return fail(fakeState.boardError);

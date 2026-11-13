@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useSearchParams } from 'react-router-dom';
 import { getPublicProfile } from '../api/links';
 import { getFollowStatus, getFollowers, getInfluencerBuilds } from '../api/follow';
 import { getChampionMap } from '../api/ddragon';
@@ -22,6 +22,7 @@ const day = (ts) => (ts ? String(ts).slice(0, 10) : '');
  * 장인 페이지 (/u/:id — 047 공개 프로필을 050에서 빌드 중심으로, SPEC 6-34 · 6-36).
  * 위: 닉네임 + 장인 표시 + 유형 · 팔로워 수 · [팔로우] · 링크(작게). 본문: 그 장인이 처음 만든 공개 빌드(influencer_builds, 최근 수정순, 20개씩 [더보기]).
  * 팔로워 수는 누구나, 팔로워 목록은 로그인한 사람에게만 [팔로워 목록] 버튼(20개씩).
+ * 052: ?followers=1(새 팔로워 알림 → /me/followers)로 열면 로그인한 사람에게는 팔로워 목록이 처음부터 펼쳐져 있다.
  * DB가 장인이 아니거나 없는 id·모양이 틀린 id에 모두 null을 주므로 화면도 모두 같은 "없는 페이지".
  * 이메일·라이엇 닉네임·역할·레벨은 DB가 주지 않는다.
  */
@@ -57,7 +58,8 @@ function Profile({ data, me, signedIn, notice, onDone }) {
   const [follow, setFollow] = useState({ following: data.following, count: Number(data.first.follower_count) || 0 });
   const [builds, setBuilds] = useState({ items: data.first.items, total: Number(data.first.total) || 0, page: 1 });
   const [more, setMore] = useState({ busy: false, error: null });
-  const [showFollowers, setShowFollowers] = useState(false);
+  const [params] = useSearchParams();
+  const [showFollowers, setShowFollowers] = useState(() => signedIn && params.get('followers') === '1');
   const kind = INFLUENCER_KINDS[profile.influencer];
   // 3b: 링크 옆 ⋮ — 신고(정식 회원) / 삭제(운영진). 장인 페이지는 역할을 주지 않으므로 운영진의 링크인지는 DB가 가른다
   const actions = (l) => <LinkActions link={l} ownerId={profile.id} label="링크 더보기" onDone={onDone} />;
