@@ -146,6 +146,7 @@ export function resetFake() {
   TABLES.link_reports = [];
   TABLES.influencer_follows = [];
   fakeState.followStatusCalls = [];
+  fakeState.searchCalls = [];
   fakeState.influencerNextAt = null;
   TABLES.xp_events = [];
   TABLES.user_titles = [];
@@ -1255,7 +1256,8 @@ function linkRpc(name, args) {
 }
 
 // ---- 050 장인 팔로우 (SPEC 6-36): DB 함수와 같은 규칙만 흉내 낸다 ----
-const FOLLOW_RPCS = ['follow_influencer', 'unfollow_influencer', 'follow_status', 'influencer_builds', 'influencer_followers', 'influencer_follower_count'];
+const FOLLOW_RPCS = ['follow_influencer', 'unfollow_influencer', 'follow_status', 'influencer_builds', 'influencer_followers', 'influencer_follower_count',
+  'search_influencers', 'followed_builds', 'my_following'];
 function followRpc(name, args) {
   const writing = ['follow_influencer', 'unfollow_influencer'].includes(name);
   if (writing) fakeState.rpcCalls.push({ name, args });
@@ -1265,6 +1267,28 @@ function followRpc(name, args) {
   const isInf = (id) => !!prof(id)?.influencer;
   const count = (id) => TABLES.influencer_follows.filter((f) => f.influencer_id === id).length;
   const meRow = meNow();
+  const recent = (a, b) => String(b.updated_at ?? b.created_at).localeCompare(String(a.updated_at ?? a.created_at)) || b.id - a.id;
+  const card = (b) => {
+    const p = prof(b.author_id);
+    const l = TABLES.ext_links.find((x) => x.build_id === b.id);
+    return {
+      id: b.id, counter_id: b.counter_id, seq: b.seq, name: b.name, patch: b.patch, summary: b.summary,
+      target_champion: b.counter.target_champion, counter_champion: b.counter.counter_champion, up_count: b.up_count, down_count: b.down_count,
+      created_at: b.created_at, updated_at: b.updated_at ?? b.created_at, editor_count: 0,
+      author: p ? { id: p.id, nickname: p.nickname, influencer: p.influencer ?? null } : null,
+      link: l ? { id: l.id, url: l.url, host: l.host, build_id: l.build_id, sort: l.sort } : null,
+    };
+  };
+  const pageOf = (all, page) => all.slice((Math.max(1, page ?? 1) - 1) * 20, Math.max(1, page ?? 1) * 20);
+  if (name === 'search_influencers') {
+    fakeState.searchCalls = [...(fakeState.searchCalls ?? []), args.p_query];
+    const q = String(args.p_query ?? '').trim();
+    if (!q) return { data: null, error: { message: '검색어를 한 글자 이상 적어 주세요.', code: '22023' } };
+    const all = TABLES.profiles.filter((p) => p.influencer && p.nickname && p.nickname.toLowerCase().includes(q.toLowerCase()))
+      .map((p) => ({ id: p.id, nickname: p.nickname, influencer: p.influencer, follower_count: count(p.id), build_count: 0, exact: p.nickname.toLowerCase() === q.toLowerCase() }))
+      .sort((a, b) => b.exact - a.exact || b.follower_count - a.follower_count || a.nickname.localeCompare(b.nickname));
+    return ok({ total: all.length, page: args.p_page ?? 1, size: 20, items: pageOf(all, args.p_page).map(({ exact, ...x }) => x) });
+  }
   if (name === 'influencer_builds' || name === 'influencer_follower_count') {
     const p = prof(args.p_user);
     if (!p || !p.influencer || !p.nickname) return ok(null);
@@ -1297,6 +1321,22 @@ function followRpc(name, args) {
       items: all.slice((page - 1) * 20, page * 20).map((f) => {
         const u = prof(f.follower_id);
         return { id: f.follower_id, nickname: u?.nickname ?? null, influencer: u?.influencer ?? null, nickname_state: u?.nickname_state ?? null, followed_at: f.created_at };
+      }),
+    }));
+  }
+  if (name === 'followed_builds') {
+    const mine = TABLES.influencer_follows.filter((f) => f.follower_id === meRow.id && isInf(f.influencer_id)).map((f) => f.influencer_id);
+    const all = TABLES.builds.filter((b) => mine.includes(b.author_id) && b.status === 'approved').sort(recent);
+    return ok(structuredClone({ total: all.length, page: args.p_page ?? 1, size: 20, items: pageOf(all, args.p_page).map(card) }));
+  }
+  if (name === 'my_following') {
+    const all = TABLES.influencer_follows.filter((f) => f.follower_id === meRow.id)
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+    return ok(structuredClone({
+      total: all.length, page: args.p_page ?? 1, size: 20,
+      items: pageOf(all, args.p_page).map((f) => {
+        const u = prof(f.influencer_id);
+        return { id: f.influencer_id, nickname: u?.nickname ?? null, influencer: u?.influencer ?? null, followed_at: f.created_at, follower_count: count(f.influencer_id) };
       }),
     }));
   }

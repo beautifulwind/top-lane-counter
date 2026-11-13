@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { getPublicProfile } from '../api/links';
 import { getFollowStatus, getFollowers, getInfluencerBuilds } from '../api/follow';
 import { getChampionMap } from '../api/ddragon';
@@ -9,10 +9,9 @@ import ExternalLink from '../components/ExternalLink';
 import LinkActions from '../components/LinkActions';
 import FollowButton from '../components/FollowButton';
 import { InfluencerName } from '../components/UserName';
-import { LayersIcon, ThumbIcon } from '../components/Icons';
+import InfluencerBuildCard from '../components/InfluencerBuildCard';
+import { LayersIcon } from '../components/Icons';
 import { INFLUENCER_KINDS, displayNickname } from '../lib/nickname';
-import { matchupShort } from '../lib/josa';
-import { patchMinor } from '../lib/buildContent';
 import { useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
 import NotFound from './NotFound';
@@ -59,7 +58,6 @@ function Profile({ data, me, signedIn, notice, onDone }) {
   const [builds, setBuilds] = useState({ items: data.first.items, total: Number(data.first.total) || 0, page: 1 });
   const [more, setMore] = useState({ busy: false, error: null });
   const [showFollowers, setShowFollowers] = useState(false);
-  const name = (c) => champs?.[c]?.name ?? c;
   const kind = INFLUENCER_KINDS[profile.influencer];
   // 3b: 링크 옆 ⋮ — 신고(정식 회원) / 삭제(운영진). 장인 페이지는 역할을 주지 않으므로 운영진의 링크인지는 DB가 가른다
   const actions = (l) => <LinkActions link={l} ownerId={profile.id} label="링크 더보기" onDone={onDone} />;
@@ -125,26 +123,7 @@ function Profile({ data, me, signedIn, notice, onDone }) {
           <p className="empty">공개된 빌드가 없습니다.</p>
         ) : (
           <ul className="profile-builds inf-build-list">
-            {builds.items.map((b) => (
-              <li key={b.id}>
-                <Link className="inf-build-card" to={`/champion/${b.target_champion}/counter/${b.counter_champion}?build=${b.id}`}>
-                  <span className="inf-build-champs" aria-hidden="true">
-                    <ChampIcon champ={champs?.[b.counter_champion]} />
-                    <span className="vs">vs</span>
-                    <ChampIcon champ={champs?.[b.target_champion]} />
-                  </span>
-                  <span className="inf-build-text">
-                    <strong className="inf-build-matchup">{matchupShort(name(b.counter_champion), name(b.target_champion))}</strong>
-                    <span className="inf-build-name">{b.name || `빌드 ${b.seq ?? ''}`.trim()}</span>
-                    <small className="muted">
-                      {b.patch ? `패치 ${patchMinor(b.patch)} · ` : ''}최근 수정 {day(b.updated_at ?? b.created_at)}
-                      {' · '}<ThumbIcon size={12} /><span className="sr-only">추천 </span>{b.up_count ?? 0}
-                    </small>
-                  </span>
-                </Link>
-                {b.link && <div className="link-item"><ExternalLink link={b.link} />{actions(b.link)}</div>}
-              </li>
-            ))}
+            {builds.items.map((b) => <InfluencerBuildCard key={b.id} b={b} champs={champs} linkActions={actions} />)}
           </ul>
         )}
         {builds.items.length < builds.total && (
@@ -158,11 +137,6 @@ function Profile({ data, me, signedIn, notice, onDone }) {
       </section>
     </article>
   );
-}
-
-function ChampIcon({ champ }) {
-  if (!champ?.icon) return <span className="ico missing inf-champ" />;
-  return <img className="ico inf-champ" src={champ.icon} alt="" width={36} height={36} loading="lazy" />;
 }
 
 /** 팔로워 목록 (로그인한 사람만 — DB도 막는다). 최근 팔로우 순, 20개씩 [더보기] */

@@ -7,7 +7,8 @@ import { getUnreadCount, onNotificationsChanged } from '../api/notifications';
 import { isGuest, useAuth } from '../lib/auth';
 import { isCurrentNav, navItemsFor } from '../lib/navItems';
 import { promptInstall, useInstallKind } from '../lib/install';
-import { BellIcon, DownloadIcon, HelpIcon, MenuIcon, MessageIcon, ShieldIcon, UserIcon, XIcon } from './Icons';
+import { BellIcon, ChevronIcon, DownloadIcon, HelpIcon, MenuIcon, MessageIcon, SearchIcon, ShieldIcon, UserIcon, XIcon } from './Icons';
+import InfluencerSearch from './InfluencerSearch';
 import UserName from './UserName';
 
 /**
@@ -30,7 +31,7 @@ const pendingTitle = (c) =>
 
 export const logout = () => signOut().catch((e) => alert(e.message));
 
-const ICONS = { user: UserIcon, message: MessageIcon, shield: ShieldIcon, bell: BellIcon, help: HelpIcon };
+const ICONS = { user: UserIcon, message: MessageIcon, shield: ShieldIcon, bell: BellIcon, help: HelpIcon, search: SearchIcon };
 
 /**
  * 안 읽은 알림 개수 (빨간 점). 페이지를 옮길 때와 읽음 처리했을 때 다시 센다.
@@ -90,15 +91,25 @@ export default function SiteMenu() {
   const installKindNow = useInstallKind(); // 'prompt'(안드로이드) | 'ios' | 숨김
   const [showIosGuide, setShowIosGuide] = useState(false);
   const [open, setOpen] = useState(false);
+  const [searching, setSearching] = useState(false); // 050 [장인찾기] 검색 칸이 펼쳐져 있나
+  const searchItem = useRef(null);
   const pending = usePendingCounts(kind === 'moderator' || kind === 'operator', open, kind === 'operator');
   const opener = useRef(null);
   const panel = useRef(null);
 
   const close = useCallback((backToButton = true) => {
     setOpen(false);
+    setSearching(false);
     if (backToButton) opener.current?.focus();
   }, []);
 
+  // 050: 검색 칸 바깥(메뉴 안 다른 곳)을 누르면 검색 칸만 접는다 (뒤 흐린 곳을 누르면 메뉴 전체가 닫힌다)
+  useEffect(() => {
+    if (!searching) return undefined;
+    const away = (e) => { if (!searchItem.current?.contains(e.target)) setSearching(false); };
+    document.addEventListener('pointerdown', away);
+    return () => document.removeEventListener('pointerdown', away);
+  }, [searching]);
   // 열린 동안 뒤 화면 스크롤 막기
   useEffect(() => {
     if (!open) return undefined;
@@ -166,6 +177,23 @@ export default function SiteMenu() {
               <ul className="menu-list">
                 {navItemsFor('menu', kind).map((it) => {
                   const Icon = ICONS[it.icon];
+                  if (it.panel === 'influencerSearch') {
+                    // 050 [장인찾기]: 누르면 바로 아래에 검색 칸, 다시 누르거나 바깥을 누르면 접힌다
+                    return (
+                      <li key={it.key} ref={searchItem} className={searching ? 'menu-search open' : 'menu-search'}>
+                        <button
+                          type="button" className={searching ? 'menu-item on' : 'menu-item'}
+                          aria-expanded={searching} aria-controls={searching ? 'menu-inf-search' : undefined}
+                          onClick={() => setSearching((v) => !v)}
+                        >
+                          {Icon && <Icon size={20} className="menu-icon" />}
+                          <span className="menu-label">{it.label}</span>
+                          <ChevronIcon size={18} className="menu-chevron" />
+                        </button>
+                        {searching && <InfluencerSearch id="menu-inf-search" onGo={go} />}
+                      </li>
+                    );
+                  }
                   const here = isCurrentNav(it, pathname);
                   const dot = it.dot === 'unread' && unread > 0;
                   const waiting = it.count === 'pending' && pending?.total > 0 ? pending : null;

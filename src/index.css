@@ -1157,3 +1157,23 @@ a.inf-link:hover .user-nick, a.inf-link:focus-visible .user-nick { text-decorati
 .follower-list { list-style: none; margin: 0; padding: 0; }
 .follower-list li { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 4px var(--gap-md); padding: 8px 0; border-bottom: 1px solid var(--line); }
 .follower-list li:last-child { border-bottom: 0; }
+
+/* 050 ☰ 메뉴 [장인찾기] 검색 칸 — 메뉴 폭(최소 320px 화면에서 약 270px) 안에서 줄바꿈, 가로로 넘치지 않게 */
+.menu-search { min-width: 0; }
+.menu-chevron { flex: none; color: var(--muted); transition: transform .15s ease; }
+.menu-search.open .menu-chevron { transform: rotate(90deg); }
+.inf-search { display: flex; flex-direction: column; gap: 8px; margin: 4px 0 8px; padding: 10px; min-width: 0; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--field); }
+.inf-search-input { width: 100%; min-width: 0; box-sizing: border-box; }
+.inf-search .hint, .inf-search .empty { margin: 0; }
+.inf-search-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.inf-search-row { display: flex; flex-direction: column; gap: 2px; min-height: 44px; justify-content: center; padding: 6px 4px; border-bottom: 1px solid var(--line); color: var(--text); min-width: 0; overflow-wrap: anywhere; }
+.inf-search-list li:last-child .inf-search-row { border-bottom: 0; }
+.inf-search-row:hover { text-decoration: none; background: var(--raised); }
+.inf-search-name { min-width: 0; }
+.inf-search-more { align-self: flex-start; }
+.inf-search-following { display: flex; align-items: center; min-height: 44px; font-weight: 700; overflow-wrap: anywhere; }
+.inf-build-author { font-size: var(--fs-sm); }
+.following-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 var(--gap-md); }
+.following-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px var(--gap-md); padding: 10px 0; border-bottom: 1px solid var(--line); }
+.following-row:last-child { border-bottom: 0; }
+.following-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }

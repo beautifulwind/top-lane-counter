@@ -48,3 +48,13 @@ export const getInfluencerBuilds = (id, page = 1) =>
 /** 팔로워 목록 (로그인한 사람만, 최근 순, 20개씩): { follower_count, total, page, size, items: [{ id, nickname, influencer, nickname_state, followed_at }] } */
 export const getFollowers = (id, page = 1) =>
   rpc('influencer_followers', { p_user: id, p_page: page }, '팔로워 목록을 불러오지 못했습니다.');
+
+/** 장인 찾기 (비로그인도): 인증된 장인 닉네임 부분 일치 1~20자, 20개씩. { total, page, size, items: [{ id, nickname, influencer, follower_count, build_count }] } */
+export const searchInfluencers = (query, page = 1) =>
+  rpc('search_influencers', { p_query: String(query ?? '').trim(), p_page: page }, '장인을 찾지 못했습니다.');
+
+/** 팔로우 모아보기 (로그인한 사람만): 내가 팔로우한 장인들의 공개 빌드, 최근 수정순 20개씩. { total, page, size, items: [빌드 카드] } */
+export const getFollowedBuilds = (page = 1) => rpc('followed_builds', { p_page: page }, '팔로우한 장인의 빌드를 불러오지 못했습니다.');
+
+/** 내가 팔로우한 장인 (로그인한 사람만, 최근 팔로우 순 20개씩). { total, page, size, items: [{ id, nickname, influencer, followed_at, follower_count }] } */
+export const getMyFollowing = (page = 1) => rpc('my_following', { p_page: page }, '팔로우한 장인 목록을 불러오지 못했습니다.');
