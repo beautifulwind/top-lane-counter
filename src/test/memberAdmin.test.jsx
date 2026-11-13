@@ -212,7 +212,7 @@ test('감독관: 회원 관리·회원 정보 화면이 없고 회원 함수를 
 test('감독관: /admin에 회원 관리 칸이 없다', async () => {
   fakeLogin('u-mod', { nickname: '감독', role: 'moderator', level: 3, main_title: null });
   start('/admin');
-  await screen.findByRole('heading', { name: /자유게시판·댓글/ });
+  await screen.findByRole('heading', { name: /탑신병자 커뮤니티·댓글/ });
   expect(screen.queryByRole('link', { name: '회원 관리 열기' })).toBeNull();
   expect(fakeState.memberCalls.length).toBe(0);
 });

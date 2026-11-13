@@ -42,7 +42,7 @@ export default function Board() {
   return (
     <article className="board">
       <div className="board-head">
-        <h1 className="doc-title page-title"><MessageIcon size={26} className="title-icon" /> 자유게시판</h1>
+        <h1 className="doc-title page-title"><MessageIcon size={26} className="title-icon" /> 탑신병자 커뮤니티</h1>
         {auth.status === 'signedIn' ? (
           <Link to="/board/new" className="btn btn-primary"><PencilIcon size={16} /> 글쓰기</Link>
         ) : (

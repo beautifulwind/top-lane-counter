@@ -1,4 +1,4 @@
-// 묶음 C (018): 시작 아이템 500골드 상한, 선마 하나, 카운터 순위·문구, 자유게시판, 부제, 운영자 아이템 가격표
+// 묶음 C (018): 시작 아이템 500골드 상한, 선마 하나, 카운터 순위·문구, 탑신병자 커뮤니티, 부제, 운영자 아이템 가격표
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 // 승인 제도 화면은 지금 꺼 두었다(lib/features.js). 이 파일의 승인 검사는 켠 채로 한다 — 끈 상태는 approvalOff.test.jsx
 vi.mock('../lib/features', async (importOriginal) => ({ ...(await importOriginal()), APPROVAL_ENABLED: true }));
@@ -171,11 +171,11 @@ test('챔피언 문서: "다리우스 상대법", 순위 숫자, 안내 문구 �
   expect(screen.getByText(/› 새 상대법/)).toBeDefined();
 });
 
-test('상단 바: 사이트 이름 옆에 부제, 메뉴의 자유게시판 링크와 화면 제목', async () => {
+test('상단 바: 사이트 이름 옆에 부제, 메뉴의 탑신병자 커뮤니티 링크와 화면 제목', async () => {
   start('/board');
   expect(screen.getByRole('link', { name: '탑신병자' })).toBeDefined();
   expect(screen.getByText('탑은 라인전이 전부')).toBeDefined();
-  await clickMenu('자유게시판');
-  expect(await screen.findByRole('heading', { name: '자유게시판' })).toBeDefined();
-  await vi.waitFor(() => expect(document.title).toBe('자유게시판 - 탑신병자'));
+  await clickMenu('탑신병자 커뮤니티');
+  expect(await screen.findByRole('heading', { name: '탑신병자 커뮤니티' })).toBeDefined();
+  await vi.waitFor(() => expect(document.title).toBe('탑신병자 커뮤니티 - 탑신병자'));
 });

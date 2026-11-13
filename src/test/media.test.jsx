@@ -1,4 +1,4 @@
-// 023: 자유게시판 사진·GIF — 글·댓글에 붙이기(회원만), 빼기, 고치기 때 바꾸기, 보기·크게 보기, 목록 📷, 사진 신고 사유, 운영자 저장 공간
+// 023: 탑신병자 커뮤니티 사진·GIF — 글·댓글에 붙이기(회원만), 빼기, 고치기 때 바꾸기, 보기·크게 보기, 목록 📷, 사진 신고 사유, 운영자 저장 공간
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -184,7 +184,7 @@ test('목록: 사진 있는 글에 📷', async () => {
   expect(screen.getAllByRole('img', { name: '사진 있음' })).toHaveLength(1);
 });
 
-test('신고 사유: 자유게시판은 "음란·잔혹한 사진"이 있고, 사진 없는 곳(문서 댓글)에는 없다', () => {
+test('신고 사유: 탑신병자 커뮤니티은 "음란·잔혹한 사진"이 있고, 사진 없는 곳(문서 댓글)에는 없다', () => {
   const { rerender } = render(<ReportForm id="r" what="댓글" onSubmit={() => {}} onCancel={() => {}} />);
   expect(screen.getByRole('radio', { name: /음란·잔혹한 사진/ })).toBeDefined();
   rerender(<ReportForm id="r" what="댓글" photos={false} onSubmit={() => {}} onCancel={() => {}} />);

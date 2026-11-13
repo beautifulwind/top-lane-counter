@@ -91,7 +91,7 @@ function ModeratorHome() {
         )}
       </section>}
       <section className="section">
-        <SectionHead icon={MessageIcon}>자유게시판·댓글</SectionHead>
+        <SectionHead icon={MessageIcon}>탑신병자 커뮤니티·댓글</SectionHead>
         <BoardAdmin />
       </section>
       <ModeratorHiddenBuilds onDone={(message) => setDone(message)} />
@@ -261,7 +261,7 @@ function PendingList() {
       )}
 
       <section className="section">
-        <SectionHead icon={MessageIcon}>자유게시판·댓글</SectionHead>
+        <SectionHead icon={MessageIcon}>탑신병자 커뮤니티·댓글</SectionHead>
         <BoardAdmin />
       </section>
       <section className="section">

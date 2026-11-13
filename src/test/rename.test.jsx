@@ -1,4 +1,4 @@
-// 022: 이름·문구·화면 바꾸기 — 사이트 이름, 홈 제목, 상단 바 자유게시판 위치, 문서·입력 순서, 입력 예시, 강타 빼기, [제안]
+// 022: 이름·문구·화면 바꾸기 — 사이트 이름, 홈 제목, 상단 바 탑신병자 커뮤니티 위치, 문서·입력 순서, 입력 예시, 강타 빼기, [제안]
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -27,16 +27,16 @@ test('홈: 제목 "챔피언 선택", 탭 제목 "탑신병자 - 롤 탑 카운�
   await vi.waitFor(() => expect(document.title).toBe('탑신병자 - 롤 탑 카운터'));
 });
 
-test('자유게시판(예전 이름 노가리방)은 상단 바가 아니라 ☰ 메뉴 안, 마이페이지 다음', async () => {
+test('탑신병자 커뮤니티(예전 이름 노가리방)은 상단 바가 아니라 ☰ 메뉴 안, 마이페이지 다음', async () => {
   start('/');
   await screen.findByRole('heading', { level: 1, name: '챔피언 선택' });
-  expect(document.querySelector('.topbar').textContent).not.toContain('자유게시판');
+  expect(document.querySelector('.topbar').textContent).not.toContain('탑신병자 커뮤니티');
   cleanup();
   fakeLogin('u-old');
   start('/');
   const menu = await openMenu();
   const mypage = menu.getByRole('link', { name: '마이페이지' });
-  const link = menu.getByRole('link', { name: '자유게시판' });
+  const link = menu.getByRole('link', { name: '탑신병자 커뮤니티' });
   expect(mypage.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(document.body.textContent).not.toContain('노가리방');
 });

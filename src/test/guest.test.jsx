@@ -158,7 +158,7 @@ test('Supabase에서 익명 로그인이 꺼져 있으면 이유를 알려 준�
 
 // ---------------- 표시 · 로그아웃 없음 ----------------
 
-test('비회원: 메뉴에 [마이페이지]·[자유게시판]만, 로그아웃은 어디에도 없고 닉네임 옆에 "비회원"', async () => {
+test('비회원: 메뉴에 [마이페이지]·[탑신병자 커뮤니티]만, 로그아웃은 어디에도 없고 닉네임 옆에 "비회원"', async () => {
   guestWithName();
   start('/me');
   const menu = await openMenu();
@@ -270,7 +270,7 @@ test('비회원이 추천을 누르면 투표 대신 연결 안내', async () =>
   expect(fakeState.rpcCalls.filter((c) => c.name === 'vote_build')).toEqual([]);
 });
 
-test('자유게시판 글: 비회원은 [추천]·[신고] 없이 안내만, 댓글은 쓸 수 있다', async () => {
+test('탑신병자 커뮤니티 글: 비회원은 [추천]·[신고] 없이 안내만, 댓글은 쓸 수 있다', async () => {
   TABLES.posts.push(fakePost(1));
   guestWithName();
   start('/board/1');

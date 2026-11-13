@@ -50,7 +50,7 @@ test('일반 회원은 /admin 못 들어가고 메뉴에 [관리]도 없다', as
   expect((await openMenu()).queryByRole('link', { name: '관리' })).toBeNull();
 });
 
-test('감독관 /admin: 메뉴에 [관리], 새 카운터 대기와 자유게시판만. 운영자 전용 구역은 안 보이고 불러오지도 않는다', async () => {
+test('감독관 /admin: 메뉴에 [관리], 새 카운터 대기와 탑신병자 커뮤니티만. 운영자 전용 구역은 안 보이고 불러오지도 않는다', async () => {
   asMod();
   TABLES.edit_proposals.push(
     newCounter(1),
@@ -61,7 +61,7 @@ test('감독관 /admin: 메뉴에 [관리], 새 카운터 대기와 자유게시
   start('/admin');
   expect(await screen.findByRole('heading', { name: /새 카운터 승인 대기/ })).toBeDefined();
   expect((await openMenu()).getByRole('link', { name: '관리' })).toBeDefined();
-  expect(await screen.findByRole('heading', { name: /자유게시판·댓글/ })).toBeDefined();
+  expect(await screen.findByRole('heading', { name: /탑신병자 커뮤니티·댓글/ })).toBeDefined();
   for (const name of ['회원 관리', '사진 저장 공간', '비주류 픽', '아이템 가격', '숨긴 상대법', '삭제 기록']) {
     expect(screen.queryByRole('heading', { name: new RegExp(name) })).toBeNull();
   }

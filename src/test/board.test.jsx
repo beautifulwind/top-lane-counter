@@ -1,4 +1,4 @@
-// 7단계: 자유게시판 — 목록·검색·쪽, 글쓰기·고치기·지우기, 추천, 댓글, 신고, 운영자 숨기기·다시 공개·신고 처리, 알림
+// 7단계: 탑신병자 커뮤니티 — 목록·검색·쪽, 글쓰기·고치기·지우기, 추천, 댓글, 신고, 운영자 숨기기·다시 공개·신고 처리, 알림
 // 040: 고치기·지우기·신고·숨기기·운영진 삭제는 글·댓글마다 ⋮ 메뉴 안 (추천은 밖)
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
@@ -26,9 +26,9 @@ const OTHER = { nickname: '남의글', level: 2, main_title: null };
 const asOp = () => fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
 const rpcs = (name) => fakeState.rpcCalls.filter((c) => c.name === name).map((c) => c.args);
 
-test('메뉴에 자유게시판 링크', async () => {
+test('메뉴에 탑신병자 커뮤니티 링크', async () => {
   start('/');
-  expect((await openMenu()).getByRole('link', { name: '자유게시판' }).getAttribute('href')).toBe('/board');
+  expect((await openMenu()).getByRole('link', { name: '탑신병자 커뮤니티' }).getAttribute('href')).toBe('/board');
 });
 
 test('비로그인 목록: 최신순, 댓글 수·추천, 숨긴 글은 안 보임, [로그인하고 글쓰기]', async () => {
@@ -333,7 +333,7 @@ test('운영자 /admin/reports: 대상별로 묶음 → 숨기기 / 신고 기�
   expect(await screen.findByText('처리할 신고가 없습니다.')).toBeDefined();
 });
 
-test('운영자 /admin: 자유게시판 칸 — 처리할 신고 수, 숨긴 글·댓글 [다시 공개]', async () => {
+test('운영자 /admin: 탑신병자 커뮤니티 칸 — 처리할 신고 수, 숨긴 글·댓글 [다시 공개]', async () => {
   TABLES.posts.push(fakePost(1, { status: 'hidden', title: '숨긴 글', hidden_note: '광고', hidden_at: '2026-11-01T10:00:00Z' }));
   TABLES.reports.push({ id: 1, reporter_id: 'u-r', post_id: 2, comment_id: null, reason: 'spam', detail: null, status: 'open', created_at: '2026-11-01T00:00:00Z', reporter: null });
   TABLES.posts.push(fakePost(2));

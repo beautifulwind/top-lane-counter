@@ -1,4 +1,4 @@
-// ☰ 메뉴 도우미 (상단 바는 로고와 ☰만 — 마이페이지·자유게시판·관리·로그인·로그아웃은 메뉴 패널 안)
+// ☰ 메뉴 도우미 (상단 바는 로고와 ☰만 — 마이페이지·탑신병자 커뮤니티·관리·로그인·로그아웃은 메뉴 패널 안)
 import { fireEvent, screen, waitFor, within } from '@testing-library/react';
 import { expect } from 'vitest';
 

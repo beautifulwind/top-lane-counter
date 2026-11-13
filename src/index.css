@@ -116,7 +116,7 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="r
 .status { padding: 32px 0; text-align: center; color: var(--muted); }
 .status-error { color: var(--warn); }
 .status p { margin: 0 0 8px; }
-.prose { white-space: pre-line; }
+.prose { white-space: pre-wrap; overflow-wrap: anywhere; }
 
 .actions { margin-top: var(--gap-lg); display: flex; gap: var(--gap-sm); flex-wrap: wrap; }
 .btn {
@@ -234,7 +234,8 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="r
 .level { display: flex; flex-direction: column; padding: var(--pad-box); border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--field); }
 .level dt { font-weight: 900; font-size: var(--fs-sm); color: var(--muted); }
 .level.req dt { color: var(--brand-dark); }
-.level dd { margin: 4px 0 0; color: var(--text-soft); line-height: 1.6; }
+.level dd { margin: 4px 0 0; color: var(--text-soft); line-height: 1.6; white-space: pre-wrap; overflow-wrap: anywhere; }
+.level { min-width: 0; }
 
 .build { border: 1px solid var(--line); border-radius: var(--radius); padding: var(--pad-card); margin-bottom: var(--gap-lg); background: var(--paper); }
 .build-head { display: flex; justify-content: space-between; align-items: center; gap: var(--gap-sm); margin-bottom: var(--gap-md); }
@@ -692,7 +693,7 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
 .menu-item.on .menu-icon { color: var(--brand-dark); }
 .menu-item.op-link, .menu-item.op-link .menu-icon { color: var(--op-dark); }
 .menu-item.op-link.on { background: var(--op-soft); border-color: var(--op); }
-.menu-label { flex: 1; min-width: 0; }
+.menu-label { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .menu-count { flex: none; min-width: 22px; padding: 0 7px; border: 1px solid var(--op); border-radius: 999px; background: var(--op-soft); color: var(--op-dark); font-size: 0.8125rem; font-weight: 700; line-height: 1.5; text-align: center; }
 .menu-foot { margin-top: auto; padding-top: 12px; border-top: 1px solid var(--line); }
 .menu-logout { color: var(--muted); }

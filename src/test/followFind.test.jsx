@@ -31,13 +31,13 @@ async function openSearch() {
 
 // ---------------- ☰ [장인찾기] ----------------
 
-test('[장인찾기]: 알림과 자유게시판 사이, 누르면 아래에 검색 칸 / 다시 누르거나 바깥을 누르면 접힘', async () => {
+test('[장인찾기]: 알림과 탑신병자 커뮤니티 사이, 누르면 아래에 검색 칸 / 다시 누르거나 바깥을 누르면 접힘', async () => {
   fakeLogin('u-1', { nickname: '팬' });
   start('/');
   const { menu, btn, box } = await openSearch();
   const names = [...document.querySelectorAll('.menu-list > li > .menu-item')].map((el) => el.textContent.trim());
   expect(names.indexOf('장인찾기')).toBe(names.indexOf('알림') + 1);
-  expect(names.indexOf('자유게시판')).toBe(names.indexOf('장인찾기') + 1);
+  expect(names.indexOf('탑신병자 커뮤니티')).toBe(names.indexOf('장인찾기') + 1);
   expect(btn.getAttribute('aria-expanded')).toBe('true');
   expect(document.activeElement).toBe(box); // 펼치면 바로 입력
   expect(menu.getByText('장인 닉네임을 한 글자 이상 넣어 주세요.')).toBeTruthy();

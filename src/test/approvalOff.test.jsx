@@ -38,7 +38,7 @@ test('운영자 페이지: 승인 대기·재검토·빌드 승인 대기 구역
 test('감독관 페이지: 새 카운터 승인 대기가 없다', async () => {
   fakeLogin('u-mod', { nickname: '감독', role: 'moderator', level: 3, main_title: null });
   start('/admin');
-  expect(await screen.findByRole('heading', { name: /자유게시판·댓글/ })).toBeDefined();
+  expect(await screen.findByRole('heading', { name: /탑신병자 커뮤니티·댓글/ })).toBeDefined();
   expect(screen.queryByRole('heading', { name: /승인 대기/ })).toBeNull();
 });
 

@@ -1,4 +1,4 @@
-// 상단 바: 왼쪽 로고(사이트 이름), 오른쪽 ☰만. ☰ → 오른쪽 패널: 맨 위 계정, 마이페이지·자유게시판·관리(운영자), 맨 아래 로그아웃
+// 상단 바: 왼쪽 로고(사이트 이름), 오른쪽 ☰만. ☰ → 오른쪽 패널: 맨 위 계정, 마이페이지·탑신병자 커뮤니티·관리(운영자), 맨 아래 로그아웃
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
@@ -31,16 +31,16 @@ test('상단 바에는 로고(사이트 이름 → 홈)와 ☰만', async () => 
   expect(topbar().getByText('탑은 라인전이 전부')).toBeDefined();
 });
 
-test('로그인 전: 맨 위 [로그인 · 가입](보던 페이지로 돌아오게), 자유게시판만, 로그아웃 없음', async () => {
+test('로그인 전: 맨 위 [로그인 · 가입](보던 페이지로 돌아오게), 탑신병자 커뮤니티만, 로그아웃 없음', async () => {
   start('/champion/Darius');
   const menu = await openMenu();
-  expect(menuNames()).toEqual(['', '로그인 · 가입', '장인찾기', '자유게시판']); // '' = [X] 닫기
+  expect(menuNames()).toEqual(['', '로그인 · 가입', '장인찾기', '탑신병자 커뮤니티']); // '' = [X] 닫기
   fireEvent.click(menu.getByRole('link', { name: '로그인 · 가입' }));
   expect(where()).toBe('/login');
   expect(screen.queryByRole('dialog')).toBeNull();
 });
 
-test('회원: 맨 위 "Lv.7 [칭호] 닉네임"(글자만), 마이페이지·알림·자유게시판·로그아웃, 관리 없음 → 마이페이지로 이동하며 닫힘', async () => {
+test('회원: 맨 위 "Lv.7 [칭호] 닉네임"(글자만), 마이페이지·알림·탑신병자 커뮤니티·로그아웃, 관리 없음 → 마이페이지로 이동하며 닫힘', async () => {
   fakeLogin('u-user', { nickname: '탑고수', level: 7, main_title: 'solid_heavy' });
   start('/');
   const menu = await openMenu();
@@ -48,7 +48,7 @@ test('회원: 맨 위 "Lv.7 [칭호] 닉네임"(글자만), 마이페이지·알
   expect(who.closest('.menu-user').textContent).toBe('Lv.7 단단묵직 탑고수');
   expect(who.closest('a')).toBeNull(); // 닉네임을 눌러도 아무 동작 없음
   expect(menu.queryByRole('link', { name: '관리' })).toBeNull();
-  expect(menuNames()).toEqual(['', '마이페이지', '알림', '장인찾기', '자유게시판', '문의하기', '로그아웃']);
+  expect(menuNames()).toEqual(['', '마이페이지', '알림', '장인찾기', '탑신병자 커뮤니티', '문의하기', '로그아웃']);
   fireEvent.click(menu.getByRole('link', { name: '마이페이지' }));
   expect(where()).toBe('/me');
   expect(screen.queryByRole('dialog')).toBeNull();
@@ -57,7 +57,7 @@ test('회원: 맨 위 "Lv.7 [칭호] 닉네임"(글자만), 마이페이지·알
   // 지금 보는 페이지 항목은 강조
   const again = await openMenu();
   expect(again.getByRole('link', { name: '마이페이지' }).getAttribute('aria-current')).toBe('page');
-  expect(again.getByRole('link', { name: '자유게시판' }).getAttribute('aria-current')).toBeNull();
+  expect(again.getByRole('link', { name: '탑신병자 커뮤니티' }).getAttribute('aria-current')).toBeNull();
 });
 
 test('운영자: [관리](보라)가 메뉴에, 닉네임은 "Lv.0 닉네임"만 (운영자·관리자 글자 없음)', async () => {
@@ -69,15 +69,15 @@ test('운영자: [관리](보라)가 메뉴에, 닉네임은 "Lv.0 닉네임"만
   expect(admin.getAttribute('href')).toBe('/admin');
   expect(admin.matches('.op-link')).toBe(true);
   expect(menu.getByRole('link', { name: '마이페이지' }).matches('.op-link')).toBe(false);
-  expect(menuNames()).toEqual(['', '마이페이지', '알림', '장인찾기', '자유게시판', '문의하기', '관리', '로그아웃']);
+  expect(menuNames()).toEqual(['', '마이페이지', '알림', '장인찾기', '탑신병자 커뮤니티', '문의하기', '관리', '로그아웃']);
 });
 
-test('비회원: 닉네임 뒤 "비회원", 마이페이지·알림·자유게시판만 — 로그아웃은 없다', async () => {
+test('비회원: 닉네임 뒤 "비회원", 마이페이지·알림·탑신병자 커뮤니티만 — 로그아웃은 없다', async () => {
   fakeGuestLogin('g-1', { nickname: '손님' });
   start('/');
   const menu = await openMenu();
   expect((await menu.findByText('손님')).closest('.menu-user').textContent).toContain('비회원');
-  expect(menuNames()).toEqual(['', '마이페이지', '알림', '장인찾기', '자유게시판', '문의하기']);
+  expect(menuNames()).toEqual(['', '마이페이지', '알림', '장인찾기', '탑신병자 커뮤니티', '문의하기']);
 });
 
 test('닉네임 정하기 전: 맨 위 [닉네임 정하기](→ /welcome), 로그아웃은 있다', async () => {
@@ -85,7 +85,7 @@ test('닉네임 정하기 전: 맨 위 [닉네임 정하기](→ /welcome), 로�
   start('/champion/Darius');
   const menu = await openMenu();
   expect(await menu.findByText('닉네임을 아직 정하지 않았습니다.')).toBeDefined();
-  expect(menuNames()).toEqual(['', '닉네임 정하기', '마이페이지', '알림', '장인찾기', '자유게시판', '문의하기', '로그아웃']);
+  expect(menuNames()).toEqual(['', '닉네임 정하기', '마이페이지', '알림', '장인찾기', '탑신병자 커뮤니티', '문의하기', '로그아웃']);
   fireEvent.click(menu.getByRole('link', { name: '닉네임 정하기' }));
   await vi.waitFor(() => expect(where()).toBe('/welcome'));
 });
@@ -103,7 +103,7 @@ test('새 알림 빨간 점: ☰와 메뉴의 [알림] 둘 다 (마이페이지 
   const menu = within(await screen.findByRole('dialog', { name: '메뉴' }));
   expect(menu.getByRole('link', { name: '알림, 새 알림 2개' }).querySelector('.alert-dot')).not.toBeNull();
   expect(menu.getByRole('link', { name: '마이페이지' }).querySelector('.alert-dot')).toBeNull();
-  expect(menu.getByRole('link', { name: '자유게시판' }).querySelector('.alert-dot')).toBeNull();
+  expect(menu.getByRole('link', { name: '탑신병자 커뮤니티' }).querySelector('.alert-dot')).toBeNull();
 });
 
 test('닫기: 바깥 누르기·Esc·[X] — 닫으면 초점은 ☰로, 열면 패널 안 첫 항목으로, 열린 동안 뒤는 스크롤 안 됨', async () => {

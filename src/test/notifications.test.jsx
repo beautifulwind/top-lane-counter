@@ -151,7 +151,7 @@ test('마이페이지: 알림 칸 없이 [알림 보기] (새 알림 개수), �
   const link = await screen.findByRole('link', { name: '알림 보기 (새 알림 2개)' });
   expect(link.getAttribute('href')).toBe('/notifications');
   expect(screen.queryByText('레벨이 올랐습니다: Lv.3')).toBeNull();
-  expect(screen.queryByRole('heading', { name: '댓글·자유게시판 알림' })).toBeNull();
+  expect(screen.queryByRole('heading', { name: '댓글·탑신병자 커뮤니티 알림' })).toBeNull();
   expect(fakeState.rpcCalls.filter((c) => c.name.startsWith('mark_'))).toEqual([]);
 });
 

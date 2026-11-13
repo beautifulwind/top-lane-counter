@@ -3,6 +3,8 @@
 // 상단 바 밖으로 꺼내 보일 항목은 bar: true (지금은 없음 — 상단 바는 로고와 ☰만).
 // needs: 'any'(누구나) | 'signedIn'(로그인 — 비회원·닉네임 전 포함) | 'staff'(운영자·감독관)
 // 로그인·로그아웃은 페이지 이동이 아니라 계정 동작이라 이 목록 밖(SiteMenu)에서 처리한다.
+import { BOARD_NAME } from './siteNames';
+
 export const NAV_ITEMS = [
   { key: 'home', to: '/', label: '챔피언 선택', icon: 'shield', needs: 'any', menu: false, tab: true, bar: false },
   { key: 'me', to: '/me', label: '마이페이지', icon: 'user', needs: 'signedIn', menu: true, tab: true, bar: false },
@@ -10,7 +12,7 @@ export const NAV_ITEMS = [
   { key: 'notifications', to: '/notifications', label: '알림', icon: 'bell', needs: 'signedIn', menu: true, tab: true, bar: false, dot: 'unread' },
   // 장인찾기 (050): 이동이 아니라 펼침 — 누르면 바로 아래에 검색 칸(InfluencerSearch). 누구나 (로그인 전 포함)
   { key: 'influencers', to: null, panel: 'influencerSearch', label: '장인찾기', icon: 'search', needs: 'any', menu: true, tab: false, bar: false },
-  { key: 'board', to: '/board', label: '자유게시판', icon: 'message', needs: 'any', menu: true, tab: true, bar: false },
+  { key: 'board', to: '/board', label: BOARD_NAME, icon: 'message', needs: 'any', menu: true, tab: true, bar: false },
   // 문의하기 (032): 로그인한 사람 모두 (비회원·닉네임 전 포함). 답변은 알림과 이 화면으로
   { key: 'inquiries', to: '/inquiries', label: '문의하기', icon: 'help', needs: 'signedIn', menu: true, tab: false, bar: false },
   // 처리 대기 건수(033)는 [관리] 옆 숫자로 (count: 'pending')

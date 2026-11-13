@@ -61,7 +61,7 @@ export const TABLES = {
   xp_events: [],
   user_titles: [],
   offmeta_champions: [],
-  // 015 자유게시판 (author = select가 돌려주는 관계 모양)
+  // 015 탑신병자 커뮤니티 (author = select가 돌려주는 관계 모양)
   posts: [],
   post_comments: [],
   post_votes: [],
