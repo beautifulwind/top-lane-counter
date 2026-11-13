@@ -149,6 +149,7 @@ test('칭호 도감 문구: 약관 제4조의4, 방침의 수집·처리 기록�
   expect(sec.textContent).toMatch(/운영자가 직접 지급하고 회수/);
   expect(sec.textContent).toMatch(/기간이 끝나도 이미 받은 칭호는 유지/);
   expect(sec.textContent).toMatch(/부정한 방법으로 칭호를 얻은 것이 확인되면/);
+  expect(screen.getByRole('heading', { name: '제7조 (운영자의 조치)' }).closest('section').textContent).toMatch(/제4조의4에 따라 한정판 칭호를 지급하거나 회수/);
   cleanup();
   start('/privacy');
   await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' });
@@ -156,5 +157,6 @@ test('칭호 도감 문구: 약관 제4조의4, 방침의 수집·처리 기록�
   expect(text).toMatch(/장인 칭호는 따로 기록하지 않고 장인 인증 상태로 표시/);
   expect(text).toMatch(/한정판 칭호 지급·회수.*메모는 최대 500자/);
   expect(text).toMatch(/한정판 칭호와 장인 칭호\(장인 표시\)도 다른 이용자에게 보일 수 있습니다/);
+  expect(text).toMatch(/한정판 칭호 지급: 운영자가 한정판 칭호를 지급하거나 회수/);
   expect(LEGAL.effectiveDate).toBe('2026-11-09');
 });
