@@ -1332,3 +1332,10 @@ RLS 원칙:
   - 개정 공지: "탈퇴 정리 방식은 시행일 전부터 이미 새 기준으로 동작하고, 그 사이 탈퇴한 분도 같은 기준" 한 줄, 전문 링크를 전체 주소(https://top-lane-counter.pages.dev/privacy, /terms)로.
   - 개정 이력 칸은 만들지 않음(운영자 결정).
   - 검사: `legal.test.jsx` 055 문구 검사에 제12조(기존 두 문장 유지 + 새 두 문장) 추가.
+
+### 6-52. 경험치 설정 메모의 옛 이름 "자유게시판" -> "탑신병자 커뮤니티" — DB 준비 (2026-11-14, 057, 실행은 운영자가 Supabase에서)
+- **바뀌는 것**: `xp_rules.note`(메모 칸은 `note text` 하나) 11줄의 글자 "자유게시판"만 "탑신병자 커뮤니티"로. key: `post`·`post_daily_cap`·`comment`·`comment_daily_cap`·`post_interval`·`comment_interval`·`post_edit_minutes`·`comment_edit_minutes`·`media_post_max`·`media_post_gif_max`·`media_comment_max`. 숫자(value)·다른 key·다른 표·함수는 그대로. 조사가 어색해지는 줄은 없음(11줄 모두 "자유게시판" 바로 뒤가 띄어쓰기). 여러 번 실행해도 같음(두 번째는 0줄).
+- **파일**: `migrations/057_board_name_text.sql`(맨 위에 되돌리기 + 원래 문구 목록, 되돌리기는 같은 11줄에서 거꾸로 replace), `scripts/check_board_name_before.sql`(1~6번 정상 값, 7~9번 적어 둘 값 — 다른 줄 지문·숫자 지문·바뀐 뒤 예상 메모 지문, 11~21번 원래 문구), `scripts/check_board_name_after.sql`(1~5번 정상 값, 6~9번이 before와 같은지, 11~21번 새 문구), `scripts/check_board_name_find.sql`(읽기 전용: 시스템 문구가 들어가는 곳만 찾음).
+- **로컬 검사**(Docker Postgres, 001~056 적용 뒤): before 11줄·key 일치·조사 0, 057이 11줄 바꿈, 한 번 더 실행하면 0줄, after 1~5번 정상, 7·8·9번 지문이 before와 같음, 되돌리기를 실행하면 원래 문구로 돌아옴(예상 지문과 같음).
+- **찾기 결과**(find): `xp_rules.note` 11줄(이번에 바꿈) 말고, 표 설명(`comment on table`) 2곳 — `board_attachments`(024), `reports`(024)에 "자유게시판"이 남음. 도감 칭호 글·알림 문장·경험치 내역 이유·처리 기록 메모·함수 본문에는 없음(실제 DB의 알림·경험치 내역은 find로 확인). 표 설명은 화면에 안 보이고 057 범위 밖이라 안 고침.
+- **앱 코드**: 이용자에게 보이는 "자유게시판"은 없음(화면 문구는 이미 "탑신병자 커뮤니티", 남은 것은 모두 주석). SPEC의 "자유게시판"은 현재 설명·과거 기록이라 그대로 둠.
