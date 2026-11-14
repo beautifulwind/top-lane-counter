@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { WITHDRAWN_USER } from '../lib/nickname';
 import { getModerationLog, setModerator } from '../api/moderation';
 import { fmtDateTime } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
@@ -23,7 +24,7 @@ export const KIND_LABEL = {
 export const ROLE_LABEL = { admin: '운영자', moderator: '감독관', user: '일반 회원' };
 
 /** 처리 대상 한 마디: 지정·해제는 닉네임, 나머지는 "글 #12" */
-export const WITHDRAWN_USER = '탈퇴한 이용자';
+export { WITHDRAWN_USER };
 export const targetText = (r) => {
   if (r.target_kind === 'user') return r.target_nickname?.trim() || WITHDRAWN_USER;
   const kind = KIND_LABEL[r.target_kind] ?? r.target_kind;
@@ -45,7 +46,7 @@ export function ModerationLog({ refreshKey = 0 }) {
           {data.map((r) => (
             <li key={r.id}>
               {fmtDateTime(r.created_at)} · {ACTION_LABEL[r.action] ?? r.action} · {targetText(r)}
-              {' · '}{r.actor_nickname ?? '(알 수 없음)'} ({ROLE_LABEL[r.actor_role] ?? r.actor_role})
+              {' · '}{r.actor_nickname || WITHDRAWN_USER} ({ROLE_LABEL[r.actor_role] ?? r.actor_role})
               {r.note && <> · {r.note}</>}
             </li>
           ))}

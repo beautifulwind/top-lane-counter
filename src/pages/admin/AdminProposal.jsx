@@ -11,7 +11,7 @@ import { STATUS_LABEL, TYPE_LABEL, fmtDateTime } from '../../lib/format';
 import { ErrorBox, Loading } from '../../components/Status';
 import { RequireStaff } from '../../components/RequireOperator';
 import { useAuth } from '../../lib/auth';
-import { isStaffPerson } from '../../lib/nickname';
+import { WITHDRAWN_USER, isStaffPerson } from '../../lib/nickname';
 import DiffView from '../../components/DiffView';
 import UserName from '../../components/UserName';
 import NoteForm from '../../components/NoteForm';
@@ -82,7 +82,7 @@ function Review() {
       <nav className="crumbs"><Link to="/admin">운영자 페이지</Link> › 제안 #{p.id}</nav>
       <h1 className="doc-title">[{label}] {title}</h1>
       <p className="proposal-meta">
-        {p.proposer ? <UserName profile={p.proposer} /> : <span>(탈퇴한 유저)</span>}
+        {p.proposer ? <UserName profile={p.proposer} /> : <span>{WITHDRAWN_USER}</span>}
         <span>{fmtDateTime(p.created_at)}</span>
         <span className={`status-badge ${p.status}`}>{STATUS_LABEL[p.status]}</span>
         <EditedBadge row={p} />

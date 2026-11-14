@@ -37,7 +37,7 @@ test('상대법 빌드: 승인된 것만 탭으로, 추천 많은 순, 작성자
   fireEvent.click(screen.getByRole('tab', { name: /^빌드 1/ }));
   expect(screen.getByText('패치 14.1')).toBeDefined();
   expect(document.querySelector('.build-panel .doc-sub').textContent).toBe('패치 14.1 · 최근 수정 2026-11-01');
-  expect(screen.getByText('(탈퇴한 유저)')).toBeDefined();
+  expect(screen.getByText('탈퇴한 이용자')).toBeDefined();
 });
 
 test('승인 안 된 카운터는 매치업 문서가 열리지 않는다', async () => {

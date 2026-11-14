@@ -1,4 +1,4 @@
-import { displayNickname } from '../lib/nickname';
+import { WITHDRAWN_USER, displayNickname } from '../lib/nickname';
 import { useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { voteBuild } from '../api/builds';
@@ -39,10 +39,10 @@ export function Icon({ entry, size = 32, round = false, fallback = '?' }) {
   return img(entry.name);
 }
 
-/** 작성자 표시: 닉네임만(레벨·칭호 없이, 장인 표시는 보임 — 046) / 작성자가 없으면 탈퇴한 유저 */
+/** 작성자 표시: 닉네임만(레벨·칭호 없이, 장인 표시는 보임 — 046) / 작성자가 없으면 탈퇴한 이용자 */
 export function BuildAuthor({ build }) {
   if (build.author) return <UserName profile={build.author} plain linkTo={build.author_id} />;
-  return '(탈퇴한 유저)';
+  return WITHDRAWN_USER;
 }
 
 /**
@@ -53,7 +53,7 @@ export function BuildAuthor({ build }) {
 export default function BuildCard({ build, items, runes, spells, interactive = false, authorExtra = null }) {
   const r = build.runes;
   return (
-    <article className="build" aria-label={`빌드: ${displayNickname(build.author, '(탈퇴한 유저)')}`}>
+    <article className="build" aria-label={`빌드: ${displayNickname(build.author)}`}>
       <div className="build-head">
         <span className="build-author">
           <BuildAuthor build={build} />

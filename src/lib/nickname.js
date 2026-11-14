@@ -10,7 +10,10 @@ export const isStaffPerson = (person) => person?.role === 'admin' || person?.rol
 export const roleMark = (person) => (isStaffPerson(person) ? '(운)' : '');
 
 /** 화면에 보이는 닉네임: 운영진은 "(운)영자". 사람이 없으면(탈퇴 등) fallback */
-export const displayNickname = (person, fallback = '탈퇴한 유저') =>
+/** 탈퇴한 사람(닉네임·id가 비어 있는 줄)의 표기 — 화면 어디서나 이 글자 */
+export const WITHDRAWN_USER = '탈퇴한 이용자';
+
+export const displayNickname = (person, fallback = WITHDRAWN_USER) =>
   person?.nickname ? `${roleMark(person)}${person.nickname}` : fallback;
 
 const OPEN = '[{<〔【〈《「『〖﹙⁽₍❨❪❬❮❰❲❴⟦⟨⟪⟬⦅〘〚﹛﹝＜';

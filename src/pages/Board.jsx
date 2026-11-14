@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { WITHDRAWN_USER } from '../lib/nickname';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { PAGE_SIZE, getBoardPage } from '../api/board';
 import { useAuth } from '../lib/auth';
@@ -101,7 +102,7 @@ function PostRow({ p }) {
           {p.media_count > 0 && <span className="post-media" role="img" aria-label="사진 있음" title="사진 있음"><ImageIcon size={16} /></span>}
         </span>
         <span className="post-meta">
-          {p.author ? <UserName profile={p.author} /> : <span>(탈퇴한 유저)</span>}
+          {p.author ? <UserName profile={p.author} /> : <span>{WITHDRAWN_USER}</span>}
           <span>{fmtDateTime(p.created_at)}</span>
         </span>
         <span className="post-stats">

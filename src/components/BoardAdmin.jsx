@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { WITHDRAWN_USER } from '../lib/nickname';
 import { Link } from 'react-router-dom';
 import { getHiddenBoard, getOpenReports, restoreComment, restoreDocComment, restorePost } from '../api/board';
 import { getChampionMap } from '../api/ddragon';
@@ -86,7 +87,7 @@ function HiddenBoardRow({ kind, row, champs, onDone }) {
       </div>
       {k && <p className="hint">{matchupTitle(name(k.counter_champion), name(k.target_champion))}</p>}
       <div className="proposal-meta">
-        <span>작성자: {row.author ? <UserName profile={row.author} /> : '(탈퇴한 유저)'}</span>
+        <span>작성자: {row.author ? <UserName profile={row.author} /> : WITHDRAWN_USER}</span>
         <span>숨긴 날 {fmtDateTime(row.hidden_at)}</span>
       </div>
       <p className="reject-reason">메모: {row.hidden_note}</p>

@@ -1,15 +1,16 @@
 import { useState } from 'react';
+import { WITHDRAWN_USER } from '../lib/nickname';
 import { PHOTO_REPORT_REASONS, REPORT_REASONS, REPORT_REASON_HINTS } from '../api/board';
 import { canRestore, useAuth } from '../lib/auth';
 import { fmtDateTime } from '../lib/format';
 import UserName from './UserName';
 import NoteForm from './NoteForm';
 
-/** 글쓴이 · 시간 · 수정됨 (탈퇴하면 "(탈퇴한 유저)") */
+/** 글쓴이 · 시간 · 수정됨 (탈퇴하면 "탈퇴한 이용자") */
 export function BoardByline({ row }) {
   return (
     <span className="post-meta">
-      {row.author ? <UserName profile={row.author} linkTo={row.author_id} /> : <span>(탈퇴한 유저)</span>}
+      {row.author ? <UserName profile={row.author} linkTo={row.author_id} /> : <span>{WITHDRAWN_USER}</span>}
       <span>{fmtDateTime(row.created_at)}</span>
       {row.edited_at && <span className="edited" title={`${fmtDateTime(row.edited_at)}에 고침`}>수정됨</span>}
     </span>

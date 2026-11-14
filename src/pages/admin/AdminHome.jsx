@@ -1,4 +1,4 @@
-import { displayNickname } from '../../lib/nickname';
+import { WITHDRAWN_USER, displayNickname } from '../../lib/nickname';
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getChampionMap } from '../../api/ddragon';
@@ -357,7 +357,7 @@ function PendingRow({ proposal: p, name, game, onDone, onReload }) {
         <span className="proposal-type">{label}</span> {title}
       </div>
       <div className="proposal-meta">
-        {p.proposer ? <UserName profile={p.proposer} /> : <span>(탈퇴한 유저)</span>}
+        {p.proposer ? <UserName profile={p.proposer} /> : <span>{WITHDRAWN_USER}</span>}
         <span>{fmtDateTime(p.created_at)}</span>
         <EditedBadge row={p} />
       </div>
@@ -677,7 +677,7 @@ function WaitingRow({ kind, item, name, game, onDone }) {
         <span className="proposal-type">{label}</span> {title}
       </div>
       <div className="proposal-meta">
-        {isBuild ? <BuildAuthor build={item} /> : item.proposer ? <UserName profile={item.proposer} /> : <span>(탈퇴한 유저)</span>}
+        {isBuild ? <BuildAuthor build={item} /> : item.proposer ? <UserName profile={item.proposer} /> : <span>{WITHDRAWN_USER}</span>}
         <span className="status-badge revision_requested">{BUILD_STATUS_LABEL.revision_requested}</span>
         <span>요청한 날 {fmtDateTime(item.revision_requested_at)}</span>
       </div>

@@ -21,6 +21,7 @@ test('displayNickname: 운영자·감독관은 닉네임 앞에 똑같이 (운),
   expect(displayNickname({ nickname: '감독', role: 'moderator' })).toBe('(운)감독');
   expect(displayNickname({ nickname: '탑고수', role: 'user' })).toBe('탑고수');
   expect(displayNickname({ nickname: '탑고수' })).toBe('탑고수');
-  expect(displayNickname(null)).toBe('탈퇴한 유저');
-  expect(displayNickname(null, '(탈퇴한 유저)')).toBe('(탈퇴한 유저)');
+  expect(displayNickname(null)).toBe('탈퇴한 이용자');
+  expect(displayNickname({ nickname: '' })).toBe('탈퇴한 이용자');
+  expect(displayNickname(null, '닉네임을 정하지 않은 사용자')).toBe('닉네임을 정하지 않은 사용자');
 });

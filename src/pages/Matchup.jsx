@@ -364,7 +364,7 @@ function BuildPanel({ build, index, doc, data, path, isOperator, canHide, lastOn
           onCancel={() => setHiding(null)}
           onSubmit={async (reason) => {
             await hideBuild(build.id, reason);
-            onHidden(`빌드를 숨겼습니다. (${label} · ${displayNickname(build.author, '(탈퇴한 유저)')})`);
+            onHidden(`빌드를 숨겼습니다. (${label} · ${displayNickname(build.author)})`);
           }}
         />
       )}

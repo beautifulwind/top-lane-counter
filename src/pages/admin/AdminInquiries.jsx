@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { WITHDRAWN_USER } from '../../lib/nickname';
 import { Link } from 'react-router-dom';
 import {
   INQUIRY_ANSWER_MAX, INQUIRY_CATEGORIES, answerInquiry, getStaffInquiries, setInquiryCategory,
@@ -79,7 +80,7 @@ function StaffInquiry({ row, onDone }) {
     <li className="inquiry-row" aria-label={`${INQUIRY_CATEGORIES[row.category]} 문의`}>
       <div className="inquiry-head">
         <span className="proposal-type">{INQUIRY_CATEGORIES[row.category]}</span>
-        <span>{row.user ? <UserName profile={row.user} /> : '(탈퇴한 유저)'}</span>
+        <span>{row.user ? <UserName profile={row.user} /> : WITHDRAWN_USER}</span>
         <small className="hint">{fmtDateTime(row.created_at)}</small>
       </div>
       <p className="inquiry-body">{row.body}</p>

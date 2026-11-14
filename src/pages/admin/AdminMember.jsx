@@ -4,7 +4,7 @@ import { getDeletedWritings, getMemberDetail } from '../../api/moderation';
 import { getChampionMap } from '../../api/ddragon';
 import RequireOperator from '../../components/RequireOperator';
 import { ErrorBox, Loading } from '../../components/Status';
-import { ACTION_LABEL, ModeratorToggle, ROLE_LABEL, targetText } from '../../components/ModeratorAdmin';
+import { ACTION_LABEL, ModeratorToggle, ROLE_LABEL, WITHDRAWN_USER, targetText } from '../../components/ModeratorAdmin';
 import UserName from '../../components/UserName';
 import { GrantInfluencer, RenameMember, RevokeInfluencer } from '../../components/InfluencerAdmin';
 import { UsersIcon } from '../../components/Icons';
@@ -15,7 +15,7 @@ import { INFLUENCER_KINDS } from '../../lib/nickname';
 import { useAsync } from '../../lib/useAsync';
 
 const PROVIDER_LABEL = { google: '구글', kakao: '카카오' };
-const WITHDRAWN = '탈퇴한 이용자';
+const WITHDRAWN = WITHDRAWN_USER;
 
 /** 가입 방식 한 마디 (연결한 로그인 방식 이름만 — 이메일·로그인 ID는 화면에 오지 않는다) */
 const joinedWith = (m) => {
@@ -163,7 +163,7 @@ function ModerationHistory({ rows }) {
           {rows.map((r) => (
             <li key={r.id}>
               {fmtDateTime(r.created_at)} · {ACTION_LABEL[r.action] ?? r.action} · {r.target_kind === 'user' ? '회원' : targetText(r)}
-              {' · '}{r.actor_nickname ?? '(알 수 없음)'} ({ROLE_LABEL[r.actor_role] ?? r.actor_role})
+              {' · '}{r.actor_nickname || WITHDRAWN_USER} ({ROLE_LABEL[r.actor_role] ?? r.actor_role})
               {r.note && <> · {r.note}</>}
             </li>
           ))}

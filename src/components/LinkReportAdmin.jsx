@@ -5,7 +5,7 @@ import { getChampionMap } from '../api/ddragon';
 import { useAsync } from '../lib/useAsync';
 import { fmtDateTime } from '../lib/format';
 import { LINK_REPORT_REASONS } from '../lib/links';
-import { displayNickname } from '../lib/nickname';
+import { WITHDRAWN_USER, displayNickname } from '../lib/nickname';
 import { matchupShort } from '../lib/josa';
 import { ErrorBox, Loading } from './Status';
 import UserName from './UserName';
@@ -66,7 +66,7 @@ function LinkReportRow({ link: l, champs, onDone }) {
       <p className="hint"><code>{l.url}</code></p>
       {b && <p className="hint">{matchupShort(name(b.counter_champion), name(b.target_champion))} · {b.name || `빌드 ${b.seq ?? ''}`.trim()}</p>}
       <div className="proposal-meta">
-        <span>올린 장인: {l.owner ? <UserName profile={l.owner} /> : '(탈퇴한 유저)'}</span>
+        <span>올린 장인: {l.owner ? <UserName profile={l.owner} /> : WITHDRAWN_USER}</span>
         {l.visible === false && <span className="op-badge">지금 숨김 (허용 사이트에서 빠짐)</span>}
       </div>
       <ul className="log-list" aria-label="신고 내용">
