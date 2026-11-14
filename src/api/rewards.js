@@ -40,6 +40,20 @@ export async function getMyTitleBook() {
   return { ...data, items: data?.items ?? [] };
 }
 
+let titleBookOnce = { userId: null, promise: null };
+/** 같은 세션에서 도감을 한 번만 읽고 재사용(알림 화면용). fresh = 새로 읽는다(칭호를 새로 받은 직후). 실패한 읽기는 남기지 않는다 */
+export function getMyTitleBookOnce(userId, { fresh = false } = {}) {
+  if (fresh || titleBookOnce.userId !== userId || !titleBookOnce.promise) {
+    const p = getMyTitleBook();
+    titleBookOnce = { userId, promise: p };
+    p.catch(() => { if (titleBookOnce.promise === p) titleBookOnce = { userId: null, promise: null }; });
+  }
+  return titleBookOnce.promise;
+}
+/** 이 사용자의 도감을 이미 읽어 둔 것이 있는가 */
+export const hasTitleBookOnce = (userId) => titleBookOnce.userId === userId && !!titleBookOnce.promise;
+export const resetTitleBookOnce = () => { titleBookOnce = { userId: null, promise: null }; };
+
 /**
  * 닉네임 옆 칭호 배지용 공개 정보 (054 public_title_info, 비로그인도): [{ key, kind, name, icon, color }].
  * 활동 + 한정판(숨김 빼고, 비밀은 누군가 대표로 단 것만). 소개·얻는 방법은 없다.

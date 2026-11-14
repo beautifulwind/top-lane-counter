@@ -42,22 +42,33 @@ async function rpc(name, args, fallback) {
 
 const shape = ({ up_count, down_count, ...b }) => ({ ...b, up: up_count, down: down_count });
 
+/** 일찍 시작한 요청이 먼저 실패해도 처리 안 된 거부(unhandled rejection)가 되지 않게 결과를 담아 두고, 원래 순서대로 풀어 본다 */
+const settle = (p) => Promise.resolve(p).then((value) => ({ value }), (error) => ({ error }));
+const unwrap = (r) => {
+  if (r.error) throw r.error;
+  return r.value;
+};
+
 /**
  * 상대법의 공개된 빌드 (추천 수 → 점수 → 최신순). userId를 주면 내 표(mine: 1 | -1 | null)도 붙인다.
+ * 빌드·내 표·편집자 수·링크는 서로 기다릴 필요가 없어 한 번에 보낸다 (내 표는 빌드 id 대신 builds 관계로 상대법을 좁힌다).
+ * 오류는 예전 순서(빌드 → 내 표)대로 먼저 난 쪽을 던진다.
  */
 export async function getBuilds(counterRowId, userId = null) {
-  const rows = await run(
+  const rowsReq = settle(run(
     db().from('builds').select(`${BUILD_FIELDS}, ${AUTHOR}`).eq('counter_id', counterRowId).eq('status', 'approved'),
     '빌드를 불러오지 못했습니다.',
-  );
-  let votes = [];
-  if (userId && rows.length > 0) {
-    votes = await run(
-      db().from('build_votes').select('build_id, value').eq('user_id', userId).in('build_id', rows.map((b) => b.id)),
+  ));
+  const votesReq = settle(userId
+    ? run(
+      db().from('build_votes').select('build_id, value, builds!inner(counter_id)').eq('user_id', userId).eq('builds.counter_id', counterRowId),
       '내 투표를 불러오지 못했습니다.',
-    );
-  }
-  const [editors, links] = rows.length > 0 ? await Promise.all([getBuildEditorCounts(counterRowId), getBuildLinks(counterRowId)]) : [{}, {}];
+    )
+    : []);
+  const sideReq = settle(Promise.all([getBuildEditorCounts(counterRowId), getBuildLinks(counterRowId)]));
+  const rows = unwrap(await rowsReq);
+  const votes = unwrap(await votesReq);
+  const [editors, links] = rows.length > 0 ? unwrap(await sideReq) : [{}, {}];
   return rows
     .map((b) => ({
       ...shape(b), mine: votes.find((v) => v.build_id === b.id)?.value ?? null, editors: editors[b.id] ?? 0,

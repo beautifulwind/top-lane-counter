@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { Link, useLocation } from 'react-router-dom';
 import { signOut } from '../api/auth';
 import { getPendingCounts } from '../api/moderation';
-import { getUnreadCount, onNotificationsChanged } from '../api/notifications';
+import { useUnreadCount, useUnreadRefresher } from '../lib/unread';
 import { isGuest, useAuth } from '../lib/auth';
 import { isCurrentNav, navItemsFor } from '../lib/navItems';
 import { promptInstall, useInstallKind } from '../lib/install';
@@ -32,26 +32,6 @@ const pendingTitle = (c) =>
 export const logout = () => signOut().catch((e) => alert(e.message));
 
 const ICONS = { user: UserIcon, message: MessageIcon, shield: ShieldIcon, bell: BellIcon, help: HelpIcon, search: SearchIcon };
-
-/**
- * 안 읽은 알림 개수 (빨간 점). 페이지를 옮길 때와 읽음 처리했을 때 다시 센다.
- * 알림 화면(/notifications)을 열면 꺼진다.
- */
-function useUnreadCount(userId, pathname) {
-  const [count, setCount] = useState(0);
-  const [changed, setChanged] = useState(0);
-  useEffect(() => {
-    const off = onNotificationsChanged(() => setChanged((n) => n + 1));
-    return off; // 구독 해제
-  }, []);
-  useEffect(() => {
-    if (!userId) return undefined;
-    let alive = true;
-    getUnreadCount(userId).then((n) => alive && setCount(n), () => {}); // 알림은 실패해도 조용히
-    return () => { alive = false; };
-  }, [userId, pathname, changed]);
-  return userId ? count : 0;
-}
 
 /**
  * 관리 메뉴의 처리 대기 건수 (운영진만, 033). 메뉴를 열 때마다 새로 센다 — 처리하고 돌아오면 줄어 있도록.
@@ -87,7 +67,9 @@ export default function SiteMenu() {
   const { pathname, search } = useLocation();
   const kind = accountKind(auth);
   const signedIn = !['loading', 'signedOut'].includes(kind);
-  const unread = useUnreadCount(signedIn ? auth.user?.id : null, pathname);
+  const unreadUserId = signedIn ? auth.user?.id : null;
+  useUnreadRefresher(unreadUserId); // 앱을 열 때·푸시가 올 때·읽음 처리 뒤에만 다시 센다 (화면을 옮길 때는 안 셈)
+  const unread = useUnreadCount(unreadUserId);
   const installKindNow = useInstallKind(); // 'prompt'(안드로이드) | 'ios' | 숨김
   const [showIosGuide, setShowIosGuide] = useState(false);
   const [open, setOpen] = useState(false);

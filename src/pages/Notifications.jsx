@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { getChampionMap } from '../api/ddragon';
 import { getNotifications, markAllNotificationsRead } from '../api/notifications';
-import { getMyTitleBook } from '../api/rewards';
+import { getMyTitleBookOnce, hasTitleBookOnce } from '../api/rewards';
 import { useAuth } from '../lib/auth';
 import { describeNotification, noticeTime } from '../lib/notifications';
 import { fmtDateTime } from '../lib/format';
@@ -39,7 +39,11 @@ export default function Notifications() {
 function NotificationList({ userId }) {
   const { data, error, loading, retry } = useAsync(async () => {
     // 칭호 알림의 훈장은 도감(한정판 포함)에서 — 못 읽어도 알림은 보인다(예전 6개 훈장으로)
-    const [champs, page, book] = await Promise.all([getChampionMap(), getNotifications(userId), getMyTitleBook().then((b) => b.items, () => [])]);
+    // 도감은 같은 세션에서 한 번만 읽는다. 단, 안 읽은 칭호 알림(새로 받음·회수)이 있는데 도감이 예전에 읽은 것이면 그것만 새로 읽는다
+    const cachedBook = hasTitleBookOnce(userId);
+    const [champs, page, first] = await Promise.all([getChampionMap(), getNotifications(userId), getMyTitleBookOnce(userId).then((b) => b.items, () => [])]);
+    const newTitle = page.rows.some((n) => !n.read_at && (n.kind === 'title_earned' || n.kind === 'title_revoked'));
+    const book = cachedBook && newTitle ? await getMyTitleBookOnce(userId, { fresh: true }).then((b) => b.items, () => first) : first;
     return { champs, book, ...page };
   }, [userId]);
   // [더 보기]로 이어 붙인 알림 (처음 목록을 다시 불러오면 비운다)

@@ -29,6 +29,13 @@ import { displayNickname } from '../lib/nickname';
 import FollowButton from '../components/FollowButton';
 import { getFollowStatus } from '../api/follow';
 
+// 일찍 시작한 요청이 먼저 실패해도 처리 안 된 거부가 되지 않게 결과를 담아 두고, 원래 순서대로 풀어 본다
+const settle = (p) => Promise.resolve(p).then((value) => ({ value }), (error) => ({ error }));
+const unwrap = (r) => {
+  if (r.error) throw r.error;
+  return r.value;
+};
+
 const day = (ts) => (ts ? String(ts).slice(0, 10) : null);
 
 /**
@@ -49,15 +56,17 @@ export default function Matchup() {
   const [notice, setNotice] = useState(location.state?.done ?? null);
   const { data, error, loading, retry } = useAsync(
     async () => {
-      const [champs, matchup] = await Promise.all([getChampionMap(), getMatchup(targetId, counterId)]);
-      const builds = matchup ? await getBuilds(matchup.counter.id, userId) : [];
-      const [items, runes, spells, latest] = await Promise.all([
-        getItems(),
-        getRunes(),
-        getSummonerSpells(),
-        getLatestVersion(),
-      ]);
-      return { champs, matchup, builds, items, runes, spells, latest };
+      // Data Dragon(빌드와 무관)은 맨 처음부터, 상대법 문서와 함께 시작한다. 오류는 예전 순서(챔피언·문서 → 빌드 → 게임 데이터)대로 먼저 난 쪽을 던진다.
+      const game = settle(Promise.all([getItems(), getRunes(), getSummonerSpells(), getLatestVersion()]));
+      const champsReq = settle(getChampionMap());
+      const matchupReq = settle(getMatchup(targetId, counterId));
+      const champs = unwrap(await champsReq);
+      const matchup = unwrap(await matchupReq);
+      // 문서 id(counter.id)를 안 뒤에는 빌드·내 표·편집자 수·링크가 한 번에 가고, 댓글·고치기 규칙도 같이 시작한다 (댓글 칸은 이 결과를 받아 쓴다)
+      const comments = matchup ? settle(Promise.all([getDocComments(matchup.counter.id), getEditRules()])) : null;
+      const builds = matchup ? unwrap(await settle(getBuilds(matchup.counter.id, userId))) : [];
+      const [items, runes, spells, latest] = unwrap(await game);
+      return { champs, matchup, builds, items, runes, spells, latest, preload: comments && { counterRowId: matchup.counter.id, result: comments } };
     },
     [targetId, counterId, userId],
   );
@@ -240,7 +249,7 @@ export default function Matchup() {
         />
       )}
 
-      <DocComments counterRowId={data.matchup.counter.id} auth={auth} live num={4} />
+      <DocComments counterRowId={data.matchup.counter.id} auth={auth} live num={4} preload={data.preload} />
     </article>
   );
 }
@@ -411,9 +420,19 @@ function BuildPanel({ build, index, doc, data, path, isOperator, canHide, lastOn
  * 문서 댓글 (SPEC 6-5): 문서와 따로 불러온다 → 댓글을 달거나 처리해도 문서 전체가 다시 그려지지 않는다.
  * live = 카운터가 공개 중인가 (숨긴 카운터 미리보기에서는 false: 새 댓글·고치기·신고 없음, 운영자 숨기기·다시 공개만)
  */
-export function DocComments({ counterRowId, auth, live, num }) {
+export function DocComments({ counterRowId, auth, live, num, preload = null }) {
   const [notice, setNotice] = useState(null);
+  // preload = 상대법 화면이 문서를 읽자마자 미리 보낸 요청 { counterRowId, result }. 첫 로딩에만 쓰고, 댓글을 단 뒤 다시 읽을 때는 새로 읽는다
+  const early = useRef(preload);
   const { data, error, loading, retry } = useAsync(async () => {
+    const p = early.current;
+    early.current = null;
+    if (p && p.counterRowId === counterRowId) {
+      const r = await p.result;
+      if (r.error) throw r.error;
+      const [comments, rules] = r.value;
+      return { comments, rules };
+    }
     const [comments, rules] = await Promise.all([getDocComments(counterRowId), getEditRules()]);
     return { comments, rules };
   }, [counterRowId]);

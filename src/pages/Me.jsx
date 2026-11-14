@@ -3,7 +3,7 @@ import { Link, Navigate, useLocation } from 'react-router-dom';
 import { PROVIDERS } from '../api/auth';
 import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../api/ddragon';
 import { approvedWithEdits, getMyProposals } from '../api/proposals';
-import { getUnreadCount } from '../api/notifications';
+import { useUnreadCount } from '../lib/unread';
 import { getMyBuilds } from '../api/builds';
 import { APPROVAL_ENABLED } from '../lib/features';
 import { getMyRewards, getMyTitleBook } from '../api/rewards';
@@ -150,7 +150,7 @@ function MyActivity({ auth }) {
 
 /** [알림 보기] (알림은 /notifications에서 본다 — 마이페이지의 알림 칸은 027에서 없앰) */
 function NotificationsLink({ userId }) {
-  const { data: count } = useAsync(() => getUnreadCount(userId).catch(() => 0), [userId]);
+  const count = useUnreadCount(userId); // 상단 메뉴가 센 값을 같이 쓴다 (요청 없음)
   return (
     <Link
       to="/notifications" className="btn btn-small me-noti-btn"

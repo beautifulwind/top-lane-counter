@@ -20,11 +20,14 @@ export function announceNotificationsChanged() {
   window.dispatchEvent(new Event(NOTIFICATIONS_CHANGED));
 }
 
-/** 안 읽은 내 알림 개수 (빨간 점·마이페이지 [알림 보기]). RLS가 내 것만 돌려준다 */
+/**
+ * 안 읽은 내 알림 개수 (빨간 점·마이페이지 [알림 보기]). RLS가 내 것만 돌려준다.
+ * id 목록을 받지 않고 개수만 센다(count + head). 조건은 부분 인덱스 notifications_unread_idx (user_id) where read_at is null과 같다
+ */
 export async function getUnreadCount(userId) {
-  const { data, error } = await db().from('notifications').select('id').eq('user_id', userId).is('read_at', null);
+  const { count, error } = await db().from('notifications').select('id', { count: 'exact', head: true }).eq('user_id', userId).is('read_at', null);
   if (error) throw friendly(error, '알림을 불러오지 못했습니다.');
-  return data.length;
+  return count ?? 0;
 }
 
 export const NOTIFICATIONS_PAGE = 20;

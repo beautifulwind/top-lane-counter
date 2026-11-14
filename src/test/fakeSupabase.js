@@ -143,7 +143,7 @@ export const EMPTY_USAGE = () => ({
 // 테스트가 바꾸는 상태. setupTests.js가 테스트마다 초기화한다.
 export const fakeState = {
   error: null, session: null, initError: null, oauthCalls: [], linkCalls: [], linkError: null, listeners: new Set(),
-  inserts: [], insertError: null, pendingCounts: null, pendingCountsAsked: 0, rpcCalls: [], memberCalls: [], memberStats: { total: 0, members: 0, guests: 0, google: 0, kakao: 0, both: 0, new_7d: 0, new_7d_members: 0 }, members: [], memberInfo: {}, memberDetail: {}, deletedWritings: {}, buildRevisions: {}, rpcError: null, rpcErrorCode: null, reviewCalls: [], reviewers: {}, boardError: null,
+  queryLog: [], inserts: [], insertError: null, pendingCounts: null, pendingCountsAsked: 0, rpcCalls: [], memberCalls: [], memberStats: { total: 0, members: 0, guests: 0, google: 0, kakao: 0, both: 0, new_7d: 0, new_7d_members: 0 }, members: [], memberInfo: {}, memberDetail: {}, deletedWritings: {}, buildRevisions: {}, rpcError: null, rpcErrorCode: null, reviewCalls: [], reviewers: {}, boardError: null,
   functionCalls: [], functionError: null, // Edge Function 호출 (017 delete-account)
   anonCalls: [], anonError: null, anonDelay: null, hideCounts: {}, signOutCalls: [], touched: 0, // 비회원 (020)
   uploads: [], uploadError: null, mediaProblem: null, mediaUsage: EMPTY_USAGE(), // 사진 (023, mediaUsage = media_usage 결과)
@@ -199,6 +199,7 @@ export function resetFake() {
   fakeState.inserts = [];
   fakeState.insertError = null;
   fakeState.rpcCalls = [];
+  fakeState.queryLog = [];
   fakeState.contributors = {};
   fakeState.editorCounts = {};
   fakeState.memberCalls = [];
@@ -292,6 +293,7 @@ function visibleRows(table) {
       };
     });
   }
+  if (table === 'build_votes') return rows.map((v) => ({ ...v, builds: { counter_id: TABLES.builds.find((b) => b.id === v.build_id)?.counter_id ?? null } }));
   if (table === 'doc_comments') {
     const all = rows.map(withCounter);
     // RLS 흉내: 숨긴 댓글·숨긴 카운터의 댓글은 운영자에게만
@@ -324,13 +326,16 @@ function query(table) {
   let inserted = null;
   let upserted = null;
   let removing = false;
+  let countOnly = false; // select(cols, { count: 'exact', head: true }) — 줄 없이 개수만
+  fakeState.queryLog.push({ table, kind: 'query' });
   const q = {
-    select: () => q,
+    select: (_cols, opts) => { if (opts?.head) countOnly = true; return q; },
     insert: (values) => { inserted = values; return q; },
     upsert: (values, { onConflict } = {}) => { upserted = { values, key: onConflict }; return q; },
     delete: () => { removing = true; return q; },
     update: (values) => { patch = values; return q; },
-    eq: (col, v) => { rows = rows.filter((r) => r[col] === v); return q; },
+    // 'builds.counter_id' 같은 관계 조건 (build_votes → builds!inner)
+    eq: (col, v) => { rows = rows.filter((r) => col.split('.').reduce((o, k) => o?.[k], r) === v); return q; },
     is: (col, v) => { rows = rows.filter((r) => (r[col] ?? null) === v); return q; },
     in: (col, vs) => { rows = rows.filter((r) => vs.includes(r[col])); return q; },
     lt: (col, v) => { rows = rows.filter((r) => r[col] < v); return q; },
@@ -427,6 +432,7 @@ function query(table) {
       rows.forEach((r) => Object.assign(r, patch));
       rows = rows.map((r) => ({ ...r }));
     }
+    if (countOnly) return { data: null, count: rows.length, error: null };
     return { data: single ? rows[0] ?? null : rows, error: null };
   }
   return q;
@@ -510,6 +516,7 @@ const auth = {
 
 // 운영자 전용 DB 함수 호출 기록. 오류는 fakeState.rpcError로 흉내 낸다 (예: '운영자만 할 수 있습니다.')
 async function rpc(name, args) {
+  fakeState.queryLog.push({ table: name, kind: 'rpc' });
   if (name === 'hide_counts') {
     // 운영자 신고 목록이 알아서 부르는 것이라 rpcCalls에는 넣지 않는다. fakeState.hideCounts = { 작성자id: 횟수 }
     if (!isStaffNow()) return { data: null, error: { message: '운영진만 할 수 있습니다.', code: '42501' } };

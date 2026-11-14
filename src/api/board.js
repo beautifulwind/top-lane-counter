@@ -196,14 +196,21 @@ export async function getHiddenBoard() {
 
 // ---------------- 고치기 시간 (016) ----------------
 
-/** 고치기 시간 규칙 { post, comment, grace } (분, xp_rules) */
-export async function getEditRules() {
-  const rows = await run(
-    db().from('xp_rules').select('key, value').in('key', ['post_edit_minutes', 'comment_edit_minutes', 'edit_grace_minutes']),
-    '설정을 불러오지 못했습니다.',
-  );
-  return editRulesFrom(rows);
+let editRulesOnce = null;
+/** 고치기 시간 규칙 { post, comment, grace } (분, xp_rules). 바뀌지 않는 값이라 같은 세션에서 한 번만 읽고 재사용한다 (실패하면 다음에 다시) */
+export function getEditRules() {
+  if (!editRulesOnce) {
+    const p = run(
+      db().from('xp_rules').select('key, value').in('key', ['post_edit_minutes', 'comment_edit_minutes', 'edit_grace_minutes']),
+      '설정을 불러오지 못했습니다.',
+    ).then(editRulesFrom);
+    editRulesOnce = p;
+    p.catch(() => { if (editRulesOnce === p) editRulesOnce = null; });
+  }
+  return editRulesOnce;
 }
+/** 읽어 둔 고치기 규칙을 비운다 (테스트용) */
+export const resetEditRulesCache = () => { editRulesOnce = null; };
 
 /** 고치는 화면을 열 때: 마감 전이면 유예를 받는다. 돌려주는 값: 저장할 수 있는 마지막 시각. kind = 'post' | 'comment' | 'doc_comment' */
 export const beginEdit = (kind, id) => rpc('begin_edit', { p_kind: kind, p_id: id }, '고칠 수 없습니다.');
