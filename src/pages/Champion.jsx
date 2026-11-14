@@ -79,8 +79,11 @@ export default function Champion() {
                       <span className={i < 3 ? 'rank top' : 'rank'} aria-label={`${i + 1}위`}>{i + 1}</span>
                       <img src={champ.icon} alt="" width="48" height="48" />
                       <span className="counter-text">
-                        <strong>{champ.name}</strong>
-                        <span>{c.summary || '공략 문서가 아직 비어 있습니다.'}</span>
+                        <span className="counter-name">
+                          <strong>{champ.name}</strong>
+                          {c.topInfluencer && <span className="inf-build-tag">장인 빌드</span>}
+                        </span>
+                        <span className="counter-summary">{c.summary || '공략 문서가 아직 비어 있습니다.'}</span>
                       </span>
                       <span className="chev" aria-hidden="true"><ChevronIcon size={20} /></span>
                     </Link>

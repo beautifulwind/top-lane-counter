@@ -1263,3 +1263,10 @@ RLS 원칙:
 - **되돌리기**: `056_core_items_free.sql` 맨 위(055 정의로). 056 뒤 등록된 7~10칸·중복·기본템 빌드는 그대로 보이지만 고칠 때는 예전 규칙에 맞춰야 함. 로컬에서 055와 스키마 같음(pg_dump 비교 — 차이는 가운뎃점을 이스케이프로 쓴 표기뿐) 확인.
 - **검사**: DB `core_items_test.sql`(기본템·소모품·장신구·서포터템 + 같은 아이템 3번 10칸 등록, 0칸·11칸·가격표에 없는 아이템 막힘, 고치기 1칸·중복, 제안·고쳐서 승인 10칸, 위키 등록, 예전 빌드 그대로), `builds_test`·`wiki_builds_test`·`counter_build_test`·`approve_revision_test`·`proposer_edit_test`의 "3~6개" 검사를 "1~10개"로. 화면 `coreTree.test.jsx`(6개 — 칸 수, 규칙, 10칸·중복 입력과 보낸 값, 상대법 10칸·예전 3칸 그대로, 빌드 카드 줄바꿈 칸, 변경 비교), `coreItems.test.jsx`(목록 순서·검색·전설 없어도 됨), `builds.test.jsx`(중복 가능), `rename.test.jsx`(안내 문구). 가짜 Data Dragon에 여신의 눈물·투명 와드·세계 지도집 추가(시작 아이템 목록은 그대로 되게 500골드 넘게). 가짜 DB(`fakeSupabase.js`)는 핵심 템트리를 검사하지 않아 바꿀 것 없음.
 - **방침·약관**: 바꿀 곳 없음(빌드 칸의 개수·종류를 적은 문구가 없다).
+
+### 6-44. 챔피언 화면 — 장인 빌드 우선 요약과 "장인 빌드" 칩 (2026-11-14, DB 변경 없음)
+- **요약 빌드 고르기**(`content.js` `topBuild`): 공개(`approved`) 빌드만 대상(기존 조건 그대로). 그중 **지금 인증된 장인**(`author.influencer`가 있음)이 처음 만든 빌드가 하나라도 있으면 그중에서만, 없으면 전체에서 `compareBuilds`(추천 수 → 점수 → 최신)로 맨 앞 하나. 장인 빌드가 여럿이면 추천 수 1등, 동점은 기존 정렬 그대로. 인증이 해제됐거나 탈퇴한 작성자(`author` 없음)의 빌드는 장인 빌드로 치지 않는다.
+- **칩**: 요약으로 올라온 빌드가 장인 빌드이고 그 빌드에 요약이 있을 때만 챔피언 이름 바로 옆에 기존 진홍 `.inf-build-tag` "장인 빌드"(`getCountersFor`가 `topInfluencer`를 돌려줌). 이름 줄 `.counter-name`은 flex-wrap이라 320px에서도 줄이 깨지지 않는다. 요약 줄 말줄임(2줄)은 `.counter-summary`로 옮겨 칩에 번지지 않게 했다.
+- **쿼리**: `getCountersFor`의 `builds(...)`에 `author:profiles!builds_author_id_fkey(influencer)` 추가(클라이언트만, DB·RLS·SQL 변경 없음).
+- **알려진 어긋남(고치지 않음)**: 상대법 화면(`Matchup`)의 빌드 탭 순서와 처음 보이는 빌드는 `getBuilds`의 `compareBuilds`(추천 → 점수 → 최신, 장인 우선 없음)라, 챔피언 화면 링크(`?build` 없음)로 들어가면 요약으로 올라온 장인 빌드가 아니라 추천 1등 빌드가 먼저 보일 수 있다.
+- **검사**: `championInfluencer.test.jsx`(장인 없음 / 장인이 요약으로 / 장인 여럿·동점 / 인증 해제 / 탈퇴 / 비공개·숨김).

@@ -13,9 +13,12 @@ async function run(query) {
 const one = (v) => (Array.isArray(v) ? v[0] ?? null : v ?? null);
 const day = (ts) => (ts ? String(ts).slice(0, 10) : null);
 
-function topBuild(builds) {
+// 맨 앞 빌드 (038, 장인 우선): 공개된 빌드 중 지금 인증된 장인이 처음 만든 빌드가 있으면 그중 추천 수 1등(compareBuilds 그대로),
+// 없으면 기존대로 추천 → 점수 → 최신. 해제·탈퇴한 작성자는 author.influencer가 비어 장인 빌드로 치지 않는다
+export function topBuild(builds) {
   const open = (builds ?? []).filter((b) => b.status === 'approved').map((b) => ({ ...b, up: b.up_count, down: b.down_count }));
-  return open.sort(compareBuilds)[0] ?? null;
+  const inf = open.filter((b) => one(b.author)?.influencer);
+  return (inf.length > 0 ? inf : open).sort(compareBuilds)[0] ?? null;
 }
 
 /** 이 챔피언을 이기는 카운터 목록 (운영자가 정한 순서) */
@@ -23,14 +26,18 @@ export async function getCountersFor(targetId) {
   const rows = await run(
     db()
       .from('counters')
-      .select('id, target_champion, counter_champion, sort_order, matchup_docs(summary), builds(summary, status, up_count, down_count, created_at)')
+      .select('id, target_champion, counter_champion, sort_order, matchup_docs(summary), builds(summary, status, up_count, down_count, created_at, author:profiles!builds_author_id_fkey(influencer))')
       .eq('target_champion', targetId)
       .eq('status', 'approved')
       .order('sort_order', { ascending: true })
       .order('id', { ascending: true }),
   );
   // 한 줄 요약 = 맨 앞 빌드(추천 → 점수 → 최신)의 요약 (038). 빌드에 요약이 없으면 예전 문서 요약
-  return rows.map(({ matchup_docs, builds, ...c }) => ({ ...c, summary: topBuild(builds)?.summary || one(matchup_docs)?.summary || '' }));
+  return rows.map(({ matchup_docs, builds, ...c }) => {
+    const top = topBuild(builds);
+    // topInfluencer: 요약으로 올라온 빌드가 장인 빌드일 때만 (챔피언 화면의 "장인 빌드" 칩)
+    return { ...c, summary: top?.summary || one(matchup_docs)?.summary || '', topInfluencer: !!top?.summary && !!one(top.author)?.influencer };
+  });
 }
 
 /** 매치업 문서 (없으면 null) */
