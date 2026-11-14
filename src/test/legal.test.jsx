@@ -74,7 +74,7 @@ test('개인정보처리방침 (037): 휴대폰 알림 수집 항목·삭제 시
   expect(text).toContain('브라우저 푸시 서비스: Google LLC');
 });
 
-test('방침·약관 (046 장인 인증): 수집·보관·공개 범위, 인증 절차, 사칭 금지 / 시행일 2026-11-13', async () => {
+test('방침·약관 (046 장인 인증): 수집·보관·공개 범위, 인증 절차, 사칭 금지 / 시행일 2026-12-14', async () => {
   const before = { ...LEGAL };
   start('/privacy');
   await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' });
@@ -141,7 +141,7 @@ test('지금 legal.js에는 빈칸이 없다 (배포 전 체크)', async () => {
   expect(screen.getByText(/대한민국\(서울\), AWS ap-northeast-2/)).toBeDefined();
 });
 
-test('칭호 도감 문구: 약관 제4조의4, 방침의 수집·처리 기록·공개 정보, 시행일 2026-11-13', async () => {
+test('칭호 도감 문구: 약관 제4조의4, 방침의 수집·처리 기록·공개 정보, 시행일 2026-12-14', async () => {
   start('/terms');
   await screen.findByRole('heading', { level: 1, name: '이용약관' });
   const sec = screen.getByRole('heading', { name: '제4조의4 (칭호 도감)' }).closest('section');
@@ -161,5 +161,32 @@ test('칭호 도감 문구: 약관 제4조의4, 방침의 수집·처리 기록�
   expect(text).toMatch(/한정판 칭호 지급·회수.*메모는 최대 500자/);
   expect(text).toMatch(/한정판 칭호와 장인 칭호\(장인 표시\)도 다른 이용자에게 보일 수 있습니다/);
   expect(text).toMatch(/한정판 칭호 지급: 운영자가 한정판 칭호를 지급하거나 회수/);
-  expect(LEGAL.effectiveDate).toBe('2026-11-13');
+  expect(LEGAL.effectiveDate).toBe('2026-12-14');
+});
+
+test('방침·약관 (055 회원 탈퇴 정리): 추천 익명 유지, 신청·처리 기록 정리, 탈퇴한 장인 닉네임 30일 예약 / 시행일 2026-12-14', async () => {
+  start('/privacy');
+  await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' });
+  const privacy = document.querySelector('article.legal').textContent;
+  const removed = [...document.querySelectorAll('li')].find((li) => li.textContent.startsWith('삭제:')).textContent;
+  expect(removed).not.toMatch(/추천·비추천|·추천·/);
+  expect(removed).toContain('장인 인증 신청 기록 중 나를 알아볼 수 있는 정보');
+  expect(privacy).toContain('누른 사람 표시만 지우고 남김(수 유지): 내가 빌드에 누른 추천·비추천과 탑신병자 커뮤니티 글에 누른 추천');
+  expect(privacy).toContain('장인 인증 신청 기록(나를 알아볼 수 있는 정보는 지우고 유형·상태·시각만 1년 보관)');
+  expect(privacy).toContain('그 회원이 탈퇴하면 대상을 “탈퇴한 이용자”로 바꾸고, 메모에 적힌 그 회원의 닉네임과 링크 주소를 지웁니다');
+  expect(privacy).toContain('유형·상태·시각만 남겨 끝난 날(심사 중이거나 인증된 상태였으면 탈퇴한 날)부터 1년');
+  expect(privacy).not.toContain('신청 기록과 계정의 연결을 끊고');
+  expect(privacy).toContain('탈퇴한 장인 닉네임 예약: 인증된 장인이 탈퇴하면 그 닉네임을 30일 동안 보관해');
+  expect(privacy).toContain('누구의 닉네임이었는지는 남기지 않습니다');
+  expect(privacy).toContain('[탈퇴]를 누르고 내 닉네임을 입력한 뒤 [탈퇴 확정]');
+  expect(privacy).toContain('[계정 설정]의 “공지”에서 끌 수 있습니다');
+  cleanup();
+  start('/terms');
+  await screen.findByRole('heading', { level: 1, name: '이용약관' });
+  const sec = (name) => screen.getByRole('heading', { name }).closest('section').textContent;
+  expect(sec('제4조 (닉네임)')).toContain('인증된 장인이 탈퇴하면 그 닉네임과 같거나 비슷한 닉네임은 30일 동안 누구도 쓸 수 없습니다');
+  expect(sec('제4조의2 (장인 인증)')).toContain('그 닉네임과 비슷한 닉네임은 30일 동안 다른 사람이 쓸 수 없습니다');
+  expect(sec('제9조 (탈퇴)')).toContain('익명으로 남아, 추천 수는 그대로 유지됩니다');
+  expect(sec('제9조 (탈퇴)')).toContain('[마이페이지] → [계정 설정](닉네임 전이면 닉네임 정하기 화면)의 “비회원 기록 지우기”');
+  expect(LEGAL.effectiveDate).toBe('2026-12-14');
 });

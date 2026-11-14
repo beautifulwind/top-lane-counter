@@ -6,7 +6,7 @@ export const LEGAL = {
   /** Supabase 프로젝트 서버 지역 (대시보드 → Project Settings → General). 예: '대한민국 (서울)' */
   supabaseRegion: '대한민국(서울), AWS ap-northeast-2',
   /** 시행일. 예: '2026년 11월 15일' */
-  effectiveDate: '2026-11-13',
+  effectiveDate: '2026-12-14',
 };
 
 export const SITE_NAME = '탑신병자';
