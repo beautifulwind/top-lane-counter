@@ -70,3 +70,25 @@ test('비공개·숨김 상태의 장인 빌드는 고르지 않는다', async (
   expect(row.textContent).toContain('일반 요약');
   expect(chip()).toHaveLength(0);
 });
+
+test('링크가 요약 빌드를 ?build=로 지정한다 (장인 우선, 일반 요약은 추천 1등)', async () => {
+  let row = await show([fakeBuild(101, plain, { up_count: 9, summary: '일반 요약' }), fakeBuild(102, PRO, { up_count: 1, summary: '장인 요약' })]);
+  expect(row.getAttribute('href')).toBe('/champion/Darius/counter/Quinn?build=102');
+  cleanup();
+  row = await show([fakeBuild(101, plain, { up_count: 9, summary: '일반 요약' }), fakeBuild(102, plain, { up_count: 1 })]);
+  expect(row.getAttribute('href')).toBe('/champion/Darius/counter/Quinn?build=101');
+  cleanup();
+  row = await show([]);
+  expect(row.getAttribute('href')).toBe('/champion/Darius/counter/Quinn');
+});
+
+test('링크로 들어가면 지정한 빌드가 먼저 보이고, 그 빌드가 사라졌으면 추천 1등으로 돌아간다', async () => {
+  TABLES.builds = [fakeBuild(101, plain, { up_count: 9, name: '일등' }), fakeBuild(102, PRO, { up_count: 1, name: '장인빌드' })];
+  const go = (path) => render(<MemoryRouter initialEntries={[path]}><AppRoutes /></MemoryRouter>);
+  go('/champion/Darius/counter/Quinn?build=102');
+  expect((await screen.findByRole('heading', { level: 3 })).textContent).toContain('장인빌드');
+  cleanup();
+  TABLES.builds[1].status = 'hidden';
+  go('/champion/Darius/counter/Quinn?build=102');
+  expect((await screen.findByRole('heading', { level: 3 })).textContent).toContain('일등');
+});

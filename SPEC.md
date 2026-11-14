@@ -1268,5 +1268,5 @@ RLS 원칙:
 - **요약 빌드 고르기**(`content.js` `topBuild`): 공개(`approved`) 빌드만 대상(기존 조건 그대로). 그중 **지금 인증된 장인**(`author.influencer`가 있음)이 처음 만든 빌드가 하나라도 있으면 그중에서만, 없으면 전체에서 `compareBuilds`(추천 수 → 점수 → 최신)로 맨 앞 하나. 장인 빌드가 여럿이면 추천 수 1등, 동점은 기존 정렬 그대로. 인증이 해제됐거나 탈퇴한 작성자(`author` 없음)의 빌드는 장인 빌드로 치지 않는다.
 - **칩**: 요약으로 올라온 빌드가 장인 빌드이고 그 빌드에 요약이 있을 때만 챔피언 이름 바로 옆에 기존 진홍 `.inf-build-tag` "장인 빌드"(`getCountersFor`가 `topInfluencer`를 돌려줌). 이름 줄 `.counter-name`은 flex-wrap이라 320px에서도 줄이 깨지지 않는다. 요약 줄 말줄임(2줄)은 `.counter-summary`로 옮겨 칩에 번지지 않게 했다.
 - **쿼리**: `getCountersFor`의 `builds(...)`에 `author:profiles!builds_author_id_fkey(influencer)` 추가(클라이언트만, DB·RLS·SQL 변경 없음).
-- **알려진 어긋남(고치지 않음)**: 상대법 화면(`Matchup`)의 빌드 탭 순서와 처음 보이는 빌드는 `getBuilds`의 `compareBuilds`(추천 → 점수 → 최신, 장인 우선 없음)라, 챔피언 화면 링크(`?build` 없음)로 들어가면 요약으로 올라온 장인 빌드가 아니라 추천 1등 빌드가 먼저 보일 수 있다.
-- **검사**: `championInfluencer.test.jsx`(장인 없음 / 장인이 요약으로 / 장인 여럿·동점 / 인증 해제 / 탈퇴 / 비공개·숨김).
+- **링크로 맞춤**: 챔피언 화면의 상대법 링크는 요약으로 올라온 빌드(`topBuildId`, 장인 우선이든 일반 1등이든)를 `?build=빌드id`로 지정해 들어가므로 그 빌드가 먼저 보인다. `Matchup`은 이미 `?build=`를 받고(`wanted` → `builds.findIndex`), 공개 빌드(`getBuilds`는 `approved`만)에 없으면(삭제·숨김·비공개) 맨 앞(추천 → 점수 → 최신 1등)으로 돌아간다. 장인 빌드가 아닌 일반 요약은 `topBuild`가 `compareBuilds` 1등이라 `Matchup` 기본과 같아 결과가 어긋나지 않는다. 빌드가 하나도 없으면 `?build` 없이 예전 주소 그대로. 상대법 화면 탭 순서는 안 바꿈(장인 우선 없음).
+- **검사**: `championInfluencer.test.jsx`(장인 없음 / 장인이 요약으로 / 장인 여럿·동점 / 인증 해제 / 탈퇴 / 비공개·숨김 / 링크 `?build=` 지정, 일반 요약도 1등 지정, 빌드 없으면 지정 없음, 지정한 빌드가 숨겨지면 추천 1등으로).

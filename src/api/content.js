@@ -26,7 +26,7 @@ export async function getCountersFor(targetId) {
   const rows = await run(
     db()
       .from('counters')
-      .select('id, target_champion, counter_champion, sort_order, matchup_docs(summary), builds(summary, status, up_count, down_count, created_at, author:profiles!builds_author_id_fkey(influencer))')
+      .select('id, target_champion, counter_champion, sort_order, matchup_docs(summary), builds(id, summary, status, up_count, down_count, created_at, author:profiles!builds_author_id_fkey(influencer))')
       .eq('target_champion', targetId)
       .eq('status', 'approved')
       .order('sort_order', { ascending: true })
@@ -35,8 +35,8 @@ export async function getCountersFor(targetId) {
   // 한 줄 요약 = 맨 앞 빌드(추천 → 점수 → 최신)의 요약 (038). 빌드에 요약이 없으면 예전 문서 요약
   return rows.map(({ matchup_docs, builds, ...c }) => {
     const top = topBuild(builds);
-    // topInfluencer: 요약으로 올라온 빌드가 장인 빌드일 때만 (챔피언 화면의 "장인 빌드" 칩)
-    return { ...c, summary: top?.summary || one(matchup_docs)?.summary || '', topInfluencer: !!top?.summary && !!one(top.author)?.influencer };
+    // topBuildId: 챔피언 화면 링크가 ?build=로 이 빌드를 먼저 보여 준다 / topInfluencer: 요약으로 올라온 빌드가 장인 빌드일 때만 (챔피언 화면의 "장인 빌드" 칩)
+    return { ...c, summary: top?.summary || one(matchup_docs)?.summary || '', topBuildId: top?.id ?? null, topInfluencer: !!top?.summary && !!one(top.author)?.influencer };
   });
 }
 

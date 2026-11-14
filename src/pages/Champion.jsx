@@ -75,7 +75,7 @@ export default function Champion() {
               return (
                 <li key={c.id} className={i === 0 ? 'counter-card first' : 'counter-card'}>
                   <div className="counter-item">
-                    <Link to={`/champion/${id}/counter/${champ.id}`} className="counter-row">
+                    <Link to={`/champion/${id}/counter/${champ.id}${c.topBuildId ? `?build=${c.topBuildId}` : ''}`} className="counter-row">
                       <span className={i < 3 ? 'rank top' : 'rank'} aria-label={`${i + 1}위`}>{i + 1}</span>
                       <img src={champ.icon} alt="" width="48" height="48" />
                       <span className="counter-text">
