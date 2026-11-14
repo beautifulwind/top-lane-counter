@@ -144,7 +144,7 @@ test('공개 프로필: 닉네임·장인 표시·링크·최근 빌드(빌드 �
   const builds = screen.getByRole('heading', { name: '처음 만든 빌드' }).closest('section');
   const go = within(builds).getByRole('link', { name: /퀸으로 다리우스\s*빌드 2/ });
   expect(go.getAttribute('href')).toBe('/champion/Darius/counter/Quinn?build=102');
-  expect(within(builds).getByRole('link', { name: /youtu\.be\/build102/ })).toBeTruthy();
+  expect(within(builds).getByRole('link', { name: /관련 영상 보기/ })).toBeTruthy();
   expect(document.body.textContent).not.toContain('secret@x.com');
   expect(document.body.textContent).not.toMatch(/Lv\.7/);
   expect(document.title).toBe('탑고수 프로필 - 탑신병자');
@@ -239,26 +239,26 @@ test('빌드 링크: 처음 만든 장인에게만 "장인 링크" 칸, [빌드 
   asInfluencer();
   start(MATCHUP);
   await screen.findByText(/퀸으로 다리우스 이기는 법/);
-  const box = screen.getByRole('heading', { name: /장인 링크/, level: 3 }).closest('section');
+  const box = screen.getByRole('heading', { name: /관련 영상 링크/, level: 3 }).closest('section');
   expect(box.className).toBe('build-link-box');
   expect(within(box).queryByRole('link', { name: '빌드 수정' })).toBeNull();
   expect(screen.getByRole('link', { name: '빌드 수정' }).closest('.build-link-box')).toBeNull();
 
   // 다른 빌드(작성자가 다른 분)를 고르면 칸이 없다
   fireEvent.click(screen.getByRole('tab', { name: /^빌드 3/ }));
-  expect(screen.queryByRole('heading', { name: /장인 링크/, level: 3 })).toBeNull();
+  expect(screen.queryByRole('heading', { name: /관련 영상 링크/, level: 3 })).toBeNull();
 });
 
 test('빌드 링크: 장인이 아니면(내 빌드라도) 칸이 없다, 다른 장인에게도 없다', async () => {
   fakeLogin('u-102', { nickname: '탑고수', level: 7, main_title: null }); // 장인 아님
   start(MATCHUP);
   await screen.findByText(/퀸으로 다리우스 이기는 법/);
-  expect(screen.queryByRole('heading', { name: /장인 링크/, level: 3 })).toBeNull();
+  expect(screen.queryByRole('heading', { name: /관련 영상 링크/, level: 3 })).toBeNull();
   cleanup();
   fakeLogin('u-other', { nickname: '다른장인', influencer: 'pro' });
   start(MATCHUP);
   await screen.findByText(/퀸으로 다리우스 이기는 법/);
-  expect(screen.queryByRole('heading', { name: /장인 링크/, level: 3 })).toBeNull();
+  expect(screen.queryByRole('heading', { name: /관련 영상 링크/, level: 3 })).toBeNull();
 });
 
 test('빌드 링크: 달기 → 제목 아래 표시(누구에게나) → 고치기 → 지우기', async () => {
@@ -266,7 +266,7 @@ test('빌드 링크: 달기 → 제목 아래 표시(누구에게나) → 고치
   const version = b.version;
   start(MATCHUP);
   await screen.findByText(/퀸으로 다리우스 이기는 법/);
-  fireEvent.click(screen.getByRole('button', { name: '링크 달기' }));
+  fireEvent.click(screen.getByRole('button', { name: '영상 링크 달기' }));
   fireEvent.change(screen.getByLabelText('링크 주소'), { target: { value: 'http://youtu.be/abc' } });
   fireEvent.click(screen.getByRole('button', { name: '저장' }));
   expect(screen.getByText(/https:\/\/로 바꿔/)).toBeTruthy(); // 화면이 먼저 알려 줌
@@ -278,8 +278,8 @@ test('빌드 링크: 달기 → 제목 아래 표시(누구에게나) → 고치
   fireEvent.click(screen.getByRole('button', { name: '저장' }));
   expect(await screen.findByText('빌드 링크를 달았습니다.')).toBeTruthy();
   expect(rpcCalls('set_build_link').at(-1)).toEqual({ p_build: 102, p_url: 'https://youtu.be/abc' });
-  const shown = await screen.findByText('장인 링크', { selector: '.build-link-row .muted' });
-  expect(within(shown.parentElement).getByRole('link').getAttribute('href')).toBe('https://youtu.be/abc');
+  const shown = await screen.findByText('관련 영상 보기', { selector: '.build-link-row .video-text' });
+  expect(shown.closest('a').getAttribute('href')).toBe('https://youtu.be/abc');
   expect(b.version).toBe(version); // 빌드 내용(버전)은 그대로
 
   fireEvent.click(screen.getByRole('button', { name: '링크 고치기' }));
@@ -304,5 +304,5 @@ test('빌드 링크: 로그인하지 않은 사람에게도 표시만 된다 (�
   await screen.findByText(/퀸으로 다리우스 이기는 법/);
   const row = document.querySelector('.build-panel > .build-link-row');
   expect(within(row).getByRole('link').getAttribute('rel')).toBe(LINK_REL);
-  expect(screen.queryByRole('heading', { name: /장인 링크/, level: 3 })).toBeNull();
+  expect(screen.queryByRole('heading', { name: /관련 영상 링크/, level: 3 })).toBeNull();
 });

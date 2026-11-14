@@ -40,14 +40,14 @@ export default function BuildLinkBox({ build, onSaved }) {
 
   return (
     <section className="build-link-box" aria-labelledby={`${inputId}-title`}>
-      <h3 id={`${inputId}-title`}>장인 링크 <small className="muted">(내가 처음 만든 빌드)</small></h3>
-      <p className="hint">이 빌드와 관련된 내 영상·방송 주소 1개를 달 수 있습니다. 빌드 내용 수정과는 따로라 다른 분이 빌드를 고쳐도 그대로입니다.</p>
+      <h3 id={`${inputId}-title`}>관련 영상 링크 <small className="muted">(선택, 1개)</small></h3>
+      <p className="hint">이 빌드를 설명하는 영상이 있으면 달아 보세요(선택, 1개). 달면 이 빌드에 [관련 영상 보기]로 보입니다. 빌드 내용 수정과는 따로라 다른 분이 빌드를 고쳐도 그대로입니다.</p>
       {!editing && (
         <>
-          {current ? <div className="build-link-row"><ExternalLink link={current} /></div> : <p className="empty">아직 단 링크가 없습니다.</p>}
+          {current ? <div className="build-link-row"><ExternalLink link={current} /></div> : <p className="empty">아직 단 영상 링크가 없습니다.</p>}
           <div className="row-actions">
             <button type="button" className="btn btn-small" onClick={() => { setUrl(current?.url ?? ''); setError(null); setRemoving(false); setEditing(true); }}>
-              {current ? '링크 고치기' : '링크 달기'}
+              {current ? '링크 고치기' : '영상 링크 달기'}
             </button>
             {current && !removing && <button type="button" className="btn btn-small" onClick={() => setRemoving(true)}>링크 지우기</button>}
           </div>

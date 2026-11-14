@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useParams, useSearchParams } from 'react-router-dom';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { getPublicProfile } from '../api/links';
 import { getFollowStatus, getFollowers, getInfluencerBuilds } from '../api/follow';
 import { getChampionMap } from '../api/ddragon';
@@ -113,6 +113,12 @@ function Profile({ data, me, signedIn, notice, onDone }) {
           <ul className="link-list inf-links" aria-label="링크">
             {profile.links.map((l) => <li key={l.id} className="link-item"><ExternalLink link={l} />{actions(l)}</li>)}
           </ul>
+        )}
+        {profile.links.length === 0 && me === profile.id && (
+          <div className="inf-links-empty">
+            <p className="hint">채널 링크를 등록해 보세요.</p>
+            <Link to="/me/links" className="btn btn-small">링크 관리로 가기</Link>
+          </div>
         )}
         {profile.links.length > 0 && <p className="hint">장인이 올린 외부 사이트입니다. 탑신병자가 내용을 보증하지 않습니다.</p>}
       </header>

@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import ExternalLink from './ExternalLink';
+import VideoLink from './VideoLink';
 import { InfluencerName } from './UserName';
 import { ThumbIcon } from './Icons';
 import { matchupShort } from '../lib/josa';
@@ -38,7 +38,7 @@ export default function InfluencerBuildCard({ b, champs, showAuthor = false, lin
           </small>
         </span>
       </Link>
-      {b.link && linkActions && <div className="link-item"><ExternalLink link={b.link} />{linkActions(b.link)}</div>}
+      {b.link && <div className="link-item inf-video"><VideoLink link={b.link} />{linkActions?.(b.link)}</div>}
     </li>
   );
 }
