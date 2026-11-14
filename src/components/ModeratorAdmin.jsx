@@ -23,7 +23,12 @@ export const KIND_LABEL = {
 export const ROLE_LABEL = { admin: '운영자', moderator: '감독관', user: '일반 회원' };
 
 /** 처리 대상 한 마디: 지정·해제는 닉네임, 나머지는 "글 #12" */
-const targetText = (r) => (r.target_kind === 'user' ? (r.target_nickname ?? '(알 수 없음)') : `${KIND_LABEL[r.target_kind] ?? r.target_kind} #${r.target_id}`);
+export const WITHDRAWN_USER = '탈퇴한 이용자';
+export const targetText = (r) => {
+  if (r.target_kind === 'user') return r.target_nickname?.trim() || WITHDRAWN_USER;
+  const kind = KIND_LABEL[r.target_kind] ?? r.target_kind;
+  return r.target_id == null ? `${kind} (${WITHDRAWN_USER})` : `${kind} #${r.target_id}`;
+};
 
 /** 운영진 처리 기록 (최근 순, 운영자만 읽는다) */
 export function ModerationLog({ refreshKey = 0 }) {

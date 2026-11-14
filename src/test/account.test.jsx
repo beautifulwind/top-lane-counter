@@ -148,7 +148,22 @@ test('탈퇴(055 가짜 DB): 장인이 탈퇴하면 추천은 익명으로 남�
   fireEvent.click(await within(nick).findByRole('button', { name: '닉네임 바꾸기' }));
   fireEvent.change(within(nick).getByLabelText('새 닉네임'), { target: { value: '장인님' } });
   fireEvent.click(within(nick).getByRole('button', { name: '고친 내용 저장' }));
-  // DB(와 가짜)는 23505 "최근 탈퇴한 장인의 닉네임…"을 돌려주지만 화면(saveNickname)은 23505를 모두 "이미 사용 중"으로 바꾼다 - 화면 단계에서 고칠 것
-  expect(await within(nick).findByRole('alert')).toHaveProperty('textContent', '이미 사용 중인 닉네임입니다. 비슷한 닉네임도 쓸 수 없습니다.');
+  // 055: 예약된 닉네임은 같은 23505라도 문구로 구분해 따로 안내
+  expect(await within(nick).findByRole('alert')).toHaveProperty('textContent', '최근 탈퇴한 장인의 닉네임이라 30일 동안 사용할 수 없습니다.');
   expect(TABLES.profiles.find((p) => p.id === 'u-old').nickname).not.toBe('장인님');
+});
+
+test('탈퇴 안내: 추천은 수만 남고, 장인 안내는 장인에게만 보인다', async () => {
+  fakeLogin('u-old');
+  start('/me/settings');
+  let del = await screen.findByRole('region', { name: '회원 탈퇴' });
+  expect(del.textContent).toMatch(/누른 사람 표시만 지워지고 추천 수는 그대로 남습니다/);
+  expect(del.textContent).not.toMatch(/빌드에 누른 추천·비추천/);
+  expect(del.textContent).not.toMatch(/한정판 칭호/);
+  cleanup();
+
+  fakeLogin('u-jang', { nickname: '장인님', influencer: 'pro', influencer_at: '2026-11-01T00:00:00Z' });
+  start('/me/settings');
+  del = await screen.findByRole('region', { name: '회원 탈퇴' });
+  expect(del.textContent).toMatch(/링크, 팔로우, 장인 표시, 한정판 칭호가 사라지고, 닉네임은 30일 동안 다른 사람이 쓸 수 없습니다/);
 });

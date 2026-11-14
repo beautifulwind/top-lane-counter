@@ -289,6 +289,8 @@ export function nicknameProblem(raw) {
   return null;
 }
 
+export const HELD_NICKNAME_MESSAGE = '최근 탈퇴한 장인의 닉네임이라 30일 동안 사용할 수 없습니다.';
+
 export async function saveNickname(userId, raw) {
   const problem = nicknameProblem(raw);
   if (problem) throw new Error(problem);
@@ -299,6 +301,8 @@ export async function saveNickname(userId, raw) {
     .select(cols)
     .maybeSingle());
   if (error) {
+    // 055: 예약된 닉네임도 같은 23505라서 DB 문구("최근 탈퇴한 장인의 닉네임…")로 구분한다
+    if (error.code === '23505' && /최근 탈퇴한 장인/.test(error.message ?? '')) throw new Error(HELD_NICKNAME_MESSAGE);
     if (error.code === '23505') throw new Error('이미 사용 중인 닉네임입니다. 비슷한 닉네임도 쓸 수 없습니다.');
     if (error.code === '42501' && /장인/.test(error.message ?? '')) throw new Error(error.message); // 046: 장인·인증 대기는 직접 못 바꿈
     if (error.code === 'P0001') throw new Error(error.message); // 30일에 한 번 (DB 문구에 다음 날짜가 들어 있다)

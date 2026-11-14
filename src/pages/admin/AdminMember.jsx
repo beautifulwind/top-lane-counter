@@ -4,7 +4,7 @@ import { getDeletedWritings, getMemberDetail } from '../../api/moderation';
 import { getChampionMap } from '../../api/ddragon';
 import RequireOperator from '../../components/RequireOperator';
 import { ErrorBox, Loading } from '../../components/Status';
-import { ACTION_LABEL, KIND_LABEL, ModeratorToggle, ROLE_LABEL } from '../../components/ModeratorAdmin';
+import { ACTION_LABEL, ModeratorToggle, ROLE_LABEL, targetText } from '../../components/ModeratorAdmin';
 import UserName from '../../components/UserName';
 import { GrantInfluencer, RenameMember, RevokeInfluencer } from '../../components/InfluencerAdmin';
 import { UsersIcon } from '../../components/Icons';
@@ -162,7 +162,7 @@ function ModerationHistory({ rows }) {
         <ul className="log-list" aria-label="처리 이력 목록">
           {rows.map((r) => (
             <li key={r.id}>
-              {fmtDateTime(r.created_at)} · {ACTION_LABEL[r.action] ?? r.action} · {r.target_kind === 'user' ? '회원' : `${KIND_LABEL[r.target_kind] ?? r.target_kind} #${r.target_id}`}
+              {fmtDateTime(r.created_at)} · {ACTION_LABEL[r.action] ?? r.action} · {r.target_kind === 'user' ? '회원' : targetText(r)}
               {' · '}{r.actor_nickname ?? '(알 수 없음)'} ({ROLE_LABEL[r.actor_role] ?? r.actor_role})
               {r.note && <> · {r.note}</>}
             </li>
