@@ -1300,3 +1300,9 @@ RLS 원칙:
 - **고침**: `useAsync(loader, deps, { enabled })` 옵션 추가 — `enabled`가 false인 동안은 시작하지 않고 `loading` 그대로. `Matchup`은 `enabled: auth.status !== 'loading'`. 기다리는 동안은 이미 쓰던 같은 `<Loading />`("불러오는 중…")이라 비어 보이거나 깜빡이지 않는다. 비로그인(`signedOut`)은 확인이 끝난 상태라 바로 시작 — 동작 그대로. `?build=` 처리·에러 상자·다시 시도는 안 건드림. 기다리는 짧은 동안에도 빌드와 무관한 Data Dragon(챔피언·item·rune·spell)은 화면이 뜨자마자 미리 받는다(캐시라 로더가 같은 요청을 다시 보내지 않음).
 - **요청 수**(로그인 상태, 상대법 화면 하나 열기, Supabase): 11건 → **6건** (counters 2→1, builds 2→1, 편집자 수 2→1, 링크 2→1, 댓글 2→1, 내 표 1 그대로; 세션 첫 화면이면 고치기 규칙 xp_rules가 전후 각 +1). 비로그인은 6건 그대로.
 - 검사: `speed.test.jsx`(로그인: 확인 전 로딩만·요청 0건 → 각 요청 1건씩, `?build=` 지정 유지; 비로그인: 바로 1번).
+
+### 6-49. 글꼴 CSS를 화면 표시를 막지 않게 분리 (2026-11-14, 앱 속도 개선 마지막 단계, DB 변경 없음)
+- **원인**: Pretendard 92개 + Black Han Sans 88개 `@font-face`(약 337KB)가 `index.css`(402KB)에 같이 들어 있어, 이걸 다 받아야 첫 화면이 그려졌다.
+- **고침**: 선언을 `src/styles/fonts.css`로 분리하고 `src/index.jsx`에서 첫 화면을 그린 직후 `import('./styles/fonts.css')`로 불러온다(Vite가 별도 `assets/fonts-*.css`로 뽑고 `<link>`를 JS가 덧붙임 → 화면 표시를 막지 않음). 선언은 전부 `font-display: swap`(180/180) → 글꼴이 오기 전엔 `--font-body` 뒤쪽 시스템 글꼴로 보이고 투명 글자 구간이 없다. 글꼴 파일(woff2)은 전과 같이 쓰는 글자 조각만 받는다.
+- **막는 CSS**: 402KB(gzip 183KB, brotli 155KB) → 73KB(gzip 13.4KB, brotli 11.9KB). 서비스 워커는 `/assets/*` 규칙 그대로(새 코드 없음).
+- preload·대체 글꼴 크기 보정(size-adjust)은 하지 않음 — 조각이 글자별로 흩어져 하나를 고르기 어렵고, 기기마다 대체 글꼴이 달라 보정값이 맞지 않는다.

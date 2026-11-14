@@ -1,0 +1,4 @@
+/* 글꼴 선언 모음 (한글 Pretendard, 제목 Black Han Sans). 화면 표시를 막지 않게 index.html에서 따로 불러온다.
+ * 선언마다 font-display: swap 이 들어 있다 → 글꼴이 오기 전엔 --font-body 뒤쪽의 시스템 글꼴로 먼저 보이고(투명 글자 없음), 오면 바뀐다. */
+@import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
+@import '@fontsource/black-han-sans/400.css';
