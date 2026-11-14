@@ -69,7 +69,12 @@ export default function Matchup() {
       return { champs, matchup, builds, items, runes, spells, latest, preload: comments && { counterRowId: matchup.counter.id, result: comments } };
     },
     [targetId, counterId, userId],
+    { enabled: auth.status !== 'loading' }, // 로그인 확인이 끝난 뒤 한 번만 불러온다 (확인 전·후로 두 번 도는 것 방지). 기다리는 동안은 같은 로딩 표시
   );
+  // 기다리는 동안에도 빌드와 무관한 Data Dragon은 미리 받아 둔다 (캐시돼 있어 로더가 같은 요청을 다시 보내지 않음, 실패는 로더가 다시 시도)
+  useEffect(() => {
+    [getChampionMap, getItems, getRunes, getSummonerSpells].forEach((f) => f().catch(() => {}));
+  }, []);
   // 050: 장인 [+] 팔로우 상태 — 빌드 목록의 장인 작성자를 한 번에 묻는다(follow_status). { 장인 id: true/false }
   const [follows, setFollows] = useState({});
   const loadedBuilds = data?.builds;

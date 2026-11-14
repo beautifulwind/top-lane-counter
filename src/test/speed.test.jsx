@@ -184,3 +184,26 @@ test('로그아웃 상태에서는 다시 보여도 세지 않는다', async () 
   await new Promise((r) => setTimeout(r, 30));
   expect(asked('notifications')).toHaveLength(0);
 });
+
+// ---------------- 상대법 화면: 로그인 확인을 기다렸다가 한 번만 불러오기 (SPEC 6-48) ----------------
+
+test('로그인한 사용자: 인증이 정해질 때까지 로딩만 보이고, 상대법 요청은 한 번만 나간다', async () => {
+  fakeLogin(ME, { nickname: '기존유저' });
+  TABLES.build_votes.push({ build_id: 102, user_id: ME, value: 1 });
+  start(`${MATCHUP}?build=103`);
+  expect(screen.getByRole('status').textContent).toBe('불러오는 중…'); // 비어 보이지 않고 같은 로딩 표시
+  expect(asked('counters')).toHaveLength(0); // 인증 확인 전에는 시작하지 않는다
+  expect(await screen.findByRole('heading', { name: /4\. 댓글/ })).toBeDefined();
+  await new Promise((r) => setTimeout(r, 100));
+  for (const t of ['counters', 'builds', 'build_votes', 'build_editor_counts', 'build_links', 'doc_comments']) expect(asked(t)).toHaveLength(1);
+  expect(screen.getByRole('tab', { selected: true }).textContent).toMatch(/빌드 3/); // ?build= 지정 그대로
+  expect(screen.queryByText('불러오는 중…')).toBeNull();
+});
+
+test('비로그인 사용자: 예전처럼 바로 한 번 불러온다', async () => {
+  start(MATCHUP);
+  expect(await screen.findByRole('heading', { name: /4\. 댓글/ })).toBeDefined();
+  await new Promise((r) => setTimeout(r, 100));
+  for (const t of ['counters', 'builds', 'build_editor_counts', 'build_links', 'doc_comments']) expect(asked(t)).toHaveLength(1);
+  expect(asked('build_votes')).toHaveLength(0);
+});
