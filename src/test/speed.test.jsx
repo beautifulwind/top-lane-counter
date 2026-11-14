@@ -136,3 +136,51 @@ test('알림 화면의 칭호 도감: 같은 세션에서 한 번만 읽고, 칭
   await screen.findByText(/칭호 '장군'을 얻었습니다/);
   await waitFor(() => expect(book()).toBe(2));
 });
+
+// ---------------- 앱이 다시 보일 때 세기 (30초 제한) ----------------
+
+const setVisibility = (v) => {
+  Object.defineProperty(document, 'visibilityState', { value: v, configurable: true });
+  document.dispatchEvent(new Event('visibilitychange'));
+};
+afterEach(() => { delete document.visibilityState; });
+
+test('앱이 다시 보이면 센다: 30초 안이면 건너뛰고, 지나면 센다 (푸시 없는 기기도 점이 맞음)', async () => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  try {
+    vi.setSystemTime(new Date('2026-11-14T10:00:00Z'));
+    fakeLogin(ME, { nickname: '기존유저' });
+    TABLES.notifications.push(noti('level_up'));
+    start('/');
+    await waitFor(() => expect(asked('notifications')).toHaveLength(1)); // 앱 열 때
+    TABLES.notifications.push(noti('level_up')); // 푸시 없이 새 알림이 쌓임
+    setVisibility('hidden');
+    expect(asked('notifications')).toHaveLength(1); // 가려질 때는 안 센다
+    vi.setSystemTime(new Date('2026-11-14T10:00:20Z'));
+    setVisibility('visible'); // 20초 만에 돌아옴 → 건너뜀
+    await new Promise((r) => setTimeout(r, 30));
+    expect(asked('notifications')).toHaveLength(1);
+    vi.setSystemTime(new Date('2026-11-14T10:00:31Z'));
+    setVisibility('visible'); // 센 지 31초 → 센다
+    await waitFor(() => expect(asked('notifications')).toHaveLength(2));
+    // 센 값이 점에 반영된다
+    fireEvent.click((await screen.findAllByRole('button', { name: /메뉴/ }))[0]);
+    expect(await screen.findAllByRole('link', { name: /알림/ })).not.toHaveLength(0);
+  } finally { vi.useRealTimers(); }
+});
+
+test('푸시 신호와 읽음 처리는 30초 제한 없이 바로 센다', async () => {
+  fakeLogin(ME, { nickname: '기존유저' });
+  start('/');
+  await waitFor(() => expect(asked('notifications')).toHaveLength(1));
+  act(() => announceNotificationsChanged()); // 방금 센 직후여도
+  await waitFor(() => expect(asked('notifications')).toHaveLength(2));
+});
+
+test('로그아웃 상태에서는 다시 보여도 세지 않는다', async () => {
+  start('/');
+  await screen.findAllByRole('button', { name: /메뉴/ });
+  setVisibility('visible');
+  await new Promise((r) => setTimeout(r, 30));
+  expect(asked('notifications')).toHaveLength(0);
+});
