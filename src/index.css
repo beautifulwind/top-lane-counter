@@ -1026,7 +1026,7 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
 .more-btn[aria-expanded="true"], .more-btn:active { background: var(--raised); color: var(--text); }
 @media (hover: hover) { .more-btn:hover { background: var(--raised); color: var(--text); } }
 .more-panel {
-  position: absolute; right: 0; top: calc(100% + 4px); z-index: 30; min-width: 200px; max-width: min(320px, calc(100vw - 2 * var(--gutter)));
+  position: fixed; left: 0; top: 0; overflow-y: auto; overscroll-behavior: contain; z-index: 30; min-width: 200px; max-width: min(320px, calc(100vw - 2 * var(--gutter)));
   padding: 6px; border: 1px solid var(--line-hover); border-radius: var(--radius-sm); background: var(--paper); box-shadow: var(--shadow-pop);
 }
 .more-row { display: flex; flex-direction: column; }

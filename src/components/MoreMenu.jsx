@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, useState } from 'react';
+import { useEffect, useId, useLayoutEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 
 /**
@@ -39,6 +39,43 @@ export default function MoreMenu({ items, label = '더보기' }) {
       document.removeEventListener('mousedown', onDown);
     };
   }, [open]);
+
+  // 화면 안에 다 들어오게 자리를 잡는다 (position: fixed라 카드의 overflow에 잘리지 않는다).
+  // 아래로 넘치면 위로, 한쪽으로 넘치면 반대쪽으로, 그래도 길면 안에서 스크롤.
+  useLayoutEffect(() => {
+    if (!open) return undefined;
+    const place = () => {
+      const p = panel.current;
+      const b = button.current;
+      if (!p || !b) return;
+      const M = 8;
+      const GAP = 4;
+      const vw = document.documentElement.clientWidth || window.innerWidth;
+      const vh = window.innerHeight;
+      const r = b.getBoundingClientRect();
+      p.style.maxHeight = '';
+      const w = p.offsetWidth;
+      const h = p.offsetHeight;
+      const below = vh - r.bottom - GAP - M;
+      const above = r.top - GAP - M;
+      const up = h > below && above > below;
+      const room = Math.max(up ? above : below, 0);
+      const shownH = Math.min(h, room);
+      let left = r.right - w; // 기본: 버튼 오른쪽 끝에 맞춘다
+      if (left < M) left = r.left; // 왼쪽으로 넘치면 버튼 왼쪽 끝에 맞춘다
+      left = Math.max(M, Math.min(left, vw - w - M));
+      p.style.maxHeight = `${room}px`;
+      p.style.left = `${left}px`;
+      p.style.top = `${up ? r.top - GAP - shownH : r.bottom + GAP}px`;
+    };
+    place();
+    window.addEventListener('resize', place);
+    window.addEventListener('scroll', place, true);
+    return () => {
+      window.removeEventListener('resize', place);
+      window.removeEventListener('scroll', place, true);
+    };
+  }, [open, asking]);
 
   // 열리면 첫 항목에 초점 (묻는 중이면 [취소]에)
   useEffect(() => {
