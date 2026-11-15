@@ -3,11 +3,13 @@
 // - 아이폰·아이패드: iOS 16.4 이상에서 "홈 화면에 추가"한 앱으로 열었을 때만 된다 (Safari 탭에서는 안 됨)
 // - 서비스 워커는 프로덕션 빌드에서만 켜지므로(src/lib/sw.js) 개발 서버에서는 켤 수 없다
 import { isIos, isStandalone } from './install';
+import { isNativeApp } from './native';
 
 /**
- * 순수 판정: 'ok' | 'ios-browser'(홈 화면 앱이 아님) | 'ios-old'(iOS 16.4 미만) | 'unsupported' | 'denied'(차단됨) | 'dev'
+ * 순수 판정: 'ok' | 'app'(안드로이드·iOS 앱 — 앱 알림은 아직 없음, SPEC 6-55) | 'ios-browser'(홈 화면 앱이 아님) | 'ios-old'(iOS 16.4 미만) | 'unsupported' | 'denied'(차단됨) | 'dev'
  */
-export function pushSupport({ ios, standalone, hasPush, permission, prod }) {
+export function pushSupport({ native = false, ios, standalone, hasPush, permission, prod }) {
+  if (native) return 'app'; // 앱은 서비스 워커를 켜지 않아 웹 푸시를 쓸 수 없다
   if (ios && !standalone) return 'ios-browser';
   if (!hasPush) return ios ? 'ios-old' : 'unsupported';
   if (!prod) return 'dev';
@@ -18,6 +20,7 @@ export function pushSupport({ ios, standalone, hasPush, permission, prod }) {
 export function currentPushSupport() {
   const hasPush = typeof window !== 'undefined' && 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
   return pushSupport({
+    native: isNativeApp(),
     ios: isIos(),
     standalone: isStandalone(),
     hasPush,
@@ -28,6 +31,7 @@ export function currentPushSupport() {
 
 /** 켤 수 없을 때 보여 줄 안내 */
 export const PUSH_HELP = {
+  app: '앱에서 받는 휴대폰 알림은 준비 중입니다. 지금은 알림함에서 새 소식을 확인해 주세요.',
   'ios-browser': '아이폰·아이패드는 홈 화면에 추가한 앱에서만 알림을 받을 수 있습니다 (iOS 16.4 이상). Safari 아래쪽 공유 버튼 → [홈 화면에 추가]를 누른 뒤, 홈 화면의 탑신병자 아이콘으로 열어 여기서 켜 주세요.',
   'ios-old': '알림은 iOS 16.4 이상에서 받을 수 있습니다. 설정 → 일반 → 소프트웨어 업데이트에서 iOS를 업데이트한 뒤 다시 열어 주세요.',
   unsupported: '이 브라우저는 알림을 지원하지 않습니다. 안드로이드는 크롬에서, 아이폰은 홈 화면에 추가한 앱에서 켤 수 있습니다.',

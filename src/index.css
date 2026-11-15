@@ -31,6 +31,8 @@ input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="r
 :is(input, textarea, select):focus-visible { outline-offset: 0; border-color: var(--brand); }
 
 .app { min-height: 100vh; display: flex; flex-direction: column; }
+/* 가로로 눕힌 폰(노치·카메라 구멍이 옆)에서 글이 잘리지 않게 좌우 안전 영역만큼 띄운다 (세로·PC에서는 0) — 앱(Capacitor)·홈 화면 앱 공통 */
+.app { padding-left: env(safe-area-inset-left); padding-right: env(safe-area-inset-right); }
 
 .topbar {
   position: sticky; top: 0; z-index: 10;
@@ -694,7 +696,7 @@ a.noti-main:hover { text-decoration: none; background: var(--raised); }
 .menu-panel {
   position: absolute; top: 0; right: 0; bottom: 0; width: min(320px, 85vw); overflow-y: auto;
   display: flex; flex-direction: column; gap: 8px;
-  padding: calc(8px + env(safe-area-inset-top)) var(--gutter) calc(16px + env(safe-area-inset-bottom));
+  padding: calc(8px + env(safe-area-inset-top)) calc(var(--gutter) + env(safe-area-inset-right)) calc(16px + env(safe-area-inset-bottom)) var(--gutter);
   background: var(--paper); border-left: 1px solid var(--line); box-shadow: var(--shadow-pop);
   animation: menu-in .2s ease;
 }
@@ -863,8 +865,9 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
 .media-gallery:not(.single) .media-open img { aspect-ratio: 1 / 1; object-fit: cover; }
 .comment .media-gallery { max-width: 320px; margin: 6px 0; }
 .media-viewer { -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px); position: fixed; inset: 0; z-index: 100; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px;
-  padding: 16px; background: var(--viewer-bg); }
-.media-viewer img { max-width: 100%; max-height: calc(100vh - 96px); object-fit: contain; }
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  background: var(--viewer-bg); }
+.media-viewer img { max-width: 100%; max-height: calc(100vh - 96px - env(safe-area-inset-top) - env(safe-area-inset-bottom)); object-fit: contain; }
 .media-close { background: var(--paper); }
 .post-media { flex: none; display: inline-flex; color: var(--muted); }
 .media-usage p { margin: 4px 0; }
@@ -1008,7 +1011,7 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
 
 /* 새 버전 알림 (SPEC 2장 PWA): 화면 아래, 메뉴(z 50)보다 아래층 */
 .update-banner {
-  position: fixed; z-index: 40; left: var(--gutter); right: var(--gutter);
+  position: fixed; z-index: 40; left: calc(var(--gutter) + env(safe-area-inset-left)); right: calc(var(--gutter) + env(safe-area-inset-right));
   bottom: calc(var(--gap-lg) + env(safe-area-inset-bottom));
   max-width: calc(var(--page-max) - 2 * var(--gutter)); margin: 0 auto;
   display: flex; align-items: center; justify-content: space-between; gap: var(--gap-md);
@@ -1109,7 +1112,8 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
 /* 기여자 팝업 */
 .dialog-backdrop {
   position: fixed; inset: 0; z-index: 50; display: flex; align-items: center; justify-content: center;
-  padding: var(--gutter); background: var(--viewer-bg);
+  padding: calc(var(--gutter) + env(safe-area-inset-top)) calc(var(--gutter) + env(safe-area-inset-right)) calc(var(--gutter) + env(safe-area-inset-bottom)) calc(var(--gutter) + env(safe-area-inset-left));
+  background: var(--viewer-bg);
 }
 .dialog-panel {
   width: 100%; max-width: 420px; max-height: 80vh; overflow-y: auto; padding: var(--pad-card);

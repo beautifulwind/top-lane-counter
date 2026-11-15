@@ -128,3 +128,19 @@ yarn-error.log*
 
 # 예전 롤 보조 앱 코드 (디자인 참고용, 저장소·사이트 빌드에 넣지 않음)
 /old-app-reference/
+
+# 안드로이드·iOS 앱 (Capacitor, SPEC 6-55)
+# 빌드 산출물·복사된 웹 파일은 android/.gitignore, ios/.gitignore가 막는다. 여기서는 서명 키·로컬 설정을 막는다.
+*.jks
+*.keystore
+*.p12
+*.p8
+*.mobileprovision
+*.cer
+keystore.properties
+signing.properties
+android/local.properties
+android/app/release/
+android/app/google-services.json
+ios/App/App/GoogleService-Info.plist
+ios/App/*.xcworkspace/xcuserdata/

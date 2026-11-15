@@ -4,12 +4,10 @@ import './styles/tokens.css';
 import './index.css';
 import App from './App';
 import { blockStrayFileDrops } from './components/Media';
-import { captureInstallPrompt } from './lib/install';
-import { registerServiceWorker } from './lib/sw';
+import { startWebOnlyFeatures } from './lib/startup';
 
 blockStrayFileDrops(); // 사진을 첨부 칸 밖에 떨어뜨려도 새 탭으로 열리지 않게
-captureInstallPrompt(); // [앱 설치] 메뉴용 — 설치 창 이벤트를 미리 잡아 둠
-registerServiceWorker(); // 화면 파일 저장·오프라인 안내·새 버전 알림 (프로덕션 빌드에서만)
+startWebOnlyFeatures(); // 웹에서만: [앱 설치] 설치 창 잡기 + 서비스 워커(오프라인 안내·새 버전 알림). 앱(Capacitor)에서는 끔
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

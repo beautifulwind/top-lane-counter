@@ -1,0 +1,11 @@
+{
+  "appId": "com.topsinbyeongja.app",
+  "appName": "탑신병자",
+  "webDir": "dist",
+  "plugins": {
+    "SystemBars": {
+      "insetsHandling": "css",
+      "initialViewportFitValueHint": "cover"
+    }
+  }
+}

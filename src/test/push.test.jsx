@@ -66,6 +66,8 @@ describe('pushSupport', () => {
     [{ hasPush: false }, 'unsupported'],
     [{ permission: 'denied' }, 'denied'],
     [{ prod: false }, 'dev'],
+    [{ native: true }, 'app'], // 안드로이드 앱: 서비스 워커가 없어 웹 푸시 불가 (SPEC 6-55)
+    [{ native: true, ios: true, standalone: false }, 'app'], // iOS 앱: 홈 화면 안내 대신 앱 안내
   ])('%j → %s', (over, kind) => {
     expect(pushSupport({ ...base, ...over })).toBe(kind);
     expect(PUSH_HELP[kind] ?? 'ok').toBeTruthy();
