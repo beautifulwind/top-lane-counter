@@ -6,7 +6,6 @@ import { getChampionMap } from '../api/ddragon';
 import { ErrorBox, Loading } from '../components/Status';
 import SectionHead from '../components/SectionHead';
 import ExternalLink from '../components/ExternalLink';
-import VideoLink from '../components/VideoLink';
 import LinkActions from '../components/LinkActions';
 import FollowButton from '../components/FollowButton';
 import { InfluencerName } from '../components/UserName';
@@ -21,7 +20,7 @@ const day = (ts) => (ts ? String(ts).slice(0, 10) : '');
 
 /**
  * 장인 페이지 (/u/:id — 047 공개 프로필을 050에서 빌드 중심으로, SPEC 6-34 · 6-36).
- * 위: 닉네임 + 장인 표시 + 유형 · 팔로워 수 · [팔로우] · 링크(작게) · 빌드 영상 링크(6-53, 빌드 이름 + 관련 영상 보기 + ⋮). 본문: 그 장인이 처음 만든 공개 빌드(influencer_builds, 최근 수정순, 20개씩 [더보기]).
+ * 위: 닉네임 + 장인 표시 + 유형 · 팔로워 수 · [팔로우] · 링크(작게). 본문: 그 장인이 처음 만든 공개 빌드(influencer_builds, 최근 수정순, 20개씩 [더보기]).
  * 팔로워 수는 누구나, 팔로워 목록은 로그인한 사람에게만 [팔로워 목록] 버튼(20개씩).
  * 052: ?followers=1(새 팔로워 알림 → /me/followers)로 열면 로그인한 사람에게는 팔로워 목록이 처음부터 펼쳐져 있다.
  * DB가 장인이 아니거나 없는 id·모양이 틀린 id에 모두 null을 주므로 화면도 모두 같은 "없는 페이지".
@@ -61,7 +60,6 @@ function Profile({ data, me, signedIn, notice, onDone }) {
   const [more, setMore] = useState({ busy: false, error: null });
   const [params] = useSearchParams();
   const [showFollowers, setShowFollowers] = useState(() => signedIn && params.get('followers') === '1');
-  const buildLinks = builds.items.filter((b) => b.link); // 불러온 빌드의 영상 링크 (SPEC 6-53: 빌드 아래가 아니라 장인 카드 안)
   const kind = INFLUENCER_KINDS[profile.influencer];
   // 3b: 링크 옆 ⋮ — 신고(정식 회원) / 삭제(운영진). 장인 페이지는 역할을 주지 않으므로 운영진의 링크인지는 DB가 가른다
   const actions = (l) => <LinkActions link={l} ownerId={profile.id} label="링크 더보기" onDone={onDone} />;
@@ -122,17 +120,7 @@ function Profile({ data, me, signedIn, notice, onDone }) {
             <Link to="/me/links" className="btn btn-small">링크 관리로 가기</Link>
           </div>
         )}
-        {buildLinks.length > 0 && (
-          <ul className="link-list inf-links inf-build-links" aria-label="빌드 영상 링크">
-            {buildLinks.map((b) => (
-              <li key={b.id} className="link-item">
-                <span className="inf-build-links-name muted">{b.name || `빌드 ${b.seq ?? ''}`.trim()}</span>
-                <VideoLink link={b.link} />{actions(b.link)}
-              </li>
-            ))}
-          </ul>
-        )}
-        {(profile.links.length > 0 || buildLinks.length > 0) && <p className="hint">장인이 올린 외부 사이트입니다. 탑신병자가 내용을 보증하지 않습니다.</p>}
+        {profile.links.length > 0 && <p className="hint">장인이 올린 외부 사이트입니다. 탑신병자가 내용을 보증하지 않습니다.</p>}
       </header>
       {showFollowers && <Followers id={profile.id} count={follow.count} />}
       {notice && <p className="notice" role="status">{notice}</p>}
@@ -143,7 +131,7 @@ function Profile({ data, me, signedIn, notice, onDone }) {
           <p className="empty">공개된 빌드가 없습니다.</p>
         ) : (
           <ul className="profile-builds inf-build-list">
-            {builds.items.map((b) => <InfluencerBuildCard key={b.id} b={b} champs={champs} showLink={false} />)}
+            {builds.items.map((b) => <InfluencerBuildCard key={b.id} b={b} champs={champs} linkActions={actions} />)}
           </ul>
         )}
         {builds.items.length < builds.total && (

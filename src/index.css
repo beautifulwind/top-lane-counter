@@ -1180,8 +1180,6 @@ a.inf-link:hover .user-nick, a.inf-link:focus-visible .user-nick { text-decorati
 .inf-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 0; }
 .inf-links { font-size: var(--fs-sm); }
 .inf-links li { padding: 4px 0; border-bottom: 0; }
-.inf-build-links-name { flex: 1 1 100%; min-width: 0; font-size: var(--fs-xs); overflow-wrap: anywhere; } /* 좁은 폰: 빌드 이름이 윗줄, 영상 칩·⋮가 아랫줄 */
-@media (min-width: 480px) { .inf-build-links-name { flex: 0 1 auto; } }
 .inf-hero .hint { margin: 0; }
 .inf-links-empty { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap-sm) var(--gap-md); }
 /* 관련 영상 링크 (SPEC 6-45): 사이트 이름 칸 + 진한 글자의 알약. 좁은 폰에서는 줄바꿈 */

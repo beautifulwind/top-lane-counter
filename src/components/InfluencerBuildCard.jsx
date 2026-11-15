@@ -16,10 +16,9 @@ function ChampIcon({ champ }) {
  * 장인 빌드 카드 한 줄 (050 — 장인 페이지 /u/:id · 팔로우 모아보기 /following 공용). b = DB 빌드 카드(follow_build_card 모양).
  * 챔피언 아이콘 2개(내 챔피언 vs 상대) + 상대법 이름 + 빌드 이름 + 패치·최근 수정·추천 수, 누르면 그 상대법의 그 빌드로.
  * showAuthor: 카드 맨 위에 장인 닉네임 (모아보기). 카드 전체가 링크라 닉네임은 링크가 아니다(링크 안의 링크 방지).
- * linkActions(l): 빌드 링크 옆 ⋮ (모아보기에서는 없음)
- * showLink=false: 카드 아래 영상 링크를 그리지 않는다 (장인 페이지는 영상 링크를 맨 위 장인 카드 안에 모아 보여 준다, SPEC 6-53)
+ * linkActions(l): 빌드 링크 옆 ⋮ (장인 페이지에서만)
  */
-export default function InfluencerBuildCard({ b, champs, showAuthor = false, linkActions = null, showLink = true }) {
+export default function InfluencerBuildCard({ b, champs, showAuthor = false, linkActions = null }) {
   const name = (c) => champs?.[c]?.name ?? c;
   return (
     <li>
@@ -39,7 +38,7 @@ export default function InfluencerBuildCard({ b, champs, showAuthor = false, lin
           </small>
         </span>
       </Link>
-      {showLink && b.link && <div className="link-item inf-video"><VideoLink link={b.link} />{linkActions?.(b.link)}</div>}
+      {b.link && <div className="link-item inf-video"><VideoLink link={b.link} />{linkActions?.(b.link)}</div>}
     </li>
   );
 }
