@@ -144,7 +144,8 @@ test('공개 프로필: 닉네임·장인 표시·링크·최근 빌드(빌드 �
   const builds = screen.getByRole('heading', { name: '처음 만든 빌드' }).closest('section');
   const go = within(builds).getByRole('link', { name: /퀸으로 다리우스\s*빌드 2/ });
   expect(go.getAttribute('href')).toBe('/champion/Darius/counter/Quinn?build=102');
-  expect(within(builds).getByRole('link', { name: /관련 영상 보기/ })).toBeTruthy();
+  expect(within(builds).queryByRole('link', { name: /관련 영상 보기/ })).toBeNull(); // 6-53: 영상 링크는 맨 위 장인 카드 안으로
+  expect(within(document.querySelector('header.inf-hero')).getByRole('link', { name: /관련 영상 보기/ })).toBeTruthy();
   expect(document.body.textContent).not.toContain('secret@x.com');
   expect(document.body.textContent).not.toMatch(/Lv\.7/);
   expect(document.title).toBe('탑고수 프로필 - 탑신병자');
