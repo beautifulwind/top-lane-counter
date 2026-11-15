@@ -3,13 +3,33 @@ import { INFLUENCER_MARK_MESSAGE, hasReservedMark, mimicsInfluencer } from '../l
 import { db } from './supabase';
 import { dropBrowserPush, forgetDevicePush } from './push';
 import { ALREADY_MEMBER_TEXT } from '../lib/guest';
-import { isNativeApp } from '../lib/native';
-import { NATIVE_REDIRECT, listenAuthCallbacks, openAuthBrowser } from '../lib/nativeAuth';
+import { isIosApp, isNativeApp } from '../lib/native';
+import { NATIVE_REDIRECT, emitNativeAuth, listenAuthCallbacks, openAuthBrowser } from '../lib/nativeAuth';
+import { signInWithAppleSheet } from '../lib/appleAuth';
 
 export const NICKNAME_MAX = 20;
 
-/** 로그인할 수 있는 방식 (Supabase Auth의 provider 이름 → 화면에 보일 이름) */
-export const PROVIDERS = { google: '구글', kakao: '카카오' };
+/**
+ * 로그인 방식 (Supabase Auth의 provider 이름 → 화면에 보일 이름).
+ * apple은 iOS 앱에서만 버튼이 보인다(6-58) — 버튼 목록은 loginProviders(), 이 표는 이름 표시용(웹에서도 "연결됨"은 보임).
+ */
+export const PROVIDERS = { google: '구글', kakao: '카카오', apple: 'Apple' };
+
+/** 이 기기에서 쓸 수 있는 로그인 방식인가 (apple = iOS 앱에서만) */
+export function canUseProvider(provider) {
+  if (!PROVIDERS[provider]) return false;
+  return provider !== 'apple' || isIosApp();
+}
+
+/** 이 기기에서 보여 줄 로그인 버튼 [[provider, 이름], …] — 웹·안드로이드는 구글·카카오, iOS 앱은 + Apple */
+export function loginProviders() {
+  return Object.entries(PROVIDERS).filter(([p]) => canUseProvider(p));
+}
+
+/** 연결 권유 제목에 쓸 이름들 ("구글·카카오" / iOS 앱 "구글·카카오·Apple") */
+export function providerNames() {
+  return loginProviders().map(([, name]) => name).join('·');
+}
 
 /**
  * 브라우저에 이미 로그인된 구글·카카오 계정으로 자동으로 들어가지 않게, 매번 계정을 고르게 한다.
@@ -26,7 +46,8 @@ export const PROVIDER_PROMPT = { google: { prompt: 'select_account' }, kakao: { 
  *   Supabase가 한 계정으로 자동 연결하는 데 쓰이고, 화면에는 /me의 "로그인 연결"에만 보인다.
  */
 export async function signIn(provider, returnTo = '/') {
-  if (!PROVIDERS[provider]) throw new Error(`지원하지 않는 로그인 방식입니다. (${provider})`);
+  if (!canUseProvider(provider)) throw new Error(`지원하지 않는 로그인 방식입니다. (${provider})`);
+  if (provider === 'apple') return appleFlow('signIn', returnTo);
   const native = isNativeApp();
   rememberPending('signIn', provider, returnTo);
   const { data, error } = await db().auth.signInWithOAuth({
@@ -82,10 +103,11 @@ async function openInSystemBrowser(data, kind, provider, returnTo) {
 export const SETTINGS_PATH = '/me/settings';
 
 export async function linkProvider(provider, { guest = false } = {}) {
-  if (!PROVIDERS[provider]) throw new Error(`지원하지 않는 로그인 방식입니다. (${provider})`);
+  if (!canUseProvider(provider)) throw new Error(`지원하지 않는 로그인 방식입니다. (${provider})`);
   const native = isNativeApp();
   const kind = guest ? 'upgrade' : 'link';
   const returnTo = guest ? '/me' : SETTINGS_PATH;
+  if (provider === 'apple') return appleFlow(kind, returnTo);
   rememberPending(kind, provider, returnTo);
   const { data, error } = await db().auth.linkIdentity({
     provider,
@@ -100,6 +122,48 @@ export async function linkProvider(provider, { guest = false } = {}) {
   }
   if (native) return openInSystemBrowser(data, kind, provider, returnTo);
   return undefined;
+}
+
+/**
+ * iOS 앱 Apple 로그인·연결 (6-58). 시스템 브라우저·딥링크 없이 iOS 시트 → id token → Supabase.
+ *   signIn: signInWithIdToken(provider apple, nonce 원문)
+ *   link·upgrade: linkIdentity({ provider, token, nonce }) — 지금 세션(회원·비회원)에 붙인다. 비회원이면 같은 계정이 정식 계정이 된다.
+ * 결과는 구글·카카오 앱 로그인과 같은 길(emitNativeAuth → 위 띠·닉네임 정하기·돌아갈 경로)로 보낸다.
+ * 돌려주는 값: 'finished' | 'cancelled' (화면은 값이 오면 버튼을 다시 연다)
+ */
+async function appleFlow(kind, returnTo) {
+  const pending = { kind, provider: 'apple', returnTo };
+  let credential;
+  try {
+    credential = await signInWithAppleSheet();
+  } catch (e) {
+    if (e.cancelled) {
+      emitNativeAuth(cancelResult(pending));
+      return 'cancelled';
+    }
+    emitNativeAuth({ type: 'error', error: appleError(e, pending) });
+    return 'finished';
+  }
+  const auth = db().auth;
+  const args = { provider: 'apple', token: credential.idToken, nonce: credential.nonce };
+  const { data, error } = kind === 'signIn' ? await auth.signInWithIdToken(args) : await auth.linkIdentity(args);
+  const user = data?.user ?? data?.session?.user ?? null;
+  if (error || !user) {
+    emitNativeAuth({ type: 'error', error: loginError(error ?? null, null, error?.code ?? null, pending) });
+    return 'finished';
+  }
+  emitNativeAuth({ type: 'success', notice: loginNotice(pending, user), returnTo });
+  return 'finished';
+}
+
+/** Apple 시트 자체가 실패 (기기에 Apple 계정 없음, capability 빠짐 등) */
+function appleError(e, pending) {
+  const linking = pending.kind !== 'signIn';
+  return Object.assign(new Error(linking ? 'Apple 연결을 마치지 못했습니다. 다시 시도해 주세요.' : 'Apple 로그인을 마치지 못했습니다. 다시 시도해 주세요.'), {
+    detail: e?.message ?? null,
+    title: linking ? '계정을 연결하지 못했습니다.' : '로그인하지 못했습니다.',
+    retryTo: pending.kind === 'upgrade' ? '/me' : linking ? SETTINGS_PATH : '/login',
+  });
 }
 
 /**
@@ -144,7 +208,7 @@ export async function getIdentities() {
   if (error) throw new Error(`연결된 로그인 방식을 불러오지 못했습니다. (${error.message})`);
   return (data?.identities ?? []).map((i) => ({
     provider: i.provider,
-    email: i.identity_data?.email ?? null,
+    email: i.identity_data?.email ?? null, // Apple 이메일 숨김이면 …@privaterelay.appleid.com (화면은 displayEmail로)
     createdAt: i.created_at ?? null,
   }));
 }
@@ -226,7 +290,10 @@ export async function finishNativeLogin({ code, flowId, error, errorCode, errorD
 
 /** 앱: 로그인 창을 그냥 닫았을 때 (기록은 남겨 둔다 — 카카오톡 앱으로 다녀오는 길이면 늦게라도 콜백이 올 수 있음) */
 export function nativeCancelResult() {
-  const pending = peekPending();
+  return cancelResult(peekPending());
+}
+
+function cancelResult(pending) {
   const linking = pending?.kind === 'link' || pending?.kind === 'upgrade';
   const name = PROVIDERS[pending?.provider] ?? '';
   const error = Object.assign(

@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
-import { PROVIDERS, getIdentities, linkProvider } from '../api/auth';
+import { PROVIDERS, canUseProvider, getIdentities, linkProvider } from '../api/auth';
+import { APPLE_ONLY_TEXT, displayEmail, isAppleOnly } from '../lib/appleAuth';
 import { isGuest, useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
@@ -50,18 +51,21 @@ function LinkedLogins({ userId }) {
   return (
     <section className="me-section" aria-labelledby="linked-logins">
       <SectionHead icon={LinkIcon} id="linked-logins">로그인 연결</SectionHead>
-      <p className="lead">둘 다 연결하면 구글·카카오 어느 쪽으로 로그인해도 이 계정으로 들어옵니다.</p>
+      <p className="lead">여러 개를 연결하면 어느 쪽으로 로그인해도 이 계정으로 들어옵니다.</p>
+      {identities && isAppleOnly(identities.map((i) => i.provider)) && <p className="notice caution apple-only">{APPLE_ONLY_TEXT}</p>}
       {loading && <Loading />}
       {error && <ErrorBox error={error} onRetry={retry} />}
       {identities && (
         <ul className="identity-list">
           {Object.entries(PROVIDERS).map(([provider, name]) => {
             const linked = identities.find((i) => i.provider === provider);
+            // Apple: iOS 앱에서만 연결 버튼. 웹·안드로이드는 이미 연결된 경우에만 "연결됨"으로 보여 준다 (6-58)
+            if (!linked && !canUseProvider(provider)) return null;
             return (
               <li key={provider} className="identity-row">
                 <span>
                   <span className="identity-name">{name}</span>
-                  {linked?.email && <small>{linked.email}</small>}
+                  {linked?.email && <small>{displayEmail(linked.email)}</small>}
                 </span>
                 {linked ? (
                   <span className="identity-linked"><CheckCircleIcon size={16} /> 연결됨</span>
@@ -72,7 +76,7 @@ function LinkedLogins({ userId }) {
                     onClick={() => link(provider)}
                     disabled={busy !== null}
                   >
-                    {busy === provider ? `${name}로 이동 중…` : `${name} 연결하기`}
+                    {busy === provider ? (provider === 'apple' ? 'Apple 연결 중…' : `${name}로 이동 중…`) : `${name} 연결하기`}
                   </button>
                 )}
               </li>

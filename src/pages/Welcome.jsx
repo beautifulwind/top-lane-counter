@@ -7,6 +7,7 @@ import { ErrorBox, Loading } from '../components/Status';
 import { safePath } from './Login';
 import { isGuest } from '../lib/auth';
 import { DeleteAccount } from '../components/AccountSettings';
+import { APPLE_ONLY_TEXT, isAppleOnly, userProviders } from '../lib/appleAuth';
 
 /** 첫 로그인 시 닉네임 설정 */
 export default function Welcome() {
@@ -66,6 +67,11 @@ export default function Welcome() {
           {busy ? '저장하는 중…' : '시작하기'}
         </button>
       </form>
+      {isAppleOnly(userProviders(auth.user)) && (
+        <p className="notice caution apple-only">
+          {APPLE_ONLY_TEXT} <Link to="/me/settings">계정 설정</Link>에서 연결할 수 있습니다.
+        </p>
+      )}
       <p className="hint">
         닉네임 없이도 둘러볼 수 있습니다.{' '}
         <Link to={needsNicknameFor(from.split(/[?#]/)[0]) ? '/' : from}>나중에 정하기</Link>

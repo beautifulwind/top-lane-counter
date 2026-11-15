@@ -1396,3 +1396,23 @@ RLS 원칙:
 - **점검**: 닉네임 정하기(`cameBack` → /welcome → 원래 페이지)·비회원 연결(upgrade, 비회원 세션 유지)·새 계정으로 시작(`startFresh` → 로컬 로그아웃 후 앱 로그인)은 코드·테스트로 확인. 비회원 시작(Turnstile)은 OAuth와 무관하나, 앱 주소(안드로이드 `https://localhost`, iOS `capacitor://localhost`)를 Turnstile 허용 호스트에 넣어야 할 수 있음 — 실기기에서 확인할 것.
 - **외부 설정(운영자)**: Supabase → Authentication → URL Configuration → Redirect URLs에 `com.topsinbyeongja.app://auth-callback` 추가. 구글·카카오 콘솔의 리디렉션 URI는 Supabase 콜백(`https://<프로젝트>.supabase.co/auth/v1/callback`) 그대로라 변경 없음. 이 주소가 허용 목록에 없으면 Supabase가 Site URL(웹사이트)로 보내 버려 앱으로 돌아오지 않는다.
 - **검사**: `nativeLogin.test.jsx` 14건(콜백 파싱·code 한 번만·웹/앱 분기·리스너 한 번·구글 로그인 → 닉네임 → 원래 페이지·getLaunchUrl 겹침·취소/거절·교환 실패·창 닫음과 늦은 콜백·닫힘 먼저 온 경우·계정 연결·비회원 연결) — 전체 74파일 745건 통과, 웹 빌드 통과, 디버그 APK 빌드 통과(약 11.2MB).
+
+### 6-58. 안드로이드·iOS 앱 (Capacitor) — 4-a단계: iOS 앱에서만 Apple 로그인 (2026-11-15, DB·SQL·방침·약관 변경 없음)
+- **보이는 곳**: `isIosApp()`(`src/lib/native.js`: `Capacitor.isNativePlatform()` + `getPlatform() === 'ios'`)일 때만 [Apple로 시작하기]·[Apple 연결하기]. 웹·안드로이드 앱에는 버튼이 없고, `signIn('apple')`·`linkProvider('apple')`도 "지원하지 않는 로그인 방식"으로 막는다(플러그인을 부르지 않음).
+  - `PROVIDERS`에 `apple: 'Apple'` 추가 (이름 표시용 — 웹에서도 연결된 Apple은 "연결됨"으로 보임). 버튼 목록은 `loginProviders()`, 가능 여부는 `canUseProvider()`. 비회원 연결 칸 제목은 `providerNames()`("구글·카카오" / iOS 앱 "구글·카카오·Apple").
+- **방식** (`src/lib/appleAuth.js`, `api/auth.js`의 `appleFlow`): iOS Apple 시트(`@capawesome/capacitor-apple-sign-in` **0.1.5 정확히 고정**, Capacitor 8·SPM 지원, MIT) → id token → Supabase.
+  - nonce: 원문(32바이트 hex) → Supabase, SHA-256 hex → Apple (플러그인은 받은 nonce를 해시하지 않고 그대로 넘기므로 직접 해시).
+  - 요청 정보: **이메일만** (`scopes: ['EMAIL']`). 이름은 요청하지 않음 — 닉네임은 사용자가 정하고, 프로필 트리거도 이름·이메일을 쓰지 않는다.
+  - 로그인: `signInWithIdToken({ provider: 'apple', token, nonce })`. 연결·비회원 연결: `linkIdentity({ provider: 'apple', token, nonce })`(supabase-js `linkIdentityIdToken`, `link_identity: true`) → 지금 세션에 붙는다. 비회원이면 같은 계정이 정식 계정이 된다(비회원 세션을 지우지 않음).
+  - 시스템 브라우저·딥링크·pending·flowId는 쓰지 않는다. 결과는 구글·카카오 앱 로그인과 같은 `emitNativeAuth`로 보내 같은 화면 흐름(합쳐짐·연결함·정식 계정 안내, 처음 가입이면 닉네임 정하기, 돌아갈 경로)을 탄다. 버튼은 `'finished'`/`'cancelled'`를 받아 다시 열린다.
+  - 시트를 닫음(`SIGN_IN_CANCELED`/1001): "로그인 창을 닫아서 로그인하지 않았습니다" 띠. 시트 실패: "Apple 로그인을 마치지 못했습니다". Supabase 거절: 기존 `loginError` 문구(이미 다른 회원 계정 → 비회원은 "이미 가입된 계정입니다…").
+  - 플러그인은 **동적 import로만** 불러온다 → 웹 번들에는 0.6KB·1.3KB짜리 따로 나뉜 조각만 생기고, iOS 앱에서 Apple 버튼을 눌러야 받는다 (index·auth 조각 증가는 화면·흐름 코드 약 1.5KB씩).
+- **Apple만 연결된 계정 안내** (`isAppleOnly`): "Apple 로그인은 iOS 앱에서만 됩니다. 다른 기기(웹·안드로이드)에서도 쓰려면 구글·카카오를 연결해 주세요." — 가입 직후 닉네임 정하기(/welcome, + [계정 설정] 링크)와 계정 설정의 로그인 연결에서, Apple만 연결된 사람에게만. 구글·카카오가 같이 연결돼 있으면 보이지 않음.
+- **이메일 숨기기(릴레이)**: `…@privaterelay.appleid.com`은 로그인 연결 화면에 "이메일 숨김 (Apple)"으로 보인다. 같은 이메일 자동 연결이 안 되므로 새 계정이 된다(정상). 실제 이메일을 공유하면 같은 이메일의 구글·카카오 계정에 Supabase가 자동으로 합치고 "합쳐짐" 안내.
+- **버튼 모양**: Apple 버튼 가이드의 흰 버튼(어두운 화면) + Apple 로고, "Apple로 시작하기"/"Apple 연결하기", 누르면 "Apple 로그인 중…"·"Apple 연결 중…". 색은 `tokens.css`의 `--apple`·`--apple-hover`·`--on-apple`.
+- **iOS 설정**: `ios/App/App/App.entitlements`(`com.apple.developer.applesignin = [Default]`) 새로 만들고, `project.pbxproj`의 App 대상 Debug·Release(`504EC317…`·`504EC318…`)에 `CODE_SIGN_ENTITLEMENTS = App/App.entitlements;` 두 줄만 추가. 서명 값(`DEVELOPMENT_TEAM` 등)·푸시(`aps-environment`)는 넣지 않음(클라우드 빌드 서비스를 정할 때).
+  - 검사(맥 없이): entitlements는 Python `plistlib`로 읽힘. pbxproj는 서로 다른 두 파서(npm `xcode` 3.0.1, Python `openstep_parser` 1.5.4)로 읽힘, 객체 38개·섹션별 개수 그대로, **두 줄을 빼면 원본과 파싱 결과가 완전히 같음**, `cap sync` 뒤에도 차이는 그 두 줄뿐.
+  - `npx cap sync`가 `CapApp-SPM/Package.swift`에 플러그인을, 안드로이드 gradle 설정에 플러그인 모듈을 추가함(안드로이드에서는 쓰지 않음, 디버그 APK 약 11.2MB → 11.8MB).
+- **외부 설정(운영자, 이미 함)**: Apple Developer 번들 ID에 Sign in with Apple capability, Supabase → Authentication → Providers → Apple 켜고 Client IDs = `com.topsinbyeongja.app`. 네이티브만 쓰므로 Secret Key(OAuth)·6개월 키 교체·Server-to-Server 알림 주소는 필요 없음(Supabase 문서 "If you're building a native app only, you do not need to configure the OAuth settings.").
+- **아직 안 한 것**: 4-b 탈퇴 시 Apple 토큰 취소(App Store 제출 전), 4-c 방침·약관에 Apple 추가. 실기기 확인(TestFlight): 처음 가입 → 닉네임, 비회원 → Apple 연결(같은 계정 유지 — Supabase 문서에 익명 계정 id token 연결 예가 없어 1순위 확인), 이메일 공유 → 자동 합쳐짐, 이메일 숨김 → 새 계정, 이미 연결된 Apple로 비회원 연결, 시트 취소, Supabase 캡차를 켠 상태에서 id token 로그인이 막히지 않는지.
+- **검사**: `appleLogin.test.jsx` 20건(플랫폼별 노출 iOS/안드로이드/웹, 웹·안드로이드 호출 차단, 정적 import 없음, nonce 해시·이메일만 요청, 취소·실패, 처음 가입 → 닉네임 + 안내 → 원래 페이지, 이메일 합쳐짐, 비회원 연결·이미 회원, 계정 설정 연결·릴레이 표시·Apple만 안내, 웹·안드로이드에서 "연결됨"만) — 전체 75파일 765건 통과, 웹 빌드·`cap sync`(android·ios)·디버그 APK 빌드 통과.

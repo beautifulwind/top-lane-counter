@@ -10,3 +10,14 @@ export function isNativeApp() {
     return false;
   }
 }
+
+/**
+ * iOS 앱인가 (SPEC 6-58: Apple 로그인은 iOS 앱에서만 보인다). 웹·안드로이드 앱은 false.
+ */
+export function isIosApp() {
+  try {
+    return Capacitor.isNativePlatform() && Capacitor.getPlatform?.() === 'ios';
+  } catch {
+    return false;
+  }
+}

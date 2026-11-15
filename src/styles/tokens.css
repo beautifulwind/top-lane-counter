@@ -102,6 +102,10 @@
   --kakao: #FEE500;
   --kakao-hover: #F5DC00;
   --on-kakao: rgba(0, 0, 0, .85);
+  /* Apple 로그인 버튼 (6-58, Apple 버튼 가이드: 어두운 바탕 위에서는 흰 버튼 + 검정 글자·로고) */
+  --apple: #fff;
+  --apple-hover: #e8e8ed;
+  --on-apple: #000;
 
   /* 모서리 */
   --radius: 16px;            /* 카드 */

@@ -53,7 +53,7 @@ export default function GuestLinkDialog({ provider, returnTo = '/', onClose }) {
           <p className="warn">{LINK_CHOICES.fresh.warn}</p>
           <div className="row-actions">
             <button type="button" className="btn btn-danger" onClick={() => run(() => startFresh(provider, returnTo))} disabled={busy}>
-              {busy ? `${name}로 이동 중…` : `${name} 새 계정으로 시작`}
+              {busy ? (provider === 'apple' ? 'Apple 로그인 중…' : `${name}로 이동 중…`) : `${name} 새 계정으로 시작`}
             </button>
             <button type="button" className="btn" onClick={() => setStep('choose')} disabled={busy}>뒤로</button>
           </div>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router-dom';
-import { PROVIDERS } from '../api/auth';
+import { loginProviders, providerNames } from '../api/auth';
 import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../api/ddragon';
 import { approvedWithEdits, getMyProposals } from '../api/proposals';
 import { useUnreadCount } from '../lib/unread';
@@ -105,10 +105,10 @@ function GuestUpgrade() {
   const [choosing, setChoosing] = useState(null);
   return (
     <section id="upgrade" className="me-section guest-upgrade" aria-labelledby="guest-upgrade">
-      <SectionHead icon={LinkIcon} id="guest-upgrade">구글·카카오 연결하기</SectionHead>
+      <SectionHead icon={LinkIcon} id="guest-upgrade">{providerNames()} 연결하기</SectionHead>
       <p>{GUEST_UPGRADE_TEXT}</p>
       <div className="row-actions">
-        {Object.entries(PROVIDERS).map(([provider, name]) => (
+        {loginProviders().map(([provider, name]) => (
           <button key={provider} type="button" className={`btn login-btn-sm ${provider}`} onClick={() => setChoosing(provider)} disabled={!!choosing}>
             {name} 연결하기
           </button>

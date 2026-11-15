@@ -1,6 +1,6 @@
 import { useRef, useState } from 'react';
 import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { PROVIDERS, signIn, signInAsGuest } from '../api/auth';
+import { loginProviders, signIn, signInAsGuest } from '../api/auth';
 import { isGuest, useAuth } from '../lib/auth';
 import { guestNotice } from '../lib/guest';
 import { josa } from '../lib/josa';
@@ -55,7 +55,7 @@ export default function Login() {
           <p className="notice login-join">처음이면 자동으로 가입됩니다. 따로 회원가입할 필요 없습니다.</p>
         )}
         <div className="login-buttons">
-          {Object.entries(PROVIDERS).map(([provider, name]) => (
+          {loginProviders().map(([provider, name]) => (
             <button
               key={provider}
               type="button"
@@ -64,7 +64,8 @@ export default function Login() {
               disabled={busy !== null}
             >
               {provider === 'kakao' && <KakaoSymbol />}
-              {busy === provider ? `${name}로 이동 중…` : `${name}로 시작하기`}
+              {provider === 'apple' && <AppleSymbol />}
+              {busy === provider ? busyLabel(provider, name) : `${name}로 시작하기`}
             </button>
           ))}
           {!guest && (
@@ -153,6 +154,20 @@ function KakaoSymbol() {
       <path fill="currentColor" d="M12 3C6.48 3 2 6.54 2 10.9c0 2.82 1.87 5.3 4.69 6.7l-.95 3.5c-.08.3.26.55.52.38l4.13-2.73c.53.06 1.07.1 1.61.1 5.52 0 10-3.54 10-7.95S17.52 3 12 3z" />
     </svg>
   );
+}
+
+/** Apple 로그인 버튼의 Apple 로고 (글자색을 따름 — 흰 버튼 위 검정) */
+function AppleSymbol() {
+  return (
+    <svg className="apple-symbol" viewBox="0 0 24 24" width="18" height="18" aria-hidden="true" focusable="false">
+      <path fill="currentColor" d="M16.37 12.6c-.02-2.2 1.8-3.26 1.88-3.31-1.03-1.5-2.62-1.7-3.18-1.73-1.35-.14-2.64.8-3.33.8-.69 0-1.74-.78-2.87-.76-1.47.02-2.83.86-3.59 2.18-1.53 2.66-.39 6.6 1.1 8.75.73 1.05 1.6 2.24 2.73 2.2 1.1-.04 1.51-.71 2.84-.71 1.32 0 1.7.71 2.86.69 1.18-.02 1.93-1.07 2.65-2.13.84-1.22 1.18-2.4 1.2-2.46-.03-.01-2.3-.88-2.32-3.5zM14.2 6.13c.6-.73 1.01-1.74.9-2.75-.87.04-1.92.58-2.54 1.3-.56.64-1.05 1.67-.92 2.66.97.08 1.96-.49 2.56-1.21z" />
+    </svg>
+  );
+}
+
+/** 누른 버튼의 "진행 중" 글자 — Apple은 화면을 떠나지 않고 iOS 시트가 뜬다 */
+export function busyLabel(provider, name) {
+  return provider === 'apple' ? 'Apple 로그인 중…' : `${name}로 이동 중…`;
 }
 
 /** 외부 주소로 튕겨 나가지 않게, 우리 사이트 안의 경로만 허용 */
