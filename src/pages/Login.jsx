@@ -33,7 +33,8 @@ export default function Login() {
     setBusy(provider);
     setError(null);
     try {
-      await signIn(provider, from); // 성공하면 구글/카카오 화면으로 이동한다
+      // 웹: 구글/카카오 화면으로 이동한다. 앱: 시스템 브라우저에서 끝나고(돌아옴·닫음) 값이 오면 버튼을 다시 연다 (결과 안내는 위 띠)
+      if (await signIn(provider, from)) setBusy(null);
     } catch (e) {
       setError(e.message);
       setBusy(null);

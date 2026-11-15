@@ -6,10 +6,12 @@ import App from './App';
 import { blockStrayFileDrops } from './components/Media';
 import { startWebOnlyFeatures } from './lib/startup';
 import { startBackButton } from './lib/backButton';
+import { startNativeLogin } from './api/auth';
 
 blockStrayFileDrops(); // 사진을 첨부 칸 밖에 떨어뜨려도 새 탭으로 열리지 않게
 startWebOnlyFeatures(); // 웹에서만: [앱 설치] 설치 창 잡기 + 서비스 워커(오프라인 안내·새 버전 알림). 앱(Capacitor)에서는 끔
 startBackButton(); // 앱에서만: 안드로이드 뒤로가기 = 열린 창 닫기 → 이전 화면 → 첫 화면이면 종료
+startNativeLogin(); // 앱에서만: 시스템 브라우저 로그인에서 돌아온 주소(appUrlOpen) 받기 — 한 번만 등록
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>

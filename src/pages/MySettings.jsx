@@ -39,7 +39,8 @@ function LinkedLogins({ userId }) {
     setBusy(provider);
     setLinkError(null);
     try {
-      await linkProvider(provider); // 성공하면 구글/카카오 화면으로 이동한다
+      // 웹: 구글/카카오 화면으로 이동한다. 앱: 시스템 브라우저에서 끝나면 버튼을 다시 연다 (6-57)
+      if (await linkProvider(provider)) setBusy(null);
     } catch (e) {
       setLinkError(e.message);
       setBusy(null);

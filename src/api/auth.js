@@ -3,6 +3,8 @@ import { INFLUENCER_MARK_MESSAGE, hasReservedMark, mimicsInfluencer } from '../l
 import { db } from './supabase';
 import { dropBrowserPush, forgetDevicePush } from './push';
 import { ALREADY_MEMBER_TEXT } from '../lib/guest';
+import { isNativeApp } from '../lib/native';
+import { NATIVE_REDIRECT, listenAuthCallbacks, openAuthBrowser } from '../lib/nativeAuth';
 
 export const NICKNAME_MAX = 20;
 
@@ -25,14 +27,49 @@ export const PROVIDER_PROMPT = { google: { prompt: 'select_account' }, kakao: { 
  */
 export async function signIn(provider, returnTo = '/') {
   if (!PROVIDERS[provider]) throw new Error(`지원하지 않는 로그인 방식입니다. (${provider})`);
-  rememberPending('signIn', provider);
-  const { error } = await db().auth.signInWithOAuth({
+  const native = isNativeApp();
+  rememberPending('signIn', provider, returnTo);
+  const { data, error } = await db().auth.signInWithOAuth({
     provider,
-    options: { redirectTo: window.location.origin + returnTo, queryParams: PROVIDER_PROMPT[provider] },
+    options: oauthOptions(provider, returnTo, native),
   });
   if (error) {
     forgetPending();
     throw new Error(`로그인을 시작하지 못했습니다. (${error.message})`);
+  }
+  if (native) return openInSystemBrowser(data, 'signIn', provider, returnTo);
+  return undefined;
+}
+
+/**
+ * 구글·카카오에서 돌아올 주소. 웹: 지금 접속한 주소(origin) + 경로 그대로.
+ * 앱(6-57): 앱 전용 주소 com.topsinbyeongja.app://auth-callback (돌아간 뒤 갈 경로는 pending에 적어 둔다)
+ */
+function redirectFor(path, native = isNativeApp()) {
+  return native ? NATIVE_REDIRECT : window.location.origin + path;
+}
+
+/** 로그인·연결 요청 옵션. 앱만 skipBrowserRedirect (주소만 받아 시스템 브라우저로 연다) — 웹 요청은 예전과 똑같다 */
+function oauthOptions(provider, returnTo, native) {
+  const options = { redirectTo: redirectFor(returnTo, native), queryParams: PROVIDER_PROMPT[provider] };
+  return native ? { ...options, skipBrowserRedirect: true } : options;
+}
+
+/**
+ * 앱: 받은 로그인 주소를 시스템 브라우저로 연다. 끝나면 'finished' | 'cancelled'를 돌려준다
+ * (웹은 페이지가 구글·카카오로 넘어가서 돌아오지 않으므로 undefined) → 화면은 값이 있으면 버튼을 다시 연다.
+ */
+async function openInSystemBrowser(data, kind, provider, returnTo) {
+  if (!data?.url) {
+    forgetPending();
+    throw new Error('로그인 주소를 받지 못했습니다. 다시 시도해 주세요.');
+  }
+  rememberPending(kind, provider, returnTo, data.flowId ?? null);
+  try {
+    return await openAuthBrowser(data.url);
+  } catch (e) {
+    forgetPending();
+    throw e;
   }
 }
 
@@ -46,10 +83,13 @@ export const SETTINGS_PATH = '/me/settings';
 
 export async function linkProvider(provider, { guest = false } = {}) {
   if (!PROVIDERS[provider]) throw new Error(`지원하지 않는 로그인 방식입니다. (${provider})`);
-  rememberPending(guest ? 'upgrade' : 'link', provider);
-  const { error } = await db().auth.linkIdentity({
+  const native = isNativeApp();
+  const kind = guest ? 'upgrade' : 'link';
+  const returnTo = guest ? '/me' : SETTINGS_PATH;
+  rememberPending(kind, provider, returnTo);
+  const { data, error } = await db().auth.linkIdentity({
     provider,
-    options: { redirectTo: window.location.origin + (guest ? '/me' : SETTINGS_PATH), queryParams: PROVIDER_PROMPT[provider] },
+    options: oauthOptions(provider, returnTo, native),
   });
   if (error) {
     forgetPending();
@@ -58,6 +98,8 @@ export async function linkProvider(provider, { guest = false } = {}) {
     }
     throw new Error(`${PROVIDERS[provider]} 연결을 시작하지 못했습니다. (${error.message})`);
   }
+  if (native) return openInSystemBrowser(data, kind, provider, returnTo);
+  return undefined;
 }
 
 /**
@@ -82,7 +124,7 @@ export async function signInAsGuest(captchaToken) {
 export async function startFresh(provider, returnTo = '/') {
   await forgetDevicePush(); // 비회원 때 켠 알림이 다음 계정으로 가지 않게 (037)
   await db().auth.signOut({ scope: 'local' });
-  await signIn(provider, returnTo);
+  return signIn(provider, returnTo);
 }
 
 /** 마지막 접속 기록 (비회원 정리 기준). 하루 한 번만 부른다 — 실패해도 조용히 */
@@ -108,22 +150,34 @@ export async function getIdentities() {
 }
 
 // 구글/카카오로 떠나기 직전에 "무엇을 하러 갔는지" 기억해 둔다 (돌아왔을 때 안내 문구에 쓴다).
-// 같은 탭에서만 필요하므로 sessionStorage. 못 쓰는 환경이면 안내만 빠진다.
+// 웹: 같은 탭에서만 필요하므로 sessionStorage. 못 쓰는 환경이면 안내만 빠진다.
+// 앱(6-57): 로그인하는 동안 앱이 꺼졌다 켜질 수 있어 localStorage + 돌아간 뒤 갈 경로(returnTo)·PKCE flowId + 15분 지나면 무시.
 const PENDING_KEY = 'auth:pending';
-function rememberPending(kind, provider) {
-  try { sessionStorage.setItem(PENDING_KEY, JSON.stringify({ kind, provider })); } catch { /* 안내만 빠짐 */ }
+const PENDING_MAX_MS = 15 * 60 * 1000;
+const pendingStore = () => (isNativeApp() ? localStorage : sessionStorage);
+function rememberPending(kind, provider, returnTo = null, flowId = null) {
+  try {
+    const v = isNativeApp() ? { kind, provider, returnTo, flowId, at: Date.now() } : { kind, provider }; // 웹은 예전 그대로
+    pendingStore().setItem(PENDING_KEY, JSON.stringify(v));
+  } catch { /* 안내만 빠짐 */ }
 }
 function forgetPending() {
-  try { sessionStorage.removeItem(PENDING_KEY); } catch { /* 무시 */ }
+  try { pendingStore().removeItem(PENDING_KEY); } catch { /* 무시 */ }
 }
-function takePending() {
+function peekPending() {
   try {
-    const v = JSON.parse(sessionStorage.getItem(PENDING_KEY) ?? 'null');
-    sessionStorage.removeItem(PENDING_KEY);
-    return v && PROVIDERS[v.provider] ? v : null;
+    const v = JSON.parse(pendingStore().getItem(PENDING_KEY) ?? 'null');
+    if (!v || !PROVIDERS[v.provider]) return null;
+    if (isNativeApp() && v.at && Date.now() - v.at > PENDING_MAX_MS) return null; // 웹은 예전처럼 시간 제한 없음
+    return v;
   } catch {
     return null;
   }
+}
+function takePending() {
+  const v = peekPending();
+  forgetPending();
+  return v;
 }
 
 // 로그인 후 돌아온 주소에 붙는 값들 (처리 후 주소창에서 지운다)
@@ -152,6 +206,44 @@ export async function finishLoginFromUrl() {
   // 연결(linkIdentity)이 실패해도 원래 세션은 남아 있으므로, 구글/카카오가 보낸 오류가 있으면 실패로 본다
   if (data.session && !error && !providerError) return loginNotice(pending, data.session.user);
   throw loginError(error, providerError, providerCode, pending);
+}
+
+/**
+ * 앱(6-57): com.topsinbyeongja.app://auth-callback으로 돌아온 값(parseAuthCallback 결과)으로 로그인을 마친다.
+ * 성공: { type: 'success', notice, returnTo } (returnTo = 웹이라면 돌아왔을 경로). 실패하면 웹과 같은 안내 문구의 Error를 던진다.
+ */
+export async function finishNativeLogin({ code, flowId, error, errorCode, errorDescription }) {
+  const pending = takePending();
+  if (!code || error || errorDescription) {
+    // 구글·카카오에서 취소·거절 (Supabase가 error·error_description을 붙여 돌려보냄)
+    throw loginError(null, errorDescription ?? error ?? '로그인 정보 없이 돌아왔습니다.', errorCode, pending);
+  }
+  const id = flowId ?? pending?.flowId ?? null;
+  const { data, error: exchangeError } = await db().auth.exchangeCodeForSession(code, id ? { flowId: id } : undefined);
+  if (exchangeError || !data?.session) throw loginError(exchangeError ?? null, null, null, pending);
+  return { type: 'success', notice: loginNotice(pending, data.session.user), returnTo: pending?.returnTo ?? null };
+}
+
+/** 앱: 로그인 창을 그냥 닫았을 때 (기록은 남겨 둔다 — 카카오톡 앱으로 다녀오는 길이면 늦게라도 콜백이 올 수 있음) */
+export function nativeCancelResult() {
+  const pending = peekPending();
+  const linking = pending?.kind === 'link' || pending?.kind === 'upgrade';
+  const name = PROVIDERS[pending?.provider] ?? '';
+  const error = Object.assign(
+    new Error(linking ? `${name} 연결 창을 닫아서 연결하지 않았습니다. 다시 시도해 주세요.` : '로그인 창을 닫아서 로그인하지 않았습니다. 다시 시도해 주세요.'),
+    {
+      title: linking ? '계정을 연결하지 못했습니다.' : '로그인하지 못했습니다.',
+      retryTo: pending?.kind === 'upgrade' ? '/me' : linking ? SETTINGS_PATH : '/login',
+      cancelled: true,
+    },
+  );
+  return { type: 'cancelled', error };
+}
+
+/** 앱에서만: 로그인 콜백(appUrlOpen)·창 닫힘 리스너를 한 번 등록한다 (index.jsx). 등록했으면 true */
+export function startNativeLogin(native = isNativeApp(), plugins = {}) {
+  if (!native) return false;
+  return listenAuthCallbacks({ onCallback: finishNativeLogin, onCancel: nativeCancelResult, ...plugins });
 }
 
 // 처음 만들어진 계정이면 계정과 로그인 방식이 같은 순간에 생긴다. 이보다 늦게 붙었으면 "기존 계정에 합쳐짐".

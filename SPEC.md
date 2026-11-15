@@ -1382,3 +1382,17 @@ RLS 원칙:
 - **sync로 바뀐 생성 파일**: `android/capacitor.settings.gradle`·`android/app/capacitor.build.gradle`(`:capacitor-app`), `ios/App/CapApp-SPM/Package.swift`.
 - **정식 서명(아직 안 함)**: Play App Signing을 쓰면 앱 서명 키는 구글이 보관하고, 우리는 업로드 키(.jks + 비밀번호)만 저장소 밖에 보관. 분실하면 Play Console에서 업로드 키 재설정 요청(새 키 등록)으로 복구 가능.
 - **검사**: `backButton.test.jsx` 8건(⋮ 메뉴 닫기·[지우기] 확인 닫기·겹친 창은 맨 위부터·이전 화면·첫 화면 종료·웹은 안 잡음·앱은 잡음) — 전체 73파일 731건 통과, 웹 빌드 통과, APK 빌드 통과.
+
+### 6-57. 안드로이드·iOS 앱 (Capacitor) — 3단계: 앱에서 구글·카카오 로그인 (2026-11-15, DB·SQL·방침·약관 변경 없음)
+- **방식**: 앱(`isNativeApp()`)에서만 `signInWithOAuth`·`linkIdentity`에 `redirectTo: com.topsinbyeongja.app://auth-callback` + `skipBrowserRedirect: true` → 받은 주소를 `@capacitor/browser`(8.0.5)로 시스템 브라우저(안드로이드 Custom Tab, iOS Safari 창)에서 연다. 구글은 앱 화면(WebView) 안 로그인을 막기 때문. **웹 요청·저장값은 예전과 똑같다**(옵션·sessionStorage 그대로, 기존 테스트 그대로 통과).
+- **돌아옴** (`src/lib/nativeAuth.js`, `api/auth.js`의 `startNativeLogin`·`finishNativeLogin`): `@capacitor/app`의 `appUrlOpen` + 딥링크로 켜진 경우 `getLaunchUrl` → `parseAuthCallback`(?·# 둘 다) → `exchangeCodeForSession(code, { flowId })` (flowId는 signInWithOAuth가 준 값을 pending에 적어 둠) → `Browser.close()`. 결과는 `onNativeAuth`로 AuthProvider에 전달(받는 쪽이 아직 없으면 마지막 결과를 들고 있음).
+  - 성공: 웹과 같은 안내(합쳐짐·연결함·정식 계정), `cameBack`(처음 가입이면 닉네임 정하기), Layout이 웹이라면 돌아왔을 경로(`returnTo`: 로그인 = 원래 페이지, 연결 = /me/settings, 비회원 연결 = /me)로 옮긴다.
+  - 실패: 웹과 같은 `loginError` 띠 + [다시 로그인]/[다시 연결하기]. 구글·카카오 취소·거절(error 파라미터)은 교환하지 않음.
+  - 창을 그냥 닫음(`browserFinished`): 1.5초 기다려도 콜백이 없으면 "로그인 창을 닫아서 로그인하지 않았습니다" 띠 + 버튼 다시 열림. pending은 남겨 두어(15분) 카카오톡 앱에 다녀오는 길에 늦게 온 콜백도 받는다(성공하면 띠 지움). 안드로이드처럼 닫힘 이벤트가 콜백보다 먼저 와도 기다리는 사이 콜백이 오면 취소로 보지 않는다.
+- **중복 방지**: 리스너는 `startNativeLogin()`(index.jsx)에서 한 번만 등록(두 번째 호출은 false). code는 `claimCode`로 한 번만 교환(메모리 + localStorage 최근 5개 — appUrlOpen·getLaunchUrl 겹침, 화면 다시 불러오기 대비).
+- **pending**: 웹은 sessionStorage `{kind, provider}` 그대로. 앱은 localStorage `{kind, provider, returnTo, flowId, at}`(로그인 중 앱이 꺼졌다 켜져도 남게, 15분 지나면 무시).
+- **버튼**: `signIn`·`linkProvider`·`startFresh`가 앱에서는 끝나면 `'finished'`/`'cancelled'`를 돌려줌 → 로그인 화면·계정 설정·비회원 연결 창이 "이동 중…"을 푼다. 웹은 undefined(페이지가 넘어가므로 예전처럼 잠긴 채).
+- **네이티브 설정**: `AndroidManifest.xml`에 VIEW·BROWSABLE intent-filter(`scheme=com.topsinbyeongja.app`, `host=auth-callback`), `launchMode="singleTask"`는 이미 있음(떠 있는 앱으로 돌아와 appUrlOpen). iOS `Info.plist`에 `CFBundleURLTypes`, `SceneDelegate`가 이미 `openURLContexts`를 Capacitor로 넘김.
+- **점검**: 닉네임 정하기(`cameBack` → /welcome → 원래 페이지)·비회원 연결(upgrade, 비회원 세션 유지)·새 계정으로 시작(`startFresh` → 로컬 로그아웃 후 앱 로그인)은 코드·테스트로 확인. 비회원 시작(Turnstile)은 OAuth와 무관하나, 앱 주소(안드로이드 `https://localhost`, iOS `capacitor://localhost`)를 Turnstile 허용 호스트에 넣어야 할 수 있음 — 실기기에서 확인할 것.
+- **외부 설정(운영자)**: Supabase → Authentication → URL Configuration → Redirect URLs에 `com.topsinbyeongja.app://auth-callback` 추가. 구글·카카오 콘솔의 리디렉션 URI는 Supabase 콜백(`https://<프로젝트>.supabase.co/auth/v1/callback`) 그대로라 변경 없음. 이 주소가 허용 목록에 없으면 Supabase가 Site URL(웹사이트)로 보내 버려 앱으로 돌아오지 않는다.
+- **검사**: `nativeLogin.test.jsx` 14건(콜백 파싱·code 한 번만·웹/앱 분기·리스너 한 번·구글 로그인 → 닉네임 → 원래 페이지·getLaunchUrl 겹침·취소/거절·교환 실패·창 닫음과 늦은 콜백·닫힘 먼저 온 경우·계정 연결·비회원 연결) — 전체 74파일 745건 통과, 웹 빌드 통과, 디버그 APK 빌드 통과(약 11.2MB).

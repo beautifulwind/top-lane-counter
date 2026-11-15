@@ -24,6 +24,13 @@ export default function Layout() {
     const stop = onOpenPath((path) => navigate(path));
     return stop;
   }, [navigate]);
+  // 앱(6-57): 시스템 브라우저에서 로그인을 마치면 웹에서 돌아왔을 경로로 (로그인 화면이면 Login이 원래 페이지로 보낸다)
+  const { goTo, clearGoTo } = auth;
+  useEffect(() => {
+    if (!goTo) return;
+    clearGoTo();
+    if (goTo !== pathname + search) navigate(goTo, { replace: true });
+  }, [goTo, clearGoTo, navigate, pathname, search]);
   usePageTitle(mainRef, pathname); // 탭 제목 = 본문 첫 h1 (SPEC 3장)
   // 로그인했는데 닉네임이 없으면: 읽기는 어디서나, 쓰기 화면·/me에 오면 닉네임 정하기로 (정하면 돌아온다).
   // 막 가입하고 돌아온 때도 한 번 보여 준다 ([나중에 정하기]로 건너뜀)

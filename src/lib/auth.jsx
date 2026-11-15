@@ -1,6 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { finishLoginFromUrl, getProfile, getSession, onAuthChange, touchLastSeen } from '../api/auth';
 import { isGuest } from './guest';
+import { onNativeAuth } from './nativeAuth';
 import { isStaffPerson } from './nickname';
 
 /**
@@ -9,7 +10,7 @@ import { isStaffPerson } from './nickname';
  * profile: 로그인했을 때 내 프로필 (불러오는 중이면 undefined)
  */
 const AuthContext = createContext(null);
-const SIGNED_OUT = { status: 'signedOut', session: null, user: null, profile: null, isOperatorAccount: false, isOperator: false, isModerator: false, isStaff: false, setProfile: () => {}, loginError: null, clearLoginError: () => {}, notice: null, clearNotice: () => {}, cameBack: false, clearCameBack: () => {} };
+const SIGNED_OUT = { status: 'signedOut', session: null, user: null, profile: null, isOperatorAccount: false, isOperator: false, isModerator: false, isStaff: false, setProfile: () => {}, loginError: null, clearLoginError: () => {}, notice: null, clearNotice: () => {}, cameBack: false, clearCameBack: () => {}, goTo: null, clearGoTo: () => {} };
 
 /** 운영자 모드가 켜진 운영자인가 (034: profiles.operator_mode, 없으면 켜짐) */
 const operatorOn = (profile) => profile?.role === 'admin' && profile?.operator_mode !== false;
@@ -21,6 +22,23 @@ export function AuthProvider({ children }) {
   // 구글·카카오에서 막 돌아왔나 (처음 가입한 사람은 닉네임 정하기를 한 번 보여 준다 — 건너뛸 수 있음)
   const [cameBack, setCameBack] = useState(() => /[?&]code=/.test(window.location.search));
   const [loaded, setLoaded] = useState({ userId: null, profile: undefined, error: null });
+  // 앱(6-57): 로그인을 마친 뒤 갈 경로 (웹은 구글·카카오가 그 경로로 돌려보내지만, 앱은 같은 화면에 머물러 있으므로 Layout이 옮긴다)
+  const [goTo, setGoTo] = useState(null);
+
+  // 앱(6-57): 시스템 브라우저에서 돌아온 로그인 결과 (웹에서는 아무것도 오지 않는다)
+  useEffect(() => {
+    const off = onNativeAuth((r) => {
+      if (r.type === 'success') {
+        setLoginError(null);
+        setNotice(r.notice ?? null);
+        setCameBack(true); // 처음 가입한 사람에게 닉네임 정하기를 한 번 (웹과 같음)
+        if (r.returnTo) setGoTo(r.returnTo);
+      } else {
+        setLoginError(r.error); // 실패·취소: 위 띠에 안내 + [다시 로그인]
+      }
+    });
+    return off;
+  }, []);
 
   useEffect(() => {
     let alive = true;
@@ -59,10 +77,11 @@ export function AuthProvider({ children }) {
   const clearLoginError = useCallback(() => setLoginError(null), []);
   const clearNotice = useCallback(() => setNotice(null), []);
   const clearCameBack = useCallback(() => setCameBack(false), []);
+  const clearGoTo = useCallback(() => setGoTo(null), []);
 
   let value;
   if (session === undefined) value = { ...SIGNED_OUT, status: 'loading' };
-  else if (!session) value = { ...SIGNED_OUT, loginError, clearLoginError };
+  else if (!session) value = { ...SIGNED_OUT, loginError, clearLoginError, goTo, clearGoTo };
   else {
     const profile = loaded.userId === userId ? loaded.profile : undefined;
     value = {
@@ -86,6 +105,8 @@ export function AuthProvider({ children }) {
       clearNotice,
       cameBack,
       clearCameBack,
+      goTo,
+      clearGoTo,
     };
   }
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
