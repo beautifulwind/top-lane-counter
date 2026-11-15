@@ -270,14 +270,16 @@ test('비회원이 추천을 누르면 투표 대신 연결 안내', async () =>
   expect(fakeState.rpcCalls.filter((c) => c.name === 'vote_build')).toEqual([]);
 });
 
-test('탑신병자 커뮤니티 글: 비회원은 [추천]·[신고] 없이 안내만, 댓글은 쓸 수 있다', async () => {
+test('탑신병자 커뮤니티 글: 비회원은 [추천]·[신고] 없이 안내만, 댓글·답글도 못 쓴다 (안내만)', async () => {
   TABLES.posts.push(fakePost(1));
   guestWithName();
   start('/board/1');
   expect(await screen.findByText(/비회원은 추천·신고를 할 수 없습니다/)).toBeDefined();
   expect(screen.queryByRole('button', { name: /추천/ })).toBeNull();
   expect(screen.queryByRole('button', { name: '신고' })).toBeNull();
-  expect(screen.getByLabelText(/댓글/, { selector: 'textarea' })).toBeDefined();
+  expect(screen.getByText(/비회원은 댓글을 달 수 없습니다/)).toBeDefined();
+  expect(screen.queryByRole('textbox')).toBeNull();
+  expect(screen.queryByRole('button', { name: '답글' })).toBeNull();
 });
 
 // ---------------- 비회원 기록 지우기 ----------------

@@ -51,7 +51,7 @@ test('비로그인: 매치업 문서 "4. 댓글" — 목차, 댓글 보임, 로�
   expect(screen.getByRole('link', { name: '댓글' }).getAttribute('href')).toBe('#comments');
 });
 
-test('문서 댓글 달기 → 바로 보임 / 남의 댓글은 신고 / 빌드 카드에는 댓글 없음', async () => {
+test('문서 댓글 달기 → 바로 보임 / 남의 댓글은 신고 / 문서 댓글은 빌드 카드 안에 섞이지 않음', async () => {
   TABLES.doc_comments.push(fakeDocComment(1, { author_id: 'u-x', author: OTHER, body: '남의 문서 댓글' }));
   fakeLogin('u-old');
   start(MATCHUP);

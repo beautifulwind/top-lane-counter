@@ -29,16 +29,25 @@ set role authenticated;
 set request.jwt.claim.sub = :'G';
 select t.fails('본인도 비회원 표시를 못 바꿈', $$update profiles set is_guest = false where id = auth.uid()$$, 'permission denied');
 
--- ===== 2. 할 수 있는 것: 글·댓글·문서 댓글·제안 =====
+-- ===== 2. 할 수 있는 것: 글·문서 댓글·제안 (058부터 탑신병자 커뮤니티 댓글·빌드 댓글은 못 함) =====
 select public.create_post('비회원 글', '안녕하세요');
 insert into ids select 'post', max(id) from posts;
-select public.create_comment((select v from ids where k = 'post'), '비회원 댓글');
+select t.fails('058: 비회원은 탑신병자 커뮤니티 댓글 불가', format($$select public.create_comment(%s, '비회원 댓글')$$, (select v from ids where k = 'post')),
+  '비회원은 댓글을 달 수 없습니다');
+select t.fails('058: 비회원은 빌드 댓글 불가', format($$select public.create_build_comment(%s, '비회원 빌드 댓글')$$, (select v from ids where k = 'build')),
+  '비회원은 댓글을 달 수 없습니다');
+reset role;
+select t.fails('058: 표에 직접 넣어도 비회원 댓글 불가 (트리거)',
+  format($$insert into public.post_comments (post_id, author_id, body) values (%s, '%s', 'x')$$, (select v from ids where k = 'post'), :'G'),
+  '비회원은 댓글을 달 수 없습니다');
+set role authenticated;
+set request.jwt.claim.sub = :'G';
 select public.create_doc_comment((select v from ids where k = 'quinn'), '비회원 문서 댓글');
 insert into edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
 values ('new_counter', 'Darius', 'Garen', auth.uid(),
         '{"summary":"s","level_notes":{"1":"a","2":"b","3":"c","6":"d"},"lane_cautions":""}', t.build());
-select t.ok('비회원도 글·댓글·문서 댓글·제안',
-  exists (select 1 from posts where author_id = auth.uid()) and exists (select 1 from post_comments where author_id = auth.uid())
+select t.ok('비회원도 글·문서 댓글·제안',
+  exists (select 1 from posts where author_id = auth.uid()) and not exists (select 1 from post_comments where author_id = auth.uid())
   and exists (select 1 from doc_comments where author_id = auth.uid()) and exists (select 1 from edit_proposals where proposer_id = auth.uid()));
 select t.ok('비회원도 경험치가 쌓임', (select xp > 0 from profiles where id = auth.uid()));
 

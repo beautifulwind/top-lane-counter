@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { WITHDRAWN_USER } from '../lib/nickname';
 import { Link } from 'react-router-dom';
-import { getHiddenBoard, getOpenReports, restoreComment, restoreDocComment, restorePost } from '../api/board';
+import { getHiddenBoard, getOpenReports, restoreBuildComment, restoreComment, restoreDocComment, restorePost } from '../api/board';
 import { getChampionMap } from '../api/ddragon';
 import { getPendingCounts } from '../api/moderation';
 import { canRestore, useAuth } from '../lib/auth';
@@ -30,6 +30,7 @@ export default function BoardAdmin() {
     ...data.hidden.posts.map((p) => ({ kind: 'post', row: p })),
     ...data.hidden.comments.map((c) => ({ kind: 'comment', row: c })),
     ...data.hidden.docComments.map((c) => ({ kind: 'doc_comment', row: c })),
+    ...(data.hidden.buildComments ?? []).map((c) => ({ kind: 'build_comment', row: c })),
   ].sort((a, b) => String(b.row.hidden_at).localeCompare(String(a.row.hidden_at)));
 
   return (
@@ -66,16 +67,19 @@ export default function BoardAdmin() {
   );
 }
 
-const KIND_LABEL = { post: '글', comment: '댓글', doc_comment: '문서 댓글' };
+const KIND_LABEL = { post: '글', comment: '댓글', doc_comment: '문서 댓글', build_comment: '빌드 댓글' };
 
 function HiddenBoardRow({ kind, row, champs, onDone }) {
   const auth = useAuth();
   const [open, setOpen] = useState(false);
   const isPost = kind === 'post';
   const text = isPost ? row.title : row.body;
-  const k = row.counter;
+  const k = row.counter ?? row.build?.counter; // 058 빌드 댓글은 빌드의 상대법
   const name = (id) => champs[id]?.name ?? id;
-  const goTo = kind === 'doc_comment'
+  const goTo = kind === 'build_comment'
+    ? k && k.status === 'approved' && row.build?.status === 'approved'
+      && `/champion/${k.target_champion}/counter/${k.counter_champion}?build=${row.build_id}#build-comments`
+    : kind === 'doc_comment'
     ? k && (k.status === 'approved'
       ? `/champion/${k.target_champion}/counter/${k.counter_champion}#comments`
       : `/admin/preview/${k.target_champion}/${k.counter_champion}`)
@@ -107,6 +111,7 @@ function HiddenBoardRow({ kind, row, champs, onDone }) {
           onSubmit={async (note) => {
             if (isPost) await restorePost(row.id, note);
             else if (kind === 'doc_comment') await restoreDocComment(row.id, note);
+            else if (kind === 'build_comment') await restoreBuildComment(row.id, note);
             else await restoreComment(row.id, note);
             onDone(`${isPost ? '글' : '댓글'}을 다시 공개했습니다.`);
           }}

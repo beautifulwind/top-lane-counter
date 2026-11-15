@@ -88,6 +88,7 @@ export const TABLES = {
   // 015 탑신병자 커뮤니티 (author = select가 돌려주는 관계 모양)
   posts: [],
   post_comments: [],
+  build_comments: [], // 058 빌드 댓글·답글 (comment_count는 빌드 줄에)
   post_votes: [],
   moderation_log: [], // 처리 기록 (resetFake도 비움)
   nickname_holds: [], // 055 탈퇴한 장인 닉네임 예약 { nickname_key, hold_until } (delete-account 흉내가 넣는다)
@@ -181,6 +182,7 @@ export function resetFake() {
   TABLES.offmeta_champions = [];
   TABLES.posts = [];
   TABLES.post_comments = [];
+  TABLES.build_comments = [];
   TABLES.post_votes = [];
   TABLES.nickname_holds = [];
   TABLES.reports = [];
@@ -260,6 +262,12 @@ const isStaffNow = () => isAdminNow() || roleNow() === 'moderator';
 const STAFF_NOTICE_KINDS = ['proposal_submitted', 'build_submitted', 'inquiry_received', 'matchup_created', 'build_created', 'error_reported', 'report_received'];
 const operatorModeOffNow = () => roleNow() === 'admin' && meNow()?.operator_mode === false;
 /** RLS 흉내: 숨긴 글·댓글(숨긴 글의 댓글 포함)은 운영자에게만 */
+/** 058 빌드 댓글 + select가 붙여 주는 build(이름·번호·상대법) 관계 */
+const withBuild = (c) => {
+  if (!c) return null;
+  const b = TABLES.builds.find((x) => x.id === c.build_id);
+  return { ...c, build: b ? { id: b.id, name: b.name, seq: b.seq, status: b.status, counter: b.counter } : null };
+};
 function visibleRows(table) {
   const rows = TABLES[table] ?? [];
   if (table === 'reports') {
@@ -269,6 +277,7 @@ function visibleRows(table) {
       post: r.post_id != null ? TABLES.posts.find((p) => p.id === r.post_id) ?? null : null,
       comment: r.comment_id != null ? TABLES.post_comments.find((c) => c.id === r.comment_id) ?? null : null,
       doc_comment: r.doc_comment_id != null ? withCounter(TABLES.doc_comments.find((c) => c.id === r.doc_comment_id)) : null,
+      build_comment: r.build_comment_id != null ? withBuild(TABLES.build_comments.find((c) => c.id === r.build_comment_id)) : null,
     }));
   }
   if (table === 'notifications') {
@@ -310,6 +319,11 @@ function visibleRows(table) {
     return rows
       .filter((r) => r.user_id === mine || isAdminNow() || (roleNow() === 'moderator' && r.category !== 'account'))
       .map((r) => ({ answer: null, answered_at: null, user: r.user ?? person(r.user_id), ...r }));
+  }
+  if (table === 'build_comments') {
+    // 058 RLS: 지운 것은 아무에게도, 숨긴 것은 운영진만, 공개 빌드에 달린 것만 (운영진은 다 본다 — 감독관 세부 규칙은 DB 검사에서). build 관계를 붙여 준다
+    return rows.filter((c) => !c.deleted_at && (isStaffNow()
+      || (c.status === 'visible' && TABLES.builds.find((b) => b.id === c.build_id)?.status === 'approved'))).map(withBuild);
   }
   if (isStaffNow()) return rows;
   if (table === 'posts') return rows.filter((p) => p.status === 'visible');
@@ -801,8 +815,17 @@ export function fakeDocComment(id, extra = {}) {
 }
 export function fakeComment(id, postId, extra = {}) {
   return {
-    id, post_id: postId, author_id: 'u-old', author: { nickname: '기존유저', level: 1, main_title: null }, body: `댓글 ${id}`,
+    id, post_id: postId, parent_id: null, author_id: 'u-old', author: { nickname: '기존유저', level: 1, main_title: null }, body: `댓글 ${id}`,
     status: 'visible', hidden_note: null, hidden_at: null, edited_at: null, created_at: `2026-11-01T1${id % 10}:00:00Z`, media: [],
+    ...extra,
+  };
+}
+
+/** 058 빌드 댓글 한 줄 (기본: 기존유저가 빌드 buildId에 단 공개 댓글) */
+export function fakeBuildComment(id, buildId, extra = {}) {
+  return {
+    id, build_id: buildId, parent_id: null, author_id: 'u-old', author: { nickname: '기존유저', level: 1, main_title: null }, body: `빌드 댓글 ${id}`,
+    status: 'visible', hidden_note: null, hidden_at: null, edited_at: null, deleted_at: null, created_at: `2026-11-02T1${id % 10}:00:00Z`,
     ...extra,
   };
 }
@@ -890,6 +913,11 @@ function boardRpc(name, args) {
   const recount = (pid) => {
     const p = post(pid);
     if (p) p.comment_count = TABLES.post_comments.filter((c) => c.post_id === pid && c.status === 'visible').length;
+  };
+  const bcomment = (id) => TABLES.build_comments.find((c) => c.id === id);
+  const brecount = (bid) => {
+    const b = TABLES.builds.find((x) => x.id === bid);
+    if (b) b.comment_count = TABLES.build_comments.filter((c) => c.build_id === bid && c.status === 'visible' && !c.deleted_at).length;
   };
   switch (name) {
     case 'board_page': {
@@ -989,10 +1017,13 @@ function boardRpc(name, args) {
     }
     case 'create_comment': {
       if (fakeState.boardError) return fail(fakeState.boardError);
+      if (meNow()?.is_guest) return fail('비회원은 댓글을 달 수 없습니다.'); // 058
+      const parent = args.p_parent != null ? comment(args.p_parent) : null;
+      if (args.p_parent != null && (!parent || parent.post_id !== args.p_post || parent.parent_id != null)) return fail('답글을 달 수 없는 댓글입니다.');
       const id = 800 + TABLES.post_comments.length;
       TABLES.post_comments.push(fakeComment(id, args.p_post, {
         author_id: me(), author: person(me()), body: args.p_body.trim(), created_at: new Date().toISOString(),
-        media: mediaRows(args.p_media),
+        media: mediaRows(args.p_media), parent_id: args.p_parent ?? null,
       }));
       recount(args.p_post);
       return ok(id);
@@ -1038,10 +1069,55 @@ function boardRpc(name, args) {
       if (!name.endsWith('post')) recount(row.post_id);
       return ok();
     }
+    case 'create_build_comment': {
+      if (fakeState.boardError) return fail(fakeState.boardError);
+      if (meNow()?.is_guest) return fail('비회원은 댓글을 달 수 없습니다.');
+      const parent = args.p_parent != null ? bcomment(args.p_parent) : null;
+      if (args.p_parent != null && (!parent || parent.build_id !== args.p_build || parent.parent_id != null)) return fail('답글을 달 수 없는 댓글입니다.');
+      const id = 1000 + TABLES.build_comments.length;
+      TABLES.build_comments.push(fakeBuildComment(id, args.p_build, {
+        author_id: me(), author: person(me()), body: args.p_body.trim(), created_at: new Date().toISOString(), parent_id: args.p_parent ?? null,
+      }));
+      brecount(args.p_build);
+      return ok(id);
+    }
+    case 'edit_build_comment':
+      if (fakeState.boardError) return fail(fakeState.boardError);
+      Object.assign(bcomment(args.p_id), { body: args.p_body.trim(), edited_at: new Date().toISOString() });
+      return ok();
+    case 'staff_delete_build_comment':
+      if (!isStaffNow()) return fail('운영진만 할 수 있습니다.');
+    // eslint-disable-next-line no-fallthrough -- 지우는 방법은 같다
+    case 'delete_my_build_comment': {
+      const c = bcomment(args.p_id);
+      c.deleted_at = new Date().toISOString(); // 답글은 그대로 (화면이 "삭제된 댓글입니다")
+      brecount(c.build_id);
+      return ok();
+    }
+    case 'report_build_comment':
+      if (TABLES.reports.some((r) => r.reporter_id === me() && r.build_comment_id === args.p_id)) return fail('이미 신고한 댓글입니다.');
+      TABLES.reports.push({
+        id: 600 + TABLES.reports.length, reporter_id: me(), post_id: null, comment_id: null, doc_comment_id: null, build_comment_id: args.p_id,
+        reason: args.p_reason, detail: args.p_detail, status: 'open', created_at: new Date().toISOString(), reporter: person(me()),
+      });
+      return ok();
+    case 'hide_build_comment':
+    case 'restore_build_comment': {
+      const row = bcomment(args.p_id);
+      if (name === 'hide_build_comment') {
+        Object.assign(row, { status: 'hidden', hidden_note: args.p_note, hidden_at: new Date().toISOString() });
+        TABLES.reports.filter((r) => r.build_comment_id === row.id && r.status === 'open').forEach((r) => { r.status = 'resolved'; });
+      } else {
+        Object.assign(row, { status: 'visible', hidden_note: null, hidden_at: null });
+      }
+      brecount(row.build_id);
+      return ok();
+    }
     case 'dismiss_reports': {
       const open = TABLES.reports.filter((r) => r.status === 'open'
         && ((args.p_post != null && r.post_id === args.p_post) || (args.p_comment != null && r.comment_id === args.p_comment)
-          || (args.p_doc_comment != null && r.doc_comment_id === args.p_doc_comment)));
+          || (args.p_doc_comment != null && r.doc_comment_id === args.p_doc_comment)
+          || (args.p_build_comment != null && r.build_comment_id === args.p_build_comment)));
       open.forEach((r) => { r.status = 'dismissed'; });
       return ok(open.length);
     }

@@ -120,6 +120,8 @@ function Writings({ data }) {
             <li key={`${c.kind}-${c.id}`}>
               {c.kind === 'post'
                 ? <Link to={`/board/${c.post_id}`} className="op-link">글 「{c.post_title}」</Link>
+                : c.kind === 'build' // 058 빌드 댓글
+                ? <Link to={`/champion/${c.target_champion}/counter/${c.counter_champion}?build=${c.build_id}#build-comments`} className="op-link">빌드 · 상대법 「{docTitle(c)}」</Link>
                 : <Link to={`/champion/${c.target_champion}/counter/${c.counter_champion}#comments`} className="op-link">상대법 「{docTitle(c)}」</Link>}
               {c.status === 'hidden' && <> <span className="hint">(숨김)</span></>}
               {' · '}{fmtDateTime(c.created_at)}
@@ -197,6 +199,8 @@ function DeletedList({ userId }) {
     ...data.posts.map((p) => ({ key: `p${p.id}`, kind: '글', title: p.title, body: p.body, row: p })),
     ...data.comments.map((c) => ({ key: `c${c.id}`, kind: '댓글', title: `글 「${c.post_title || '지운 글'}」`, body: c.body, row: c })),
     ...data.doc_comments.map((d) => ({ key: `d${d.id}`, kind: '문서 댓글', title: `상대법 「${matchupTitle(data.champs[d.counter_champion]?.name ?? d.counter_champion, data.champs[d.target_champion]?.name ?? d.target_champion)}」`, body: d.body, row: d })),
+    // 058 빌드 댓글 (058 실행 전 DB면 없음)
+    ...(data.build_comments ?? []).map((d) => ({ key: `b${d.id}`, kind: '빌드 댓글', title: `상대법 「${matchupTitle(data.champs[d.counter_champion]?.name ?? d.counter_champion, data.champs[d.target_champion]?.name ?? d.target_champion)}」 · ${d.build_name || `빌드 ${d.build_seq ?? ''}`.trim()}`, body: d.body, row: d })),
   ].sort((a, b) => String(b.row.deleted_at).localeCompare(String(a.row.deleted_at)));
   if (rows.length === 0) return <p className="empty">지운 글·댓글이 없습니다.</p>;
   return (

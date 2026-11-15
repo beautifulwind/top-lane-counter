@@ -132,7 +132,7 @@ function GuestStart({ busy, onStart, onCancel }) {
   return (
     <section className="guest-start" aria-label="비회원으로 시작" onKeyDown={(e) => e.key === 'Escape' && !busy && onCancel()}>
       <p className="warn">{guestNotice('web')}</p>
-      <p className="hint">비회원은 읽기·탑신병자 커뮤니티 글·댓글·문서 댓글·제안을 할 수 있습니다. 추천·비추천·신고는 구글·카카오를 연결한 뒤에 됩니다.</p>
+      <p className="hint">비회원은 읽기·탑신병자 커뮤니티 글·문서 댓글·제안을 할 수 있습니다. 탑신병자 커뮤니티·빌드 댓글, 추천·비추천·신고는 구글·카카오를 연결한 뒤에 됩니다.</p>
       <Captcha ref={captcha} onToken={setToken} onError={setCaptchaError} />
       {captchaError && <p className="form-error" role="alert">{captchaError}</p>}
       <div className="row-actions">

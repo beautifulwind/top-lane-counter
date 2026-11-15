@@ -159,7 +159,7 @@ update doc_comments set deleted_at = now() - interval '366 days' where id = :dc1
 delete from notifications where user_id = :'F';
 select purge_deleted_writings() as purged \gset
 select t.ok('정리: 1년 지난 글 1(그 아래 남의 댓글도)·댓글 1·문서 댓글 1',
-  :'purged'::jsonb = '{"posts": 1, "comments": 1, "doc_comments": 1}'::jsonb
+  :'purged'::jsonb = '{"posts": 1, "comments": 1, "doc_comments": 1, "build_comments": 0}'::jsonb
   and not exists (select 1 from posts where id = :p2) and not exists (select 1 from post_comments where id in (:c1, :c3))
   and not exists (select 1 from doc_comments where id = :dc1));
 select t.ok('1년 안 된 것은 그대로', exists (select 1 from posts where id = :p1) and exists (select 1 from post_comments where id = :c2));

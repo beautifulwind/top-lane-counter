@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'reac
 import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../api/ddragon';
 import { getMatchup } from '../api/content';
 import { getBuilds, hideBuild } from '../api/builds';
-import { DOC_COMMENT_OPS, getDocComments, getEditRules } from '../api/board';
+import { BUILD_COMMENT_OPS, DOC_COMMENT_OPS, getBuildComments, getDocComments, getEditRules } from '../api/board';
 import CommentThread from '../components/CommentThread';
 import { useAsync } from '../lib/useAsync';
 import { canModerate, useAuth } from '../lib/auth';
@@ -16,7 +16,7 @@ import WikiReportBox from '../components/WikiReport';
 import { hideCounter } from '../api/proposals';
 import { LevelList, SummaryBox } from '../components/DocView';
 import SectionHead from '../components/SectionHead';
-import { AlertIcon, LayersIcon, ThumbIcon, TrendingUpIcon } from '../components/Icons';
+import { AlertIcon, LayersIcon, MessageIcon, ThumbIcon, TrendingUpIcon } from '../components/Icons';
 import NotFound from './NotFound';
 import { matchupTitle } from '../lib/josa';
 import { patchMinor } from '../lib/buildContent';
@@ -41,7 +41,7 @@ const day = (ts) => (ts ? String(ts).slice(0, 10) : null);
 /**
  * 상대법 화면 (038): 플레이할 챔피언 vs 상대 챔피언. 빌드(공략 한 벌)가 여러 개 → 가로로 넘기는 탭으로 고른다.
  * 처음에는 추천 → 점수 → 최신 순으로 맨 앞 빌드. ?build=빌드 id로 고른 빌드를 주소에 남긴다 (공유·뒤로 가기).
- * 댓글은 빌드가 아니라 상대법에 단다.
+ * 댓글: 상대법 전체 댓글(4. 댓글)은 그대로, 058부터 빌드마다 빌드 댓글·답글 — 빌드 카드 아래에 개수만 보이고 펼치면 읽는다.
  */
 export default function Matchup() {
   const { targetId, counterId } = useParams();
@@ -220,6 +220,7 @@ export default function Matchup() {
           build={selected}
           index={index}
           doc={doc}
+          auth={auth}
           data={data}
           path={path}
           isOperator={isOperator}
@@ -315,7 +316,7 @@ function BuildTabs({ builds, selected, onSelect, newTo }) {
 }
 
 /** 고른 빌드 한 벌: 이름·패치·최근 수정 → 한 줄 결론 → 룬·주문·아이템·선마·추천 → 레벨별 딜교법 → 특이사항 → [빌드 수정]·[수정 기록] */
-function BuildPanel({ build, index, doc, data, path, isOperator, canHide, lastOne, hiding, setHiding, onHidden, reportItem, reportBox, canLink, onLinkSaved, follow }) {
+function BuildPanel({ build, index, doc, auth, data, path, isOperator, canHide, lastOne, hiding, setHiding, onHidden, reportItem, reportBox, canLink, onLinkSaved, follow }) {
   const [showPeople, setShowPeople] = useState(false);
   const peopleBtn = useRef(null);
   const label = buildTitleText(build, index);
@@ -387,6 +388,7 @@ function BuildPanel({ build, index, doc, data, path, isOperator, canHide, lastOn
           <>{' '}<FollowButton plus id={build.author_id} nickname={build.author?.nickname} following={follow.following} onChange={follow.onChange} /></>
         )}
       />
+      <BuildComments build={build} auth={auth} />
 
       <section className="section" id="levels">
         <SectionHead icon={TrendingUpIcon} num={2}>레벨별 딜교법</SectionHead>
@@ -416,6 +418,61 @@ function BuildPanel({ build, index, doc, data, path, isOperator, canHide, lastOn
       {canLink && <BuildLinkBox build={build} onSaved={onLinkSaved} />}
       {showPeople && (
         <ContributorsDialog build={build} title={label} opener={peopleBtn} onClose={() => setShowPeople(false)} />
+      )}
+    </div>
+  );
+}
+
+/**
+ * 빌드 댓글·답글 (058, SPEC 6-53): 처음에는 "빌드 댓글 N개"만 (개수는 빌드 목록과 함께 이미 받았다 — 따로 요청 없음).
+ * [펼치기]를 누르면 그때 댓글과 고치기 규칙을 함께 읽는다. 알림에서 #build-comments로 오면 펼친 채로 연다.
+ * 빌드를 바꾸면(key) 다시 접힌다.
+ */
+export function BuildComments({ build, auth }) {
+  const { hash } = useLocation();
+  const [open, setOpen] = useState(hash === '#build-comments');
+  const [notice, setNotice] = useState(null);
+  const { data, error, loading, retry } = useAsync(
+    async () => {
+      const [comments, rules] = await Promise.all([getBuildComments(build.id), getEditRules()]);
+      return { comments, rules };
+    },
+    [build.id],
+    { enabled: open },
+  );
+  const last = useRef(null);
+  if (data) last.current = data;
+  const shown = data ?? (open && loading ? last.current : null);
+  const count = shown ? shown.comments.filter((c) => c.status === 'visible').length : (build.comment_count ?? 0);
+
+  return (
+    <div className="build-comments" id="build-comments">
+      <button
+        type="button" className="build-comments-toggle" aria-expanded={open} aria-controls="build-comments-body"
+        onClick={() => setOpen((v) => !v)}
+      >
+        <MessageIcon size={18} />
+        <span>빌드 댓글</span>
+        <span className="count-badge">{count}개</span>
+        <span className="toggle-word">{open ? '접기' : '펼치기'}</span>
+      </button>
+      {open && (
+        <div id="build-comments-body">
+          {notice && <p className="notice" role="status">{notice}</p>}
+          {!shown && loading && <Loading />}
+          {error && <ErrorBox error={error} onRetry={retry} />}
+          {shown && (
+            <CommentThread
+              ops={BUILD_COMMENT_OPS} parentId={build.id} comments={shown.comments} auth={auth} rules={shown.rules}
+              open live heading={false} idPrefix="build-comment" sectionId="build-comments-thread" label="빌드 댓글"
+              onDone={(message) => {
+                setNotice(message);
+                retry();
+              }}
+              onReload={retry}
+            />
+          )}
+        </div>
       )}
     </div>
   );

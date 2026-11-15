@@ -113,10 +113,10 @@ test('비회원은 사진을 붙일 수 없다 (안내만)', async () => {
   expect(await screen.findByText(/비회원은 사진을 붙일 수 없습니다/)).toBeDefined();
   expect(screen.queryByRole('button', { name: /사진·GIF 추가/ })).toBeNull();
   cleanup();
-  start('/board/1');
-  await screen.findByRole('button', { name: '댓글 올리기' });
+  start('/board/1'); // 058부터 비회원은 커뮤니티 댓글 자체를 못 쓴다 → 댓글 칸도 사진 버튼도 없음
+  expect(await screen.findByText(/비회원은 댓글을 달 수 없습니다/)).toBeDefined();
+  expect(screen.queryByRole('button', { name: '댓글 올리기' })).toBeNull();
   expect(screen.queryByRole('button', { name: /사진·GIF 추가/ })).toBeNull();
-  expect(screen.getByText(/비회원은 사진을 붙일 수 없습니다/)).toBeDefined();
 });
 
 test('글 고치기: 사진을 안 건드리면 p_media null(그대로), 빼면 남은 목록', async () => {

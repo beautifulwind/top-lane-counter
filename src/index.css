@@ -814,6 +814,21 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
 .report-preview.body { font-size: var(--fs-sm); color: var(--muted); }
 .board-notice-msg { margin: 0; }
 .comment-form .edit-deadline { margin: 0; }
+/* 058: 답글(2단계) — 부모 댓글 아래 들여 쓰고 왼쪽 선. 부모가 안 보이면 "삭제된 댓글입니다." 자리 */
+.reply-list { list-style: none; margin: var(--gap-sm) 0 0; padding: 0 0 0 var(--pad-box); border-left: 2px solid var(--line-soft); }
+.comment.reply { padding: var(--gap-sm) 0; border-top: 0; }
+.comment.reply + .comment.reply { border-top: 1px solid var(--line-soft); }
+.reply-form { margin: var(--gap-sm) 0 0 var(--pad-box); }
+.reply-btn { min-height: 36px; }
+.deleted-comment { margin: 0; font-style: italic; }
+/* 058: 빌드 카드 아래 빌드 댓글 — 처음엔 개수만, 누르면 펼침 */
+.build-comments { margin: var(--gap-md) 0 var(--gap-lg); }
+.build-comments-toggle {
+  display: flex; align-items: center; gap: var(--gap-sm); width: 100%; min-height: 44px; padding: 0 var(--pad-box);
+  border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--raised); color: inherit; font: inherit; cursor: pointer;
+}
+.build-comments-toggle .toggle-word { margin-left: auto; color: var(--muted); font-size: var(--fs-sm); }
+.build-comments .comments { margin-top: var(--gap-sm); }
 .delete-account-list { padding-left: 18px; margin: 4px 0 10px; }
 .delete-account-list li { margin: 2px 0; }
 .nick-form .note-form-actions .btn { margin-top: 0; }

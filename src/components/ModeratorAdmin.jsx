@@ -20,6 +20,7 @@ export const ACTION_LABEL = {
 };
 export const KIND_LABEL = {
   post: '글', comment: '댓글', doc_comment: '문서 댓글', proposal: '제안', inquiry: '문의', build: '빌드', wiki_report: '오류 신고',
+  build_comment: '빌드 댓글', // 058
 };
 export const ROLE_LABEL = { admin: '운영자', moderator: '감독관', user: '일반 회원' };
 
