@@ -1358,6 +1358,11 @@ RLS 원칙:
 - **검사**: DB `comments_test.sql` 71건(답글·깊이·알림 합치기·비회원·빌드 댓글 CRUD·신고·숨김·감독관·경험치·탈퇴 껍데기·정리·권한), `guest_test`·`soft_delete_test` 기대값 갱신 — 전체 통과. 화면 `commentReplies.test.jsx` 13건, `guest`·`media` 테스트를 새 비회원 규칙으로 — 전체 71파일 718건 통과.
 - **방침·약관**: 이번에 고치지 않음(시행일 2026-12-14 그대로). 보완 문구 제안은 작업 보고에.
 
+### 6-54. 방침·약관에 댓글·답글·빌드 댓글 반영 (2026-11-15, DB·SQL 변경 없음, 시행일 2026-12-14 그대로)
+- **이용약관**: 제4조 비회원 권한("읽기, 탑신병자 커뮤니티 글, 문서 댓글… 가능 / 커뮤니티 댓글·답글, 빌드 댓글, 다른 이용자의 빌드 수정… 불가"), 글·댓글·답글·문서 댓글·빌드 댓글은 승인 없이 게시, 삭제 문구("답글이 달린 댓글을 지우면 그 자리에 '삭제된 댓글입니다.'만 남고… 답글에는 다시 답글을 달 수 없습니다.") 추가.
+- **개인정보처리방침**: "문서 댓글"이 나오는 곳(수집 항목·지운 기록·운영진 기록·생성 경로·이용 목적·지운 글 보관·공개 범위·이용자 권리·비회원 정리)에 "빌드 댓글" 추가, 수집·지운 기록에 "(답글이면 어느 댓글에 단 답글인지)", 이용 목적 3번 "새 댓글·답글 알림", 탈퇴 삭제에 "빌드에 쓴 내 댓글(지운 것 포함, 아래 남김 항목 제외)", 탈퇴 남김에 "다른 사람 답글이 달린 내 댓글(…'삭제된 댓글입니다.'…)", 공개 범위에 빌드 댓글 닉네임(레벨·대표 칭호)·비로그인 열람 추가. 새로 모으는 개인정보 없음.
+- **검사**: `legal.test.jsx`에 새 문구 확인 1건 추가.
+
 ### 6-55. 안드로이드·iOS 앱 틀 (Capacitor) — 1단계: 틀 + 현황 (2026-11-15, DB·SQL·방침·약관 변경 없음, 6-54는 약관 작업용으로 비워 둠)
 - **설정**: Capacitor 8.6.2 (`@capacitor/core`·`android`·`ios`, `@capacitor/cli`는 개발용). `capacitor.config.json` — 앱 이름 "탑신병자", 앱 ID `com.topsinbyeongja.app`, `webDir: dist`, `SystemBars`(안전 영역 `insetsHandling: css`, `initialViewportFitValueHint: cover`). `android/`·`ios/`는 `npx cap add`로 만들었고 저장소에 넣는다(네이티브 설정을 앞으로 고치기 때문). iOS는 Swift Package Manager 방식이라 리눅스에서도 폴더는 만들어진다(빌드는 맥 필요).
 - **갱신 순서**: `npm run build` → `npx cap sync` (dist를 앱 안으로 복사). 복사된 웹 파일·빌드 산출물은 `android/.gitignore`·`ios/.gitignore`가, 서명 키(`*.jks`·`*.keystore`·`*.p12`·`*.p8`·`*.mobileprovision`)·`keystore.properties`·`local.properties`·`google-services.json`은 루트 `.gitignore`가 막는다.

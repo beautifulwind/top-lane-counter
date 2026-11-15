@@ -194,3 +194,23 @@ test('방침·약관 (055 회원 탈퇴 정리): 추천 익명 유지, 신청·�
   expect(sec('제9조 (탈퇴)')).toContain('[마이페이지] → [계정 설정](닉네임 전이면 닉네임 정하기 화면)의 “비회원 기록 지우기”');
   expect(LEGAL.effectiveDate).toBe('2026-12-14');
 });
+
+test('방침·약관 (6-54 댓글·답글·빌드 댓글): 비회원 권한, 승인 없이 게시, 삭제된 댓글 표시, 탈퇴 삭제·남김, 공개 범위 / 시행일 2026-12-14', async () => {
+  start('/terms');
+  await screen.findByRole('heading', { level: 1, name: '이용약관' });
+  const terms = document.querySelector('article.legal').textContent;
+  expect(terms).toContain('탑신병자 커뮤니티 댓글·답글과 빌드 댓글, 다른 이용자의 빌드 수정');
+  expect(terms).toContain('탑신병자 커뮤니티 글·댓글·답글, 문서 댓글, 빌드 댓글은 승인 없이 바로 올라가며');
+  expect(terms).toContain('그 자리에 ‘삭제된 댓글입니다.’만 남고 다른 이용자의 답글은 그대로 보입니다. 답글에는 다시 답글을 달 수 없습니다.');
+  cleanup();
+  start('/privacy');
+  await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' });
+  const privacy = document.querySelector('article.legal').textContent;
+  expect(privacy).toContain('빌드 댓글(내용, 답글이면 어느 댓글에 단 답글인지, 쓴 시각');
+  expect(privacy).toContain('내용(답글이면 어느 댓글에 단 답글인지 포함)');
+  expect(privacy).toContain('탑신병자 커뮤니티의 내 댓글(지운 것 포함), 빌드에 쓴 내 댓글(지운 것 포함, 아래 남김 항목 제외)');
+  expect(privacy).toContain('다른 사람 답글이 달린 내 댓글(본문을 지우고 ‘삭제된 댓글입니다.’로만 표시하며, 그 답글이 모두 정리되면 함께 지워집니다)');
+  expect(privacy).toContain('빌드 댓글에도 작성자 닉네임(레벨·대표 칭호)이 보이고, 로그인하지 않은 사람도 읽을 수 있습니다.');
+  expect(privacy).toContain('새 댓글·답글 알림');
+  expect(LEGAL.effectiveDate).toBe('2026-12-14');
+});
