@@ -1416,3 +1416,10 @@ RLS 원칙:
 - **외부 설정(운영자, 이미 함)**: Apple Developer 번들 ID에 Sign in with Apple capability, Supabase → Authentication → Providers → Apple 켜고 Client IDs = `com.topsinbyeongja.app`. 네이티브만 쓰므로 Secret Key(OAuth)·6개월 키 교체·Server-to-Server 알림 주소는 필요 없음(Supabase 문서 "If you're building a native app only, you do not need to configure the OAuth settings.").
 - **아직 안 한 것**: 4-b 탈퇴 시 Apple 토큰 취소(App Store 제출 전), 4-c 방침·약관에 Apple 추가. 실기기 확인(TestFlight): 처음 가입 → 닉네임, 비회원 → Apple 연결(같은 계정 유지 — Supabase 문서에 익명 계정 id token 연결 예가 없어 1순위 확인), 이메일 공유 → 자동 합쳐짐, 이메일 숨김 → 새 계정, 이미 연결된 Apple로 비회원 연결, 시트 취소, Supabase 캡차를 켠 상태에서 id token 로그인이 막히지 않는지.
 - **검사**: `appleLogin.test.jsx` 20건(플랫폼별 노출 iOS/안드로이드/웹, 웹·안드로이드 호출 차단, 정적 import 없음, nonce 해시·이메일만 요청, 취소·실패, 처음 가입 → 닉네임 + 안내 → 원래 페이지, 이메일 합쳐짐, 비회원 연결·이미 회원, 계정 설정 연결·릴레이 표시·Apple만 안내, 웹·안드로이드에서 "연결됨"만) — 전체 75파일 765건 통과, 웹 빌드·`cap sync`(android·ios)·디버그 APK 빌드 통과.
+
+### 6-59. 방침·약관에 Apple 로그인(iOS 앱 전용) 반영 (2026-11-16, DB·SQL 변경 없음, 시행일 2026-12-14 그대로)
+- **이용약관**: 제3조 가입 수단에 "(iOS 앱에서는 Apple 로그인도 가능)", 구글·카카오가 나오는 모든 곳(연결·회원만 가능한 기능·신고·장인 신청·비회원 시작·비회원 연결)에 Apple 추가, "이메일 가리기"를 고르면 다른 로그인 수단과 자동으로 합쳐지지 않고 별도 계정이 될 수 있다는 한 줄 추가.
+- **개인정보처리방침**: 수집 항목 표에 "Apple로 로그인할 때 (iOS 앱에서만 제공)" 행(Apple 사용자 식별값(ID), 이메일 주소(이메일 가리기 시 Apple 대체 주소), 이름은 요청하지 않음), 연결한 로그인 방식·가입 방식·수집 방법·이용 목적(계정 연결)·비회원 정리·비밀번호 문구에 Apple 추가. 구글·카카오가 처리 위탁 표에 없으므로 Apple도 넣지 않음.
+- **넣지 않은 것**: 탈퇴 시 Apple 연결 해제·토큰 취소 문구(기능 없음, 4-b에서 구현할 때 함께 반영). 탈퇴·연결 끊기 절(9조)은 그대로.
+- **검사**: `legal.test.jsx`에 새 문구 확인 1건 추가. 전체 75파일 766건 통과.
+

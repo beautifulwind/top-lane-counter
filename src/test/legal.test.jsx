@@ -214,3 +214,22 @@ test('방침·약관 (6-54 댓글·답글·빌드 댓글): 비회원 권한, 승
   expect(privacy).toContain('새 댓글·답글 알림');
   expect(LEGAL.effectiveDate).toBe('2026-12-14');
 });
+
+test('방침·약관 (Apple 로그인): iOS 앱 전용 수집 항목·이메일 가리기 안내, 시행일 2026-12-14 그대로', async () => {
+  start('/privacy');
+  await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' });
+  const privacy = document.querySelector('article.legal').textContent;
+  expect(privacy).toContain('Apple로 로그인할 때 (iOS 앱에서만 제공)');
+  expect(privacy).toContain('Apple 사용자 식별값(ID), 이메일 주소(“이메일 가리기”를 선택하면 Apple이 만든 대체 주소). 이름은 요청하지 않음');
+  expect(privacy).toContain('구글·카카오·Apple 로그인을 한 계정으로 연결');
+  expect(privacy).toContain('(구글·카카오·Apple 로그인만 사용)');
+  expect(privacy).not.toMatch(/Apple[^.]*(연결 해제|토큰 취소)/);
+  cleanup();
+  start('/terms');
+  await screen.findByRole('heading', { level: 1, name: '이용약관' });
+  const terms = document.querySelector('article.legal').textContent;
+  expect(terms).toContain('구글 또는 카카오 로그인(iOS 앱에서는 Apple 로그인도 가능)으로');
+  expect(terms).toContain('Apple 로그인에서 “이메일 가리기”를 선택하면 다른 로그인 수단과 자동으로 합쳐지지 않고 별도 계정이 될 수 있습니다.');
+  expect(terms).toContain('구글·카카오·Apple 없이 [비회원으로 시작하기]');
+  expect(LEGAL.effectiveDate).toBe('2026-12-14');
+});
