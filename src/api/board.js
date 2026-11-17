@@ -131,7 +131,6 @@ export const dismissReports = ({ postId = null, commentId = null, docCommentId =
 /**
  * 처리할 신고를 대상(글·댓글·문서 댓글)별로 묶는다 (오래된 신고 먼저).
  * [{ key, postId, commentId, docCommentId, post, comment, docComment, reports: [{ reason, detail, created_at, reporter }] }]
- * (058의 빌드 댓글 신고는 060에서 정리 - 그 전에 남은 것은 건너뛴다)
  */
 export async function getOpenReports(forModerator = false) {
   // 감독관(030): 신고 표는 직접 못 읽는다. 처리할 수 있는 대상만, 신고자를 뺀 목록을 DB 함수로 받는다
@@ -149,7 +148,6 @@ export async function getOpenReports(forModerator = false) {
   );
   const groups = new Map();
   for (const r of rows) {
-    if (r.post_id == null && r.comment_id == null && r.doc_comment_id == null) continue; // 060 전에 남은 빌드 댓글 신고
     const key = r.post_id ? `post-${r.post_id}` : r.comment_id ? `comment-${r.comment_id}` : `doc-${r.doc_comment_id}`;
     if (!groups.has(key)) {
       groups.set(key, {

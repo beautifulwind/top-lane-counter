@@ -1,6 +1,5 @@
 // 058 (SPEC 6-53): 커뮤니티 댓글 답글(2단계) — 답글 달기, 답글에는 [답글] 없음, 지운 부모는 "삭제된 댓글입니다."
-// 059 (SPEC 6-60): 문서 댓글 답글 — 비회원은 최상위 댓글만(답글은 안내), 빌드 카드 아래 빌드 댓글 칸은 없앰, 답글 알림 링크,
-// 060 전에 남은 빌드 댓글 알림·신고는 문장만 / 건너뜀
+// 059·060 (SPEC 6-60): 문서 댓글 답글 — 비회원은 최상위 댓글만(답글은 안내), 빌드 카드 아래 빌드 댓글 칸은 없앰, 답글 알림 링크
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
@@ -196,7 +195,7 @@ test('문서 댓글: 부모를 지우면 답글은 남고 "삭제된 댓글입�
 
 // ---------------- 알림 ----------------
 
-test('답글 알림: 문서 답글은 그 문서의 댓글 칸으로, 글의 답글은 그 글로 / 060 전에 남은 빌드 댓글 알림은 문장만', async () => {
+test('답글 알림: 문서 답글은 그 문서의 댓글 칸으로, 글의 답글은 그 글로', async () => {
   const noti = (id, kind, extra) => ({
     id, user_id: 'u-old', kind, message: null, proposal_id: null, build_id: null, post_id: null, counter_id: null,
     created_at: `2026-11-02T0${id}:00:00Z`, read_at: '2026-11-02T10:00:00Z', ...extra,
@@ -205,8 +204,6 @@ test('답글 알림: 문서 답글은 그 문서의 댓글 칸으로, 글의 답
   TABLES.notifications.push(
     noti(1, 'comment_reply', { counter_id: 1, message: '상대법 문서에 쓴 내 댓글에 새 답글이 달렸습니다.' }),
     noti(2, 'comment_reply', { post_id: 5, message: '내 댓글에 새 답글 2개가 달렸습니다.' }),
-    noti(3, 'build_comment', { build_id: 102, counter_id: 1, message: '내 빌드에 새 댓글이 달렸습니다.' }),
-    noti(4, 'comment_reply', { build_id: 102, counter_id: 1, message: '빌드 「정석」에 쓴 내 댓글에 새 답글이 달렸습니다.' }),
   );
   fakeLogin('u-old');
   start('/notifications');
@@ -217,19 +214,17 @@ test('답글 알림: 문서 답글은 그 문서의 댓글 칸으로, 글의 답
   expect(doc.textContent).toContain('퀸으로 다리우스 이기는 법');
   expect(doc.querySelector('.noti-icon.comment')).not.toBeNull();
   expect(href(await row('내 댓글에 새 답글 2개가 달렸습니다.'))).toBe('/board/5');
-  expect(href(await row('내 빌드에 새 댓글이 달렸습니다.'))).toBeNull();
-  expect(href(await row('빌드 「정석」에 쓴 내 댓글에 새 답글이 달렸습니다.'))).toBeNull();
 });
 
 // ---------------- 운영진 ----------------
 
-test('운영자 /admin/reports: 060 전에 남은 빌드 댓글 신고는 건너뛰고, 문서 댓글 답글 신고는 그대로 / 숨긴 목록은 빌드 댓글을 안 읽음', async () => {
+test('운영자 /admin/reports: 문서 댓글 답글 신고 → 기각은 인자 4개 / 숨긴 목록은 빌드 댓글을 안 읽음', async () => {
   TABLES.doc_comments.push(fakeDocComment(22, { author_id: 'u-x', author: OTHER, body: '나쁜 문서 답글', parent_id: 21 }));
   const rep = (id, extra) => ({
-    id, reporter_id: `u-r${id}`, post_id: null, comment_id: null, doc_comment_id: null, build_comment_id: null, reason: 'spam', detail: null,
+    id, reporter_id: `u-r${id}`, post_id: null, comment_id: null, doc_comment_id: null, reason: 'spam', detail: null,
     status: 'open', created_at: `2026-11-01T0${id}:00:00Z`, reporter: { nickname: `신고자${id}`, level: 1, main_title: null }, ...extra,
   });
-  TABLES.reports.push(rep(1, { build_comment_id: 31 }), rep(2, { doc_comment_id: 22 }));
+  TABLES.reports.push(rep(2, { doc_comment_id: 22 }));
   asOp();
   start('/admin/reports');
   const list = await screen.findByRole('list', { name: '신고 목록' });

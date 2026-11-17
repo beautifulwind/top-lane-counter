@@ -84,12 +84,11 @@ select t.ok('첫 제안자 = 부모 작성자: 답글 알림 하나만 (새 댓�
   (select count(*) from notifications where user_id = :'B' and read_at is null) = 1
   and (select kind from notifications where user_id = :'B' and read_at is null) = 'comment_reply');
 
--- 같은 상대법의 빌드 댓글 답글 알림(058, build_id 있음)과는 합치지 않는다
+-- 같은 상대법의 빌드 댓글 답글 알림(058, build_id 있음 - 060 전에 남았던 모양)과는 합치지 않는다
+insert into notifications (user_id, kind, message, build_id, counter_id)
+values (:'D', 'comment_reply', '빌드 댓글 답글 (058 모양)', :gbuild, :garen);
 set role authenticated;
-set request.jwt.claim.sub = :'D';
-select create_build_comment(:gbuild, 'D 빌드 댓글') as bc1 \gset
 set request.jwt.claim.sub = :'F';
-select create_build_comment(:gbuild, 'F 빌드 답글', :bc1);
 select create_doc_comment(:garen, 'F 문서 답글', :d1);
 reset role;
 select t.ok('빌드 답글 알림과 문서 답글 알림은 따로',

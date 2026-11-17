@@ -137,8 +137,7 @@ export async function getAllNewMembers(hours = 24) {
 export async function getMemberDetail(userId) {
   const { data, error } = await db().rpc('admin_member_detail', { p_user: userId, p_limit: 50 });
   if (error) throw withCode(error, '회원 정보를 불러오지 못했습니다.');
-  // 058 빌드 댓글(kind 'build')은 060에서 정리 — 그 전에 DB가 돌려줘도 보여 주지 않는다 (화면에서 없앤 기능)
-  return { ...data, comments: (data.comments ?? []).filter((c) => c.kind !== 'build') };
+  return data;
 }
 
 /** 그 회원이 지운 글·댓글과 내용 (040, 운영자 전용, 1년 보관): { keep_days, posts, comments, doc_comments } */

@@ -29,12 +29,10 @@ set role authenticated;
 set request.jwt.claim.sub = :'G';
 select t.fails('본인도 비회원 표시를 못 바꿈', $$update profiles set is_guest = false where id = auth.uid()$$, 'permission denied');
 
--- ===== 2. 할 수 있는 것: 글·문서 댓글·제안 (058부터 탑신병자 커뮤니티 댓글·빌드 댓글은 못 함) =====
+-- ===== 2. 할 수 있는 것: 글·문서 댓글·제안 (058부터 탑신병자 커뮤니티 댓글은 못 함, 059부터 문서 댓글 답글도 - doc_replies_test) =====
 select public.create_post('비회원 글', '안녕하세요');
 insert into ids select 'post', max(id) from posts;
 select t.fails('058: 비회원은 탑신병자 커뮤니티 댓글 불가', format($$select public.create_comment(%s, '비회원 댓글')$$, (select v from ids where k = 'post')),
-  '비회원은 댓글을 달 수 없습니다');
-select t.fails('058: 비회원은 빌드 댓글 불가', format($$select public.create_build_comment(%s, '비회원 빌드 댓글')$$, (select v from ids where k = 'build')),
   '비회원은 댓글을 달 수 없습니다');
 reset role;
 select t.fails('058: 표에 직접 넣어도 비회원 댓글 불가 (트리거)',

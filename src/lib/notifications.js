@@ -84,8 +84,7 @@ const BOARD_ICON = {
   post_restored: 'shown', comment_restored: 'shown', doc_comment_restored: 'shown',
   // 040: 운영진 삭제 (지운 글은 열 수 없어 링크 없음, 댓글은 그 글·문서로)
   post_deleted: 'ban', comment_deleted: 'ban', doc_comment_deleted: 'ban',
-  // 058 답글: 글의 답글은 그 글로, 059 문서 댓글의 답글(post_id·build_id 없음)은 그 문서의 댓글 칸으로.
-  // 058 빌드 댓글 알림(build_comment…, build_id가 있는 답글)은 060에서 지운다 — 그 전에 남은 것은 문장만 (빌드 댓글 칸이 없어 링크 없음)
+  // 058 답글: 글의 답글은 그 글로, 059 문서 댓글의 답글(post_id 없음)은 그 문서의 댓글 칸으로 (058의 빌드 댓글 알림은 060에서 없앰)
   comment_reply: 'comment',
 };
 
@@ -162,14 +161,14 @@ export function describeNotification(n, name = (id) => id, titleBook = []) {
     const docLink = n.counter?.status === 'approved'
       ? `/champion/${n.counter.target_champion}/counter/${n.counter.counter_champion}#comments` : null;
     const postLink = n.post_id && n.kind !== 'post_hidden' && n.kind !== 'post_deleted' ? `/board/${n.post_id}` : null; // 숨긴·지운 글은 열 수 없다
-    const onDoc = n.kind.startsWith('doc_comment') || (n.kind === 'comment_reply' && n.post_id == null && n.build_id == null);
+    const onDoc = n.kind.startsWith('doc_comment') || (n.kind === 'comment_reply' && n.post_id == null);
     const counter = n.counter ?? n.build?.counter ?? null;
     return {
       icon: BOARD_ICON[n.kind],
       title,
       subject: counter ? matchup(counter) : null,
       detail: memo ? `메모: ${memo}` : null,
-      to: n.build_id != null ? null : onDoc ? docLink : postLink,
+      to: onDoc ? docLink : postLink,
     };
   }
   if (n.kind === 'followed_build_created') {
