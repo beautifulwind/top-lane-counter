@@ -1,0 +1,104 @@
+# Codemagic: iOS 앱(탑신병자)을 빌드해 TestFlight에 올린다 (SPEC 6-63)
+#
+# - 실행은 Codemagic 화면의 "Start new build"로만 한다(무료 분량 500분/월 절약).
+#   push·PR 때 자동으로 돌리려면 workflow 안에 아래처럼 triggering을 추가한다.
+#     triggering:
+#       events: [push]
+#       branch_patterns:
+#         - pattern: main
+#           include: true
+# - 비밀 값은 저장소에 두지 않는다. 아래 groups의 이름만 참조하고 값은 Codemagic 화면에서 넣는다.
+#     web_env          : VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY, VITE_TURNSTILE_SITE_KEY
+#     ios_signing_key  : CERTIFICATE_PRIVATE_KEY (Secret, 배포 인증서용 RSA 개인키)
+# - App Store Connect API 키는 Codemagic의 Developer Portal 통합 "Codemagic"을 쓴다.
+# - Apple 팀 ID(참고): MY42TLAPWL. 서명 설정은 프로비저닝 프로파일에서 가져오므로 여기서 직접 쓰지 않는다.
+
+workflows:
+  ios-testflight:
+    name: iOS TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 45
+    integrations:
+      app_store_connect: Codemagic
+    environment:
+      xcode: 26.6
+      node: 22
+      groups:
+        - web_env
+        - ios_signing_key
+      vars:
+        BUNDLE_ID: com.topsinbyeongja.app
+        APP_STORE_APPLE_ID: "6835358085"
+        XCODE_PROJECT: ios/App/App.xcodeproj
+        XCODE_SCHEME: App
+    scripts:
+      - name: 환경 변수 확인 (값은 출력하지 않음)
+        script: |
+          missing=0
+          for name in VITE_SUPABASE_URL VITE_SUPABASE_PUBLISHABLE_KEY VITE_TURNSTILE_SITE_KEY CERTIFICATE_PRIVATE_KEY; do
+            if [ -z "$(printenv "$name")" ]; then
+              echo "환경 변수 $name 이(가) 비어 있습니다. Codemagic 화면의 web_env / ios_signing_key 그룹을 확인하세요."
+              missing=1
+            fi
+          done
+          exit $missing
+
+      - name: 의존성 설치
+        script: npm ci
+
+      - name: 웹 빌드
+        script: npm run build
+
+      - name: Capacitor iOS 동기화
+        script: npx cap sync ios
+
+      - name: 코드 서명 준비 (인증서·프로파일 없으면 자동 생성)
+        script: |
+          keychain initialize
+          # CERTIFICATE_PRIVATE_KEY 환경 변수의 개인키로 App Store 배포 인증서를 찾거나 만들고,
+          # 이 번들 ID의 App Store 프로비저닝 프로파일을 찾거나 만든다.
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE \
+            --create
+          keychain add-certificates
+          xcode-project use-profiles --project "$XCODE_PROJECT"
+
+      - name: 빌드 번호 올리기
+        script: |
+          LATEST=$(app-store-connect get-latest-testflight-build-number "$APP_STORE_APPLE_ID" 2>/dev/null | tail -n 1 | tr -d '[:space:]' || true)
+          case "$LATEST" in
+            ''|*[!0-9]*)
+              echo "TestFlight 최신 빌드 번호를 가져오지 못했습니다(첫 업로드면 정상). Codemagic 빌드 번호를 씁니다."
+              LATEST=0
+              ;;
+          esac
+          NEXT=$((LATEST + 1))
+          if [ "${BUILD_NUMBER:-0}" -gt "$NEXT" ]; then
+            NEXT=$BUILD_NUMBER
+          fi
+          echo "빌드 번호: $NEXT (TestFlight 최신: $LATEST, Codemagic: ${BUILD_NUMBER:-없음})"
+          # Info.plist의 CFBundleVersion은 $(CURRENT_PROJECT_VERSION)을 따른다. 빌드 머신 안에서만 바꾼다.
+          sed -i '' -E "s/CURRENT_PROJECT_VERSION = [0-9]+;/CURRENT_PROJECT_VERSION = $NEXT;/g" "$XCODE_PROJECT/project.pbxproj"
+          COUNT=$(grep -c "CURRENT_PROJECT_VERSION = $NEXT;" "$XCODE_PROJECT/project.pbxproj" || true)
+          if [ "$COUNT" -ne 2 ]; then
+            echo "CURRENT_PROJECT_VERSION 두 줄(Debug·Release)을 바꾸지 못했습니다: $COUNT 줄"
+            exit 1
+          fi
+
+      - name: 아카이브 및 .ipa 만들기
+        script: |
+          xcode-project build-ipa \
+            --project "$XCODE_PROJECT" \
+            --scheme "$XCODE_SCHEME"
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+
+    publishing:
+      app_store_connect:
+        auth: integration
+        # false: 업로드만 한다. 내부 테스터는 베타 심사 없이 설치할 수 있다.
+        # 외부 테스터에게 보내려면 true로 바꾸고 beta_groups를 넣는다.
+        submit_to_testflight: false

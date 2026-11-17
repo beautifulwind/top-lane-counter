@@ -1455,3 +1455,13 @@ RLS 원칙:
 - **후보 줄**(`BuildSearch.jsx`): 이름이 없으면 "빌드 N"(상대법 안 번호), 그 아래 한 줄 요약(2줄까지), 그 아래 "내 챔피언으로 상대".
 - **빌드 작성 화면**: 한 줄 요약 입력칸 예시 아래에 "룬 이름을 넣으면 검색에 잘 잡힙니다." 한 줄(새 상대법·새 빌드·빌드 수정 공용 `WikiBuildFields`만, 문서 수정 화면은 그대로). 화면 말투 규칙("~합니다"체, `tone.test.js`) 때문에 "잡혀요"가 아니라 "잡힙니다".
 - **검사**: `championSearch.test.js`(이름만·요약만·둘 다·둘 다 없음·이름/요약에 나뉜 단어·순서·초성·이름 우선), `homeSearch.test.jsx`(이름 없는 빌드가 요약으로 뜨고 "빌드 7"+요약 표시), `rename.test.jsx`(안내 문구). 전체 77파일 800건 통과, 웹 빌드 통과.
+
+### 6-63. iOS 앱을 Codemagic에서 빌드해 TestFlight에 올리기 (2026-11-17, DB 변경 없음, 맥 없이)
+- **이유**: 맥이 없으므로 Codemagic 클라우드(무료 개인 플랜, Mac mini M2 월 500분)에서 iOS 앱을 빌드해 TestFlight에 올린다.
+- **`codemagic.yaml`** (워크플로 `ios-testflight`): `mac_mini_m2`, `xcode: 26.6`(Codemagic 기본 이미지, Apple의 2026-04-28 이후 "Xcode 26 + iOS 26 SDK" 요구 충족), `node: 22`, `max_build_duration: 45`. **수동 실행만**(`triggering` 없음, 켜는 법은 주석). 순서: 환경 변수 비었는지 확인(값 출력 안 함) → `npm ci` → `npm run build` → `npx cap sync ios` → 서명 → 빌드 번호 → `xcode-project build-ipa --project ios/App/App.xcodeproj --scheme App`(SPM이라 workspace·pod 없음) → `publishing.app_store_connect`(`auth: integration`, `submit_to_testflight: false`, 내부 테스터용 업로드만).
+- **서명(B안)**: Developer Portal 통합 "Codemagic"(App Store Connect API 키)으로 `app-store-connect fetch-signing-files com.topsinbyeongja.app --type IOS_APP_STORE --create` — 배포 인증서·App Store 프로파일이 없으면 만든다. 인증서 개인키는 `CERTIFICATE_PRIVATE_KEY`(Codemagic 그룹 `ios_signing_key`, Secret). 이어서 `keychain add-certificates`, `xcode-project use-profiles`가 빌드 머신 안에서 수동 서명 설정을 넣으므로 pbxproj에 `DEVELOPMENT_TEAM` 불필요(팀 ID MY42TLAPWL은 주석에만). Sign in with Apple은 App ID(Identifiers)에 켜져 있어야 프로파일에 들어간다. Push는 entitlements에 없어 영향 없음.
+- **빌드 번호**: `get-latest-testflight-build-number 6835358085`(앱의 숫자 Apple ID) + 1과 Codemagic `$BUILD_NUMBER` 중 큰 값. 첫 업로드처럼 못 가져오면 `$BUILD_NUMBER`. pbxproj에 `VERSIONING_SYSTEM`이 없어 `agvtool` 대신 빌드 머신 안에서만 `CURRENT_PROJECT_VERSION` 두 줄을 sed로 바꾸고 두 줄인지 확인(`Info.plist`의 `CFBundleVersion`은 이 값을 따름). 저장소의 값은 1 그대로.
+- **`Info.plist`**: `ITSAppUsesNonExemptEncryption = false`(HTTPS만 사용) — 빌드마다 TestFlight 수출 규정 질문이 뜨지 않게.
+- **비밀 값은 저장소에 없음**: 그룹 `web_env`(`VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY`, `VITE_TURNSTILE_SITE_KEY` — `.env`는 git 밖이라 Codemagic에 따로 넣어야 웹 빌드가 Supabase에 연결된다), `ios_signing_key`(`CERTIFICATE_PRIVATE_KEY`). RSA 개인키는 저장소 밖 `~/codemagic-keys/`에 운영자가 만든다.
+- **예상**: 1회 10–16분(월 약 30회), 서명 단계 실패 4–6분·아카이브 실패 10–12분. 업로드 뒤 TestFlight 처리 대기는 빌드 분량을 쓰지 않는다.
+- **검사**: Codemagic 공식 JSON 스키마(codemagic.io/codemagic-schema.json)로 오류 0, 각 스크립트 `bash -n` 통과, 빌드 번호 sed를 pbxproj 사본에 적용해 두 줄만 바뀌는 것 확인, `Info.plist` 파싱 확인. 전체 77파일 800건 통과, 웹 빌드 통과. 실제 Codemagic 빌드는 운영자가 화면에서 시작.
