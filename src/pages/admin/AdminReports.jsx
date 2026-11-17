@@ -1,7 +1,7 @@
 import { WITHDRAWN_USER, displayNickname } from '../../lib/nickname';
 import { useState } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
-import { REPORT_REASONS, dismissReports, getOpenReports, hideBuildComment, hideComment, hideDocComment, hidePost } from '../../api/board';
+import { REPORT_REASONS, dismissReports, getOpenReports, hideComment, hideDocComment, hidePost } from '../../api/board';
 import { getChampionMap } from '../../api/ddragon';
 import { useAsync } from '../../lib/useAsync';
 import { fmtDateTime } from '../../lib/format';
@@ -95,20 +95,15 @@ function ReportGroup({ group: g, champs, onDone }) {
   const [mode, setMode] = useState(null); // 'hide' | 'dismiss'
   const isPost = g.postId != null;
   const isDoc = g.docCommentId != null;
-  const isBuild = g.buildCommentId != null; // 058 빌드 댓글
-  const target = isPost ? g.post : isDoc ? g.docComment : isBuild ? g.buildComment : g.comment;
+  const target = isPost ? g.post : isDoc ? g.docComment : g.comment;
   const deleted = isPost && g.post?.deleted_at != null;
   const preview = isPost ? (deleted ? '(삭제된 글)' : g.post?.title) : target?.body;
-  const what = isPost ? '글' : isDoc ? '문서 댓글' : isBuild ? '빌드 댓글' : '댓글';
+  const what = isPost ? '글' : isDoc ? '문서 댓글' : '댓글';
   const label = `${what} 신고 ${g.reports.length}건`;
-  const build = g.buildComment?.build ?? null;
-  const counter = g.docComment?.counter ?? build?.counter;
+  const counter = g.docComment?.counter;
   const name = (id) => champs[id]?.name ?? id;
   const matchup = counter && `${matchupTitle(name(counter.counter_champion), name(counter.target_champion))}`;
-  const goTo = isBuild
-    ? counter && counter.status === 'approved' && build.status === 'approved'
-      && `/champion/${counter.target_champion}/counter/${counter.counter_champion}?build=${build.id}#build-comments`
-    : isDoc
+  const goTo = isDoc
     ? counter && (counter.status === 'approved'
       ? `/champion/${counter.target_champion}/counter/${counter.counter_champion}#comments`
       : `/admin/preview/${counter.target_champion}/${counter.counter_champion}`)
@@ -121,8 +116,7 @@ function ReportGroup({ group: g, champs, onDone }) {
       </div>
       {matchup && (
         <p className="hint">
-          {matchup}{build && ` · ${build.name || `빌드 ${build.seq ?? ''}`.trim()}`}{counter.status !== 'approved' && ' (숨긴 상대법)'}
-          {build && build.status !== 'approved' && ' (숨긴 빌드)'}
+          {matchup}{counter.status !== 'approved' && ' (숨긴 상대법)'}
         </p>
       )}
       <p className="report-preview">{preview}</p>
@@ -163,7 +157,6 @@ function ReportGroup({ group: g, champs, onDone }) {
           onSubmit={async (note) => {
             if (isPost) await hidePost(g.postId, note);
             else if (isDoc) await hideDocComment(g.docCommentId, note);
-            else if (isBuild) await hideBuildComment(g.buildCommentId, note);
             else await hideComment(g.commentId, note);
             onDone(`${isPost ? '글' : '댓글'}을 숨겼습니다. 신고 ${g.reports.length}건은 처리됨으로 닫았습니다.`);
           }}
@@ -174,7 +167,7 @@ function ReportGroup({ group: g, champs, onDone }) {
           id={`dismiss-${g.key}`}
           onCancel={() => setMode(null)}
           onSubmit={async (note) => {
-            const n = await dismissReports({ postId: g.postId, commentId: g.commentId, docCommentId: g.docCommentId, buildCommentId: g.buildCommentId }, note);
+            const n = await dismissReports({ postId: g.postId, commentId: g.commentId, docCommentId: g.docCommentId }, note);
             onDone(`신고 ${n ?? g.reports.length}건을 기각했습니다.`);
           }}
         />

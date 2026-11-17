@@ -1,11 +1,12 @@
-// 058 (SPEC 6-53): 커뮤니티 댓글 답글(2단계) + 빌드 댓글·답글 — 답글 달기, 답글에는 [답글] 없음, 지운 부모는 "삭제된 댓글입니다.",
-// 비회원은 안내만, 빌드 댓글은 펼칠 때만 읽기(#build-comments면 펼친 채), 새 알림 종류, 운영진 신고·숨김 목록
+// 058 (SPEC 6-53): 커뮤니티 댓글 답글(2단계) — 답글 달기, 답글에는 [답글] 없음, 지운 부모는 "삭제된 댓글입니다."
+// 059 (SPEC 6-60): 문서 댓글 답글 — 비회원은 최상위 댓글만(답글은 안내), 빌드 카드 아래 빌드 댓글 칸은 없앰, 답글 알림 링크,
+// 060 전에 남은 빌드 댓글 알림·신고는 문장만 / 건너뜀
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
-import { TABLES, fakeBuildComment, fakeComment, fakeGuestLogin, fakeLogin, fakePost, fakeState } from './fakeSupabase';
+import { TABLES, fakeComment, fakeDocComment, fakeGuestLogin, fakeLogin, fakePost, fakeState } from './fakeSupabase';
 import { threadComments } from '../components/CommentThread';
 import { moreNames } from './moreMenu';
 
@@ -118,161 +119,128 @@ test('글 보기: 글·댓글·내 추천을 한꺼번에 요청한다', async (
   expect(tables.slice(i, i + 3)).toEqual(['posts', 'post_comments', 'post_votes']);
 });
 
-// ---------------- 빌드 댓글 ----------------
+// ---------------- 문서 댓글 답글 (059) ----------------
 
-test('빌드 댓글: 처음엔 개수만(댓글은 안 읽음) → [펼치기]로 읽고, 달기·답글', async () => {
-  TABLES.builds.find((b) => b.id === 102).comment_count = 1;
-  TABLES.build_comments.push(fakeBuildComment(31, 102, { author_id: 'u-x', author: OTHER, body: '이 빌드 좋네요' }));
+const docSection = async () => (await screen.findByRole('heading', { name: /4\. 댓글/ })).closest('section');
+
+test('문서 댓글에 [답글] → p_parent로 올리고 부모 밑에 보임, 답글에는 [답글]이 없다 / 빌드 카드 아래 빌드 댓글 칸은 없다', async () => {
+  TABLES.doc_comments.push(fakeDocComment(21, { author_id: 'u-x', author: OTHER, body: '부모 문서 댓글' }));
   fakeLogin('u-old');
   start(`${MATCHUP}?build=102`);
-  const toggle = await screen.findByRole('button', { name: /빌드 댓글/ });
-  expect(toggle.getAttribute('aria-expanded')).toBe('false');
-  expect(toggle.textContent).toContain('1개');
-  expect(toggle.textContent).toContain('펼치기');
-  expect(asked('build_comments')).toHaveLength(0);
-
-  fireEvent.click(toggle);
-  expect(toggle.getAttribute('aria-expanded')).toBe('true');
-  const box = document.getElementById('build-comments');
-  const list = await within(box).findByRole('list', { name: '빌드 댓글' });
-  expect(asked('build_comments')).toHaveLength(1);
-  expect(within(list).getByText('이 빌드 좋네요')).toBeDefined();
-
-  fireEvent.change(within(box).getByLabelText('댓글 쓰기'), { target: { value: '저도 써 봤어요' } });
-  fireEvent.click(within(box).getByRole('button', { name: '댓글 올리기' }));
-  await vi.waitFor(() => expect(toggle.textContent).toContain('2개'));
-  expect(rpcs('create_build_comment')).toEqual([{ p_build: 102, p_body: '저도 써 봤어요' }]);
-
-  const parent = topItems(within(box).getByRole('list', { name: '빌드 댓글' }))[0];
+  const sec = await docSection();
+  const parent = topItems(await within(sec).findByRole('list', { name: '댓글' }))[0];
   fireEvent.click(within(parent).getByRole('button', { name: '답글' }));
-  fireEvent.change(within(parent).getByLabelText('답글 쓰기'), { target: { value: '감사합니다' } });
+  const field = within(parent).getByLabelText('답글 쓰기');
+  expect(document.activeElement).toBe(field);
+  fireEvent.change(field, { target: { value: '문서 답글입니다' } });
   fireEvent.click(within(parent).getByRole('button', { name: '답글 올리기' }));
-  expect(await within(parent).findByText('감사합니다')).toBeDefined();
-  expect(rpcs('create_build_comment')[1]).toEqual({ p_build: 102, p_body: '감사합니다', p_parent: 31 });
-  // 빌드 댓글에는 사진이 없다
-  expect(within(box).queryByRole('button', { name: /사진·GIF 추가/ })).toBeNull();
-  // 문서 댓글(4. 댓글)은 그대로 따로
-  expect(rpcs('create_doc_comment')).toEqual([]);
-
-  fireEvent.click(toggle);
-  expect(toggle.textContent).toContain('펼치기');
-  expect(document.getElementById('build-comments-body')).toBeNull();
+  const replies = await within(parent).findByRole('list', { name: '답글' });
+  expect(within(replies).getByText('문서 답글입니다')).toBeDefined();
+  expect(rpcs('create_doc_comment')).toEqual([{ p_counter: 1, p_body: '문서 답글입니다', p_parent: 21 }]);
+  const reply = within(replies).getAllByRole('listitem')[0];
+  expect(within(reply).queryByRole('button', { name: '답글' })).toBeNull();
+  // 새 댓글(맨 아래 칸)은 그대로 p_parent 없이, 사진 없음
+  fireEvent.change(within(sec).getByLabelText('댓글 쓰기'), { target: { value: '그냥 문서 댓글' } });
+  fireEvent.click(within(sec).getByRole('button', { name: '댓글 올리기' }));
+  await vi.waitFor(() => expect(rpcs('create_doc_comment')).toHaveLength(2));
+  expect(rpcs('create_doc_comment')[1]).toEqual({ p_counter: 1, p_body: '그냥 문서 댓글' });
+  expect(within(sec).queryByRole('button', { name: /사진·GIF 추가/ })).toBeNull();
+  // 058 빌드 댓글 칸은 없앴다: 버튼·요청·빌드 댓글 수 읽기 모두 없음
+  expect(screen.queryByRole('button', { name: /빌드 댓글/ })).toBeNull();
+  expect(document.getElementById('build-comments')).toBeNull();
+  expect(asked('build_comments')).toHaveLength(0);
+  expect(asked('builds').some((q) => String(q.select ?? '').includes('comment_count'))).toBe(false);
 });
 
-test('알림에서 #build-comments로 오면 빌드 댓글을 펼친 채로 연다', async () => {
-  TABLES.build_comments.push(fakeBuildComment(31, 102, { author_id: 'u-x', author: OTHER, body: '알림 온 댓글' }));
-  fakeLogin('u-old');
-  start(`${MATCHUP}?build=102#build-comments`);
-  expect(await screen.findByText('알림 온 댓글')).toBeDefined();
-  expect(screen.getByRole('button', { name: /빌드 댓글/ }).getAttribute('aria-expanded')).toBe('true');
-});
-
-test('빌드 댓글: 비회원은 안내만, 비로그인은 로그인 안내 (읽기는 둘 다 됨)', async () => {
-  TABLES.build_comments.push(fakeBuildComment(31, 102, { author_id: 'u-x', author: OTHER, body: '읽을 수 있는 댓글' }));
+test('문서 댓글: 비회원은 최상위 댓글만 — [답글] 없이 안내 한 줄, 비로그인은 로그인 안내 (답글은 둘 다 읽힘)', async () => {
+  TABLES.doc_comments.push(
+    fakeDocComment(21, { author_id: 'u-x', author: OTHER, body: '부모' }),
+    fakeDocComment(22, { author_id: 'u-y', author: OTHER, body: '자식 답글', parent_id: 21 }),
+  );
   fakeGuestLogin('g-1', { nickname: '손님' });
-  start(`${MATCHUP}?build=102#build-comments`);
-  const box = document.getElementById('build-comments') ?? (await screen.findByText('읽을 수 있는 댓글')).closest('#build-comments');
-  await within(box).findByText('읽을 수 있는 댓글');
-  expect(within(box).getByText(/비회원은 댓글을 달 수 없습니다/)).toBeDefined();
-  expect(within(box).queryByLabelText('댓글 쓰기')).toBeNull();
-  expect(within(box).queryByRole('button', { name: '답글' })).toBeNull();
+  start(MATCHUP);
+  const sec = await docSection();
+  expect(await within(sec).findByText('자식 답글')).toBeDefined();
+  expect(within(sec).queryByRole('button', { name: '답글' })).toBeNull();
+  expect(within(sec).getByText(/비회원은 답글을 달 수 없습니다/)).toBeDefined();
+  expect(within(sec).getByLabelText('댓글 쓰기')).toBeDefined();
+  fireEvent.change(within(sec).getByLabelText('댓글 쓰기'), { target: { value: '손님 댓글' } });
+  fireEvent.click(within(sec).getByRole('button', { name: '댓글 올리기' }));
+  await vi.waitFor(() => expect(rpcs('create_doc_comment')).toEqual([{ p_counter: 1, p_body: '손님 댓글' }]));
   cleanup();
   fakeState.session = null;
-  start(`${MATCHUP}?build=102#build-comments`);
-  const box2 = (await screen.findByText('읽을 수 있는 댓글')).closest('#build-comments');
-  expect(within(box2).getByText(/하면 댓글을 달 수 있습니다/)).toBeDefined();
+  start(MATCHUP);
+  const sec2 = await docSection();
+  expect(await within(sec2).findByText('자식 답글')).toBeDefined();
+  expect(within(sec2).queryByRole('button', { name: '답글' })).toBeNull();
+  expect(within(sec2).queryByText(/비회원은 답글을/)).toBeNull();
+  expect(within(sec2).getByText(/하면 댓글을 달 수 있습니다/)).toBeDefined();
 });
 
-test('빌드 댓글: 부모를 지우면 답글은 남고 "삭제된 댓글입니다."', async () => {
-  TABLES.build_comments.push(
-    fakeBuildComment(31, 102, { author_id: 'u-old', body: '내 댓글', created_at: new Date().toISOString() }),
-    fakeBuildComment(32, 102, { author_id: 'u-x', author: OTHER, body: '남의 답글', parent_id: 31 }),
+test('문서 댓글: 부모를 지우면 답글은 남고 "삭제된 댓글입니다."', async () => {
+  TABLES.doc_comments.push(
+    fakeDocComment(21, { author_id: 'u-old', body: '내 문서 댓글' }),
+    fakeDocComment(22, { author_id: 'u-x', author: OTHER, body: '남의 문서 답글', parent_id: 21 }),
   );
   fakeLogin('u-old');
-  start(`${MATCHUP}?build=102#build-comments`);
-  const box = (await screen.findByText('내 댓글')).closest('#build-comments');
-  const mine = topItems(within(box).getByRole('list', { name: '빌드 댓글' }))[0];
+  start(MATCHUP);
+  const sec = await docSection();
+  const mine = topItems(await within(sec).findByRole('list', { name: '댓글' }))[0];
   fireEvent.click(within(mine).getByRole('button', { name: '댓글 더보기' }));
   fireEvent.click(await screen.findByRole('menuitem', { name: '지우기' }));
   fireEvent.click(within(within(mine).getByRole('group', { name: /지우시겠습니까/ })).getByRole('button', { name: '지우기' }));
-  expect(await within(box).findByText('삭제된 댓글입니다.')).toBeDefined();
-  expect(within(box).getByText('남의 답글')).toBeDefined();
-  expect(rpcs('delete_my_build_comment')).toEqual([{ p_id: 31 }]);
+  expect(await within(sec).findByText('삭제된 댓글입니다.')).toBeDefined();
+  expect(within(sec).getByText('남의 문서 답글')).toBeDefined();
+  expect(rpcs('delete_my_doc_comment')).toEqual([{ p_id: 21 }]);
 });
 
 // ---------------- 알림 ----------------
 
-test('새 알림: 빌드 댓글·빌드 답글은 그 빌드 댓글 칸으로, 글의 답글은 그 글로, 숨김은 메모 둘째 줄', async () => {
+test('답글 알림: 문서 답글은 그 문서의 댓글 칸으로, 글의 답글은 그 글로 / 060 전에 남은 빌드 댓글 알림은 문장만', async () => {
   const noti = (id, kind, extra) => ({
     id, user_id: 'u-old', kind, message: null, proposal_id: null, build_id: null, post_id: null, counter_id: null,
     created_at: `2026-11-02T0${id}:00:00Z`, read_at: '2026-11-02T10:00:00Z', ...extra,
   });
   TABLES.posts.push(fakePost(5));
   TABLES.notifications.push(
-    noti(1, 'build_comment', { build_id: 102, message: '내 빌드에 새 댓글이 달렸습니다.' }),
-    noti(2, 'comment_reply', { build_id: 102, message: '내 빌드 댓글에 새 답글이 달렸습니다.' }),
-    noti(3, 'comment_reply', { post_id: 5, message: '내 댓글에 새 답글 2개가 달렸습니다.' }),
-    noti(4, 'build_comment_hidden', { build_id: 102, message: '운영진이 내 빌드 댓글을 숨겼습니다. 메모: 욕설' }),
+    noti(1, 'comment_reply', { counter_id: 1, message: '상대법 문서에 쓴 내 댓글에 새 답글이 달렸습니다.' }),
+    noti(2, 'comment_reply', { post_id: 5, message: '내 댓글에 새 답글 2개가 달렸습니다.' }),
+    noti(3, 'build_comment', { build_id: 102, counter_id: 1, message: '내 빌드에 새 댓글이 달렸습니다.' }),
+    noti(4, 'comment_reply', { build_id: 102, counter_id: 1, message: '빌드 「정석」에 쓴 내 댓글에 새 답글이 달렸습니다.' }),
   );
   fakeLogin('u-old');
   start('/notifications');
   const row = async (text) => (await screen.findByText(text)).closest('li');
   const href = (li) => within(li).queryByRole('link')?.getAttribute('href') ?? null;
-  const b = await row('내 빌드에 새 댓글이 달렸습니다.');
-  expect(href(b)).toBe(`${MATCHUP}?build=102#build-comments`);
-  expect(b.textContent).toContain('[빌드] 퀸으로 다리우스 이기는 법');
-  expect(b.querySelector('.noti-icon.comment')).not.toBeNull();
-  expect(href(await row('내 빌드 댓글에 새 답글이 달렸습니다.'))).toBe(`${MATCHUP}?build=102#build-comments`);
+  const doc = await row('상대법 문서에 쓴 내 댓글에 새 답글이 달렸습니다.');
+  expect(href(doc)).toBe(`${MATCHUP}#comments`);
+  expect(doc.textContent).toContain('퀸으로 다리우스 이기는 법');
+  expect(doc.querySelector('.noti-icon.comment')).not.toBeNull();
   expect(href(await row('내 댓글에 새 답글 2개가 달렸습니다.'))).toBe('/board/5');
-  const hidden = await row('운영진이 내 빌드 댓글을 숨겼습니다.');
-  expect(hidden.textContent).toContain('메모: 욕설');
-  expect(hidden.querySelector('.noti-icon.hidden')).not.toBeNull();
+  expect(href(await row('내 빌드에 새 댓글이 달렸습니다.'))).toBeNull();
+  expect(href(await row('빌드 「정석」에 쓴 내 댓글에 새 답글이 달렸습니다.'))).toBeNull();
 });
 
 // ---------------- 운영진 ----------------
 
-test('운영자 /admin/reports: 빌드 댓글 신고 → 빌드 이름·보러 가기, 숨기기 / 기각은 p_build_comment', async () => {
-  TABLES.build_comments.push(
-    fakeBuildComment(31, 102, { author_id: 'u-x', author: OTHER, body: '나쁜 빌드 댓글' }),
-    fakeBuildComment(32, 102, { author_id: 'u-x', author: OTHER, body: '애매한 빌드 댓글' }),
-  );
+test('운영자 /admin/reports: 060 전에 남은 빌드 댓글 신고는 건너뛰고, 문서 댓글 답글 신고는 그대로 / 숨긴 목록은 빌드 댓글을 안 읽음', async () => {
+  TABLES.doc_comments.push(fakeDocComment(22, { author_id: 'u-x', author: OTHER, body: '나쁜 문서 답글', parent_id: 21 }));
   const rep = (id, extra) => ({
     id, reporter_id: `u-r${id}`, post_id: null, comment_id: null, doc_comment_id: null, build_comment_id: null, reason: 'spam', detail: null,
     status: 'open', created_at: `2026-11-01T0${id}:00:00Z`, reporter: { nickname: `신고자${id}`, level: 1, main_title: null }, ...extra,
   });
-  TABLES.reports.push(rep(1, { build_comment_id: 31 }), rep(2, { build_comment_id: 32 }));
+  TABLES.reports.push(rep(1, { build_comment_id: 31 }), rep(2, { doc_comment_id: 22 }));
   asOp();
   start('/admin/reports');
   const list = await screen.findByRole('list', { name: '신고 목록' });
-  const groups = within(list).getAllByRole('listitem', { name: '빌드 댓글 신고 1건' });
-  const bad = groups.find((g) => g.textContent.includes('나쁜 빌드 댓글'));
-  expect(bad.textContent).toContain('빌드 2');
-  expect(within(bad).getByRole('link', { name: /보러 가기/ }).getAttribute('href')).toBe(`${MATCHUP}?build=102#build-comments`);
-  fireEvent.click(within(bad).getByRole('button', { name: '숨기기' }));
-  fireEvent.change(within(bad).getByLabelText(/숨기는 사유/), { target: { value: '도배' } });
-  fireEvent.click(within(bad).getByRole('button', { name: '숨기기 확정' }));
-  await vi.waitFor(() => expect(rpcs('hide_build_comment')).toEqual([{ p_id: 31, p_note: '도배' }]));
-
-  const left = await vi.waitFor(() => {
-    const g = within(screen.getByRole('list', { name: '신고 목록' })).getByRole('listitem', { name: '빌드 댓글 신고 1건' });
-    expect(g.textContent).toContain('애매한 빌드 댓글');
-    return g;
-  });
-  fireEvent.click(within(left).getByRole('button', { name: '신고 기각' }));
-  fireEvent.click(within(left).getByRole('button', { name: '기각 확정' }));
-  await vi.waitFor(() => expect(rpcs('dismiss_reports')).toEqual([{ p_post: null, p_comment: null, p_note: null, p_doc_comment: null, p_build_comment: 32 }]));
-});
-
-test('운영자 /admin: 숨긴 빌드 댓글도 목록에 → [다시 공개]', async () => {
-  TABLES.build_comments.push(fakeBuildComment(31, 102, {
-    author_id: 'u-x', author: OTHER, body: '숨긴 빌드 댓글', status: 'hidden', hidden_note: '욕설', hidden_at: '2026-11-02T00:00:00Z',
-  }));
-  asOp();
+  expect(within(list).getAllByRole('listitem', { name: /신고 \d+건/ }).map((g) => g.getAttribute('aria-label'))).toEqual(['문서 댓글 신고 1건']);
+  const g = within(list).getByRole('listitem', { name: '문서 댓글 신고 1건' });
+  expect(g.textContent).toContain('나쁜 문서 답글');
+  fireEvent.click(within(g).getByRole('button', { name: '신고 기각' }));
+  fireEvent.click(within(g).getByRole('button', { name: '기각 확정' }));
+  await vi.waitFor(() => expect(rpcs('dismiss_reports')).toEqual([{ p_post: null, p_comment: null, p_note: null, p_doc_comment: 22 }]));
+  cleanup();
   start('/admin');
-  const row = await screen.findByRole('listitem', { name: '[숨긴 빌드 댓글] 숨긴 빌드 댓글' });
-  expect(within(row).getByRole('link', { name: '보러 가기' }).getAttribute('href')).toBe(`${MATCHUP}?build=102#build-comments`);
-  fireEvent.click(within(row).getByRole('button', { name: '다시 공개' }));
-  fireEvent.change(within(row).getByLabelText(/다시 공개 메모/), { target: { value: '오해' } });
-  fireEvent.click(within(row).getByRole('button', { name: '다시 공개 확정' }));
-  await vi.waitFor(() => expect(rpcs('restore_build_comment')).toEqual([{ p_id: 31, p_note: '오해' }]));
+  await screen.findByRole('heading', { name: '숨긴 글·댓글' });
+  expect(asked('build_comments')).toHaveLength(0);
 });

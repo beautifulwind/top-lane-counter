@@ -84,15 +84,9 @@ const BOARD_ICON = {
   post_restored: 'shown', comment_restored: 'shown', doc_comment_restored: 'shown',
   // 040: 운영진 삭제 (지운 글은 열 수 없어 링크 없음, 댓글은 그 글·문서로)
   post_deleted: 'ban', comment_deleted: 'ban', doc_comment_deleted: 'ban',
-  // 058: 빌드 댓글·답글 (빌드 것은 그 상대법의 그 빌드 댓글 칸으로, 글의 답글은 그 글로)
-  build_comment: 'comment', comment_reply: 'comment',
-  build_comment_hidden: 'hidden', build_comment_restored: 'shown', build_comment_deleted: 'ban',
-};
-/** 058: 빌드에 달린 댓글 알림 → 그 상대법의 그 빌드, 빌드 댓글 칸을 펼친 채로 (숨긴 상대법은 열 수 없어 링크 없음) */
-const buildCommentPath = (n) => {
-  const c = n.counter ?? n.build?.counter;
-  if (!c || (n.counter && n.counter.status !== 'approved')) return null;
-  return `${wikiPath(n)}#build-comments`;
+  // 058 답글: 글의 답글은 그 글로, 059 문서 댓글의 답글(post_id·build_id 없음)은 그 문서의 댓글 칸으로.
+  // 058 빌드 댓글 알림(build_comment…, build_id가 있는 답글)은 060에서 지운다 — 그 전에 남은 것은 문장만 (빌드 댓글 칸이 없어 링크 없음)
+  comment_reply: 'comment',
 };
 
 /**
@@ -168,14 +162,14 @@ export function describeNotification(n, name = (id) => id, titleBook = []) {
     const docLink = n.counter?.status === 'approved'
       ? `/champion/${n.counter.target_champion}/counter/${n.counter.counter_champion}#comments` : null;
     const postLink = n.post_id && n.kind !== 'post_hidden' && n.kind !== 'post_deleted' ? `/board/${n.post_id}` : null; // 숨긴·지운 글은 열 수 없다
-    const onBuild = n.build_id != null && (n.kind.startsWith('build_comment') || n.kind === 'comment_reply');
+    const onDoc = n.kind.startsWith('doc_comment') || (n.kind === 'comment_reply' && n.post_id == null && n.build_id == null);
     const counter = n.counter ?? n.build?.counter ?? null;
     return {
       icon: BOARD_ICON[n.kind],
       title,
-      subject: counter ? `${onBuild ? '[빌드] ' : ''}${matchup(counter)}` : null,
+      subject: counter ? matchup(counter) : null,
       detail: memo ? `메모: ${memo}` : null,
-      to: onBuild ? buildCommentPath(n) : n.kind.startsWith('doc_comment') ? docLink : postLink,
+      to: n.build_id != null ? null : onDoc ? docLink : postLink,
     };
   }
   if (n.kind === 'followed_build_created') {

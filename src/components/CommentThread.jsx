@@ -39,19 +39,19 @@ export function threadComments(comments) {
 }
 
 /**
- * 댓글 칸 (탑신병자 커뮤니티 글, 매치업 문서, 058 빌드 공통 — SPEC 6-5, 6-6, 고치기 시간 6-7, 답글·빌드 댓글 6-53).
- * ops: POST_COMMENT_OPS | DOC_COMMENT_OPS | BUILD_COMMENT_OPS
+ * 댓글 칸 (탑신병자 커뮤니티 글, 매치업 문서 공통 — SPEC 6-5, 6-6, 고치기 시간 6-7, 답글 6-53, 문서 댓글 답글 6-60).
+ * ops: POST_COMMENT_OPS | DOC_COMMENT_OPS
  *   (kind, create(parentId, body, media?, replyTo?), edit, remove, report, hide, restore, staffRemove,
- *    replies = 답글(2단계) 사용, noGuest = 비회원은 못 닮, media = 사진)
+ *    replies = 답글(2단계) 사용, noGuest = 비회원은 댓글·답글 못 닮, noGuestReply = 비회원은 답글만 못 닮, media = 사진)
  * 댓글마다 ⋮ 메뉴 (040): 내 댓글 [고치기][지우기], 남의 댓글 [신고], 운영진 [숨기기]·[운영진 삭제](메모 필수).
  * 숨긴 댓글의 [다시 공개]는 메뉴 밖 띠에. 지운 댓글은 아무에게도 안 보인다 — 답글이 남은 부모 자리는 "삭제된 댓글입니다."
  * 답글: 최상위 댓글에만 [답글] (답글에는 없음 — DB도 3단계를 막는다).
- * parentId: 글 id / 카운터 id / 빌드 id
- * open: 새 댓글을 달 수 있나 (글·문서·빌드가 보이는 상태), closedHint: 못 달 때 안내 (없으면 안내 없이 폼만 숨김)
- * live: 글·문서·빌드가 보이는 상태인가 (아니면 고치기·신고·답글 숨김 — 숨긴 것은 운영진만 봄)
+ * parentId: 글 id / 카운터 id
+ * open: 새 댓글을 달 수 있나 (글·문서가 보이는 상태), closedHint: 못 달 때 안내 (없으면 안내 없이 폼만 숨김)
+ * live: 글·문서가 보이는 상태인가 (아니면 고치기·신고·답글 숨김 — 숨긴 것은 운영진만 봄)
  * rules: 고치기 시간 { post, comment, grace }
- * num: 칸 제목 번호 (매치업 문서 4), 개수는 제목 옆 "N개" 알약. heading=false면 제목 없이 (빌드 카드 아래 펼친 칸)
- * idPrefix: 한 화면에 댓글 칸이 둘일 때(상대법: 문서 + 빌드) 입력칸·줄 id가 겹치지 않게 ('comment' = 예전 id 그대로)
+ * num: 칸 제목 번호 (매치업 문서 4), 개수는 제목 옆 "N개" 알약. heading=false면 제목 없이
+ * idPrefix: 한 화면에 댓글 칸이 둘일 때 입력칸·줄 id가 겹치지 않게 ('comment' = 예전 id 그대로)
  * mediaRules: 사진 숫자 (ops.media일 때만 — 탑신병자 커뮤니티 댓글)
  */
 export default function CommentThread({
@@ -64,6 +64,8 @@ export default function CommentThread({
   const threads = ops.replies ? threadComments(comments) : comments.map((c) => ({ comment: c, parentId: c.id, replies: [] }));
   const guestBlocked = Boolean(ops.noGuest) && isGuest(auth);
   const writable = canWrite(auth) && !guestBlocked;
+  // 059 문서 댓글: 비회원은 최상위 댓글만 — [답글]은 없고 목록 아래 안내 한 줄
+  const guestNoReply = Boolean(ops.replies) && Boolean(ops.noGuestReply) && isGuest(auth);
   const shared = { ops, live, rules, mediaRules, now, auth, onDone, onReload, idPrefix };
   return (
     <section className="section comments" id={sectionId} aria-labelledby={heading ? `${sectionId}-title` : undefined} aria-label={heading ? undefined : label}>
@@ -74,11 +76,12 @@ export default function CommentThread({
           {threads.map((t) => (
             <Thread
               key={t.comment ? t.comment.id : `gone-${t.parentId}`} thread={t} target={parentId} {...shared}
-              canReply={Boolean(ops.replies) && open && writable && live}
+              canReply={Boolean(ops.replies) && open && writable && !guestNoReply && live}
             />
           ))}
         </ul>
       )}
+      {guestNoReply && open && live && comments.length > 0 && <GuestHint what="답글을 달" />}
       {!open && closedHint && <p className="hint">{closedHint}</p>}
       {open && (writable ? (
         <CommentForm ops={ops} parentId={parentId} auth={auth} mediaRules={mediaRules} onDone={onReload} idPrefix={idPrefix} />

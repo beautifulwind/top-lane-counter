@@ -1,4 +1,4 @@
-// 탑신병자 커뮤니티·문서 댓글·빌드 댓글 접근 계층 (SPEC 3장 /board, 6-5, 6-6, 6-53). 화면 컴포넌트는 이 모듈만 호출한다.
+// 탑신병자 커뮤니티·문서 댓글 접근 계층 (SPEC 3장 /board, 6-5, 6-6, 6-53, 6-60). 화면 컴포넌트는 이 모듈만 호출한다.
 // 쓰기·고치기·지우기·추천·신고·숨기기는 모두 DB 함수(015)로만 — 로그인·닉네임·도배 간격·길이·권한은 DB가 막는다.
 import { db } from './supabase';
 import { editRulesFrom } from '../lib/editWindow';
@@ -29,17 +29,12 @@ const PERSON = 'nickname, role, level, main_title, is_guest, influencer, nicknam
 const POST_FIELDS =
   'id, author_id, title, body, status, hidden_note, hidden_at, edited_at, edit_grace_until, deleted_at, comment_count, up_count, created_at';
 const COMMENT_FIELDS = 'id, post_id, parent_id, author_id, body, status, hidden_note, hidden_at, edited_at, edit_grace_until, created_at'; // 058 parent_id = 답글의 부모
-const BUILD_COMMENT_FIELDS = 'id, build_id, parent_id, author_id, body, status, hidden_note, hidden_at, edited_at, edit_grace_until, created_at';
-const DOC_COMMENT_FIELDS = 'id, counter_id, author_id, body, status, hidden_note, hidden_at, edited_at, edit_grace_until, created_at';
+const DOC_COMMENT_FIELDS = 'id, counter_id, parent_id, author_id, body, status, hidden_note, hidden_at, edited_at, edit_grace_until, created_at';
 const COUNTER = 'counter:counters!doc_comments_counter_id_fkey(id, target_champion, counter_champion, status)';
 // 숨긴 사람의 역할만 (감독관은 다른 감독관이 숨긴 것만 다시 공개할 수 있다, 030)
 const POST_HIDER = 'hider:profiles!posts_hidden_by_fkey(role)';
 const COMMENT_HIDER = 'hider:profiles!post_comments_hidden_by_fkey(role)';
 const DOC_HIDER = 'hider:profiles!doc_comments_hidden_by_fkey(role)';
-const BUILD_COMMENT_HIDER = 'hider:profiles!build_comments_hidden_by_fkey(role)';
-const BUILD_COMMENT_AUTHOR = `author:profiles!build_comments_author_id_fkey(${PERSON})`;
-// 058: 빌드 댓글이 달린 빌드 (운영자 신고·숨김 목록에서 상대법·빌드 이름으로 보여 주고 그리로 이동)
-const BUILD_OF_COMMENT = 'build:builds!build_comments_build_id_fkey(id, name, seq, status, counter:counters!builds_counter_id_fkey(id, target_champion, counter_champion, status))';
 // 023: 붙은 사진 (보이는 글·댓글의 것만 RLS가 돌려준다)
 const MEDIA = 'path, mime, size, position';
 const POST_MEDIA = `media:board_attachments!board_attachments_post_id_fkey(${MEDIA})`;
@@ -130,47 +125,44 @@ export const restoreComment = (id, note) => rpc('restore_comment', { p_id: id, p
 // 운영진 삭제 (040): 메모 필수, 작성자에게 알림. 감독관은 일반 회원 것만 (DB가 검사)
 export const staffDeletePost = (id, note) => rpc('staff_delete_post', { p_id: id, p_note: note }, '삭제하지 못했습니다.');
 export const staffDeleteComment = (id, note) => rpc('staff_delete_comment', { p_id: id, p_note: note }, '삭제하지 못했습니다.');
-export const dismissReports = ({ postId = null, commentId = null, docCommentId = null, buildCommentId = null }, note) =>
-  rpc('dismiss_reports', {
-    p_post: postId, p_comment: commentId, p_note: note || null, p_doc_comment: docCommentId,
-    ...(buildCommentId != null && { p_build_comment: buildCommentId }), // 058
-  }, '기각하지 못했습니다.');
+export const dismissReports = ({ postId = null, commentId = null, docCommentId = null }, note) =>
+  rpc('dismiss_reports', { p_post: postId, p_comment: commentId, p_note: note || null, p_doc_comment: docCommentId }, '기각하지 못했습니다.');
 
 /**
- * 처리할 신고를 대상(글·댓글·문서 댓글·빌드 댓글)별로 묶는다 (오래된 신고 먼저).
- * [{ key, postId, commentId, docCommentId, buildCommentId, post, comment, docComment, buildComment, reports: [{ reason, detail, created_at, reporter }] }]
+ * 처리할 신고를 대상(글·댓글·문서 댓글)별로 묶는다 (오래된 신고 먼저).
+ * [{ key, postId, commentId, docCommentId, post, comment, docComment, reports: [{ reason, detail, created_at, reporter }] }]
+ * (058의 빌드 댓글 신고는 060에서 정리 - 그 전에 남은 것은 건너뛴다)
  */
 export async function getOpenReports(forModerator = false) {
   // 감독관(030): 신고 표는 직접 못 읽는다. 처리할 수 있는 대상만, 신고자를 뺀 목록을 DB 함수로 받는다
   const rows = forModerator ? await rpc('open_reports_for_moderator', {}, '신고를 불러오지 못했습니다.') : await run(
     db().from('reports')
       .select(
-        'id, post_id, comment_id, doc_comment_id, build_comment_id, reason, detail, created_at, ' +
+        'id, post_id, comment_id, doc_comment_id, reason, detail, created_at, ' +
         `reporter:profiles!reports_reporter_id_fkey(${PERSON}), ` +
         `post:posts!reports_post_id_fkey(id, title, body, status, deleted_at, author_id, author:profiles!posts_author_id_fkey(${PERSON})), ` +
         `comment:post_comments!reports_comment_id_fkey(id, post_id, body, status, author_id, author:profiles!post_comments_author_id_fkey(${PERSON})), ` +
-        `doc_comment:doc_comments!reports_doc_comment_id_fkey(id, counter_id, body, status, author_id, author:profiles!doc_comments_author_id_fkey(${PERSON}), ${COUNTER}), ` +
-        `build_comment:build_comments!reports_build_comment_id_fkey(id, build_id, body, status, author_id, ${BUILD_COMMENT_AUTHOR}, ${BUILD_OF_COMMENT})`,
+        `doc_comment:doc_comments!reports_doc_comment_id_fkey(id, counter_id, body, status, author_id, author:profiles!doc_comments_author_id_fkey(${PERSON}), ${COUNTER})`,
       )
       .eq('status', 'open').order('created_at', { ascending: true }),
     '신고를 불러오지 못했습니다.',
   );
   const groups = new Map();
   for (const r of rows) {
-    const key = r.post_id ? `post-${r.post_id}` : r.comment_id ? `comment-${r.comment_id}`
-      : r.doc_comment_id ? `doc-${r.doc_comment_id}` : `build-${r.build_comment_id}`;
+    if (r.post_id == null && r.comment_id == null && r.doc_comment_id == null) continue; // 060 전에 남은 빌드 댓글 신고
+    const key = r.post_id ? `post-${r.post_id}` : r.comment_id ? `comment-${r.comment_id}` : `doc-${r.doc_comment_id}`;
     if (!groups.has(key)) {
       groups.set(key, {
-        key, postId: r.post_id, commentId: r.comment_id, docCommentId: r.doc_comment_id, buildCommentId: r.build_comment_id ?? null,
-        post: r.post, comment: r.comment, docComment: r.doc_comment, buildComment: r.build_comment ?? null, reports: [],
+        key, postId: r.post_id, commentId: r.comment_id, docCommentId: r.doc_comment_id,
+        post: r.post, comment: r.comment, docComment: r.doc_comment, reports: [],
       });
     }
     groups.get(key).reports.push(r);
   }
   const list = [...groups.values()];
-  const hides = await getHideCounts(list.map((g) => (g.post ?? g.comment ?? g.docComment ?? g.buildComment)?.author_id));
+  const hides = await getHideCounts(list.map((g) => (g.post ?? g.comment ?? g.docComment)?.author_id));
   for (const g of list) {
-    const author = (g.post ?? g.comment ?? g.docComment ?? g.buildComment)?.author_id;
+    const author = (g.post ?? g.comment ?? g.docComment)?.author_id;
     g.hides = hides && author ? { days: hides.days, count: hides.counts[author] ?? 0 } : null;
   }
   return list;
@@ -187,9 +179,9 @@ async function getHideCounts(authorIds) {
   return error || !data ? null : data;
 }
 
-/** 숨긴 글·댓글·문서 댓글·빌드 댓글 (최근에 숨긴 순) */
+/** 숨긴 글·댓글·문서 댓글 (최근에 숨긴 순) */
 export async function getHiddenBoard() {
-  const [posts, comments, docComments, buildComments] = await Promise.all([
+  const [posts, comments, docComments] = await Promise.all([
     run(
       db().from('posts').select(`${POST_FIELDS}, ${POST_HIDER}, author:profiles!posts_author_id_fkey(${PERSON})`)
         .eq('status', 'hidden').order('hidden_at', { ascending: false }),
@@ -205,13 +197,8 @@ export async function getHiddenBoard() {
         .eq('status', 'hidden').order('hidden_at', { ascending: false }),
       '숨긴 문서 댓글을 불러오지 못했습니다.',
     ),
-    run(
-      db().from('build_comments').select(`${BUILD_COMMENT_FIELDS}, ${BUILD_COMMENT_HIDER}, ${BUILD_COMMENT_AUTHOR}, ${BUILD_OF_COMMENT}`)
-        .eq('status', 'hidden').order('hidden_at', { ascending: false }),
-      '숨긴 빌드 댓글을 불러오지 못했습니다.',
-    ),
   ]);
-  return { posts, comments, docComments, buildComments };
+  return { posts, comments, docComments };
 }
 
 // ---------------- 고치기 시간 (016) ----------------
@@ -232,12 +219,12 @@ export function getEditRules() {
 /** 읽어 둔 고치기 규칙을 비운다 (테스트용) */
 export const resetEditRulesCache = () => { editRulesOnce = null; };
 
-/** 고치는 화면을 열 때: 마감 전이면 유예를 받는다. 돌려주는 값: 저장할 수 있는 마지막 시각. kind = 'post' | 'comment' | 'doc_comment' | 'build_comment' */
+/** 고치는 화면을 열 때: 마감 전이면 유예를 받는다. 돌려주는 값: 저장할 수 있는 마지막 시각. kind = 'post' | 'comment' | 'doc_comment' */
 export const beginEdit = (kind, id) => rpc('begin_edit', { p_kind: kind, p_id: id }, '고칠 수 없습니다.');
 
 // ---------------- 문서 댓글 (016) ----------------
 
-/** 매치업 문서의 댓글 (오래된 순). 숨긴 것과 숨긴 카운터의 댓글은 운영자에게만 보인다 */
+/** 매치업 문서의 댓글·답글 (오래된 순). 숨긴 것과 숨긴 카운터의 댓글은 운영자에게만, 지운 것은 아무에게도 안 보인다 (답글의 부모가 없으면 화면이 "삭제된 댓글입니다") */
 export function getDocComments(counterRowId) {
   return run(
     db().from('doc_comments').select(`${DOC_COMMENT_FIELDS}, ${DOC_HIDER}, author:profiles!doc_comments_author_id_fkey(${PERSON})`)
@@ -245,8 +232,10 @@ export function getDocComments(counterRowId) {
     '댓글을 불러오지 못했습니다.',
   );
 }
-export const createDocComment = (counterRowId, body) =>
-  rpc('create_doc_comment', { p_counter: counterRowId, p_body: body }, '댓글을 올리지 못했습니다.');
+/** 문서 댓글 달기. replyTo = 답글이면 부모 댓글 id (059 — 답글은 정식 회원만, DB도 막는다) */
+export const createDocComment = (counterRowId, body, replyTo = null) =>
+  rpc('create_doc_comment', { p_counter: counterRowId, p_body: body, ...(replyTo != null && { p_parent: replyTo }) },
+    replyTo != null ? '답글을 올리지 못했습니다.' : '댓글을 올리지 못했습니다.');
 export const editDocComment = (id, body) => rpc('edit_doc_comment', { p_id: id, p_body: body }, '댓글을 고치지 못했습니다.');
 export const deleteMyDocComment = (id) => rpc('delete_my_doc_comment', { p_id: id }, '댓글을 지우지 못했습니다.');
 export const reportDocComment = (id, reason, detail) =>
@@ -255,38 +244,15 @@ export const hideDocComment = (id, note) => rpc('hide_doc_comment', { p_id: id, 
 export const restoreDocComment = (id, note) => rpc('restore_doc_comment', { p_id: id, p_note: note }, '다시 공개하지 못했습니다.');
 export const staffDeleteDocComment = (id, note) => rpc('staff_delete_doc_comment', { p_id: id, p_note: note }, '삭제하지 못했습니다.');
 
-// ---------------- 빌드 댓글·답글 (058) ----------------
-
-/** 빌드 하나의 댓글·답글 (오래된 순). 숨긴 것은 운영진에게만, 지운 것은 아무에게도 안 보인다 (답글의 부모가 없으면 화면이 "삭제된 댓글입니다") */
-export function getBuildComments(buildId) {
-  return run(
-    db().from('build_comments').select(`${BUILD_COMMENT_FIELDS}, ${BUILD_COMMENT_HIDER}, ${BUILD_COMMENT_AUTHOR}`)
-      .eq('build_id', buildId).order('created_at', { ascending: true }).order('id', { ascending: true }),
-    '댓글을 불러오지 못했습니다.',
-  );
-}
-/** 빌드 댓글 달기. replyTo = 답글이면 부모 댓글 id */
-export const createBuildComment = (buildId, body, replyTo = null) =>
-  rpc('create_build_comment', { p_build: buildId, p_body: body, ...(replyTo != null && { p_parent: replyTo }) },
-    replyTo != null ? '답글을 올리지 못했습니다.' : '댓글을 올리지 못했습니다.');
-export const editBuildComment = (id, body) => rpc('edit_build_comment', { p_id: id, p_body: body }, '댓글을 고치지 못했습니다.');
-export const deleteMyBuildComment = (id) => rpc('delete_my_build_comment', { p_id: id }, '댓글을 지우지 못했습니다.');
-export const reportBuildComment = (id, reason, detail) =>
-  rpc('report_build_comment', { p_id: id, p_reason: reason, p_detail: detail || null }, '신고하지 못했습니다.');
-export const hideBuildComment = (id, note) => rpc('hide_build_comment', { p_id: id, p_note: note }, '숨기지 못했습니다.');
-export const restoreBuildComment = (id, note) => rpc('restore_build_comment', { p_id: id, p_note: note }, '다시 공개하지 못했습니다.');
-export const staffDeleteBuildComment = (id, note) => rpc('staff_delete_build_comment', { p_id: id, p_note: note }, '삭제하지 못했습니다.');
-
-/** 댓글 화면(CommentThread)에 넘기는 처리 묶음. replies = 답글(2단계), noGuest = 비회원은 못 닮 (058, DB도 막는다) */
+/**
+ * 댓글 화면(CommentThread)에 넘기는 처리 묶음. replies = 답글(2단계), noGuest = 비회원은 댓글·답글 모두 못 닮 (058),
+ * noGuestReply = 비회원은 답글만 못 닮 (059 문서 댓글 — 최상위 댓글은 비회원도). 둘 다 DB도 막는다
+ */
 export const POST_COMMENT_OPS = {
   kind: 'comment', media: true, replies: true, noGuest: true, create: createComment, edit: editComment, remove: deleteMyComment,
   report: reportComment, hide: hideComment, restore: restoreComment, staffRemove: staffDeleteComment,
 };
-export const BUILD_COMMENT_OPS = {
-  kind: 'build_comment', replies: true, noGuest: true, create: createBuildComment, edit: editBuildComment, remove: deleteMyBuildComment,
-  report: reportBuildComment, hide: hideBuildComment, restore: restoreBuildComment, staffRemove: staffDeleteBuildComment,
-};
 export const DOC_COMMENT_OPS = {
-  kind: 'doc_comment', create: createDocComment, edit: editDocComment, remove: deleteMyDocComment,
+  kind: 'doc_comment', replies: true, noGuestReply: true, create: createDocComment, edit: editDocComment, remove: deleteMyDocComment,
   report: reportDocComment, hide: hideDocComment, restore: restoreDocComment, staffRemove: staffDeleteDocComment,
 };

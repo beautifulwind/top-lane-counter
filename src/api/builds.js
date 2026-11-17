@@ -56,7 +56,7 @@ const unwrap = (r) => {
  */
 export async function getBuilds(counterRowId, userId = null) {
   const rowsReq = settle(run(
-    db().from('builds').select(`${BUILD_FIELDS}, comment_count, ${AUTHOR}`).eq('counter_id', counterRowId).eq('status', 'approved'),
+    db().from('builds').select(`${BUILD_FIELDS}, ${AUTHOR}`).eq('counter_id', counterRowId).eq('status', 'approved'),
     '빌드를 불러오지 못했습니다.',
   ));
   const votesReq = settle(userId
