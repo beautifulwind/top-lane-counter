@@ -67,6 +67,7 @@ test('새 상대법 등록: 입력 순서는 빌드 이름 → 한 줄 요약 �
   const summary = within(form).getByLabelText('한 줄 요약 (필수)');
   expect(summary.getAttribute('placeholder')).toBe('예) 트린 평타를 틀어막는 착취·E선마·얼심 말파');
   expect(within(form).getByText(`예) ${SUMMARY_EXAMPLE}`)).toBeDefined();
+  expect(within(form).getByText('룬 이름을 넣으면 검색에 잘 잡힙니다.')).toBeDefined(); // 6-62: 한 줄 요약도 검색 대상
   const order = (a, b) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
   const rune = within(form).getByRole('group', { name: '주 경로' });
   const lv1 = within(form).getByLabelText('1레벨 (필수)');

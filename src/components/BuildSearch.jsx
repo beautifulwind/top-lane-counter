@@ -125,8 +125,9 @@ export default function BuildSearch({ champions, value, onChange }) {
                   <span className="bs-text">
                     <strong>
                       {o.found.build.influencer && <><span className="inf-build-tag">장인 빌드</span>{' '}</>}
-                      {o.found.build.title}
+                      {o.found.build.title || `빌드 ${o.found.build.seq ?? ''}`.trim()}
                     </strong>
+                    {o.found.build.summary && <small className="bs-summary">{o.found.build.summary}</small>}
                     <small>{matchupShort(o.found.mine.name, o.found.target.name)}</small>
                   </span>
                 </Link>

@@ -67,7 +67,7 @@ export default function DocForm({
  * 매치업 문서 칸 (한 줄 요약·레벨별 딜교법·특이사항). value = {summary, level_notes, lane_cautions} (docToForm 모양)
  * 제안 폼과 운영자 [승인](고쳐서 승인) 공용. afterSummary: 한 줄 요약과 레벨별 딜교법 사이에 넣을 것 (빌드 입력)
  */
-export function DocFields({ value, onChange, afterSummary = null }) {
+export function DocFields({ value, onChange, afterSummary = null, summaryTip = null }) {
   const { summary, level_notes: notes, lane_cautions: cautions } = value;
   const [addLevel, setAddLevel] = useState('');
   const unused = ALL_LEVELS.filter((lv) => !(lv in notes));
@@ -88,13 +88,14 @@ export function DocFields({ value, onChange, afterSummary = null }) {
     <>
       <label htmlFor="doc-summary">한 줄 요약 (필수)</label>
       <small className="hint" id="doc-summary-hint">예) {SUMMARY_EXAMPLE}</small>
+      {summaryTip && <small className="hint" id="doc-summary-tip">{summaryTip}</small>}
       <input
         id="doc-summary"
         value={summary}
         onChange={(e) => set({ summary: e.target.value })}
         maxLength={LIMITS.summary + 20}
         placeholder={`예) ${SUMMARY_EXAMPLE}`}
-        aria-describedby="doc-summary-hint"
+        aria-describedby={summaryTip ? 'doc-summary-hint doc-summary-tip' : 'doc-summary-hint'}
       />
       <small className="count">{[...summary.trim()].length}/{LIMITS.summary}자</small>
 

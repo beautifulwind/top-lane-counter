@@ -1255,3 +1255,4 @@ a.inf-link:hover .user-nick, a.inf-link:focus-visible .user-nick { text-decorati
 .bs-text strong { font-size: var(--fs-md); overflow-wrap: anywhere; }
 .bs-text small { color: var(--muted); font-size: var(--fs-xs); overflow-wrap: anywhere; }
 .bs-note { margin: 0; padding: 12px; color: var(--muted); font-size: var(--fs-sm); }
+.bs-text .bs-summary { color: var(--text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }

@@ -22,7 +22,7 @@ async function load() {
   const [counters, builds] = await Promise.all([
     allRows(() => db().from('counters').select('id, target_champion, counter_champion, sort_order').eq('status', 'approved').order('id', { ascending: true })),
     allRows(() => db().from('builds')
-      .select('id, counter_id, name, seq, author:profiles!builds_author_id_fkey(influencer), counter:counters!builds_counter_id_fkey(target_champion, counter_champion, status)')
+      .select('id, counter_id, name, seq, summary, author:profiles!builds_author_id_fkey(influencer), counter:counters!builds_counter_id_fkey(target_champion, counter_champion, status)')
       .eq('status', 'approved').order('id', { ascending: true })),
   ]);
   return {
@@ -31,7 +31,7 @@ async function load() {
       .filter((b) => b.counter?.status === 'approved')
       .map((b) => {
         const a = Array.isArray(b.author) ? b.author[0] : b.author;
-        return { id: b.id, title: b.name ?? '', seq: b.seq ?? null, target: b.counter.target_champion, mine: b.counter.counter_champion, influencer: !!a?.influencer };
+        return { id: b.id, title: b.name ?? '', summary: b.summary ?? '', seq: b.seq ?? null, target: b.counter.target_champion, mine: b.counter.counter_champion, influencer: !!a?.influencer };
       }),
   };
 }

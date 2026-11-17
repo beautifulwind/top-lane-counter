@@ -140,3 +140,34 @@ describe('빌드 제목 찾기', () => {
     expect(searchAll(tokenize('빛망'), CHAMPS, many).builds).toHaveLength(6);
   });
 });
+
+describe('이름 + 한 줄 요약', () => {
+  const index = {
+    counters: [],
+    builds: [
+      build(1, 'Darius', 'Akali', '빛망 감전'), // 이름만
+      build(2, 'Darius', 'Akali', '', { summary: '감전 룬으로 초반 견제' }), // 요약만 (이름 없음)
+      build(3, 'Darius', 'Akali', '착취 탱커', { summary: '정복자 대신 감전' }), // 둘 다
+      build(4, 'Darius', 'Akali', '', { summary: '' }), // 둘 다 없음
+    ],
+  };
+  const found = (q) => searchAll(tokenize(q), CHAMPS, index).builds.map((r) => r.build.id);
+  test('이름만 / 요약만 / 둘 다 있으면 찾고, 둘 다 없으면 빠진다', () => {
+    expect(found('감전').sort()).toEqual([1, 2, 3]);
+    expect(found('견제')).toEqual([2]); // 이름이 없어도 요약으로
+    expect(found('빛망')).toEqual([1]);
+    expect(found('감전')).not.toContain(4);
+  });
+  test('한 단어는 이름에, 다른 단어는 요약에 있어도 된다 (순서 무관, 초성도)', () => {
+    expect(found('착취 정복자')).toEqual([3]);
+    expect(found('정복자 착취')).toEqual([3]);
+    expect(found('ㅊㅊ ㅈㅂㅈ')).toEqual([3]);
+    expect(found('착취 견제')).toEqual([]); // 3번 요약에 견제 없음 → AND 불성립
+  });
+  test('챔피언 단어 + 요약 단어', () => {
+    expect(found('아칼리 견제')).toEqual([2]);
+  });
+  test('이름에서 맞은 빌드가 요약에서만 맞은 빌드보다 위', () => {
+    expect(found('감전')[0]).toBe(1);
+  });
+});

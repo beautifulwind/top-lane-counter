@@ -27,6 +27,7 @@ export default function WikiBuildFields({ game, value, onChange, author }) {
       <DocFields
         value={value}
         onChange={onChange}
+        summaryTip="룬 이름을 넣으면 검색에 잘 잡힙니다."
         afterSummary={(
           <fieldset className="pick-group build-in-doc">
             <legend>룬·주문·아이템·선마 (필수)</legend>

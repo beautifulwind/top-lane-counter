@@ -70,6 +70,17 @@ export function titleScore(token, title) {
   return best;
 }
 
+/** 단어 하나가 한 줄 요약의 단어에 맞는 정도: 이름보다 낮게 (통째 4 · 앞 3 · 중간 2) */
+export function summaryScore(token, summary) {
+  let best = 0;
+  String(summary ?? '').trim().split(/\s+/).filter(Boolean).forEach((w) => {
+    const at = findAt(w, token);
+    if (at < 0) return;
+    best = Math.max(best, at > 0 ? 2 : [...norm(w)].length === [...token].length ? 4 : 3);
+  });
+  return best;
+}
+
 const byScore = (a, b) => b.score - a.score;
 
 /**
@@ -79,7 +90,8 @@ const byScore = (a, b) => b.score - a.score;
  *  - champions: 모든 단어가 맞는 챔피언 (최대 6)
  *  - combos: 단어가 하나면 "그 챔피언을 상대로 한" 상대법(최대 5), 둘이면 "내 챔피언 + 상대 챔피언" 상대법 (정방향 먼저, 반대 방향은 reverse: true로 뒤, 합쳐 최대 8)
  *  - missing: 단어가 둘이고 정방향 상대법이 없을 때 { target, mine } (아직 없음, 직접 쓰기)
- *  - builds: 제목이 맞는 공개 빌드 (최대 6, 모든 단어가 챔피언 또는 제목에 맞고 제목에 맞는 단어가 1개 이상)
+ *  - builds: 이름·한 줄 요약이 맞는 공개 빌드 (최대 6, 모든 단어가 챔피언 또는 이름·요약에 맞고, 이름·요약에 맞는 단어가 1개 이상).
+ *    단어마다 이름에 있든 요약에 있든 상관없다(이름에 한 단어, 요약에 다른 단어여도 AND 성립). 이름이 비어 있어도 요약으로 찾는다
  */
 export function searchAll(tokens, champs, index) {
   const out = { champions: [], combos: [], missing: null, builds: [] };
@@ -129,14 +141,14 @@ export function searchAll(tokens, champs, index) {
     }
 
     out.builds = index.builds
-      .filter((b) => b.title && byId[b.target] && byId[b.mine])
+      .filter((b) => (b.title || b.summary) && byId[b.target] && byId[b.mine])
       .map((b) => {
         const t = byId[b.target];
         const m = byId[b.mine];
         let score = 0;
         let inTitle = 0;
         for (const tok of tokens) {
-          const ts = titleScore(tok, b.title);
+          const ts = Math.max(titleScore(tok, b.title), summaryScore(tok, b.summary));
           const cs = Math.max(champScore(tok, t), champScore(tok, m));
           if (ts === 0 && cs === 0) return null;
           if (ts > 0) inTitle += 1;

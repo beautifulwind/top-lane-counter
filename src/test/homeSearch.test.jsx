@@ -98,6 +98,18 @@ test('빌드 제목: 단어 순서가 바뀌어도, 초성이 섞여도 빌드�
   await screen.findByText(NO_RESULT);
 });
 
+test('이름이 없는 빌드는 한 줄 요약으로 찾고, 후보에 "빌드 N"과 요약이 같이 보인다', async () => {
+  TABLES.builds.push(named(120, null, { seq: 7, summary: '감전으로 초반 견제 후 이득' }), named(121, '빛망', { summary: '룬은 감전' }));
+  start();
+  await type('감전 초반');
+  const o = await opt(/빌드 7/);
+  expect(o).toHaveTextContent('감전으로 초반 견제 후 이득');
+  expect(o).toHaveAttribute('href', '/champion/Darius/counter/Quinn?build=120');
+  // 이름의 단어 + 요약의 단어
+  fireEvent.change(await box(), { target: { value: '감전 빛망' } });
+  expect(await opt(/빛망/)).toBeDefined();
+});
+
 test('숨긴·대기 빌드와 숨긴 상대법의 빌드는 후보에 없다', async () => {
   addCounters();
   TABLES.counters.push(counter(9, 'Vayne', 'Teemo', { status: 'hidden' }));
