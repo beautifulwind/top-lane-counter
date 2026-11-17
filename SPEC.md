@@ -1533,3 +1533,4 @@ RLS 원칙:
 - **versionCode**: Codemagic `BUILD_NUMBER`(이 워크플로 실행마다 1씩 증가). 저장소 값 이하이면 저장소 값 + 1. 빌드 머신 안에서만 sed로 바꾸고 커밋하지 않는다. Play에 이미 올린 번호보다 작으면 거부되므로, Play에 올린 최대 번호보다 작은 번호가 나오면 저장소 versionCode를 그 이상으로 올린다.
 - **release 서명** (`android/app/build.gradle`): 위 CM_* 4개가 모두 있을 때만 `signingConfigs.release`를 만들고 release 빌드에 쓴다. 없으면(로컬) 예전처럼 서명 없는 release / debug 서명 debug — 로컬 빌드는 그대로.
 - **확인(로컬)**: yaml 파싱, `npm test`, `npm run build`, `npx cap sync android`, 환경 변수 없이 `bundleRelease`(서명 없음), 일회용 테스트 키스토어로 `bundleRelease`(META-INF/UPLOAD.RSA 확인 후 키 삭제), versionCode 단계 스크립트(BUILD_NUMBER=7 → 7). 실제 키스토어 서명·Codemagic 환경은 Codemagic 빌드로 확인.
+- **인스턴스**: 무료 플랜 제한으로 `mac_mini_m2` 사용(`linux_x2`는 현재 요금제에서 시작 전에 실패). 맥(BSD 도구) 기준으로 SDK 경로(ANDROID_SDK_ROOT → ANDROID_HOME → ~/Library/Android/sdk)·`sed -i.bak`·`chmod +x gradlew`를 맞춤. 최대 30분 그대로

@@ -152,7 +152,8 @@ workflows:
   android-aab:
     name: Android AAB
     # 수동 실행 전용 (triggering 없음). Google Play 업로드는 하지 않는다 — artifacts의 .aab를 받아 Play Console에 직접 올린다.
-    instance_type: linux_x2
+    # 무료 플랜은 mac_mini_m2만 쓸 수 있다(linux_x2는 "selected instance type is not available with the current billing plan"). 그래서 macOS(BSD 도구) 기준으로 쓴다.
+    instance_type: mac_mini_m2
     max_build_duration: 30
     environment:
       node: 22
@@ -179,7 +180,15 @@ workflows:
           exit $missing
 
       - name: Android SDK 위치 지정
-        script: echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
+        script: |
+          # 맥 이미지: ANDROID_SDK_ROOT가 비어 있으면 ANDROID_HOME, 그래도 없으면 ~/Library/Android/sdk
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-$HOME/Library/Android/sdk}}"
+          if [ ! -d "$SDK" ]; then
+            echo "Android SDK 폴더가 없습니다: $SDK"
+            exit 1
+          fi
+          echo "sdk.dir=$SDK" > "$CM_BUILD_DIR/android/local.properties"
+          echo "Android SDK: $SDK"
 
       - name: 의존성 설치
         script: npm ci
@@ -204,7 +213,9 @@ workflows:
           fi
           echo "versionCode: $NEXT (저장소: $CURRENT, Codemagic: ${BUILD_NUMBER:-없음})"
           # 빌드 머신 안에서만 바꾼다 (저장소에는 커밋하지 않음).
-          sed -i -E "s/^([[:space:]]*versionCode[[:space:]]+)[0-9]+[[:space:]]*$/\1$NEXT/" "$GRADLE_FILE"
+          # macOS(BSD) sed는 -i 뒤에 확장자 인자가 꼭 필요하다 — .bak을 붙였다가 지우면 GNU·BSD 모두 동작
+          sed -i.bak -E "s/^([[:space:]]*versionCode[[:space:]]+)[0-9]+[[:space:]]*$/\1$NEXT/" "$GRADLE_FILE"
+          rm -f "$GRADLE_FILE.bak"
           COUNT=$(grep -c -E "^[[:space:]]*versionCode[[:space:]]+$NEXT[[:space:]]*$" "$GRADLE_FILE" || true)
           if [ "$COUNT" -ne 1 ]; then
             echo "versionCode를 바꾸지 못했습니다: $COUNT 줄"
@@ -214,6 +225,7 @@ workflows:
       - name: AAB 만들기 (bundleRelease)
         script: |
           cd android
+          chmod +x ./gradlew
           ./gradlew bundleRelease --no-daemon
 
       - name: 서명 확인 (인증서 내용은 출력하지 않음)
