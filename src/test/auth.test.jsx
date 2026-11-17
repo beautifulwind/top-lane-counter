@@ -127,7 +127,7 @@ test('운영자 페이지(/admin)에도 관리자 지정 기능은 없다 (SPEC:
 test('이미 로그인한 상태로 /login에 오면 원래 페이지로 보낸다', async () => {
   fakeLogin('u-old');
   start('/login');
-  await screen.findByRole('searchbox');
+  await screen.findByRole('combobox');
   expect(where()).toBe('/');
 });
 

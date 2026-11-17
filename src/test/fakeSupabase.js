@@ -351,6 +351,7 @@ function query(table) {
     },
     maybeSingle: () => { single = true; return q; },
     limit: (n) => { rows = rows.slice(0, n); return q; },
+    range: (from, to) => { rows = rows.slice(from, to + 1); return q; }, // PostgREST range (끝 포함)
     then: (ok, fail) => Promise.resolve(run()).then(ok, fail),
   };
   function run() {

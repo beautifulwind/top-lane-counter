@@ -7,7 +7,8 @@ import '@testing-library/jest-dom';
 import { afterEach, vi } from 'vitest';
 import { resetFake } from './test/fakeSupabase';
 import { resetTitleInfo } from './lib/titles';
+import { invalidateSearchIndex } from './api/searchIndex';
 
 // 테스트는 진짜 Supabase 대신 가짜 데이터를 쓴다
 vi.mock('./api/supabase', () => import('./test/fakeSupabase'));
-afterEach(() => { resetFake(); resetTitleInfo(); });
+afterEach(() => { resetFake(); resetTitleInfo(); invalidateSearchIndex(); });

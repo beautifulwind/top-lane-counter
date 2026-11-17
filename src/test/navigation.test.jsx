@@ -31,7 +31,7 @@ test('홈 → 챔피언 문서 → 매치업 문서를 클릭으로 이동해도
   fireEvent.click(screen.getByRole('link', { name: '다리우스' }));
   expect(await screen.findByText(/다리우스 상대법/)).toBeDefined();
   fireEvent.click(screen.getByRole('link', { name: '홈' }));
-  expect(await screen.findByRole('searchbox')).toBeDefined();
+  expect(await screen.findByRole('combobox')).toBeDefined();
   expect(console.error).not.toHaveBeenCalled();
 });
 

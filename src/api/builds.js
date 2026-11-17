@@ -2,6 +2,7 @@
 // 권한은 DB가 막는다: 등록은 RLS + 검사 트리거(승인 대기로만), 투표는 vote_build(), 승인·거절·숨기기·다시 공개는 운영자 전용 함수.
 import { getBuildLinks } from './links';
 import { db } from './supabase';
+import { invalidateSearchIndex } from './searchIndex';
 import { getItems, getLatestVersion, getRunes, getSummonerSpells } from './ddragon';
 import { START_GOLD_MAX, compareBuilds, toProposalBuild, toRow } from '../lib/buildContent';
 import { toWikiPayload } from '../lib/wikiBuild';
@@ -34,9 +35,12 @@ async function run(query, fallback) {
   return data;
 }
 
+const READ_ONLY_RPC = new Set(['vote_build', 'build_contributors', 'admin_build_revisions', 'build_editor_counts']);
+
 async function rpc(name, args, fallback) {
   const { data, error } = await db().rpc(name, args);
   if (error) throw friendly(error, fallback);
+  if (!READ_ONLY_RPC.has(name)) invalidateSearchIndex(); // 빌드 등록·수정·숨김 등 → 홈 검색 목록 새로 (6-61)
   return data;
 }
 

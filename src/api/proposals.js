@@ -1,6 +1,7 @@
 // 제안·승인 접근 계층. 화면 컴포넌트는 이 모듈만 호출한다.
 // 권한은 DB가 막는다: 제안 넣기는 RLS + 검사 트리거, 승인·거절·순서·되돌리기는 운영자 전용 함수(rpc).
 import { db, restConfig } from './supabase';
+import { invalidateSearchIndex } from './searchIndex';
 import { cleanDoc } from '../lib/docContent';
 import { proposalBuildBlock, toProposalBuild } from '../lib/buildContent';
 
@@ -214,6 +215,7 @@ const FIRST_BUILD_COLUMNS =
 async function rpc(name, args, fallback) {
   const { data, error } = await db().rpc(name, args);
   if (error) throw friendly(error, fallback);
+  invalidateSearchIndex(); // 승인·숨김·삭제 등으로 공개 상대법이 바뀔 수 있다 → 홈 검색 목록 새로 (6-61)
   return data;
 }
 
