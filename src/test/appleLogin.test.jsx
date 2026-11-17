@@ -123,7 +123,7 @@ describe('도우미', () => {
 
   test('시트: 이메일만 요청하고 Apple에는 해시, 돌려주는 nonce는 원문', async () => {
     const plugin = { signIn: vi.fn(async () => ({ idToken: 't-1' })) };
-    const { idToken, nonce } = await signInWithAppleSheet({ load: async () => plugin });
+    const { idToken, nonce } = await signInWithAppleSheet({ load: async () => ({ AppleSignIn: plugin }) });
     expect(APPLE_SCOPES).toEqual(['EMAIL']);
     expect(plugin.signIn).toHaveBeenCalledWith({ scopes: ['EMAIL'], nonce: await sha256(nonce) });
     expect(idToken).toBe('t-1');
@@ -131,9 +131,9 @@ describe('도우미', () => {
 
   test('시트: 취소는 cancelled, id token이 없으면 실패', async () => {
     const cancel = { signIn: vi.fn(async () => { throw Object.assign(new Error('canceled'), { code: 'SIGN_IN_CANCELED' }); }) };
-    await expect(signInWithAppleSheet({ load: async () => cancel })).rejects.toMatchObject({ cancelled: true });
+    await expect(signInWithAppleSheet({ load: async () => ({ AppleSignIn: cancel }) })).rejects.toMatchObject({ cancelled: true });
     const empty = { signIn: vi.fn(async () => ({})) };
-    await expect(signInWithAppleSheet({ load: async () => empty })).rejects.toThrow('Apple에서 로그인 정보를 받지 못했습니다.');
+    await expect(signInWithAppleSheet({ load: async () => ({ AppleSignIn: empty }) })).rejects.toThrow('Apple에서 로그인 정보를 받지 못했습니다.');
     expect(isAppleCancel({ code: 1001 })).toBe(true);
     expect(isAppleCancel({ code: '1000' })).toBe(false);
   });

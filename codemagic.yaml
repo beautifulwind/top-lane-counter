@@ -91,6 +91,49 @@ workflows:
             --project "$XCODE_PROJECT" \
             --scheme "$XCODE_SCHEME"
 
+      # 진단(SPEC 6-64): 서명된 앱과 임베디드 프로비저닝 프로필에 Sign in with Apple 권한이 들어갔는지 로그로만 보여 준다.
+      # 정보 출력만 한다 — 실패해도 빌드·업로드는 계속된다(ignore_failure + 항상 exit 0).
+      # 프로필은 이름·팀·만료일·권한만 출력한다(인증서 데이터는 출력하지 않음).
+      - name: 진단 - 서명된 앱 권한 확인 (applesignin)
+        ignore_failure: true
+        script: |
+          APP=$(find build/ios/xcarchive -maxdepth 5 -path "*Products/Applications/*.app" -type d 2>/dev/null | head -n 1)
+          if [ -z "$APP" ]; then
+            echo "[진단] xcarchive 안에서 .app을 찾지 못했습니다."
+            exit 0
+          fi
+          echo "[진단] 앱: $APP"
+
+          echo "== 서명된 앱의 entitlements =="
+          ENT=$(codesign -d --entitlements - --xml "$APP" 2>/dev/null | plutil -convert xml1 -o - - 2>/dev/null || true)
+          if [ -z "$ENT" ]; then
+            ENT=$(codesign -d --entitlements :- "$APP" 2>/dev/null || true)
+          fi
+          echo "$ENT"
+          if echo "$ENT" | grep -q "com.apple.developer.applesignin"; then
+            echo "[진단] 서명된 앱: applesignin 있음"
+          else
+            echo "[진단] 서명된 앱: applesignin 없음"
+          fi
+
+          echo "== 임베디드 프로비저닝 프로필 (이름·팀·만료·권한만) =="
+          PROFILE="$CM_BUILD_DIR/diag_profile.plist"
+          if security cms -D -i "$APP/embedded.mobileprovision" > "$PROFILE" 2>/dev/null; then
+            for key in Name TeamIdentifier ExpirationDate Entitlements; do
+              echo "-- $key"
+              /usr/libexec/PlistBuddy -c "Print :$key" "$PROFILE" 2>/dev/null || echo "(없음)"
+            done
+            if /usr/libexec/PlistBuddy -c "Print :Entitlements:com.apple.developer.applesignin" "$PROFILE" >/dev/null 2>&1; then
+              echo "[진단] 프로비저닝 프로필: applesignin 있음"
+            else
+              echo "[진단] 프로비저닝 프로필: applesignin 없음"
+            fi
+          else
+            echo "[진단] embedded.mobileprovision을 읽지 못했습니다."
+          fi
+          rm -f "$PROFILE"
+          exit 0
+
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log

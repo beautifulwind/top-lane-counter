@@ -34,15 +34,35 @@ export function isAppleCancel(error) {
   return code === 'SIGN_IN_CANCELED' || code === '1001';
 }
 
-const loadPlugin = async () => (await import('@capawesome/capacitor-apple-sign-in')).AppleSignIn;
+// 모듈째로 돌려준다. registerPlugin()의 플러그인 객체(Proxy)는 then도 "플러그인 메서드"로 돌려주므로
+// async 함수가 그 객체를 그대로 반환하거나 await하면 Promise가 영원히 끝나지 않는다 (SPEC 6-64).
+const loadPlugin = () => import('@capawesome/capacitor-apple-sign-in');
+
+/** 플러그인 불러오기 제한 시간 (시트가 열린 뒤에는 제한 없음 — 사용자가 오래 걸릴 수 있다) */
+export const APPLE_LOAD_TIMEOUT_MS = 10000;
+
+async function loadWithTimeout(load, ms) {
+  let timer;
+  const timeout = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error('Apple 로그인 기능을 불러오지 못했습니다.')), ms);
+  });
+  try {
+    return await Promise.race([load(), timeout]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 /**
  * iOS Apple 로그인 시트를 띄워 id token을 받는다. 돌려주는 값: { idToken, nonce(원문) }.
  * 취소하면 cancelled: true가 붙은 Error, 그 밖의 실패는 그대로 Error.
+ * load()는 { AppleSignIn } 모양의 모듈을 돌려준다 (플러그인 객체를 직접 돌려주면 안 된다).
  */
-export async function signInWithAppleSheet({ load = loadPlugin, cryptoImpl } = {}) {
+export async function signInWithAppleSheet({ load = loadPlugin, cryptoImpl, loadTimeoutMs = APPLE_LOAD_TIMEOUT_MS } = {}) {
   const { raw, hashed } = await makeNonce(cryptoImpl);
-  const plugin = await load();
+  const mod = await loadWithTimeout(load, loadTimeoutMs);
+  const plugin = mod?.AppleSignIn;
+  if (!plugin) throw new Error('Apple 로그인 기능을 불러오지 못했습니다.');
   let result;
   try {
     result = await plugin.signIn({ scopes: APPLE_SCOPES, nonce: hashed });
