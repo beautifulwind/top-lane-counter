@@ -1524,3 +1524,12 @@ RLS 원칙:
 - **덮어쓰기 없음**: `codemagic.yaml`은 `CURRENT_PROJECT_VERSION`만 sed로 바꾸고, `capacitor.config.json`에는 기기 설정이 없다. `npx cap sync ios`는 웹 자산·플러그인 설정만 복사하며 이 값들은 건드리지 않는다.
 - **다시 iPad를 지원하려면**: `TARGETED_DEVICE_FAMILY`를 `"1,2"`로 되돌리고 `~ipad` 방향 키를 복구한 뒤 iPad 화면을 먼저 검증하고 13인치 스크린샷을 준비한다.
 - **확인**: 웹으로는 확인 불가 — Codemagic 빌드(12번)에서 확인.
+
+### 6-69. Android App Bundle(.aab) 빌드 — Codemagic `android-aab` (2026-11-17, 빌드 설정만, DB·웹·iOS 변경 없음)
+- **목적**: Google Play 비공개 테스트용 서명된 AAB를 Codemagic에서 만든다. Play 업로드(service account)는 하지 않는다 — artifacts의 `app-release.aab`를 받아 Play Console에 직접 올린다.
+- **앱 정보**: applicationId·namespace `com.topsinbyeongja.app`(= capacitor.config.json appId), versionName `1.0`, 저장소 versionCode `1`, minSdk 24 / compileSdk 36 / targetSdk 36 (Google Play 신규 앱·업데이트 요건 API 36, 2026-08-31부터 — 충족), AGP 8.13.0, Gradle 8.14.3.
+- **워크플로 `android-aab`** (`codemagic.yaml`, `ios-testflight`는 그대로): 수동 실행만(triggering 없음), `linux_x2`, 최대 30분, Node 22, **Java 21**(Capacitor 8 안드로이드 모듈이 `JavaVersion.VERSION_21`로 컴파일 — 17이면 실패), 환경 변수 그룹 `web_env`, `android_signing: topsinbyeongja_upload`(Codemagic Code signing identities의 키스토어 참조 이름, key alias `upload` — 비밀번호·키스토어 파일은 저장소에 없음).
+- **단계**: 환경 변수 확인(VITE_* 3개 + CM_KEYSTORE_PATH·CM_KEYSTORE_PASSWORD·CM_KEY_ALIAS·CM_KEY_PASSWORD, 값은 출력 안 함, 키스토어 파일 존재) → `local.properties`에 SDK 위치 → `npm ci` → `npm run build` → `npx cap sync android` → versionCode 올리기 → `./gradlew bundleRelease` → AAB에 서명 파일(META-INF/*.RSA 등)이 있는지 확인 → artifacts `android/app/build/outputs/bundle/release/app-release.aab`.
+- **versionCode**: Codemagic `BUILD_NUMBER`(이 워크플로 실행마다 1씩 증가). 저장소 값 이하이면 저장소 값 + 1. 빌드 머신 안에서만 sed로 바꾸고 커밋하지 않는다. Play에 이미 올린 번호보다 작으면 거부되므로, Play에 올린 최대 번호보다 작은 번호가 나오면 저장소 versionCode를 그 이상으로 올린다.
+- **release 서명** (`android/app/build.gradle`): 위 CM_* 4개가 모두 있을 때만 `signingConfigs.release`를 만들고 release 빌드에 쓴다. 없으면(로컬) 예전처럼 서명 없는 release / debug 서명 debug — 로컬 빌드는 그대로.
+- **확인(로컬)**: yaml 파싱, `npm test`, `npm run build`, `npx cap sync android`, 환경 변수 없이 `bundleRelease`(서명 없음), 일회용 테스트 키스토어로 `bundleRelease`(META-INF/UPLOAD.RSA 확인 후 키 삭제), versionCode 단계 스크립트(BUILD_NUMBER=7 → 7). 실제 키스토어 서명·Codemagic 환경은 Codemagic 빌드로 확인.

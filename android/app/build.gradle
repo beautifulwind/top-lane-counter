@@ -1,5 +1,13 @@
 apply plugin: 'com.android.application'
 
+// release 서명 (SPEC 6-69): Codemagic의 android_signing이 넣어 주는 환경 변수 4개가 모두 있을 때만 쓴다.
+// 로컬 빌드(assembleDebug·서명 없는 bundleRelease)는 예전과 똑같다. 비밀 값은 저장소에 두지 않는다.
+def cmKeystorePath = System.getenv("CM_KEYSTORE_PATH")
+def cmKeystorePassword = System.getenv("CM_KEYSTORE_PASSWORD")
+def cmKeyAlias = System.getenv("CM_KEY_ALIAS")
+def cmKeyPassword = System.getenv("CM_KEY_PASSWORD")
+def useCmSigning = [cmKeystorePath, cmKeystorePassword, cmKeyAlias, cmKeyPassword].every { it?.trim() }
+
 android {
     namespace = "com.topsinbyeongja.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -16,8 +24,21 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        if (useCmSigning) {
+            release {
+                storeFile file(cmKeystorePath)
+                storePassword cmKeystorePassword
+                keyAlias cmKeyAlias
+                keyPassword cmKeyPassword
+            }
+        }
+    }
     buildTypes {
         release {
+            if (useCmSigning) {
+                signingConfig signingConfigs.release
+            }
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

@@ -1,4 +1,5 @@
 # Codemagic: iOS 앱(탑신병자)을 빌드해 TestFlight에 올린다 (SPEC 6-63)
+#           Android App Bundle(.aab)을 만든다 — 업로드는 Play Console에서 직접 (SPEC 6-69)
 #
 # - 실행은 Codemagic 화면의 "Start new build"로만 한다(무료 분량 500분/월 절약).
 #   push·PR 때 자동으로 돌리려면 workflow 안에 아래처럼 triggering을 추가한다.
@@ -10,6 +11,8 @@
 # - 비밀 값은 저장소에 두지 않는다. 아래 groups의 이름만 참조하고 값은 Codemagic 화면에서 넣는다.
 #     web_env          : VITE_SUPABASE_URL, VITE_SUPABASE_PUBLISHABLE_KEY, VITE_TURNSTILE_SITE_KEY
 #     ios_signing_key  : CERTIFICATE_PRIVATE_KEY (Secret, 배포 인증서용 RSA 개인키)
+# - Android 업로드 키스토어는 Codemagic의 Code signing identities에 참조 이름 topsinbyeongja_upload로 올려 둔다
+#   (key alias: upload). 빌드 때 CM_KEYSTORE_PATH·CM_KEYSTORE_PASSWORD·CM_KEY_ALIAS·CM_KEY_PASSWORD로 들어온다.
 # - App Store Connect API 키는 Codemagic의 Developer Portal 통합 "Codemagic"을 쓴다.
 # - Apple 팀 ID(참고): MY42TLAPWL. 서명 설정은 프로비저닝 프로파일에서 가져오므로 여기서 직접 쓰지 않는다.
 
@@ -145,3 +148,87 @@ workflows:
         # false: 업로드만 한다. 내부 테스터는 베타 심사 없이 설치할 수 있다.
         # 외부 테스터에게 보내려면 true로 바꾸고 beta_groups를 넣는다.
         submit_to_testflight: false
+
+  android-aab:
+    name: Android AAB
+    # 수동 실행 전용 (triggering 없음). Google Play 업로드는 하지 않는다 — artifacts의 .aab를 받아 Play Console에 직접 올린다.
+    instance_type: linux_x2
+    max_build_duration: 30
+    environment:
+      node: 22
+      # Capacitor 8 안드로이드(capacitor.build.gradle·플러그인)가 JavaVersion.VERSION_21로 컴파일하므로 JDK 21이 필요하다(17이면 실패).
+      java: 21
+      groups:
+        - web_env
+      android_signing:
+        - topsinbyeongja_upload
+    scripts:
+      - name: 환경 변수 확인 (값은 출력하지 않음)
+        script: |
+          missing=0
+          for name in VITE_SUPABASE_URL VITE_SUPABASE_PUBLISHABLE_KEY VITE_TURNSTILE_SITE_KEY CM_KEYSTORE_PATH CM_KEYSTORE_PASSWORD CM_KEY_ALIAS CM_KEY_PASSWORD; do
+            if [ -z "$(printenv "$name")" ]; then
+              echo "환경 변수 $name 이(가) 비어 있습니다. Codemagic 화면의 web_env 그룹 / 키스토어 topsinbyeongja_upload를 확인하세요."
+              missing=1
+            fi
+          done
+          if [ "$missing" -eq 0 ] && [ ! -f "$CM_KEYSTORE_PATH" ]; then
+            echo "키스토어 파일이 없습니다(CM_KEYSTORE_PATH)."
+            missing=1
+          fi
+          exit $missing
+
+      - name: Android SDK 위치 지정
+        script: echo "sdk.dir=$ANDROID_SDK_ROOT" > "$CM_BUILD_DIR/android/local.properties"
+
+      - name: 의존성 설치
+        script: npm ci
+
+      - name: 웹 빌드
+        script: npm run build
+
+      - name: Capacitor Android 동기화
+        script: npx cap sync android
+
+      - name: versionCode 올리기
+        script: |
+          GRADLE_FILE=android/app/build.gradle
+          CURRENT=$(sed -n -E 's/^[[:space:]]*versionCode[[:space:]]+([0-9]+)[[:space:]]*$/\1/p' "$GRADLE_FILE")
+          case "$CURRENT" in
+            ''|*[!0-9]*) echo "build.gradle에서 versionCode를 찾지 못했습니다."; exit 1 ;;
+          esac
+          # Codemagic 빌드 번호(이 워크플로에서 실행할 때마다 1씩 오름). 저장소 값보다 작으면 저장소 값 + 1.
+          NEXT=${BUILD_NUMBER:-0}
+          if [ "$NEXT" -le "$CURRENT" ]; then
+            NEXT=$((CURRENT + 1))
+          fi
+          echo "versionCode: $NEXT (저장소: $CURRENT, Codemagic: ${BUILD_NUMBER:-없음})"
+          # 빌드 머신 안에서만 바꾼다 (저장소에는 커밋하지 않음).
+          sed -i -E "s/^([[:space:]]*versionCode[[:space:]]+)[0-9]+[[:space:]]*$/\1$NEXT/" "$GRADLE_FILE"
+          COUNT=$(grep -c -E "^[[:space:]]*versionCode[[:space:]]+$NEXT[[:space:]]*$" "$GRADLE_FILE" || true)
+          if [ "$COUNT" -ne 1 ]; then
+            echo "versionCode를 바꾸지 못했습니다: $COUNT 줄"
+            exit 1
+          fi
+
+      - name: AAB 만들기 (bundleRelease)
+        script: |
+          cd android
+          ./gradlew bundleRelease --no-daemon
+
+      - name: 서명 확인 (인증서 내용은 출력하지 않음)
+        script: |
+          AAB=android/app/build/outputs/bundle/release/app-release.aab
+          if [ ! -f "$AAB" ]; then
+            echo "app-release.aab가 없습니다."
+            exit 1
+          fi
+          if unzip -l "$AAB" | grep -q -E 'META-INF/[^/]+\.(RSA|EC|DSA)$'; then
+            echo "서명된 AAB입니다: $AAB ($(du -h "$AAB" | cut -f1))"
+          else
+            echo "AAB에 서명이 없습니다. build.gradle의 release 서명 설정을 확인하세요."
+            exit 1
+          fi
+
+    artifacts:
+      - android/app/build/outputs/bundle/release/app-release.aab
