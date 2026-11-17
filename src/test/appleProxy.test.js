@@ -2,7 +2,7 @@
 // (appleLogin.test.jsx는 @capacitor/core를 가짜로 바꾸므로 Proxy의 then 문제를 잡지 못한다.)
 import { describe, expect, test, vi } from 'vitest';
 import { registerPlugin } from '@capacitor/core';
-import { signInWithAppleSheet } from '../lib/appleAuth';
+import { getAppleAuthorizationCode, signInWithAppleSheet } from '../lib/appleAuth';
 
 const signIn = vi.fn(async () => ({ idToken: 'proxy-token' }));
 const realPlugin = registerPlugin('AppleSignInProxyTest', { web: { signIn } });
@@ -27,5 +27,25 @@ describe('Apple 플러그인 불러오기 (실제 Capacitor Proxy)', () => {
 
   test('모듈에 AppleSignIn이 없으면 바로 오류', async () => {
     await expect(signInWithAppleSheet({ load: async () => ({}) })).rejects.toThrow('Apple 로그인 기능을 불러오지 못했습니다.');
+  });
+});
+
+// 6-65: 탈퇴 전 Apple 재확인도 같은 불러오기 방식 (Proxy를 await하지 않음)
+describe('탈퇴 전 Apple 재확인 (실제 Capacitor Proxy)', () => {
+  const codeSignIn = vi.fn(async () => ({ idToken: 't', authorizationCode: 'proxy-code' }));
+  const codePlugin = registerPlugin('AppleSignInCodeTest', { web: { signIn: codeSignIn } });
+
+  test('모듈 모양으로 불러오면 코드를 받아 끝난다', async () => {
+    await expect(getAppleAuthorizationCode({ load: async () => ({ AppleSignIn: codePlugin }) })).resolves.toBe('proxy-code');
+    expect(codeSignIn).toHaveBeenCalledTimes(1);
+  });
+
+  test('불러오기가 끝나지 않으면 제한 시간 뒤 오류', async () => {
+    await expect(getAppleAuthorizationCode({ load: () => new Promise(() => {}), loadTimeoutMs: 50 })).rejects.toThrow();
+  });
+
+  test('코드가 없으면 탈퇴하지 않는다는 오류', async () => {
+    const empty = registerPlugin('AppleSignInEmptyTest', { web: { signIn: async () => ({ idToken: 't' }) } });
+    await expect(getAppleAuthorizationCode({ load: async () => ({ AppleSignIn: empty }) })).rejects.toThrow('탈퇴하지 않았습니다');
   });
 });

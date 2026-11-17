@@ -74,6 +74,30 @@ export async function signInWithAppleSheet({ load = loadPlugin, cryptoImpl, load
   return { idToken: result.idToken, nonce: raw };
 }
 
+/**
+ * 탈퇴 전 Apple 재확인 (SPEC 6-65). iOS Apple 시트를 한 번 더 띄워 authorizationCode(5분짜리, 한 번만 쓰임)를 받는다.
+ * 이 코드는 서버(delete-account)가 Apple 연결 해제에 쓴다. 이름·이메일은 다시 받지 않는다(scopes 없음).
+ * 취소하면 cancelled: true가 붙은 Error. 불러오기 방식은 signInWithAppleSheet와 같다 (Proxy를 await하지 않음, 6-64).
+ */
+export async function getAppleAuthorizationCode({ load = loadPlugin, cryptoImpl, loadTimeoutMs = APPLE_LOAD_TIMEOUT_MS } = {}) {
+  const { hashed } = await makeNonce(cryptoImpl);
+  const mod = await loadWithTimeout(load, loadTimeoutMs);
+  const plugin = mod?.AppleSignIn;
+  if (!plugin) throw new Error('Apple 확인 기능을 불러오지 못했습니다.');
+  let result;
+  try {
+    result = await plugin.signIn({ scopes: [], nonce: hashed });
+  } catch (e) {
+    if (isAppleCancel(e)) throw Object.assign(new Error('Apple 확인을 취소해서 탈퇴하지 않았습니다.'), { cancelled: true });
+    throw Object.assign(new Error('Apple 확인을 마치지 못해 탈퇴하지 않았습니다. 다시 시도해 주세요.'), { detail: e?.message ?? String(e) });
+  }
+  if (!result?.authorizationCode) throw new Error('Apple에서 확인 정보를 받지 못해 탈퇴하지 않았습니다. 다시 시도해 주세요.');
+  return result.authorizationCode;
+}
+
+/** 탈퇴했지만 Apple 쪽 연결은 못 끊었을 때 (웹·안드로이드에서 탈퇴, 또는 해제 실패) 직접 끊는 방법 */
+export const APPLE_MANUAL_UNLINK_TEXT = 'Apple 쪽 연결은 끊지 못했습니다. iPhone 설정 → [내 이름] → 로그인 및 보안 → Apple로 로그인에서 탑신병자를 골라 직접 중단할 수 있습니다.';
+
 /** 이 계정의 로그인 방식이 Apple뿐인가 (다른 기기에서 쓰려면 구글·카카오 연결 안내) */
 export function isAppleOnly(providers) {
   const list = (providers ?? []).filter((p) => p && p !== 'anonymous');

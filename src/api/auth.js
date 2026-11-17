@@ -5,7 +5,7 @@ import { dropBrowserPush, forgetDevicePush } from './push';
 import { ALREADY_MEMBER_TEXT } from '../lib/guest';
 import { isIosApp, isNativeApp } from '../lib/native';
 import { NATIVE_REDIRECT, emitNativeAuth, listenAuthCallbacks, openAuthBrowser } from '../lib/nativeAuth';
-import { signInWithAppleSheet } from '../lib/appleAuth';
+import { getAppleAuthorizationCode, signInWithAppleSheet, userProviders } from '../lib/appleAuth';
 
 export const NICKNAME_MAX = 20;
 
@@ -493,12 +493,27 @@ export async function getNicknameRule(userId) {
   return { days, last, next };
 }
 
+/** iOS 앱에서 탈퇴할 때 Apple 재확인이 필요한가 (Apple이 연결된 계정). 연결 목록을 못 읽으면 세션 정보로 */
+async function needsAppleRecheck() {
+  if (!isIosApp()) return false;
+  try {
+    return (await getIdentities()).some((i) => i.provider === 'apple');
+  } catch {
+    const { data } = await db().auth.getSession();
+    return userProviders(data?.session?.user).includes('apple');
+  }
+}
+
 /**
- * 회원 탈퇴: Edge Function delete-account (DB delete_my_account + 카카오 연결 끊기). confirm = 내 닉네임 그대로.
- * 성공하면 이 브라우저의 로그인도 지운다 (서버 세션은 계정과 함께 이미 없어짐).
+ * 회원 탈퇴: Edge Function delete-account (DB delete_my_account + 카카오 연결 끊기 + Apple 연결 해제). confirm = 내 닉네임 그대로.
+ * iOS 앱에서 Apple이 연결된 계정이면 먼저 Apple 시트로 한 번 더 확인해 받은 코드(appleCode)를 같이 보낸다 (SPEC 6-65).
+ * 시트를 닫으면 탈퇴하지 않는다. 성공하면 이 브라우저의 로그인도 지운다 (서버 세션은 계정과 함께 이미 없어짐).
+ * 돌려주는 값: { apple: 'revoked' | 'failed' | 'not_revoked' | 'none' }
  */
 export async function deleteMyAccount(confirm) {
-  const { error } = await db().functions.invoke('delete-account', { body: { confirm } });
+  const body = { confirm };
+  if (await needsAppleRecheck()) body.appleCode = await getAppleAuthorizationCode();
+  const { data, error } = await db().functions.invoke('delete-account', { body });
   if (error) {
     let message = null;
     try {
@@ -508,4 +523,5 @@ export async function deleteMyAccount(confirm) {
   }
   await dropBrowserPush(); // 알림 주소는 계정과 함께 DB에서 지워졌다 — 이 브라우저 구독만 끊는다 (037)
   await db().auth.signOut({ scope: 'local' }).catch(() => {});
+  return { apple: data?.apple ?? 'none' };
 }

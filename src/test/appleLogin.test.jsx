@@ -21,13 +21,14 @@ vi.mock('@capawesome/capacitor-apple-sign-in', () => ({ AppleSignIn: cap.apple }
 
 const { AppRoutes } = await import('../App');
 const { db } = await import('../api/supabase');
-const { fakeGuestLogin, fakeLogin, fakeState } = await import('./fakeSupabase');
+const fakeTables = await import('./fakeSupabase');
+const { fakeGuestLogin, fakeLogin, fakeState } = fakeTables;
 const { fakeFetch } = await import('./fakeDdragon');
 const { canUseProvider, linkProvider, loginProviders, signIn } = await import('../api/auth');
 const { isIosApp } = await import('../lib/native');
 const { resetNativeAuthForTest } = await import('../lib/nativeAuth');
 const {
-  APPLE_ONLY_TEXT, APPLE_SCOPES, displayEmail, isAppleCancel, isAppleOnly, isRelayEmail, makeNonce, signInWithAppleSheet, userProviders,
+  APPLE_MANUAL_UNLINK_TEXT, APPLE_ONLY_TEXT, APPLE_SCOPES, displayEmail, isAppleCancel, isAppleOnly, isRelayEmail, makeNonce, signInWithAppleSheet, userProviders,
 } = await import('../lib/appleAuth');
 const { ALREADY_MEMBER_TEXT } = await import('../lib/guest');
 
@@ -281,5 +282,88 @@ describe('웹·안드로이드에서 Apple 가입자', () => {
     const section = await screen.findByRole('region', { name: '로그인 연결' });
     expect(await within(section).findByRole('button', { name: '카카오 연결하기' })).toBeDefined();
     expect(within(section).queryByText('Apple')).toBeNull();
+  });
+});
+
+// ---------------- 6-65: 탈퇴할 때 Apple 연결 해제 ----------------
+describe('탈퇴: Apple 연결 해제 (6-65)', () => {
+  const { TABLES } = fakeTables;
+  const withdraw = async (nickname) => {
+    start('/me/settings');
+    const del = await screen.findByRole('region', { name: '회원 탈퇴' });
+    expect(within(del).getByText(/카카오·Apple로 연결돼 있었으면 그쪽 연결도 끊습니다\(iOS 앱에서는 Apple 확인을 한 번 더 합니다\)/)).toBeDefined();
+    fireEvent.click(within(del).getByRole('button', { name: '탈퇴' }));
+    fireEvent.change(within(del).getByRole('textbox'), { target: { value: nickname } });
+    fireEvent.click(within(del).getByRole('button', { name: '탈퇴 확정' }));
+    return del;
+  };
+
+  test('iOS + Apple 계정: Apple 시트로 한 번 더 확인하고 코드를 함께 보낸다 → 해제되면 직접 끊기 안내 없음', async () => {
+    fakeLogin('u-del', { nickname: '사과탈퇴' }, { identities: [appleIdentity()] });
+    cap.apple.signIn.mockResolvedValue({ idToken: 'x', authorizationCode: 'fresh-code' });
+    await withdraw('사과탈퇴');
+    const notice = await screen.findByText(/탈퇴했습니다/);
+    expect(notice.textContent).not.toContain('직접 중단');
+    expect(cap.apple.signIn).toHaveBeenCalledTimes(1);
+    const [opts] = cap.apple.signIn.mock.calls[0];
+    expect(opts.scopes).toEqual([]);
+    expect(opts.nonce).toMatch(/^[0-9a-f]{64}$/);
+    expect(fakeState.functionCalls).toEqual([{ name: 'delete-account', body: { confirm: '사과탈퇴', appleCode: 'fresh-code' } }]);
+    expect(where()).toBe('/');
+  });
+
+  test('iOS + Apple 계정: 시트를 닫으면 탈퇴하지 않는다', async () => {
+    fakeLogin('u-del', { nickname: '사과탈퇴' }, { identities: [appleIdentity()] });
+    cap.apple.signIn.mockRejectedValue(Object.assign(new Error('canceled'), { code: 'SIGN_IN_CANCELED' }));
+    const del = await withdraw('사과탈퇴');
+    expect(await within(del).findByRole('alert')).toHaveProperty('textContent', 'Apple 확인을 취소해서 탈퇴하지 않았습니다.');
+    expect(fakeState.functionCalls).toEqual([]);
+    expect(TABLES.profiles.some((p) => p.id === 'u-del')).toBe(true);
+    expect(where()).toBe('/me/settings');
+    expect(within(del).getByRole('button', { name: '탈퇴 확정' }).disabled).toBe(false); // 다시 시도할 수 있다
+  });
+
+  test('iOS + Apple 계정: 시트가 실패하면 탈퇴하지 않고 다시 시도 안내', async () => {
+    fakeLogin('u-del', { nickname: '사과탈퇴' }, { identities: [appleIdentity()] });
+    cap.apple.signIn.mockRejectedValue(new Error('The operation couldn’t be completed. (1000)'));
+    const del = await withdraw('사과탈퇴');
+    expect(await within(del).findByRole('alert')).toHaveProperty('textContent', 'Apple 확인을 마치지 못해 탈퇴하지 않았습니다. 다시 시도해 주세요.');
+    expect(fakeState.functionCalls).toEqual([]);
+  });
+
+  test('iOS + Apple 계정: 서버가 코드 교환에 실패하면 그 문구를 보여 주고 남는다', async () => {
+    fakeLogin('u-del', { nickname: '사과탈퇴' }, { identities: [appleIdentity()] });
+    fakeState.functionError = 'Apple 확인을 마치지 못해 탈퇴하지 않았습니다. 다시 시도해 주세요.';
+    const del = await withdraw('사과탈퇴');
+    expect(await within(del).findByRole('alert')).toHaveProperty('textContent', fakeState.functionError);
+    expect(where()).toBe('/me/settings');
+  });
+
+  test('iOS + Apple 계정: 탈퇴는 됐지만 해제 실패 → 완료 문구에 직접 끊는 방법', async () => {
+    fakeLogin('u-del', { nickname: '사과탈퇴' }, { identities: [appleIdentity()] });
+    fakeState.deleteApple = 'failed';
+    await withdraw('사과탈퇴');
+    const notice = await screen.findByText(/탈퇴했습니다/);
+    expect(notice.textContent).toContain(APPLE_MANUAL_UNLINK_TEXT);
+  });
+
+  test.each([['웹', false, 'web'], ['안드로이드 앱', true, 'android']])('%s + Apple 계정: 시트 없이 탈퇴하고 직접 끊는 방법 안내', async (_n, native, platform) => {
+    cap.native = native;
+    cap.platform = platform;
+    fakeLogin('u-del', { nickname: '사과탈퇴' }, { identities: [appleIdentity()] });
+    await withdraw('사과탈퇴');
+    const notice = await screen.findByText(/탈퇴했습니다/);
+    expect(notice.textContent).toContain(APPLE_MANUAL_UNLINK_TEXT);
+    expect(cap.apple.signIn).not.toHaveBeenCalled();
+    expect(fakeState.functionCalls).toEqual([{ name: 'delete-account', body: { confirm: '사과탈퇴' } }]);
+  });
+
+  test('iOS + 구글만 연결된 계정: Apple 시트 없이 지금처럼', async () => {
+    fakeLogin('u-del', { nickname: '구글탈퇴' }, { identities: [{ provider: 'google', created_at: now() }] });
+    await withdraw('구글탈퇴');
+    const notice = await screen.findByText(/탈퇴했습니다/);
+    expect(notice.textContent).not.toContain('직접 중단');
+    expect(cap.apple.signIn).not.toHaveBeenCalled();
+    expect(fakeState.functionCalls).toEqual([{ name: 'delete-account', body: { confirm: '구글탈퇴' } }]);
   });
 });

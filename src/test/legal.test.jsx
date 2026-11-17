@@ -179,6 +179,11 @@ test('방침·약관 (055 회원 탈퇴 정리): 추천 익명 유지, 신청·�
   expect(privacy).toContain('탈퇴한 장인 닉네임 예약: 인증된 장인이 탈퇴하면 그 닉네임을 30일 동안 보관해');
   expect(privacy).toContain('누구의 닉네임이었는지는 남기지 않습니다');
   expect(privacy).toContain('[탈퇴]를 누르고 내 닉네임을 입력한 뒤 [탈퇴 확정]');
+  // 6-65: 탈퇴 때 Apple 연결 해제
+  expect(privacy).toContain('카카오·Apple로 로그인한 적이 있으면 그쪽 연결도 함께 끊습니다.');
+  expect(privacy).toContain('이때 받은 Apple 인증 정보는 저장하지 않고 연결을 끊는 데만 씁니다.');
+  expect(privacy).toContain('iPhone 설정 → [내 이름] → 로그인 및 보안 → Apple로 로그인에서 직접 중단할 수 있습니다.');
+  expect(privacy).not.toContain('카카오로 로그인한 적이 있으면 카카오 쪽 연결도 함께 끊습니다.');
   expect(privacy).toContain('[계정 설정]의 “공지”에서 끌 수 있습니다');
   cleanup();
   start('/terms');
@@ -187,6 +192,8 @@ test('방침·약관 (055 회원 탈퇴 정리): 추천 익명 유지, 신청·�
   expect(sec('제4조 (닉네임)')).toContain('인증된 장인이 탈퇴하면 그 닉네임과 같거나 비슷한 닉네임은 30일 동안 누구도 쓸 수 없습니다');
   expect(sec('제4조의2 (장인 인증)')).toContain('그 닉네임과 비슷한 닉네임은 30일 동안 다른 사람이 쓸 수 없습니다');
   expect(sec('제9조 (탈퇴)')).toContain('익명으로 남아, 추천 수는 그대로 유지됩니다');
+  expect(sec('제9조 (탈퇴)')).toContain('탈퇴하면 카카오·Apple 로그인의 연결도 함께 끊습니다(iOS 앱에서는 Apple 확인을 한 번 더 합니다).');
+  expect(sec('제9조 (탈퇴)')).toContain('iPhone 설정의 “Apple로 로그인”에서 직접 중단할 수 있습니다.');
   const change = sec('제12조 (약관의 변경)');
   expect(change).toContain('시행 7일 전부터 이 페이지에 알립니다. 이용자에게 불리한 변경은 시행 30일 전부터 알립니다.');
   expect(change).toContain('바뀐 약관을 알린 뒤 시행일까지 거부 의사를 밝히지 않고 계속 이용하면 바뀐 약관에 동의한 것으로 봅니다.');

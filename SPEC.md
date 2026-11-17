@@ -875,6 +875,7 @@ RLS 원칙:
 - **Secrets** (Edge Functions → Secrets): `KAKAO_ADMIN_KEY` = 카카오 앱 키 → **Admin 키**. 선택: `KAKAO_APP_ID` = 앱 ID (다른 앱 알림 거절). `SUPABASE_URL`·`SUPABASE_ANON_KEY`·`SUPABASE_SERVICE_ROLE_KEY`는 자동으로 들어 있다. 비밀 값은 코드·`.env`·저장소·대화에 쓰지 않는다.
 - **Kakao Developers** → 앱 → 카카오 로그인 → **연결 끊기 알림** (메뉴 이름은 콘솔 버전에 따라 "고급"/"Unlink" 등): 콜백 주소 `https://<프로젝트ID>.supabase.co/functions/v1/kakao-unlink`, 방식 GET·POST 아무거나
 - 확인: Edge Functions → kakao-unlink → Logs에 `{"event":"kakao_unlink","result":…}`. 탈퇴는 delete-account Logs에 `{"event":"account_deleted","kakao":"unlinked"}`
+- **Apple 연결 해제용 Secrets (6-65)**: `APPLE_TEAM_ID`(Apple Developer → Membership의 Team ID), `APPLE_KEY_ID`(Certificates, Identifiers & Profiles → Keys → Sign in with Apple 키의 Key ID), `APPLE_BUNDLE_ID`(앱 번들 ID), `APPLE_PRIVATE_KEY`(그 키의 .p8 파일 내용 전체 — 줄바꿈 모양은 상관없음). .p8은 Codespace·저장소·대화에 넣지 않고 대시보드에만 붙여 넣는다. 확인: 탈퇴 Logs의 `"apple":"revoked"`
 
 ### 11-9. 비회원 로그인 (020)
 1. **Authentication → Sign In / Providers → "Allow anonymous sign-ins" 켜기** (020 실행 전). "Allow manual linking"은 이미 켜져 있다 (11-3).
@@ -1473,3 +1474,16 @@ RLS 원칙:
 - **웹 영향 없음**: Apple 길은 `canUseProvider('apple')` = `isIosApp()`일 때만 탄다. 플러그인은 그대로 동적 import로 따로 나뉜 조각(웹 첫 번들에 정적 포함 없음, 기존 검사 유지).
 - **Codemagic 진단 단계**(`codemagic.yaml`, 아카이브 뒤): xcarchive의 `.app`에서 `codesign -d --entitlements`와 `embedded.mobileprovision`의 이름·팀·만료일·권한만 출력하고 각각 applesignin 있음/없음을 한 줄로. 정보 출력만 — `ignore_failure: true` + 항상 `exit 0`이라 실패해도 빌드·업로드 계속. 프로필 임시 파일은 다 읽은 뒤 지운다. 인증서 데이터·비밀 값은 출력하지 않는다.
 - **검사**: `appleLogin.test.jsx` 가짜 load를 모듈 모양으로, 새 `appleProxy.test.js`(실제 `registerPlugin` Proxy: then이 함수로 보임, 모듈 모양이면 시트 호출까지 가고 끝남, 끝나지 않는 load는 제한 시간 뒤 오류, AppleSignIn 없는 모듈은 오류). Codemagic 스키마 오류 0, 스크립트 `bash -n` 통과. 전체 78파일 804건 통과, 웹 빌드 통과.
+
+### 6-65. Apple로 가입한 계정 탈퇴 시 Apple 연결 해제 (2026-11-17, DB 변경 없음, App Store 가이드라인 5.1.1(v))
+- **목표**: Apple 로그인이 연결된 계정이 탈퇴하면 Apple 쪽 연결(토큰)도 해제한다. Apple 토큰은 저장하지 않는다 — 탈퇴할 때 한 번 더 확인해 받은 코드로 바로 해제.
+- **흐름**(iOS 앱): [탈퇴 확정] → 연결 목록(`getUserIdentities`, 못 읽으면 세션)에 apple이 있으면 Apple 시트를 한 번 더(scopes 없음, nonce만) → `authorizationCode` → Edge Function `delete-account`에 `{ confirm, appleCode }`.
+  시트를 닫거나 실패하면 탈퇴하지 않는다("Apple 확인을 취소해서 탈퇴하지 않았습니다." / "…마치지 못해…").
+- **Edge Function `delete-account`** (기존 함수에 더함): ① `getUser`로 Apple 연결·sub 확인 ② Apple 연결 + 코드면 client secret(ES256 JWT, kid=키 ID, iss=팀 ID, sub=번들 ID, aud=`https://appleid.apple.com`, 5분, WebCrypto)으로 `/auth/token` 교환 → id_token의 iss·aud·sub(이 계정의 Apple sub) 확인 ③ `delete_my_account` ④ 카카오 끊기(그대로) ⑤ `/auth/revoke`(refresh_token, 실패하면 한 번 더).
+  응답 `{ ok, apple: revoked | failed | not_revoked | none }`. 로그는 `{event, kakao, apple}`과 실패 이유만(코드·토큰·sub·이메일·키 없음).
+- **실패 정책**: 지우기 전 실패는 막는다 — 교환 실패·만료 400, 다른 Apple ID 403, 비밀 값 없음·키 형식 오류·`invalid_client` 500(설정 안내). 계정 삭제가 거절되면 해제하지 않는다.
+  지운 뒤 해제 실패는 탈퇴 완료(`failed`) + 완료 문구에 iPhone 설정에서 직접 중단하는 방법. 웹·안드로이드에서 Apple 연결 계정 탈퇴는 시트 없이 진행(`not_revoked`) + 같은 안내.
+- **비밀 값**: `APPLE_TEAM_ID`, `APPLE_KEY_ID`, `APPLE_BUNDLE_ID`, `APPLE_PRIVATE_KEY`(11-8). 키는 머리·꼬리 줄, 따옴표, 공백·줄바꿈, 글자 그대로의 `\n`을 지우고 base64만 읽으므로 붙여 넣는 모양과 상관없다.
+- **화면·문서**: 탈퇴 안내 "카카오·Apple로 연결돼 있었으면 그쪽 연결도 끊습니다(iOS 앱에서는 Apple 확인을 한 번 더 합니다)". 개인정보처리방침 9-1, 이용약관 제9조에 Apple 연결 해제·인증 정보 비저장·직접 중단 방법(시행일 2026-12-14 그대로).
+- **배포**: 대시보드 Secrets 4개 → delete-account 코드 붙여 넣기(Verify JWT 켬) → 웹 → iOS 빌드. 함수가 먼저 나가도 지금 앱·웹은 코드 없이 보내 `not_revoked`로 탈퇴된다. Apple 서버 알림(설정에서 직접 끊었을 때)은 이번에 하지 않는다.
+- **검사**: 새 `appleRevoke.test.js`(순서 token→delete→revoke, 카카오 함께, 교환 실패·invalid_client·네트워크·sub/aud/iss 다름·refresh 없음은 지우지 않음, 삭제 거절 시 해제 안 함, 해제 재시도·두 번 실패=`failed`, 비밀 값 4개 각각 없음, 키 형식 오류 로그에 키 없음, 로그에 코드·토큰·sub·이메일 없음, 코드 없음=`not_revoked`, Apple 없음=`none`, client secret 헤더·내용·서명 검증과 .p8 붙여 넣기 7가지 모양), `appleLogin.test.jsx` 탈퇴 7개(iOS 시트→코드 전송, 취소·실패 시 안 지움, 서버 거절 문구, 해제 실패 안내, 웹·안드로이드, 구글만), `appleProxy.test.js` 재확인도 실제 Proxy로, `legal.test.jsx` 문구. 가짜 delete-account가 `apple` 결과를 돌려줌(`fakeState.deleteApple`).

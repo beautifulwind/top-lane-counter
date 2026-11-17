@@ -144,7 +144,7 @@ export const EMPTY_USAGE = () => ({
 export const fakeState = {
   error: null, session: null, initError: null, oauthCalls: [], linkCalls: [], linkError: null, listeners: new Set(),
   queryLog: [], inserts: [], insertError: null, pendingCounts: null, pendingCountsAsked: 0, rpcCalls: [], memberCalls: [], memberStats: { total: 0, members: 0, guests: 0, google: 0, kakao: 0, both: 0, new_7d: 0, new_7d_members: 0 }, members: [], memberInfo: {}, memberDetail: {}, deletedWritings: {}, buildRevisions: {}, rpcError: null, rpcErrorCode: null, reviewCalls: [], reviewers: {}, boardError: null,
-  functionCalls: [], functionError: null, // Edge Function 호출 (017 delete-account)
+  functionCalls: [], functionError: null, deleteApple: null, // Edge Function 호출 (017 delete-account, 6-65 Apple 결과)
   anonCalls: [], anonError: null, anonDelay: null, hideCounts: {}, signOutCalls: [], touched: 0, // 비회원 (020)
   uploads: [], uploadError: null, mediaProblem: null, mediaUsage: EMPTY_USAGE(), // 사진 (023, mediaUsage = media_usage 결과)
 };
@@ -196,6 +196,7 @@ export function resetFake() {
   TABLES.counters = INITIAL_COUNTERS.map((c) => structuredClone(c)); // 038: 새 상대법 등록이 counters에 줄을 더한다
   fakeState.functionCalls = [];
   fakeState.functionError = null;
+  fakeState.deleteApple = null;
   fakeState.inserts = [];
   fakeState.insertError = null;
   fakeState.rpcCalls = [];
@@ -449,7 +450,13 @@ const functions = {
       const message = fakeState.functionError;
       return { data: null, error: { message: 'Edge Function returned a non-2xx status code', context: { json: async () => ({ error: message }) } } };
     }
-    if (name === 'delete-account') fakeWithdraw(fakeState.session?.user.id);
+    if (name === 'delete-account') {
+      // 6-65: 진짜 함수처럼 Apple 결과를 돌려준다 (fakeState.deleteApple로 바꿀 수 있음)
+      const hasApple = (fakeState.session?.user.identities ?? []).some((i) => i.provider === 'apple');
+      const apple = fakeState.deleteApple ?? (body?.appleCode && hasApple ? 'revoked' : hasApple ? 'not_revoked' : 'none');
+      fakeWithdraw(fakeState.session?.user.id);
+      return { data: { ok: true, apple }, error: null };
+    }
     return { data: { ok: true }, error: null };
   },
 };

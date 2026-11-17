@@ -7,6 +7,7 @@ import { josaOf } from '../lib/josa';
 import { CharCount } from './BoardParts';
 import { ErrorBox, Loading } from './Status';
 import { isGuest } from '../lib/guest';
+import { APPLE_MANUAL_UNLINK_TEXT } from '../lib/appleAuth';
 import SectionHead from './SectionHead';
 import { PencilIcon, ShieldIcon, TrashIcon } from './Icons';
 import PushSettings from './PushSettings';
@@ -153,6 +154,7 @@ function NicknameChange({ auth }) {
 
 /**
  * 회원 탈퇴 / 비회원 기록 지우기 (같은 delete_my_account). 확인 문구 = 닉네임, 닉네임 없는 비회원은 "지우기" (020).
+ * Apple 연결 계정: iOS 앱은 [탈퇴 확정] 뒤 Apple 시트로 한 번 더 확인, 연결을 못 끊었으면 완료 문구에 직접 끊는 방법 (6-65).
  * /welcome(닉네임 없는 비회원)에서도 쓴다.
  */
 export function DeleteAccount({ auth }) {
@@ -177,8 +179,9 @@ export function DeleteAccount({ auth }) {
     setBusy(true);
     setError(null);
     try {
-      await deleteMyAccount(confirm.trim());
-      const siteNotice = guest ? '비회원 기록을 지웠습니다. 이 기기에서 로그인 정보도 지웠습니다.' : '탈퇴했습니다. 계정과 내 기록을 지웠습니다. 그동안 고마웠습니다.';
+      const { apple } = await deleteMyAccount(confirm.trim());
+      let siteNotice = guest ? '비회원 기록을 지웠습니다. 이 기기에서 로그인 정보도 지웠습니다.' : '탈퇴했습니다. 계정과 내 기록을 지웠습니다. 그동안 고마웠습니다.';
+      if (apple === 'failed' || apple === 'not_revoked') siteNotice += ` ${APPLE_MANUAL_UNLINK_TEXT}`; // 6-65
       navigate('/', { replace: true, state: { siteNotice } });
     } catch (err) {
       setError(err.message);
@@ -201,7 +204,7 @@ export function DeleteAccount({ auth }) {
             {!guest && auth.profile?.influencer && (
               <li><strong>인증된 장인이라면:</strong> 링크, 팔로우, 장인 표시, 한정판 칭호가 사라지고, 닉네임은 30일 동안 다른 사람이 쓸 수 없습니다.</li>
             )}
-            {guest ? <li>되돌릴 수 없습니다.</li> : <li>카카오로 연결돼 있었으면 카카오 쪽 연결도 끊습니다. 되돌릴 수 없습니다.</li>}
+            {guest ? <li>되돌릴 수 없습니다.</li> : <li>카카오·Apple로 연결돼 있었으면 그쪽 연결도 끊습니다(iOS 앱에서는 Apple 확인을 한 번 더 합니다). 되돌릴 수 없습니다.</li>}
           </ul>
           {!open ? (
             <button type="button" className="btn btn-small btn-danger" onClick={() => setOpen(true)}>{guest ? '비회원 기록 지우기' : '탈퇴'}</button>
