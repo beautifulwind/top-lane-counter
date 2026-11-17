@@ -1487,3 +1487,12 @@ RLS 원칙:
 - **화면·문서**: 탈퇴 안내 "카카오·Apple로 연결돼 있었으면 그쪽 연결도 끊습니다(iOS 앱에서는 Apple 확인을 한 번 더 합니다)". 개인정보처리방침 9-1, 이용약관 제9조에 Apple 연결 해제·인증 정보 비저장·직접 중단 방법(시행일 2026-12-14 그대로).
 - **배포**: 대시보드 Secrets 4개 → delete-account 코드 붙여 넣기(Verify JWT 켬) → 웹 → iOS 빌드. 함수가 먼저 나가도 지금 앱·웹은 코드 없이 보내 `not_revoked`로 탈퇴된다. Apple 서버 알림(설정에서 직접 끊었을 때)은 이번에 하지 않는다.
 - **검사**: 새 `appleRevoke.test.js`(순서 token→delete→revoke, 카카오 함께, 교환 실패·invalid_client·네트워크·sub/aud/iss 다름·refresh 없음은 지우지 않음, 삭제 거절 시 해제 안 함, 해제 재시도·두 번 실패=`failed`, 비밀 값 4개 각각 없음, 키 형식 오류 로그에 키 없음, 로그에 코드·토큰·sub·이메일 없음, 코드 없음=`not_revoked`, Apple 없음=`none`, client secret 헤더·내용·서명 검증과 .p8 붙여 넣기 7가지 모양), `appleLogin.test.jsx` 탈퇴 7개(iOS 시트→코드 전송, 취소·실패 시 안 지움, 서버 거절 문구, 해제 실패 안내, 웹·안드로이드, 구글만), `appleProxy.test.js` 재확인도 실제 Proxy로, `legal.test.jsx` 문구. 가짜 delete-account가 `apple` 결과를 돌려줌(`fakeState.deleteApple`).
+
+### 6-66. 앱 아이콘과 시작 화면(splash) 적용 — iOS·Android (2026-11-17, DB 변경 없음, 웹 영향 없음)
+- **원본**: 루트 `assets/`(`icon-only.png` 1024, `icon-foreground.png`·`icon-background.png`(안드로이드 적응형), `splash.png`·`splash-dark.png` 2732). 배경색 `#0a0a0a`.
+- **생성**: `@capacitor/assets`(devDependency, 4.0.0) — `npm run assets`(= `capacitor-assets generate --ios --android` + 배경색 `#0a0a0a` 4개 옵션)로 언제든 다시 만든다. 결과: iOS `Assets.xcassets`의 `AppIcon.appiconset`(1024 하나)·`Splash.imageset`(1x~3x 밝은/어두운), Android `res/mipmap-*`(런처·둥근·적응형 앞/뒤)·`mipmap-anydpi-v26`·`drawable*/splash.png`(세로·가로·밤 모드). 안 쓰게 된 옛 기본 시작 화면 3장(`splash-2732x2732*.png`)은 지움.
+- **iOS 아이콘(App Store 조건)**: 1024×1024, RGB(투명도 없음), 네 모서리까지 `#0a0a0a`로 꽉 차 있고 둥글림 없음(둥글리기는 iOS가 한다).
+- **시작 화면 설정**: `@capacitor/splash-screen` 플러그인은 쓰지 않는다(새 네이티브 의존성 없음 → `SplashScreen` 설정 항목은 넣어도 동작하지 않는다). 시간은 시스템이 정한다 — iOS는 앱 첫 화면이 그려지면, Android(`Theme.SplashScreen`)는 첫 프레임이 그려지면 바로 사라진다(억지로 붙잡지 않음).
+  깜빡임 방지: ① `capacitor.config.json` 최상위 `backgroundColor: "#0a0a0a"`(웹뷰 바탕 — 시작 화면이 사라지고 웹이 그려지기 전 흰 화면 방지) ② iOS `LaunchScreen.storyboard` 바탕을 흰색(시스템색)에서 `#0a0a0a`로 ③ Android 12+ 시스템 시작 화면 `windowSplashScreenBackground #0a0a0a`(`styles.xml`).
+- **웹 PWA 아이콘**(`public/`의 아이콘·manifest)은 건드리지 않음. `AndroidManifest.xml`은 생성기가 공백만 바꿔 되돌림.
+- **iOS 반영**: 이 커밋 뒤 Codemagic 빌드(`cap sync ios` 포함)에 그대로 들어간다. 아이콘은 TestFlight 새 빌드로만 바뀐다.

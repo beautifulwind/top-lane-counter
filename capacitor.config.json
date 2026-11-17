@@ -2,6 +2,7 @@
   "appId": "com.topsinbyeongja.app",
   "appName": "탑신병자",
   "webDir": "dist",
+  "backgroundColor": "#0a0a0a",
   "plugins": {
     "SystemBars": {
       "insetsHandling": "css",
