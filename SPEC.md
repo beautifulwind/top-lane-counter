@@ -1517,3 +1517,10 @@ RLS 원칙:
 - **061 전 DB에서도 동작**: 차단 표가 없으면(PostgREST `PGRST205`·Postgres `42P01`) 차단 목록은 빈 목록으로 보고 아무것도 숨기지 않으며, [이 사용자 차단]·[차단 해제]만 「차단 기능을 준비하고 있습니다. 잠시 뒤 다시 시도해 주세요.」. 글 목록은 옛 `board_page` 그대로.
 - **방침·약관**: 개인정보처리방침 1번(수집 항목: 차단 목록과 쓰임, 차단당한 이용자에게 알리지 않음)·4번(탈퇴 삭제 목록 + "차단 목록" 보관·삭제 문단). 이용약관은 그대로 — 이미 「제6조를 어기면 운영자는 해당 내용을 숨기거나 삭제하고, 이용을 제한할 수 있습니다.」가 있다. 시행일 2026-12-14 그대로.
 - **검사**: DB `supabase/tests/user_blocks_test.sql`(표·RLS·권한, 자기 자신·운영자·남의 이름·비로그인 차단 불가, 고치기 불가, 글 목록·검색 거르기와 해제 복구, 댓글·답글·문서 답글 알림·합친 수, 팔로우 끊기·새 팔로워 수, 탈퇴 정리). 화면 `src/test/blocks.test.jsx`(차단 → 숨김 → 해제 복구, 댓글 자리 표시, 빌드·문서 댓글, 내 것·운영자 항목 없음, 비로그인 → 로그인, 알림, 탈퇴 정리, 061 전 DB, 홈 검색·챔피언 요약), `legal.test.jsx`. 가짜 DB에 `user_blocks`(+ `blocksMissing`, 댓글 알림 흉내). ⋮ 항목이 늘어 기존 검사 4개 파일의 메뉴 기대값을 고침.
+
+### 6-68. iOS는 iPhone 전용(iPad 미지원) (2026-11-17, 네이티브 설정만, DB·웹·안드로이드 변경 없음)
+- **이유**: iPad 지원 앱으로 올리면 App Store Connect가 13인치 iPad 스크린샷을 필수로 요구한다. iPad 화면은 검증한 적이 없어 iPhone 전용으로 제출한다.
+- **바꾼 것**: `ios/App/App.xcodeproj/project.pbxproj`의 App 타깃 Debug·Release `TARGETED_DEVICE_FAMILY`를 `"1,2"` → `1`(iPhone). 프로젝트 수준 빌드 설정에는 이 값이 없었다. `ios/App/App/Info.plist`에서 `UISupportedInterfaceOrientations~ipad` 삭제(iPhone용 `UISupportedInterfaceOrientations`는 그대로, `UIRequiresFullScreen`은 원래 없었음).
+- **덮어쓰기 없음**: `codemagic.yaml`은 `CURRENT_PROJECT_VERSION`만 sed로 바꾸고, `capacitor.config.json`에는 기기 설정이 없다. `npx cap sync ios`는 웹 자산·플러그인 설정만 복사하며 이 값들은 건드리지 않는다.
+- **다시 iPad를 지원하려면**: `TARGETED_DEVICE_FAMILY`를 `"1,2"`로 되돌리고 `~ipad` 방향 키를 복구한 뒤 iPad 화면을 먼저 검증하고 13인치 스크린샷을 준비한다.
+- **확인**: 웹으로는 확인 불가 — Codemagic 빌드(12번)에서 확인.
