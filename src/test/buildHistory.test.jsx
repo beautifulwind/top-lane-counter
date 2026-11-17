@@ -59,7 +59,7 @@ test('운영자: 빌드 ⋮ "수정 기록 자세히" → 수정 기록 화면',
   asOperator();
   start(`${MATCHUP}?build=102`);
   await screen.findByText(/퀸으로 다리우스 이기는 법/);
-  expect(moreNames(screen, '빌드 2 더보기')).toEqual(['오류 신고', '빌드 숨기기', '수정 기록 자세히']);
+  expect(moreNames(screen, '빌드 2 더보기')).toEqual(['오류 신고', '빌드 숨기기', '수정 기록 자세히', '이 사용자 차단']);
   pickMore(screen, '수정 기록 자세히', '빌드 2 더보기');
   expect(where()).toBe('/admin/builds/102/history');
   expect(await screen.findByRole('heading', { name: '빌드 수정 기록' })).toBeDefined();
@@ -145,7 +145,7 @@ test('감독관: 일반 회원·탈퇴한 분이 처음 만든 빌드는 ⋮ "�
   asModerator();
   start(`${MATCHUP}?build=102`);
   await screen.findByText(/퀸으로 다리우스 이기는 법/);
-  expect(moreNames(screen, '빌드 2 더보기')).toEqual(['오류 신고', '빌드 숨기기']);
+  expect(moreNames(screen, '빌드 2 더보기')).toEqual(['오류 신고', '빌드 숨기기', '이 사용자 차단']);
   pickMore(screen, '빌드 숨기기', '빌드 2 더보기');
   fireEvent.change(screen.getByLabelText(/숨기는 사유/), { target: { value: '장난 빌드' } });
   fireEvent.click(screen.getByRole('button', { name: '숨기기 확정' }));

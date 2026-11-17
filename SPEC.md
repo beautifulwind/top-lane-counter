@@ -681,6 +681,7 @@
 - **wiki_last_write** (038): 등록·수정 간격용 마지막 시각 (아무도 직접 못 읽음)
 - **counter_status_log**: 숨긴 카운터의 숨김·다시 공개·재검토 요청·다시 제출·거절 기록 (운영자만 읽기)
 - **counter_deletions**: 완전 삭제 기록 — 카운터와 연결하지 않아 카운터가 지워져도 남는다 (운영자만 읽기). 지운 개수(제안·수정 기록·빌드·추천·`comments_count` 문서 댓글)
+- **user_blocks** (061, 6-67): 사용자 차단 — `blocker_id`(차단한 사람)·`blocked_id`(차단된 사람) 둘 다 `profiles(id)` 참조 + **on delete cascade**(누가 탈퇴해도 함께 삭제), `created_at`(DB 시각). 기본 키 (`blocker_id`, `blocked_id`), 검사 `user_blocks_not_self`(자기 자신 차단 불가), 인덱스 `user_blocks_blocked_idx`. RLS: 로그인한 본인이 `blocker_id`인 줄만 읽기·넣기·지우기(정책 3개), 고치기 권한 없음, 비로그인(anon) 권한 없음. 넣기 전 트리거 `user_blocks_check`(운영자 계정 차단 불가 · 한 사람 1000명까지 · 시각은 DB 시각), 넣은 뒤 트리거 `user_blocks_unfollow`(내가 팔로우하던 그 장인 팔로우를 끊음). `my_blocked_ids()`(내가 차단한 id 배열, 비로그인은 빈 배열)
 
 RLS 원칙:
 - 승인된 데이터는 누구나 읽기 가능
@@ -689,6 +690,7 @@ RLS 원칙:
 - `role`을 직접 바꾸는 것은 앱에서 불가능. 감독관 지정·해제만 운영자가 DB 함수 `set_moderator`로 한다. 운영자 지정·교체는 Supabase SQL Editor에서만 한다.
 - `role = admin`(운영자)은 DB에서 **1명만** 허용한다.
 - 운영자 권한 판정(`is_admin()`·`is_staff()`)은 role과 운영자 모드(`operator_mode`)를 함께 본다 (034, 6-21). 모드는 운영자 본인만 바꾸고, 운영자가 아닌 사람에게는 권한을 주지 않는다.
+- 차단 목록(`user_blocks`, 061)은 본인 것만 읽고·넣고·지운다. 차단된 사람은 자기가 차단됐는지 알 수 없다. 운영진의 관리 화면(신고·숨긴 글·회원 정보)은 차단과 상관없이 모두 보인다.
 
 ## 8. 개발 단계
 
@@ -822,6 +824,7 @@ RLS 원칙:
 50. `supabase/migrations/050_influencer_follow.sql` (장인 팔로우 DB — 표 3개·알림 종류 `followed_build_created`·푸시 묶음 `follow_builds`·함수·트리거 2개. 지금 배포된 화면과도 동작한다. 순서: `supabase/scripts/check_follow.sql`(실행 전, 2~4번 값 적어 두기) → 050 실행 → `check_follow.sql`(실행 후) → **pg_cron 일정 등록**: `select cron.schedule('follow-notify', '* * * * *', $$select public.follow_notify_dispatch()$$);` → `check_follow.sql` 21번이 1. 되돌리기는 파일 맨 위)
 55. `supabase/migrations/055_withdrawal.sql` (회원 탈퇴 정리 — 6-42. **실행 전 `supabase/scripts/check_withdraw_before.sql`**(1~5번 정상, 6~7번 "한 번 정리" 줄 수와 9~13번 값을 적어 둠) → 055 실행(NOTICE 두 줄의 줄 수가 6번·7번 합계와 같은지) → `check_withdraw_after.sql`(1~14번 정상, 15~19번을 적어 둔 값과 비교). 지금 배포된 화면과도 동작. 새 pg_cron 없음(닉네임 예약 정리는 기존 `influencer-daily`), Edge Function 재배포 없음. 되돌리는 법은 파일 맨 위)
 56. `supabase/migrations/056_core_items_free.sql` (핵심 템트리 1~10개·중복 가능·상점 아이템 전부 — 6-43. **실행 전 `supabase/scripts/check_core_items_before.sql`**(1~3번 정상, 4~7번 값을 적어 둠) → 056 실행 → `check_core_items_after.sql`(1~3번 정상, 4~7번이 적어 둔 값과 같은지). 표·데이터는 안 바꿈, 새 pg_cron·Edge Function 재배포 없음. 지금 배포된 화면(3~6개)과도 동작하고, 새 화면은 056 뒤에 배포. 되돌리는 법은 파일 맨 위)
+61. `supabase/migrations/061_user_blocks.sql` (사용자 차단 — 6-67. 표 `user_blocks`·RLS·트리거 2개·`my_blocked_ids`, `board_page`·`notify_new_comment`·`new_follower_digest`에 차단 거르기. **실행 전 `supabase/scripts/check_blocks_before.sql`**(1~4번 정상, 5~8번 값을 적어 둠) → 061 실행 → `check_blocks_after.sql`(1~11번 정상, 12~15번이 적어 둔 값과 같은지). 지금 배포된 화면과도 동작(차단 표가 없을 때 새 화면은 차단만 "준비 중"). 새 pg_cron·Edge Function 재배포 없음. 되돌리는 법은 파일 맨 위)
 - **테스트 데이터 비우기** (마이그레이션 아님, 정식 공개 직전 등 필요할 때): `supabase/scripts/reset_test_data_preview.sql`(읽기만 — 지울·남을 개수)로 확인 → `supabase/scripts/reset_test_data.sql`. 계정(운영자 계정·운영자 모드 상태·테스트용 구글 계정 포함 — 계정은 하나도 지우지 않는다)·프로필·설정값과 트린다미어 상대 말파이트 카운터(지금 문서·공개 빌드·처음 제안)만 남기고, 문의·처리 기록(`moderation_log`, 감독관 지정·해제 기록 포함)·알림·`proposal_reviewing` 등은 모두 비우며, 말파 문서의 수정 기록은 지금 내용 1줄로 정리, 경험치·레벨·칭호는 알림 없이 다시 계산한다. SQL Editor가 RLS를 물으면 **"Run without RLS"**로 실행 ("Run and enable RLS"는 임시 표 `reset_keep`·`reset_admins` 때문에 에러). 운영자 계정이 없거나 끝에서 운영자 role·모드가 바뀌어 있으면 전부 되돌리고 멈춘다. 되돌릴 수 없으므로 순서는 ① 백업 확인 → ② preview → ③ reset → ④ 결과 표 확인.
 - 합쳐서 한 번에 돌리지 않는다: 파일마다 `begin … commit`이라 중간에 실패하면 앞부분만 반영되고, 다시 돌리면 "already exists"가 난다.
 - 새 마이그레이션(010 …)을 만들면 이 목록에 추가한다. `supabase/tests/run.sh`가 빈 DB에 같은 순서로 실행한 뒤 검사용 데이터(`tests/fixtures.sql`)를 넣고 검사한다 (`supabase/tests`는 실제 프로젝트에서 실행하지 않음).
@@ -1496,3 +1499,21 @@ RLS 원칙:
   깜빡임 방지: ① `capacitor.config.json` 최상위 `backgroundColor: "#0a0a0a"`(웹뷰 바탕 — 시작 화면이 사라지고 웹이 그려지기 전 흰 화면 방지) ② iOS `LaunchScreen.storyboard` 바탕을 흰색(시스템색)에서 `#0a0a0a`로 ③ Android 12+ 시스템 시작 화면 `windowSplashScreenBackground #0a0a0a`(`styles.xml`).
 - **웹 PWA 아이콘**(`public/`의 아이콘·manifest)은 건드리지 않음. `AndroidManifest.xml`은 생성기가 공백만 바꿔 되돌림.
 - **iOS 반영**: 이 커밋 뒤 Codemagic 빌드(`cap sync ios` 포함)에 그대로 들어간다. 아이콘은 TestFlight 새 빌드로만 바뀐다.
+
+### 6-67. 사용자 차단 (2026-11-17, 061, App Store 심사 가이드 1.2 — UGC 앱의 악성 사용자 차단, DB 실행은 운영자가 Supabase에서)
+- **차단하기**: 글(⋮ "글 더보기")·댓글·답글·문서 댓글(⋮ "댓글/답글 더보기")·빌드(⋮ "빌드 N 더보기", 처음 만든 분)에 **[이 사용자 차단]**. 내 것·탈퇴한 분(작성자 없음)·**운영자 계정**에는 없다(공지 등 공식 안내가 사라지지 않게, DB 트리거도 막음). 감독관은 차단할 수 있고, 운영진도 다른 사람을 차단할 수 있다.
+  - 로그인 전: 확인 없이 로그인 화면으로(돌아올 주소 그대로). 로그인(비회원 포함): 메뉴 안에서 「이 사용자의 글과 댓글이 내 화면에서 숨겨집니다. 설정에서 언제든 해제할 수 있습니다.」 → [이 사용자 차단] → 「차단했습니다. 마이페이지 > 계정 설정 > 차단한 사용자에서 언제든 해제할 수 있습니다.」 **새로고침 없이** 바로 숨겨진다(차단 목록은 로그인 정보와 함께 앱 전체가 공유 — `useAuth().blocked`·`block`·`unblock`, `isBlocked(auth, id)`).
+  - 상대법 문서 자체(⋮ "상대법 더보기")는 작성자가 보이지 않는 위키 문서라 차단 항목이 없다. 장인 링크 ⋮도 없음(빌드와 함께 숨겨진다).
+- **해제**: [계정 설정] "차단한 사용자" — 최근 차단 순, 닉네임·차단 시각·[차단 해제](바로 다시 보임). 없으면 「차단한 사용자가 없습니다.」
+- **숨기는 곳** (서버 = DB 함수에서 거름 / 화면 = 내 차단 목록으로 거름):
+  - 탑신병자 커뮤니티 글 목록·검색·쪽수(**서버** `board_page`). 글 보기(화면): 본문·댓글 대신 「차단한 사용자의 글입니다.」 + [계정 설정] 링크.
+  - 커뮤니티 댓글·답글, 문서 댓글·답글(화면 `CommentThread`): 그 사람 것은 빠지고, 다른 사람 답글이 달린 부모 자리는 「차단한 사용자의 댓글입니다.」. 댓글 수도 뺀 수.
+  - 상대법 빌드 탭·선택 빌드(화면): 그 사람이 처음 만든 빌드가 빠짐(`?build=`로 와도 다음 빌드). 빌드 기여자 목록(화면)에서도 뺌.
+  - 챔피언 화면 한 줄 요약·맨 앞 빌드(화면 `withTopBuild`), 홈 검색의 빌드 후보·조합의 빌드 수(화면 — 검색 목록 캐시는 모두 같이 쓰므로 `authorId`로 화면이 거름).
+  - 장인 페이지(/u/:id, 화면): 「차단한 사용자입니다.」만. 장인 찾기 결과·팔로워 목록(화면)에서 뺌. 내가 팔로우하던 장인을 차단하면 **팔로우가 끊긴다**(DB 트리거) → 팔로우 모아보기·새 빌드 알림에서도 빠짐.
+  - **알림(서버)**: `notifications`에는 알림을 일으킨 사람 칸이 없고 여러 건이 합쳐지므로, 알림을 **만드는 함수**에서 거른다 — `notify_new_comment`(내 글 새 댓글·내 댓글 새 답글·내가 제안한 문서 새 댓글: 차단한 사람 것은 만들지 않고 "N개"에서도 뺌), `new_follower_digest`(장인이 차단한 팔로워는 세지 않음). **차단 전에 이미 온 알림은 그대로**. 운영진 알림(신고 접수 등)은 관리용이라 거르지 않는다.
+- **차단당한 사람**: 아무것도 알리지 않고 화면도 그대로(내 글에 댓글도 달 수 있고, 그 댓글로 내게 알림만 안 온다). 나를 팔로우하던 것은 끊지 않는다(끊으면 드러남) — 내 팔로워 목록·새 팔로워 수에서만 빠짐.
+- **DB (061)**: 표 `user_blocks`·RLS·트리거 2개·`my_blocked_ids()`·위 함수 3개 (7장). 탈퇴는 `delete_my_account` → `auth.users` 삭제 → `profiles` → cascade로 차단 줄(차단한·당한 쪽 모두)이 지워져 함수 변경 없음(로컬 검사로 확인). 비회원 정리도 같은 길. 되돌리기는 파일 맨 위(차단 목록은 지워지고 끊긴 팔로우는 돌아오지 않음). 테스트 데이터 비우기 스크립트(`reset_test_data*.sql`)도 `user_blocks`를 비운다.
+- **061 전 DB에서도 동작**: 차단 표가 없으면(PostgREST `PGRST205`·Postgres `42P01`) 차단 목록은 빈 목록으로 보고 아무것도 숨기지 않으며, [이 사용자 차단]·[차단 해제]만 「차단 기능을 준비하고 있습니다. 잠시 뒤 다시 시도해 주세요.」. 글 목록은 옛 `board_page` 그대로.
+- **방침·약관**: 개인정보처리방침 1번(수집 항목: 차단 목록과 쓰임, 차단당한 이용자에게 알리지 않음)·4번(탈퇴 삭제 목록 + "차단 목록" 보관·삭제 문단). 이용약관은 그대로 — 이미 「제6조를 어기면 운영자는 해당 내용을 숨기거나 삭제하고, 이용을 제한할 수 있습니다.」가 있다. 시행일 2026-12-14 그대로.
+- **검사**: DB `supabase/tests/user_blocks_test.sql`(표·RLS·권한, 자기 자신·운영자·남의 이름·비로그인 차단 불가, 고치기 불가, 글 목록·검색 거르기와 해제 복구, 댓글·답글·문서 답글 알림·합친 수, 팔로우 끊기·새 팔로워 수, 탈퇴 정리). 화면 `src/test/blocks.test.jsx`(차단 → 숨김 → 해제 복구, 댓글 자리 표시, 빌드·문서 댓글, 내 것·운영자 항목 없음, 비로그인 → 로그인, 알림, 탈퇴 정리, 061 전 DB, 홈 검색·챔피언 요약), `legal.test.jsx`. 가짜 DB에 `user_blocks`(+ `blocksMissing`, 댓글 알림 흉내). ⋮ 항목이 늘어 기존 검사 4개 파일의 메뉴 기대값을 고침.

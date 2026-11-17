@@ -243,3 +243,21 @@ test('방침·약관 (Apple 로그인): iOS 앱 전용 수집 항목·이메일 
   expect(terms).toContain('구글·카카오·Apple 없이 [비회원으로 시작하기]');
   expect(LEGAL.effectiveDate).toBe('2026-12-14');
 });
+
+test('방침·약관 (6-67 사용자 차단): 차단 목록 수집·용도·삭제 시점, 약관의 이용 제한 조항 / 시행일 2026-12-14', async () => {
+  start('/privacy');
+  await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' });
+  const privacy = document.querySelector('article.legal').textContent;
+  expect(privacy).toContain('다른 이용자를 차단한 경우: 차단한 이용자와 차단한 시각(차단 목록)');
+  expect(privacy).toContain('차단당한 이용자에게는 알리지 않습니다');
+  expect(privacy).toContain('차단한 이용자 목록은 계정과 연결되어 저장되며');
+  expect(privacy).toContain('차단한 사람 또는 차단당한 사람이 탈퇴하면(비회원 계정 정리 포함) 함께 삭제합니다.');
+  expect(privacy).toContain('내 차단 목록과 다른 이용자가 나를 차단한 기록');
+  cleanup();
+  start('/terms');
+  await screen.findByRole('heading', { level: 1, name: '이용약관' });
+  const terms = document.querySelector('article.legal').textContent;
+  // 운영자의 제재 조항은 원래 있다 (바꾸지 않음)
+  expect(terms).toContain('제6조를 어기면 운영자는 해당 내용을 숨기거나 삭제하고, 이용을 제한할 수 있습니다.');
+  expect(LEGAL.effectiveDate).toBe('2026-12-14');
+});

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { getChampionMap } from '../api/ddragon';
-import { getCountersFor } from '../api/content';
+import { getCountersFor, withTopBuild } from '../api/content';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
 import { useAuth } from '../lib/auth';
@@ -15,7 +15,8 @@ import { josa, matchupTitle } from '../lib/josa';
 
 export default function Champion() {
   const { id } = useParams();
-  const { isOperator, status } = useAuth();
+  const auth = useAuth();
+  const { isOperator, status } = auth;
   const [hiding, setHiding] = useState(null); // 숨기기 사유 입력창을 연 카운터 id
   const location = useLocation();
   const [done, setDone] = useState(location.state?.done ?? null); // 숨긴 뒤 안내 (매치업 문서에서 숨기고 온 경우 포함)
@@ -31,7 +32,9 @@ export default function Champion() {
   if (error) return <ErrorBox error={error} onRetry={retry} />;
   const target = data.champs[id];
   if (!target) return <NotFound />;
-  const shown = data.counters.filter((c) => data.champs[c.counter_champion]);
+  // 061: 차단한 사람이 처음 만든 빌드는 요약·맨 앞 빌드로 쓰지 않는다
+  const counters = auth.blocked?.size > 0 ? data.counters.map((c) => withTopBuild(c, auth.blocked)) : data.counters;
+  const shown = counters.filter((c) => data.champs[c.counter_champion]);
   const signedIn = status === 'signedIn';
 
   return (

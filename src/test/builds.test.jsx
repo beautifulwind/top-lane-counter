@@ -145,13 +145,13 @@ test('운영자: ⋮ → [빌드 숨기기] → 사유(= 확인 단계)를 써�
   expect(screen.queryByRole('tab', { name: /^빌드 3/ })).toBeNull();
 });
 
-test('일반 유저: ⋮ 메뉴에는 "오류 신고"(043)만 있고 빌드·상대법 숨기기는 없다', async () => {
+test('일반 유저: ⋮ 메뉴에는 "오류 신고"(043)와 빌드 작성자 "이 사용자 차단"(061)만 있고 빌드·상대법 숨기기는 없다', async () => {
   asUser();
   start(MATCHUP);
   await screen.findByText(/퀸으로 다리우스 이기는 법/);
   expect(moreNames(screen, '상대법 더보기')).toEqual(['오류 신고']);
   for (const btn of screen.getAllByRole('button', { name: /빌드.*더보기$|더보기$/ }).filter((b) => b.getAttribute('aria-label') !== '상대법 더보기')) {
-    expect(moreNames(within(btn.parentElement), btn.getAttribute('aria-label'))).toEqual(['오류 신고']);
+    expect(moreNames(within(btn.parentElement), btn.getAttribute('aria-label'))).toEqual(['오류 신고', '이 사용자 차단']);
   }
   expect(screen.queryByRole('button', { name: '빌드 숨기기' })).toBeNull();
 });

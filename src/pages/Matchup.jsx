@@ -6,7 +6,8 @@ import { getBuilds, hideBuild } from '../api/builds';
 import { DOC_COMMENT_OPS, getDocComments, getEditRules } from '../api/board';
 import CommentThread from '../components/CommentThread';
 import { useAsync } from '../lib/useAsync';
-import { canModerate, useAuth } from '../lib/auth';
+import { canModerate, isBlocked, useAuth } from '../lib/auth';
+import { blockMenuItem } from '../lib/blocks';
 import { ErrorBox, Loading } from '../components/Status';
 import BuildCard from '../components/BuildCard';
 import NoteForm from '../components/NoteForm';
@@ -115,7 +116,8 @@ export default function Matchup() {
     );
   }
 
-  const { builds } = data;
+  // 061: 내가 차단한 사람이 처음 만든 빌드는 보이지 않는다 (탭·선택·"빌드 N"에서 모두 빠진다)
+  const builds = data.builds.filter((b) => !isBlocked(auth, b.author_id));
   const doc = data.matchup.doc;
   const wanted = Number(search.get('build')) || null;
   const index = Math.max(0, builds.findIndex((b) => b.id === wanted));
@@ -225,7 +227,7 @@ export default function Matchup() {
           path={path}
           isOperator={isOperator}
           canHide={canModerate(auth, selected.author_id, selected.author)}
-          lastOne={builds.length === 1}
+          lastOne={data.builds.length === 1}
           canLink={!!auth.profile?.influencer && !!userId && selected.author_id === userId}
           follow={selected.author?.influencer && selected.author_id && selected.author_id !== userId ? {
             following: !!follows[selected.author_id],
@@ -235,6 +237,10 @@ export default function Matchup() {
           hiding={hiding === selected.id}
           setHiding={(v) => { setReporting(null); setHiding(v); }}
           reportItem={reportItem(selected.id)}
+          blockItem={blockMenuItem(auth, selected.author_id, selected.author, {
+            onLogin: () => navigate('/login', { state: { from: `${location.pathname}${location.search}` } }),
+            onDone: (message) => { setNotice(message); setHiding(null); setReporting(null); },
+          })}
           reportBox={reporting === selected.id && (
             <WikiReportBox
               id={`report-build-${selected.id}`}
@@ -316,7 +322,7 @@ function BuildTabs({ builds, selected, onSelect, newTo }) {
 }
 
 /** 고른 빌드 한 벌: 이름·패치·최근 수정 → 한 줄 결론 → 룬·주문·아이템·선마·추천 → 레벨별 딜교법 → 특이사항 → [빌드 수정]·[수정 기록] */
-function BuildPanel({ build, index, doc, auth, data, path, isOperator, canHide, lastOne, hiding, setHiding, onHidden, reportItem, reportBox, canLink, onLinkSaved, follow }) {
+function BuildPanel({ build, index, doc, auth, data, path, isOperator, canHide, lastOne, hiding, setHiding, onHidden, reportItem, blockItem, reportBox, canLink, onLinkSaved, follow }) {
   const [showPeople, setShowPeople] = useState(false);
   const peopleBtn = useRef(null);
   const label = buildTitleText(build, index);
@@ -334,6 +340,7 @@ function BuildPanel({ build, index, doc, auth, data, path, isOperator, canHide, 
       hint: lastOne ? '마지막 공개 빌드라 숨길 수 없습니다. 상대법을 숨겨 주세요.' : null,
     },
     isOperator && { label: '수정 기록 자세히', op: true, to: `/admin/builds/${build.id}/history` },
+    blockItem, // 061: 처음 만든 분 [이 사용자 차단]
   ];
 
   return (

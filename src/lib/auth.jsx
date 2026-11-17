@@ -1,5 +1,6 @@
-import { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { finishLoginFromUrl, getProfile, getSession, onAuthChange, touchLastSeen } from '../api/auth';
+import { blockUser, getMyBlocks, unblockUser } from '../api/blocks';
 import { isGuest } from './guest';
 import { onNativeAuth } from './nativeAuth';
 import { isStaffPerson } from './nickname';
@@ -10,7 +11,11 @@ import { isStaffPerson } from './nickname';
  * profile: 로그인했을 때 내 프로필 (불러오는 중이면 undefined)
  */
 const AuthContext = createContext(null);
-const SIGNED_OUT = { status: 'signedOut', session: null, user: null, profile: null, isOperatorAccount: false, isOperator: false, isModerator: false, isStaff: false, setProfile: () => {}, loginError: null, clearLoginError: () => {}, notice: null, clearNotice: () => {}, cameBack: false, clearCameBack: () => {}, goTo: null, clearGoTo: () => {} };
+const NO_BLOCKS = new Set();
+const notSignedIn = () => Promise.reject(new Error('로그인한 뒤 차단할 수 있습니다.'));
+// 061 차단 (SPEC 6-67): blocked = 내가 차단한 사람 id 모음, blocks = 설정 화면 목록, block·unblock = 차단·해제 (바로 화면에 반영)
+const SIGNED_OUT_BLOCKS = { blocked: NO_BLOCKS, blocks: [], blocksReady: false, blocksAvailable: false, block: notSignedIn, unblock: notSignedIn };
+const SIGNED_OUT = { ...SIGNED_OUT_BLOCKS, status: 'signedOut', session: null, user: null, profile: null, isOperatorAccount: false, isOperator: false, isModerator: false, isStaff: false, setProfile: () => {}, loginError: null, clearLoginError: () => {}, notice: null, clearNotice: () => {}, cameBack: false, clearCameBack: () => {}, goTo: null, clearGoTo: () => {} };
 
 /** 운영자 모드가 켜진 운영자인가 (034: profiles.operator_mode, 없으면 켜짐) */
 const operatorOn = (profile) => profile?.role === 'admin' && profile?.operator_mode !== false;
@@ -68,6 +73,33 @@ export function AuthProvider({ children }) {
     return () => { alive = false; };
   }, [userId]);
 
+  // 061 내 차단 목록: 로그인하면 한 번 읽는다. 차단 표가 없거나(061 전) 못 읽으면 아무것도 숨기지 않는다
+  const [blockState, setBlockState] = useState({ userId: null, rows: [], ready: false, available: false });
+  useEffect(() => {
+    if (!userId) return undefined;
+    let alive = true;
+    getMyBlocks(userId).then(
+      (r) => alive && setBlockState({ userId, rows: r.rows, ready: true, available: r.available }),
+      () => alive && setBlockState({ userId, rows: [], ready: true, available: false }),
+    );
+    return () => { alive = false; };
+  }, [userId]);
+  const block = useCallback(async (targetId, person = null) => {
+    await blockUser(userId, targetId);
+    setBlockState((b) => {
+      // 목록을 아직 못 읽었어도 방금 차단한 사람은 바로 숨긴다
+      const base = b.userId === userId ? b : { userId, rows: [], ready: false };
+      if (base.rows.some((r) => r.blocked_id === targetId)) return { ...base, available: true };
+      return { ...base, available: true, rows: [{ blocked_id: targetId, created_at: new Date().toISOString(), blocked: person }, ...base.rows] };
+    });
+  }, [userId]);
+  const unblock = useCallback(async (targetId) => {
+    await unblockUser(userId, targetId);
+    setBlockState((b) => (b.userId === userId ? { ...b, rows: b.rows.filter((r) => r.blocked_id !== targetId) } : b));
+  }, [userId]);
+  const blockRows = blockState.userId === userId ? blockState.rows : null;
+  const blocked = useMemo(() => (blockRows && blockRows.length > 0 ? new Set(blockRows.map((r) => r.blocked_id)) : NO_BLOCKS), [blockRows]);
+
   // 마지막 접속 (오래 안 쓴 비회원 정리 기준, 하루 한 번)
   useEffect(() => {
     if (userId) touchLastSeen(userId);
@@ -107,6 +139,12 @@ export function AuthProvider({ children }) {
       clearCameBack,
       goTo,
       clearGoTo,
+      blocked,
+      blocks: blockRows ?? [],
+      blocksReady: blockState.userId === userId && blockState.ready,
+      blocksAvailable: blockState.userId === userId && blockState.available,
+      block,
+      unblock,
     };
   }
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
@@ -116,6 +154,9 @@ export function AuthProvider({ children }) {
 export function useAuth() {
   return useContext(AuthContext) ?? SIGNED_OUT;
 }
+
+/** 내가 차단한 사람인가 (061). Provider 밖에서 만든 auth(일부 테스트)에는 차단 목록이 없다 → false */
+export const isBlocked = (auth, userId) => userId != null && Boolean(auth?.blocked?.has?.(userId));
 
 /** 로그인했고 프로필도 불러왔는데 닉네임이 아직 없는가 */
 /** 이 글·댓글에 [숨기기]를 보여 줄까: 운영자는 전부, 감독관은 본인·운영진의 것 빼고 (실제 검사는 DB) */

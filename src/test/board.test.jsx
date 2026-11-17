@@ -104,7 +104,9 @@ test('비로그인 글 보기: 본문·댓글, 추천은 숫자만, 댓글은 �
   expect(within(c).getByText('수정됨')).toBeDefined();
   expect(screen.getByLabelText('추천 2')).toBeDefined();
   expect(screen.queryByRole('button', { name: /추천/ })).toBeNull();
-  expect(screen.queryByRole('button', { name: /더보기/ })).toBeNull(); // 비로그인: ⋮ 메뉴 없음
+  // 비로그인: ⋮에는 [이 사용자 차단]만 (061 — 누르면 로그인으로)
+  expect(moreNames(screen, '글 더보기')).toEqual(['이 사용자 차단']);
+  expect(moreNames(screen, '댓글 더보기')).toEqual(['이 사용자 차단']);
   expect(screen.getByText(/하면 댓글을 달 수 있습니다/)).toBeDefined();
 });
 
@@ -126,7 +128,7 @@ test('남의 글: 추천 누르기·취소, 신고(이유 필수, 기타는 내�
   expect(screen.getByRole('button', { name: '추천 2' }).getAttribute('aria-pressed')).toBe('true');
   fireEvent.click(screen.getByRole('button', { name: '추천 2' }));
   expect(await screen.findByRole('button', { name: '추천 1' })).toBeDefined();
-  expect(moreNames(screen, '글 더보기')).toEqual(['신고']);
+  expect(moreNames(screen, '글 더보기')).toEqual(['신고', '이 사용자 차단']); // 061 차단
 
   pickMore(screen, '신고', '글 더보기');
   const form = screen.getByRole('group', { name: '글 신고 — 이유를 골라 주세요' }).closest('form');
@@ -209,7 +211,7 @@ test('댓글: 달기(빈 칸이면 못 보냄) → 바로 보임, 내 댓글 고
   expect(rpcs('create_comment')).toEqual([{ p_post: 1, p_body: '내 댓글입니다', p_media: [] }]);
 
   const [other, mine] = within(screen.getByRole('list', { name: '댓글' })).getAllByRole('listitem');
-  expect(moreNames(within(other), '댓글 더보기')).toEqual(['신고']);
+  expect(moreNames(within(other), '댓글 더보기')).toEqual(['신고', '이 사용자 차단']);
   expect(moreNames(within(mine), '댓글 더보기')).toEqual(['고치기', '지우기']);
 
   pickMore(within(mine), '고치기', '댓글 더보기');
@@ -255,7 +257,7 @@ test('운영자: 글 [숨기기](보라, 메모 필수) → 숨김 띠·메모 �
   start('/board/1');
   await screen.findByRole('button', { name: '글 더보기' });
   const menu = openMore(screen, '글 더보기');
-  expect(menu.getAllByRole('menuitem').map((el) => el.textContent)).toEqual(['숨기기', '운영진 삭제']); // 신고 없음
+  expect(menu.getAllByRole('menuitem').map((el) => el.textContent)).toEqual(['숨기기', '운영진 삭제', '이 사용자 차단']); // 신고 없음 (061 차단은 운영진도)
   const hide = menu.getByRole('menuitem', { name: '숨기기' });
   expect(hide.classList.contains('op')).toBe(true);
   expect(menu.getByRole('menuitem', { name: '운영진 삭제' }).classList.contains('danger')).toBe(true);
@@ -288,7 +290,7 @@ test('운영자: 숨긴 댓글도 보이고 [다시 공개], 보이는 댓글은
   start('/board/1');
   const [hidden, normal] = within(await screen.findByRole('list', { name: '댓글' })).getAllByRole('listitem');
   expect(hidden.textContent).toContain('메모: 욕설');
-  expect(moreNames(within(hidden), '댓글 더보기')).toEqual(['운영진 삭제']); // 숨긴 댓글은 [다시 공개]가 띠에
+  expect(moreNames(within(hidden), '댓글 더보기')).toEqual(['운영진 삭제', '이 사용자 차단']); // 숨긴 댓글은 [다시 공개]가 띠에
   pickMore(within(normal), '숨기기', '댓글 더보기');
   fireEvent.change(within(normal).getByLabelText('숨기는 사유 (필수, 작성자에게 보입니다)'), { target: { value: '도배' } });
   fireEvent.click(within(normal).getByRole('button', { name: '숨기기 확정' }));

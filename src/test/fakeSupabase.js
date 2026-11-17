@@ -95,6 +95,8 @@ export const TABLES = {
   // 043 오류 신고 (화면은 함수로만 읽고 쓴다)
   wiki_reports: [],
   doc_comments: [],
+  // 061 사용자 차단 { blocker_id, blocked_id, created_at } (RLS 흉내: 본인 것만 보이고·넣고·지운다. 고치기 없음)
+  user_blocks: [],
   // 032 문의하기 (user = select가 붙여 주는 보낸 사람 관계)
   inquiries: [],
   // 017 닉네임 변경 기록 (본인 것만 넣는다)
@@ -187,6 +189,8 @@ export function resetFake() {
   TABLES.wiki_reports = [];
   TABLES.moderation_log = [];
   TABLES.doc_comments = [];
+  TABLES.user_blocks = [];
+  fakeState.blocksMissing = false; // true = 061 실행 전 DB (차단 표 없음)
   TABLES.nickname_changes = [];
   TABLES.inquiries = [];
   TABLES.push_subscriptions = [];
@@ -301,6 +305,11 @@ function visibleRows(table) {
     return isStaffNow() ? all : all.filter((c) => c.status === 'visible' && c.counter?.status === 'approved');
   }
   if (table === 'moderation_log') return isAdminNow() ? rows : [];
+  // 061 RLS 흉내: 내가 차단한 줄만 (blocked = select가 붙여 주는 프로필 관계). 비로그인은 권한 없음 → 빈 목록
+  if (table === 'user_blocks') {
+    const mine = fakeState.session?.user.id;
+    return rows.filter((r) => mine && r.blocker_id === mine).map((r) => ({ ...r, blocked: person(r.blocked_id) }));
+  }
   if (table === 'title_catalog') return []; // 053: 직접 못 읽음 (화면은 my_title_book)
   // 038: 챔피언 목록이 counters → builds(요약·추천)를 같이 읽는다 (RLS: 공개 빌드는 누구나)
   if (table === 'counters') return rows.map((c) => ({ ...c, builds: TABLES.builds.filter((b) => b.counter_id === c.id) }));
@@ -358,6 +367,7 @@ function query(table) {
   function run() {
     if (fakeState.error) return { data: null, error: { message: fakeState.error } };
     const me = fakeState.session?.user.id;
+    if (table === 'user_blocks') return runBlocks(me);
     if (removing) {
       // RLS 흉내: 보이는(본인) 줄만 지워진다
       TABLES[table] = TABLES[table].filter((r) => !rows.includes(r));
@@ -438,8 +448,39 @@ function query(table) {
     if (countOnly) return { data: null, count: rows.length, error: null };
     return { data: single ? rows[0] ?? null : rows, error: null };
   }
+  // 061 차단 표 흉내: 표 없음(061 전) · 비로그인 거부 · 남의 이름 거부 · 자기 자신(검사) · 운영자 계정(트리거) · 중복(기본 키) · 고치기 권한 없음.
+  // 넣으면 트리거처럼 내가 팔로우하던 그 장인 팔로우를 끊는다
+  function runBlocks(me) {
+    if (fakeState.blocksMissing) {
+      return { data: null, error: { code: 'PGRST205', message: "Could not find the table 'public.user_blocks' in the schema cache" } };
+    }
+    if (!me) return { data: null, error: { code: '42501', message: 'permission denied for table user_blocks' } };
+    if (patch || upserted) return { data: null, error: { code: '42501', message: 'permission denied for table user_blocks' } };
+    if (removing) {
+      const gone = new Set(rows.map((r) => `${r.blocker_id}|${r.blocked_id}`));
+      TABLES.user_blocks = TABLES.user_blocks.filter((r) => !gone.has(`${r.blocker_id}|${r.blocked_id}`));
+      return { data: null, error: null };
+    }
+    if (inserted) {
+      const { blocker_id: from, blocked_id: to } = inserted;
+      if (from !== me) return { data: null, error: { code: '42501', message: 'new row violates row-level security policy for table "user_blocks"' } };
+      if (from === to) return { data: null, error: { code: '23514', message: 'new row for relation "user_blocks" violates check constraint "user_blocks_not_self"' } };
+      if (TABLES.profiles.find((p) => p.id === to)?.role === 'admin') return { data: null, error: { code: '42501', message: '운영자 계정은 차단할 수 없습니다.' } };
+      if (TABLES.user_blocks.some((r) => r.blocker_id === from && r.blocked_id === to)) {
+        return { data: null, error: { code: '23505', message: 'duplicate key value violates unique constraint "user_blocks_pkey"' } };
+      }
+      fakeState.inserts.push({ table, values: inserted });
+      TABLES.user_blocks.push({ blocker_id: from, blocked_id: to, created_at: new Date().toISOString() });
+      TABLES.influencer_follows = TABLES.influencer_follows.filter((f) => !(f.follower_id === from && f.influencer_id === to));
+      return { data: null, error: null };
+    }
+    return { data: single ? rows[0] ?? null : rows, error: null };
+  }
   return q;
 }
+
+/** 061: 이 사람(blocker)이 저 사람(blocked)을 차단했나 — DB 함수 흉내(글 목록·알림)가 쓴다 */
+export const fakeBlocked = (blocker, blocked) => TABLES.user_blocks.some((r) => r.blocker_id === blocker && r.blocked_id === blocked);
 
 // Edge Function 흉내: delete-account는 탈퇴하면 세션을 끝낸다. 실패는 fakeState.functionError (DB 문구)
 const functions = {
@@ -487,6 +528,7 @@ export function fakeWithdraw(userId) {
     });
   });
   TABLES.influencer_follows = TABLES.influencer_follows.filter((f) => f.follower_id !== userId && f.influencer_id !== userId);
+  TABLES.user_blocks = TABLES.user_blocks.filter((r) => r.blocker_id !== userId && r.blocked_id !== userId); // 061 프로필 cascade
   TABLES.ext_links = TABLES.ext_links.filter((l) => l.owner_id !== userId);
   TABLES.user_titles = TABLES.user_titles.filter((t) => t.user_id !== userId);
   TABLES.profiles = TABLES.profiles.filter((p) => p.id !== userId);
@@ -903,7 +945,8 @@ function boardRpc(name, args) {
   switch (name) {
     case 'board_page': {
       const q = (args.p_q ?? '').toLowerCase();
-      let rows = visibleRows('posts');
+      // 061: 내가 차단한 사람의 글은 빠진다 (차단 표가 없으면 그대로)
+      let rows = visibleRows('posts').filter((p) => fakeState.blocksMissing || !fakeBlocked(me(), p.author_id));
       if (q) rows = rows.filter((p) => !p.deleted_at && (p.title.toLowerCase().includes(q) || p.body.toLowerCase().includes(q)));
       rows = [...rows].sort((a, b) => (a.created_at < b.created_at ? 1 : a.created_at > b.created_at ? -1 : b.id - a.id));
       const from = (args.p_page - 1) * args.p_size;
@@ -1011,6 +1054,15 @@ function boardRpc(name, args) {
         media: mediaRows(args.p_media), parent_id: args.p_parent ?? null,
       }));
       recount(args.p_post);
+      // 058·061 notify_new_comment 흉내: 답글은 부모 댓글 작성자, 댓글은 글 주인에게 (나 자신·나를 차단한 사람에게는 없음)
+      const to = parent ? parent.author_id : post(args.p_post)?.author_id;
+      if (to && to !== me() && !fakeBlocked(to, me())) {
+        TABLES.notifications.push({
+          id: 7500 + TABLES.notifications.length, user_id: to, kind: parent ? 'comment_reply' : 'post_comment', read_at: null,
+          created_at: new Date().toISOString(), post_id: args.p_post, counter_id: null, build_id: null, proposal_id: null,
+          message: parent ? `「${post(args.p_post)?.title}」에 쓴 내 댓글에 새 답글이 달렸습니다.` : `내 글 「${post(args.p_post)?.title}」에 새 댓글이 달렸습니다.`,
+        });
+      }
       return ok(id);
     }
     case 'edit_comment':

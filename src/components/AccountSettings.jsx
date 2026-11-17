@@ -9,16 +9,18 @@ import { ErrorBox, Loading } from './Status';
 import { isGuest } from '../lib/guest';
 import { APPLE_MANUAL_UNLINK_TEXT } from '../lib/appleAuth';
 import SectionHead from './SectionHead';
-import { PencilIcon, ShieldIcon, TrashIcon } from './Icons';
+import { BanIcon, PencilIcon, ShieldIcon, TrashIcon } from './Icons';
+import { displayNickname } from '../lib/nickname';
 import PushSettings from './PushSettings';
 
-/** /me/settings "계정": 운영자 모드(운영자 계정만, 034) · 휴대폰 알림(037) · 닉네임 바꾸기(30일에 한 번) · 회원 탈퇴 (SPEC 6-8) */
+/** /me/settings "계정": 운영자 모드(운영자 계정만, 034) · 휴대폰 알림(037) · 닉네임 바꾸기(30일에 한 번) · 차단한 사용자(061) · 회원 탈퇴 (SPEC 6-8) */
 export default function AccountSettings({ auth }) {
   return (
     <>
       {auth.isOperatorAccount && <OperatorMode auth={auth} />}
       <PushSettings auth={auth} />
       <NicknameChange auth={auth} />
+      <BlockedUsers auth={auth} />
       <DeleteAccount auth={auth} />
     </>
   );
@@ -63,6 +65,64 @@ function OperatorMode({ auth }) {
       <button type="button" className={`btn btn-small${on ? '' : ' btn-op'}`} onClick={toggle} disabled={busy} aria-pressed={on}>
         {busy ? '바꾸는 중…' : on ? '운영자 모드 끄기' : '운영자 모드 켜기'}
       </button>
+      {error && <p className="form-error" role="alert">{error}</p>}
+    </section>
+  );
+}
+
+/**
+ * 차단한 사용자 (061, SPEC 6-67): 최근에 차단한 순, 줄마다 닉네임·차단한 날·[차단 해제]. 해제하면 그 사람의 글·댓글이 바로 다시 보인다.
+ * 차단은 글·댓글·답글·빌드의 ⋮ [이 사용자 차단]으로 한다. 차단당한 사람에게는 알리지 않는다
+ */
+export function BlockedUsers({ auth }) {
+  const [busy, setBusy] = useState(null);
+  const [error, setError] = useState(null);
+  const [done, setDone] = useState(null);
+  const rows = auth.blocks ?? [];
+
+  const unblock = async (row) => {
+    setBusy(row.blocked_id);
+    setError(null);
+    setDone(null);
+    try {
+      await auth.unblock(row.blocked_id);
+      setDone(`${displayNickname(row.blocked)} 님의 차단을 해제했습니다.`);
+    } catch (e) {
+      setError(e.message);
+    }
+    setBusy(null);
+  };
+
+  return (
+    <section className="me-section" aria-labelledby="blocked-users" id="blocks">
+      <SectionHead icon={BanIcon} id="blocked-users">차단한 사용자</SectionHead>
+      <p className="hint">
+        차단한 사용자의 글·댓글·빌드는 내 화면에서 보이지 않고, 그 사용자가 일으킨 새 알림도 오지 않습니다. 상대에게는 차단 사실이 알려지지 않습니다.
+        글·댓글·빌드의 ⋮ 메뉴에서 [이 사용자 차단]을 누르면 차단됩니다.
+      </p>
+      {!auth.blocksReady ? (
+        <Loading />
+      ) : rows.length === 0 ? (
+        <p className="empty">차단한 사용자가 없습니다.</p>
+      ) : (
+        <ul className="link-list blocked-list" aria-label="차단한 사용자 목록">
+          {rows.map((r) => (
+            <li key={r.blocked_id} className="blocked-row">
+              <span>
+                <strong>{displayNickname(r.blocked)}</strong>{' '}
+                {r.created_at && <small className="muted">{fmtDateTime(r.created_at)} 차단</small>}
+              </span>
+              <button
+                type="button" className="btn btn-small" onClick={() => unblock(r)} disabled={busy !== null}
+                aria-label={`${displayNickname(r.blocked)} 차단 해제`}
+              >
+                {busy === r.blocked_id ? '해제하는 중…' : '차단 해제'}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      {done && <p className="notice" role="status">{done}</p>}
       {error && <p className="form-error" role="alert">{error}</p>}
     </section>
   );

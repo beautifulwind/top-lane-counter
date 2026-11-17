@@ -1,11 +1,12 @@
 import { useRef, useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { COMMENT_MAX, beginEdit } from '../api/board';
 import { canEditNow, fmtTime, useNow } from '../lib/editWindow';
 import { BoardByline, CharCount, ConfirmInline, HiddenBand, ReportForm } from './BoardParts';
 import NoteForm from './NoteForm';
 import MoreMenu from './MoreMenu';
-import { canModerate, canVote, canWrite, isGuest } from '../lib/auth';
+import { canModerate, canVote, canWrite, isBlocked, isGuest } from '../lib/auth';
+import { BLOCKED_COMMENT, blockMenuItem } from '../lib/blocks';
 import { DEFAULT_MEDIA_RULES, finishMedia } from '../api/media';
 import { MediaGallery, MediaPicker, mediaToItems, sameMedia } from './Media';
 import GuestHint from './GuestHint';
@@ -60,8 +61,12 @@ export default function CommentThread({
 }) {
   const { pathname } = useLocation();
   const now = useNow();
-  const visibleCount = comments.filter((c) => c.status === 'visible').length;
-  const threads = ops.replies ? threadComments(comments) : comments.map((c) => ({ comment: c, parentId: c.id, replies: [] }));
+  // 061: 내가 차단한 사람의 댓글·답글은 빼고 그린다 (답글이 남은 부모 자리는 "차단한 사용자의 댓글입니다.")
+  const blockedIds = new Set(comments.filter((c) => isBlocked(auth, c.author_id)).map((c) => c.id));
+  const shownComments = blockedIds.size > 0 ? comments.filter((c) => !blockedIds.has(c.id)) : comments;
+  const visibleCount = shownComments.filter((c) => c.status === 'visible').length;
+  const threads = (ops.replies ? threadComments(shownComments) : shownComments.map((c) => ({ comment: c, parentId: c.id, replies: [] })))
+    .map((t) => (t.comment ? t : { ...t, blocked: blockedIds.has(t.parentId) }));
   const guestBlocked = Boolean(ops.noGuest) && isGuest(auth);
   const writable = canWrite(auth) && !guestBlocked;
   // 059 문서 댓글: 비회원은 최상위 댓글만 — [답글]은 없고 목록 아래 안내 한 줄
@@ -70,8 +75,8 @@ export default function CommentThread({
   return (
     <section className="section comments" id={sectionId} aria-labelledby={heading ? `${sectionId}-title` : undefined} aria-label={heading ? undefined : label}>
       {heading && <SectionHead icon={MessageIcon} num={num} count={visibleCount} id={`${sectionId}-title`}>{label}</SectionHead>}
-      {comments.length === 0 && <p className="hint">아직 댓글이 없습니다.</p>}
-      {comments.length > 0 && (
+      {shownComments.length === 0 && <p className="hint">아직 댓글이 없습니다.</p>}
+      {shownComments.length > 0 && (
         <ul className="comment-list" aria-label={label}>
           {threads.map((t) => (
             <Thread
@@ -81,7 +86,7 @@ export default function CommentThread({
           ))}
         </ul>
       )}
-      {guestNoReply && open && live && comments.length > 0 && <GuestHint what="답글을 달" />}
+      {guestNoReply && open && live && shownComments.length > 0 && <GuestHint what="답글을 달" />}
       {!open && closedHint && <p className="hint">{closedHint}</p>}
       {open && (writable ? (
         <CommentForm ops={ops} parentId={parentId} auth={auth} mediaRules={mediaRules} onDone={onReload} idPrefix={idPrefix} />
@@ -100,7 +105,7 @@ export default function CommentThread({
   );
 }
 
-/** 댓글 하나 + 그 답글들 + [답글] 폼. 부모가 안 보이면(comment = null) "삭제된 댓글입니다." 자리만 */
+/** 댓글 하나 + 그 답글들 + [답글] 폼. 부모가 안 보이면(comment = null) "삭제된 댓글입니다." 자리만 (내가 차단한 사람의 댓글이면 "차단한 사용자의 댓글입니다.") */
 function Thread({ thread, canReply, target, ...shared }) {
   const { ops, idPrefix } = shared;
   const [replying, setReplying] = useState(false);
@@ -114,7 +119,7 @@ function Thread({ thread, canReply, target, ...shared }) {
   if (!c) {
     return (
       <li className="comment gone-row" id={`${idPrefix}-gone-${thread.parentId}`}>
-        <p className="hint deleted-comment">{DELETED_COMMENT}</p>
+        <p className="hint deleted-comment">{thread.blocked ? BLOCKED_COMMENT : DELETED_COMMENT}</p>
         {replyList}
       </li>
     );
@@ -143,6 +148,8 @@ function Comment({
   comment: c, ops, live, rules, mediaRules, now, auth, onDone, onReload, idPrefix, reply = false, onReply = null, replying = false, children = null,
 }) {
   const [mode, setMode] = useState(null); // 'edit' | 'delete' | 'report' | 'hide' | 'staffDelete'
+  const navigate = useNavigate();
+  const location = useLocation();
   const [body, setBody] = useState(c.body);
   const [media, setMedia] = useState(() => mediaToItems(c.media));
   const editRef = useRef(null);
@@ -218,6 +225,11 @@ function Comment({
               },
               canHide && c.status === 'visible' && { label: '숨기기', op: true, onSelect: () => setMode('hide') },
               canHide && !mine && ops.staffRemove && { label: '운영진 삭제', op: true, danger: true, onSelect: () => setMode('staffDelete') },
+              // 061: 남의 댓글·답글 [이 사용자 차단] — 로그인 전이면 로그인으로
+              blockMenuItem(auth, c.author_id, c.author, {
+                onLogin: () => navigate('/login', { state: { from: `${location.pathname}${location.search}` } }),
+                onDone,
+              }),
             ]}
           />
         )}

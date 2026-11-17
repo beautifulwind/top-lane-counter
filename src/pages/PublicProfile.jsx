@@ -12,7 +12,8 @@ import { InfluencerName } from '../components/UserName';
 import InfluencerBuildCard from '../components/InfluencerBuildCard';
 import { LayersIcon } from '../components/Icons';
 import { INFLUENCER_KINDS, displayNickname } from '../lib/nickname';
-import { useAuth } from '../lib/auth';
+import { isBlocked, useAuth } from '../lib/auth';
+import { BLOCKED_PROFILE, SETTINGS_PATH } from '../lib/blocks';
 import { useAsync } from '../lib/useAsync';
 import NotFound from './NotFound';
 
@@ -45,6 +46,17 @@ export default function PublicProfile() {
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
   if (!data.profile || !data.first) return <NotFound />;
+  // 061: 내가 차단한 장인 → 빌드·링크·팔로우 대신 안내만
+  if (isBlocked(auth, data.profile.id)) {
+    return (
+      <article className="me-page public-profile">
+        <h1 className="doc-title">{BLOCKED_PROFILE}</h1>
+        <p className="empty">
+          차단한 사용자의 빌드와 글은 보이지 않습니다. <Link to={SETTINGS_PATH}>계정 설정</Link>에서 차단을 해제할 수 있습니다.
+        </p>
+      </article>
+    );
+  }
   return (
     <Profile
       key={`${id}:${me}`} data={data} me={me} signedIn={signedIn} notice={notice}
@@ -149,6 +161,7 @@ function Profile({ data, me, signedIn, notice, onDone }) {
 
 /** 팔로워 목록 (로그인한 사람만 — DB도 막는다). 최근 팔로우 순, 20개씩 [더보기] */
 function Followers({ id, count }) {
+  const auth = useAuth();
   const [state, setState] = useState({ items: [], total: 0, page: 0, busy: true, error: null });
   const load = async (page) => {
     setState((s) => ({ ...s, busy: true, error: null }));
@@ -172,7 +185,7 @@ function Followers({ id, count }) {
       {state.page > 0 && state.items.length === 0 && <p className="empty">아직 팔로워가 없습니다.</p>}
       {state.items.length > 0 && (
         <ul className="follower-list">
-          {state.items.map((f) => (
+          {state.items.filter((f) => !isBlocked(auth, f.id)).map((f) => ( // 061: 내가 차단한 팔로워는 목록에서 뺀다
             <li key={f.id}>
               {f.nickname ? <InfluencerName profile={f} linkTo={f.influencer ? f.id : null} /> : <span className="muted">{displayNickname(f, '닉네임을 정하지 않은 사용자')}</span>}
               <small className="muted">{day(f.followed_at)} 팔로우</small>

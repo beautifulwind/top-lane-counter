@@ -3,7 +3,8 @@ import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   POST_COMMENT_OPS, deleteMyPost, getEditRules, getPost, hidePost, reportPost, restorePost, staffDeletePost, votePost,
 } from '../api/board';
-import { canModerate, canVote, isGuest, useAuth } from '../lib/auth';
+import { canModerate, canVote, isBlocked, isGuest, useAuth } from '../lib/auth';
+import { BLOCKED_POST, SETTINGS_PATH, blockMenuItem } from '../lib/blocks';
 import GuestHint from '../components/GuestHint';
 import { useAsync } from '../lib/useAsync';
 import { canEditNow, useNow } from '../lib/editWindow';
@@ -37,9 +38,9 @@ export default function BoardPost() {
     },
     [postId, userId, auth.status],
   );
-  const finished = (message) => {
+  const finished = (message, { reload = true } = {}) => {
     setDone(message);
-    retry();
+    if (reload) retry();
   };
   // 댓글을 달거나 처리한 뒤 다시 불러오는 동안에는 보던 내용을 그대로 둔다 (화면이 "불러오는 중"으로 튀지 않게)
   const last = useRef(null);
@@ -54,6 +55,20 @@ export default function BoardPost() {
         <h1 className="doc-title">글을 찾지 못했습니다</h1>
         <p className="empty">지워졌거나 운영진이 숨긴 글입니다.</p>
         <p><Link to="/board">← 탑신병자 커뮤니티</Link></p>
+      </article>
+    );
+  }
+
+  // 061: 내가 차단한 사람의 글 → 본문·댓글 대신 안내만 (해제는 계정 설정에서)
+  if (isBlocked(auth, post.author_id)) {
+    return (
+      <article className="board-post">
+        <nav className="crumbs"><Link to="/board">← 탑신병자 커뮤니티</Link></nav>
+        {done && <p className="notice" role="status">{done}</p>}
+        <h1 className="doc-title">{BLOCKED_POST}</h1>
+        <p className="empty">
+          차단한 사용자의 글과 댓글은 보이지 않습니다. <Link to={SETTINGS_PATH}>계정 설정</Link>에서 차단을 해제할 수 있습니다.
+        </p>
       </article>
     );
   }
@@ -86,6 +101,7 @@ export default function BoardPost() {
 
 function PostActions({ post, mine, auth, onDone }) {
   const navigate = useNavigate();
+  const location = useLocation();
   const [mode, setMode] = useState(null); // 'delete' | 'report' | 'hide' | 'staffDelete'
   const [vote, setVote] = useState({ up: post.up_count, mine: post.voted, busy: false, error: null });
   const signedIn = canVote(auth); // 추천·신고는 닉네임이 있고 비회원이 아니어야
@@ -125,6 +141,11 @@ function PostActions({ post, mine, auth, onDone }) {
             signedIn && !mine && visible && !canHide && { label: '신고', onSelect: () => setMode('report') },
             canHide && visible && { label: '숨기기', op: true, onSelect: () => setMode('hide') },
             canHide && !mine && { label: '운영진 삭제', op: true, danger: true, onSelect: () => setMode('staffDelete') },
+            // 061: [이 사용자 차단] — 차단하면 이 글이 바로 "차단한 사용자의 글입니다."로 바뀐다
+            blockMenuItem(auth, post.author_id, post.author, {
+              onLogin: () => navigate('/login', { state: { from: location.pathname } }),
+              onDone: (message) => onDone(message, { reload: false }),
+            }),
           ]}
         />
       </div>

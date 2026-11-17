@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { WITHDRAWN_USER } from '../lib/nickname';
 import { getBuildContributors } from '../api/builds';
 import { useAsync } from '../lib/useAsync';
+import { isBlocked, useAuth } from '../lib/auth';
 import UserName from './UserName';
 import { ErrorBox, Loading } from './Status';
 
@@ -10,7 +11,9 @@ import { ErrorBox, Loading } from './Status';
  * Esc·바깥 누르기·[닫기]로 닫히고, 닫히면 연 버튼으로 초점이 돌아간다 (opener = 연 버튼 ref).
  */
 export default function ContributorsDialog({ build, title, onClose, opener }) {
-  const { data, error, loading, retry } = useAsync(() => getBuildContributors(build.id), [build.id]);
+  const auth = useAuth();
+  const { data: all, error, loading, retry } = useAsync(() => getBuildContributors(build.id), [build.id]);
+  const data = all && all.filter((p) => !isBlocked(auth, p.user_id)); // 061: 내가 차단한 사람은 기여자 목록에서도 뺀다
   const panel = useRef(null);
   const closeBtn = useRef(null);
 

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { searchInfluencers } from '../api/follow';
 import { INFLUENCER_KINDS } from '../lib/nickname';
 import { InfluencerName } from './UserName';
+import { isBlocked, useAuth } from '../lib/auth';
 
 /** 입력을 멈추고 이만큼 기다렸다가 찾는다 (글자마다 요청하지 않게) */
 export const SEARCH_WAIT_MS = 300;
@@ -15,6 +16,7 @@ export const NO_RESULT_TEXT = '찾는 장인이 없습니다. 닉네임의 일�
  * 아래에 [내가 팔로우한 장인의 빌드 보기] → /following. onGo: 링크를 눌러 이동할 때 메뉴를 닫는다.
  */
 export default function InfluencerSearch({ id, onGo }) {
+  const auth = useAuth();
   const [q, setQ] = useState('');
   const [res, setRes] = useState(null); // { query, items, total, page }
   const [busy, setBusy] = useState(false);
@@ -80,7 +82,7 @@ export default function InfluencerSearch({ id, onGo }) {
           <>
             <p className="sr-only">장인 {res.total}명</p>
             <ul className="inf-search-list">
-              {res.items.map((p) => (
+              {res.items.filter((p) => !isBlocked(auth, p.id)).map((p) => ( // 061: 내가 차단한 장인은 결과에서 뺀다
                 <li key={p.id}>
                   <Link to={`/u/${p.id}`} className="inf-search-row" onClick={onGo}>
                     <span className="inf-search-name"><InfluencerName profile={p} /></span>

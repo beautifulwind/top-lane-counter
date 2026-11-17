@@ -138,14 +138,15 @@ test('감독관 글·댓글: 일반 회원 글은 ⋮ [숨기기]·[운영진 �
   );
   start('/board/1');
   await screen.findByRole('button', { name: '글 더보기' });
-  expect(moreNames(screen, '글 더보기')).toEqual(['숨기기', '운영진 삭제']);
+  expect(moreNames(screen, '글 더보기')).toEqual(['숨기기', '운영진 삭제', '이 사용자 차단']);
   cleanup();
   start('/board/2');
   const [member, staff] = within(await screen.findByRole('list', { name: '댓글' })).getAllByRole('listitem');
-  expect(moreNames(within(member), '댓글 더보기')).toEqual(['숨기기', '운영진 삭제']);
-  expect(moreNames(within(staff), '댓글 더보기')).toEqual(['신고']);
-  // 글 자체(운영진의 글)도 [신고]만
-  expect(moreNames(screen, '글 더보기')).toEqual(['신고']);
+  expect(moreNames(within(member), '댓글 더보기')).toEqual(['숨기기', '운영진 삭제', '이 사용자 차단']);
+  // 감독관끼리도 차단은 할 수 있다 (061 — 운영자 계정만 차단 불가)
+  expect(moreNames(within(staff), '댓글 더보기')).toEqual(['신고', '이 사용자 차단']);
+  // 글 자체(운영진의 글)도 [신고]만 (+ 차단)
+  expect(moreNames(screen, '글 더보기')).toEqual(['신고', '이 사용자 차단']);
 });
 
 test('감독관 다시 공개: 다른 감독관이 숨긴 것만, 운영자가 숨긴 것은 버튼 없음', async () => {

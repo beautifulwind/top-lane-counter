@@ -1,6 +1,7 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { getSearchIndex } from '../api/searchIndex';
+import { useAuth } from '../lib/auth';
 import { searchAll, tokenize } from '../lib/championSearch';
 import { matchupShort } from '../lib/josa';
 import { SearchIcon } from './Icons';
@@ -31,7 +32,13 @@ export default function BuildSearch({ champions, value, onChange }) {
   useEffect(() => { if (tokens.length > 0 && !asked.current) load(); }, [tokens.length]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { setActive(-1); setClosed(false); }, [key]);
 
-  const res = useMemo(() => searchAll(tokens, champions, index), [tokens, champions, index]); // eslint-disable-line react-hooks/exhaustive-deps
+  // 061: 내가 차단한 사람이 처음 만든 빌드는 검색 결과·빌드 수에서 뺀다
+  const { blocked } = useAuth();
+  const shownIndex = useMemo(
+    () => (index && blocked?.size > 0 ? { ...index, builds: index.builds.filter((b) => !(b.authorId != null && blocked.has(b.authorId))) } : index),
+    [index, blocked],
+  );
+  const res = useMemo(() => searchAll(tokens, champions, shownIndex), [tokens, champions, shownIndex]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // 위에서부터 이어 붙인 후보 (키보드 이동 순서 = 화면 순서)
   const options = [];
