@@ -76,7 +76,7 @@ export function appleConfig(env: Env): AppleConfig | null {
 export async function appleClientSecret(cfg: AppleConfig, nowMs: number): Promise<string> {
   let key: CryptoKey;
   try {
-    key = await crypto.subtle.importKey('pkcs8', pkcs8FromP8(cfg.privateKey), { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
+    key = await crypto.subtle.importKey('pkcs8', pkcs8FromP8(cfg.privateKey) as BufferSource, { name: 'ECDSA', namedCurve: 'P-256' }, false, ['sign']);
   } catch {
     throw new Error('APPLE_PRIVATE_KEY 형식 오류'); // 키 내용은 절대 출력하지 않는다
   }
