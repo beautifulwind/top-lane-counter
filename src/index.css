@@ -1203,12 +1203,27 @@ a.inf-link:hover .user-nick, a.inf-link:focus-visible .user-nick { text-decorati
 .inf-hero-name { display: flex; align-items: center; gap: var(--gap-md); min-width: 0; }
 .inf-hero-actions { display: flex; align-items: center; gap: var(--gap-sm); }
 .inf-hero-photo { flex: none; width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid var(--influencer-line); background: var(--soft); }
-.me-avatar.has-photo { overflow: hidden; padding: 0; }
+.me-avatar.has-photo:not(.avatar-btn) { overflow: hidden; padding: 0; }
 .me-avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
-.photo-editor { display: flex; flex-direction: column; gap: 6px; }
-.photo-editor .row-actions { margin: 0; }
-.photo-editor .notice, .photo-editor .form-error { margin: 0; }
-.photo-confirm { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+/* 075: 동그라미가 곧 버튼 — 오른쪽 아래 "+" 배지, 눌러서 열리는 작은 메뉴 */
+.avatar-edit { position: relative; flex: none; display: inline-flex; }
+.avatar-btn { padding: 0; font: inherit; cursor: pointer; overflow: visible; position: relative; min-width: 44px; min-height: 44px; }
+.avatar-btn:disabled { cursor: progress; opacity: .7; }
+.avatar-btn .me-avatar-img { border-radius: 50%; }
+.inf-hero-avatar { flex: none; display: grid; place-items: center; width: 64px; height: 64px; border-radius: 50%; border: 2px solid var(--influencer-line); background: var(--soft); color: var(--brand-dark); }
+.avatar-plus {
+  position: absolute; right: -4px; bottom: -4px; width: 22px; height: 22px; border-radius: 50%;
+  display: grid; place-items: center; font-size: 16px; font-weight: 900; line-height: 1;
+  background: var(--brand); color: var(--paper); border: 2px solid var(--paper);
+}
+.avatar-pop {
+  position: absolute; top: calc(100% + 8px); left: 0; z-index: 20; width: max-content; max-width: min(300px, calc(100vw - 2 * var(--gap-lg)));
+  display: flex; flex-direction: column; gap: 6px; padding: 10px; border: 1px solid var(--line); border-radius: var(--radius-sm);
+  background: var(--paper); box-shadow: var(--shadow-card);
+}
+.avatar-menu { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.avatar-menu .hint { flex-basis: 100%; }
+.avatar-pop .notice, .avatar-pop .form-error { margin: 0; }
 .inf-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 0; }
 .inf-links { font-size: var(--fs-sm); }
 .inf-links li { padding: 4px 0; border-bottom: 0; }

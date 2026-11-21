@@ -20,7 +20,7 @@ import MyTitles, { LevelBar } from '../components/MyRewards';
 import { matchupTitle } from '../lib/josa';
 import VoteTally from '../components/VoteTally';
 import SectionHead from '../components/SectionHead';
-import ProfilePhoto, { ProfilePhotoEditor } from '../components/ProfilePhoto';
+import ProfilePhoto, { ProfileAvatarEditor } from '../components/ProfilePhoto';
 import { BellIcon, GearIcon, HelpIcon, LayersIcon, LinkIcon, SendIcon, SparklesIcon, UserIcon } from '../components/Icons';
 
 /**
@@ -65,13 +65,17 @@ function ProfileCard({ auth, rewards, loading }) {
   return (
     <header className="me-hero">
       <div className="me-hero-top">
-        {/* 062: 장인 프로필 사진 (없으면 예전 아이콘 그대로) */}
-        <span className={auth.profile.photo_path ? 'me-avatar has-photo' : 'me-avatar'} aria-hidden={auth.profile.photo_path ? undefined : 'true'}>
-          <ProfilePhoto
-            path={auth.profile.photo_path} alt={`${auth.profile.nickname ?? ''} 프로필 사진`} className="me-avatar-img"
-            fallback={<UserIcon size={28} />}
-          />
-        </span>
+        {/* 062·075: 장인 프로필 사진. 인증된 장인 본인은 동그라미가 곧 버튼(062 전 DB라 photo_path 칸이 없으면 예전 모양) */}
+        {auth.profile.influencer && !auth.profile.is_guest && 'photo_path' in auth.profile ? (
+          <ProfileAvatarEditor auth={auth} shell="me-avatar" fallback={<UserIcon size={28} />} />
+        ) : (
+          <span className={auth.profile.photo_path ? 'me-avatar has-photo' : 'me-avatar'} aria-hidden={auth.profile.photo_path ? undefined : 'true'}>
+            <ProfilePhoto
+              path={auth.profile.photo_path} alt={`${auth.profile.nickname ?? ''} 프로필 사진`} className="me-avatar-img"
+              fallback={<UserIcon size={28} />}
+            />
+          </span>
+        )}
         <div className="me-hero-text">
           <p className="me-hero-label">마이페이지</p>
           <h1 className="doc-title" data-page-title="마이페이지">
@@ -93,8 +97,6 @@ function ProfileCard({ auth, rewards, loading }) {
           )}
         </div>
       </div>
-      {/* 062: 인증된 장인만 사진 올리기·바꾸기·삭제 (062 전 DB라 photo_path 칸이 없으면 숨김) */}
-      {auth.profile.influencer && !auth.profile.is_guest && 'photo_path' in auth.profile && <ProfilePhotoEditor auth={auth} />}
       {auth.isOperatorAccount ? (
         <p className="hint me-op-hint">
           운영자는 경험치·레벨·칭호가 없습니다 (항상 Lv.0).

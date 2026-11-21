@@ -25,19 +25,41 @@ export default function ProfilePhoto({ path, alt, className = 'profile-photo', f
 }
 
 /**
- * 마이페이지 프로필 카드의 [프로필 사진 올리기]/[사진 바꾸기]·[사진 삭제] (인증된 장인만 — 부모가 고른다).
- * 일반 파일 고르기(<input type="file" accept="image/*">)를 쓴다 — 앱(iOS·Android)도 같은 방식, 네이티브 플러그인 없음.
- * 고른 사진은 가운데 정사각형 512px로 줄여 올린다(사진 정보 EXIF는 빠짐). 바꾸면 옛 파일은 바로 지운다.
+ * 내 프로필 사진 동그라미 = 조작 버튼 (인증된 장인 본인만 — 부모가 고른다. 마이페이지 카드·내 공개 프로필 공통, SPEC 6-75).
+ * 오른쪽 아래에 늘 "+" 배지. 사진이 없으면 누르자마자 사진 고르기, 있으면 [사진 바꾸기]·[사진 삭제]·[취소] 메뉴.
+ * 삭제는 한 번 더 묻는다. 일반 파일 고르기(<input type="file" accept="image/*">) — 앱(iOS·Android)도 같은 방식, 네이티브 플러그인 없음.
+ * 고른 사진은 가운데 정사각형 512px로 줄여 올린다(EXIF 빠짐). 바꾸면 옛 파일은 바로 지운다. 서버 함수·제한은 062 그대로.
+ * shell: 동그라미 모양 클래스(me-avatar / inf-hero-avatar). 사진은 내 프로필(auth.profile.photo_path)에서 읽어 바꾼 즉시 반영.
  */
-export function ProfilePhotoEditor({ auth }) {
+export function ProfileAvatarEditor({ auth, shell = 'me-avatar', fallback = null }) {
   const input = useRef(null);
+  const wrap = useRef(null);
+  const [panel, setPanel] = useState(null); // null | 'menu' | 'confirm'
   const [busy, setBusy] = useState(null); // 'upload' | 'delete'
-  const [confirming, setConfirming] = useState(false);
   const [msg, setMsg] = useState(null); // { ok } | { error }
   const userId = auth.user.id;
   const path = auth.profile.photo_path ?? null;
+  const alt = `${auth.profile.nickname ?? ''} 프로필 사진`;
 
   const reload = async () => auth.setProfile(await getProfile(userId));
+  const close = () => { setPanel(null); setMsg(null); };
+
+  // 바깥을 누르거나 Esc를 누르면 닫기
+  useEffect(() => {
+    if (!panel && !msg) return undefined;
+    const away = (e) => { if (wrap.current && !wrap.current.contains(e.target)) close(); };
+    const esc = (e) => { if (e.key === 'Escape') close(); };
+    document.addEventListener('mousedown', away);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('mousedown', away); document.removeEventListener('keydown', esc); };
+  }, [panel, msg]);
+
+  const pick = () => { setPanel(null); setMsg(null); input.current?.click(); };
+  const onAvatar = () => {
+    if (busy) return;
+    if (!path) pick();
+    else { setMsg(null); setPanel((p) => (p ? null : 'menu')); }
+  };
 
   const onFile = async (e) => {
     const file = e.target.files?.[0];
@@ -45,7 +67,7 @@ export function ProfilePhotoEditor({ auth }) {
     if (!file) return;
     setBusy('upload');
     setMsg(null);
-    setConfirming(false);
+    setPanel(null);
     try {
       await changeProfilePhoto(userId, file, path);
       await reload();
@@ -63,7 +85,7 @@ export function ProfilePhotoEditor({ auth }) {
     try {
       await deleteMyProfilePhoto(path);
       await reload();
-      setConfirming(false);
+      setPanel(null);
       setMsg({ ok: '프로필 사진을 지웠습니다.' });
     } catch (err) {
       setMsg({ error: err.message });
@@ -73,31 +95,40 @@ export function ProfilePhotoEditor({ auth }) {
   };
 
   return (
-    <div className="photo-editor">
+    <div className="avatar-edit" ref={wrap}>
       <input
         ref={input} id="profile-photo-input" type="file" accept="image/*" hidden onChange={onFile}
         aria-label="프로필 사진 파일 고르기"
       />
-      <div className="row-actions">
-        <button type="button" className="btn btn-small" onClick={() => input.current?.click()} disabled={!!busy}>
-          {busy === 'upload' ? '올리는 중…' : path ? '사진 바꾸기' : '프로필 사진 올리기'}
-        </button>
-        {path && !confirming && (
-          <button type="button" className="btn btn-small" onClick={() => { setConfirming(true); setMsg(null); }} disabled={!!busy}>사진 삭제</button>
-        )}
-        {path && confirming && (
-          <span className="photo-confirm" role="group" aria-label="프로필 사진 삭제 확인">
-            <span>프로필 사진을 지우시겠습니까?</span>
-            <button type="button" className="btn btn-small btn-danger" onClick={remove} disabled={!!busy}>
-              {busy === 'delete' ? '지우는 중…' : '지우기'}
-            </button>
-            <button type="button" className="btn btn-small" onClick={() => setConfirming(false)} disabled={!!busy} autoFocus>취소</button>
-          </span>
-        )}
-      </div>
-      <small className="hint">JPG·PNG·WebP, 5MB까지. 가운데를 정사각형으로 잘라 올리며 내 공개 프로필에 보입니다.</small>
-      {msg?.ok && <p className="notice" role="status">{msg.ok}</p>}
-      {msg?.error && <p className="form-error" role="alert">{msg.error}</p>}
+      <button
+        type="button" className={`${shell} avatar-btn${path ? ' has-photo' : ''}`} onClick={onAvatar} disabled={!!busy}
+        aria-label="프로필 사진 변경" aria-haspopup={path ? 'true' : undefined} aria-expanded={path ? !!panel : undefined}
+      >
+        <ProfilePhoto path={path} alt={alt} className="me-avatar-img" fallback={fallback} />
+        <span className="avatar-plus" aria-hidden="true">+</span>
+      </button>
+      {(panel || busy || msg) && (
+        <div className="avatar-pop">
+          {busy && <p className="notice" role="status">{busy === 'upload' ? '올리는 중…' : '지우는 중…'}</p>}
+          {panel === 'menu' && !busy && (
+            <div className="avatar-menu" role="group" aria-label="프로필 사진 메뉴">
+              <button type="button" className="btn btn-small" onClick={pick} autoFocus>사진 바꾸기</button>
+              <button type="button" className="btn btn-small" onClick={() => setPanel('confirm')}>사진 삭제</button>
+              <button type="button" className="btn btn-small" onClick={close}>취소</button>
+              <small className="hint">JPG·PNG·WebP, 5MB까지. 가운데를 정사각형으로 잘라 올리며 내 공개 프로필에 보입니다.</small>
+            </div>
+          )}
+          {panel === 'confirm' && !busy && (
+            <div className="avatar-menu" role="group" aria-label="프로필 사진 삭제 확인">
+              <span>프로필 사진을 지우시겠습니까?</span>
+              <button type="button" className="btn btn-small btn-danger" onClick={remove}>지우기</button>
+              <button type="button" className="btn btn-small" onClick={() => setPanel('menu')} autoFocus>취소</button>
+            </div>
+          )}
+          {msg?.ok && <p className="notice" role="status">{msg.ok}</p>}
+          {msg?.error && <p className="form-error" role="alert">{msg.error}</p>}
+        </div>
+      )}
     </div>
   );
 }

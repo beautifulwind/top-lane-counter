@@ -10,14 +10,14 @@ import LinkActions from '../components/LinkActions';
 import FollowButton from '../components/FollowButton';
 import { InfluencerName } from '../components/UserName';
 import InfluencerBuildCard from '../components/InfluencerBuildCard';
-import { LayersIcon } from '../components/Icons';
+import { LayersIcon, UserIcon } from '../components/Icons';
 import { INFLUENCER_KINDS, displayNickname } from '../lib/nickname';
 import { canVote, isBlocked, isGuest, useAuth } from '../lib/auth';
 import { BLOCKED_PROFILE, SETTINGS_PATH, blockMenuItem } from '../lib/blocks';
 import MoreMenu from '../components/MoreMenu';
 import NoteForm from '../components/NoteForm';
 import { ReportForm } from '../components/BoardParts';
-import ProfilePhoto from '../components/ProfilePhoto';
+import ProfilePhoto, { ProfileAvatarEditor } from '../components/ProfilePhoto';
 import { PHOTO_REPORT_REASONS, removeProfilePhoto, reportProfilePhoto } from '../api/profilePhoto';
 import { useAsync } from '../lib/useAsync';
 import NotFound from './NotFound';
@@ -84,6 +84,8 @@ function Profile({ data, me, signedIn, notice, onDone }) {
   const canSeeFollowers = signedIn && !isGuest(auth) && (me === profile.id || auth.isOperator);
   const [showFollowers, setShowFollowers] = useState(() => canSeeFollowers && params.get('followers') === '1');
   const kind = INFLUENCER_KINDS[profile.influencer];
+  // 075: 내 공개 프로필에서는 동그라미가 곧 사진 올리기·바꾸기·삭제 버튼 (인증된 장인 본인만, 062 전 DB면 예전 모양)
+  const ownEditable = auth.status === 'signedIn' && auth.user?.id === profile.id && !!auth.profile?.influencer && !auth.profile.is_guest && 'photo_path' in auth.profile;
   // 3b: 링크 옆 ⋮ — 신고(정식 회원) / 삭제(운영진). 장인 페이지는 역할을 주지 않으므로 운영진의 링크인지는 DB가 가른다
   const actions = (l) => <LinkActions link={l} ownerId={profile.id} label="링크 더보기" onDone={onDone} />;
 
@@ -108,7 +110,11 @@ function Profile({ data, me, signedIn, notice, onDone }) {
         <p className="me-hero-label">장인</p>
         <div className="inf-hero-top">
           <div className="inf-hero-name">
-            <ProfilePhoto path={profile.photo_path} alt={`${profile.nickname} 프로필 사진`} className="inf-hero-photo" />
+            {ownEditable ? (
+              <ProfileAvatarEditor auth={auth} shell="inf-hero-avatar" fallback={<UserIcon size={28} />} />
+            ) : (
+              <ProfilePhoto path={profile.photo_path} alt={`${profile.nickname} 프로필 사진`} className="inf-hero-photo" />
+            )}
             <h1 className="doc-title" data-page-title={`${profile.nickname} 프로필`}>
               <InfluencerName profile={profile} />
             </h1>

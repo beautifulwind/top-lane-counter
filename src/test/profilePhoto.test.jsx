@@ -43,7 +43,8 @@ test('마이페이지: 장인이 아니면 사진 버튼이 없고 기본 아이
   fakeLogin('u-old');
   start('/me');
   await screen.findByRole('heading', { name: /기존유저/ });
-  expect(screen.queryByRole('button', { name: '프로필 사진 올리기' })).toBeNull();
+  expect(screen.queryByRole('button', { name: '프로필 사진 변경' })).toBeNull();
+  expect(document.querySelector('.avatar-plus')).toBeNull();
   expect(document.querySelector('.me-avatar svg')).not.toBeNull();
   expect(document.querySelector('.me-avatar img')).toBeNull();
 });
@@ -52,17 +53,22 @@ test('마이페이지: 062 전 DB(사진 칸 없음)면 장인이어도 사진 �
   fakeLogin(INF, { nickname: '장인님', influencer: 'creator' }); // photo_path 칸 없음
   start('/me');
   await screen.findByRole('heading', { name: /장인님/ });
-  expect(screen.queryByRole('button', { name: '프로필 사진 올리기' })).toBeNull();
+  expect(screen.queryByRole('button', { name: '프로필 사진 변경' })).toBeNull();
 });
 
 test('마이페이지: 장인이 사진을 올리면 정사각형으로 줄여 내 폴더에 올리고 정한다 → 사진이 보인다', async () => {
   stubSquare();
   asInfluencer();
   start('/me');
-  const btn = await screen.findByRole('button', { name: '프로필 사진 올리기' });
+  const btn = await screen.findByRole('button', { name: '프로필 사진 변경' });
   expect(document.querySelector('.me-avatar svg')).not.toBeNull(); // 사진 없음: 예전 그대로
+  expect(btn.querySelector('.avatar-plus')).not.toBeNull(); // 늘 보이는 + 배지
   expect(document.getElementById('profile-photo-input').getAttribute('accept')).toBe('image/*');
-  expect(btn).toBeDefined();
+  // 사진이 없으면 동그라미를 누르자마자 사진 고르기가 열린다 (메뉴 없음)
+  const click = vi.spyOn(document.getElementById('profile-photo-input'), 'click');
+  fireEvent.click(btn);
+  expect(click).toHaveBeenCalledTimes(1);
+  expect(screen.queryByRole('group', { name: '프로필 사진 메뉴' })).toBeNull();
   fireEvent.change(document.getElementById('profile-photo-input'), { target: { files: [jpg()] } });
   expect(await said('프로필 사진을 올렸습니다.')).toBeDefined();
   const up = fakeState.uploads[0];
@@ -72,7 +78,7 @@ test('마이페이지: 장인이 사진을 올리면 정사각형으로 줄여 �
   expect(rpcs('set_profile_photo')).toEqual([{ p_path: up.path }]);
   const img = await screen.findByRole('img', { name: '장인님 프로필 사진' });
   expect(img.getAttribute('src')).toContain(`profile-photos/${up.path}`);
-  expect(screen.getByRole('button', { name: '사진 바꾸기' })).toBeDefined();
+  expect(screen.getByRole('button', { name: '프로필 사진 변경' }).querySelector('.avatar-plus')).not.toBeNull();
 });
 
 test('마이페이지: 사진을 바꾸면 새 이름으로 올리고 옛 파일을 바로 지운다 (주소가 바뀌어 옛 사진이 안 남음)', async () => {
@@ -81,6 +87,13 @@ test('마이페이지: 사진을 바꾸면 새 이름으로 올리고 옛 파일
   start('/me');
   const old = await screen.findByRole('img', { name: '장인님 프로필 사진' });
   expect(old.getAttribute('src')).toContain(`${INF}/old.webp`);
+  // 사진이 있으면 동그라미를 눌러 메뉴 → [사진 바꾸기]
+  const click = vi.spyOn(document.getElementById('profile-photo-input'), 'click');
+  fireEvent.click(screen.getByRole('button', { name: '프로필 사진 변경' }));
+  expect(screen.getByRole('button', { name: '취소' })).toBeDefined();
+  expect(screen.getByRole('button', { name: '사진 삭제' })).toBeDefined();
+  fireEvent.click(screen.getByRole('button', { name: '사진 바꾸기' }));
+  expect(click).toHaveBeenCalledTimes(1);
   fireEvent.change(document.getElementById('profile-photo-input'), { target: { files: [jpg()] } });
   expect(await said('프로필 사진을 바꿨습니다.')).toBeDefined();
   const newPath = fakeState.uploads[0].path;
@@ -94,7 +107,7 @@ test('마이페이지: 정하기가 실패하면 방금 올린 파일을 지우�
   asInfluencer();
   fakeState.rpcError = '프로필 사진은 하루에 10번까지 바꿀 수 있습니다. 내일 다시 해 주세요.';
   start('/me');
-  await screen.findByRole('button', { name: '프로필 사진 올리기' });
+  await screen.findByRole('button', { name: '프로필 사진 변경' });
   fireEvent.change(document.getElementById('profile-photo-input'), { target: { files: [jpg()] } });
   expect(await screen.findByRole('alert')).toHaveTextContent('하루에 10번까지');
   expect(fakeState.removed.map((r) => r.path)).toEqual([fakeState.uploads[0].path]);
@@ -104,7 +117,7 @@ test('마이페이지: JPG·PNG·WebP가 아니거나 5MB를 넘으면 올리지
   stubSquare();
   asInfluencer();
   start('/me');
-  await screen.findByRole('button', { name: '프로필 사진 올리기' });
+  await screen.findByRole('button', { name: '프로필 사진 변경' });
   fireEvent.change(document.getElementById('profile-photo-input'), { target: { files: [new File(['g'], 'a.gif', { type: 'image/gif' })] } });
   expect(await screen.findByRole('alert')).toHaveTextContent('프로필 사진은 JPG·PNG·WebP만 올릴 수 있습니다.');
   fireEvent.change(document.getElementById('profile-photo-input'), { target: { files: [jpg(5 * 1024 * 1024 + 1)] } });
@@ -112,13 +125,18 @@ test('마이페이지: JPG·PNG·WebP가 아니거나 5MB를 넘으면 올리지
   expect(fakeState.uploads).toHaveLength(0);
 });
 
-test('마이페이지: 사진 삭제는 한 번 더 묻고, 지우면 예전 아이콘으로 돌아온다', async () => {
+test('마이페이지: 사진 삭제는 한 번 더 묻고, 지우면 예전 아이콘으로 돌아온다 (다시 눌러 올릴 수 있음)', async () => {
   asInfluencer({ photo_path: `${INF}/old.webp` });
   start('/me');
   await screen.findByRole('img', { name: '장인님 프로필 사진' });
+  const avatar = () => screen.getByRole('button', { name: '프로필 사진 변경' });
+  fireEvent.click(avatar());
   fireEvent.click(screen.getByRole('button', { name: '사진 삭제' }));
-  fireEvent.click(screen.getByRole('button', { name: '취소' }));
+  fireEvent.click(screen.getByRole('button', { name: '취소' })); // 확인 단계의 취소 → 메뉴로
   expect(rpcs('clear_profile_photo')).toHaveLength(0);
+  fireEvent.click(screen.getByRole('button', { name: '취소' })); // 메뉴의 취소 → 닫힘
+  expect(screen.queryByRole('group', { name: '프로필 사진 메뉴' })).toBeNull();
+  fireEvent.click(avatar());
   fireEvent.click(screen.getByRole('button', { name: '사진 삭제' }));
   fireEvent.click(screen.getByRole('button', { name: '지우기' }));
   expect(await said('프로필 사진을 지웠습니다.')).toBeDefined();
@@ -126,7 +144,20 @@ test('마이페이지: 사진 삭제는 한 번 더 묻고, 지우면 예전 아
   expect(fakeState.removed).toEqual([{ bucket: 'profile-photos', path: `${INF}/old.webp` }]);
   await waitFor(() => expect(screen.queryByRole('img', { name: '장인님 프로필 사진' })).toBeNull());
   expect(document.querySelector('.me-avatar svg')).not.toBeNull();
-  expect(screen.getByRole('button', { name: '프로필 사진 올리기' })).toBeDefined();
+  expect(avatar().querySelector('.avatar-plus')).not.toBeNull();
+});
+
+test('마이페이지: 아바타는 키보드로 누를 수 있는 버튼이고, 메뉴는 Esc로 닫힌다', async () => {
+  asInfluencer({ photo_path: `${INF}/old.webp` });
+  start('/me');
+  await screen.findByRole('img', { name: '장인님 프로필 사진' });
+  const avatar = screen.getByRole('button', { name: '프로필 사진 변경' });
+  expect(avatar.tagName).toBe('BUTTON');
+  expect(avatar.getAttribute('aria-expanded')).toBe('false');
+  fireEvent.click(avatar);
+  expect(avatar.getAttribute('aria-expanded')).toBe('true');
+  fireEvent.keyDown(document, { key: 'Escape' });
+  expect(screen.queryByRole('group', { name: '프로필 사진 메뉴' })).toBeNull();
 });
 
 // ---------------- 공개 프로필 ----------------
@@ -170,11 +201,36 @@ describe('공개 프로필', () => {
     expect(menu.getByText(/비회원은 신고할 수 없습니다/)).toBeDefined();
   });
 
-  test('내 공개 프로필: 사진은 보이지만 ⋮(신고·차단)는 없다', async () => {
+  test('내 공개 프로필: 사진이 보이고 동그라미가 곧 버튼(+ 배지), ⋮(신고·차단)는 없다', async () => {
     asInfluencer({ photo_path: `${INF}/p.webp` });
     start(`/u/${INF}`);
     await screen.findByRole('img', { name: '장인님 프로필 사진' });
+    expect(screen.getByRole('button', { name: '프로필 사진 변경' }).querySelector('.avatar-plus')).not.toBeNull();
     expect(moreNames(screen, '장인 더보기')).toEqual([]);
+  });
+
+  test('내 공개 프로필: 사진이 없어도 + 배지 동그라미가 보이고, 누르면 사진 고르기 → 올리면 바로 보인다', async () => {
+    stubSquare();
+    asInfluencer();
+    start(`/u/${INF}`);
+    const btn = await screen.findByRole('button', { name: '프로필 사진 변경' });
+    const click = vi.spyOn(document.getElementById('profile-photo-input'), 'click');
+    fireEvent.click(btn);
+    expect(click).toHaveBeenCalledTimes(1);
+    fireEvent.change(document.getElementById('profile-photo-input'), { target: { files: [jpg()] } });
+    expect(await said('프로필 사진을 올렸습니다.')).toBeDefined();
+    expect(await screen.findByRole('img', { name: '장인님 프로필 사진' })).toBeDefined();
+  });
+
+  test('남의 장인 페이지: + 배지도 버튼도 없고 사진을 눌러도 아무 일 없다', async () => {
+    addInfluencer({ photo_path: `${INF}/p.webp` });
+    fakeLogin('u-old');
+    start(`/u/${INF}`);
+    const img = await screen.findByRole('img', { name: '장인님 프로필 사진' });
+    fireEvent.click(img);
+    expect(screen.queryByRole('button', { name: '프로필 사진 변경' })).toBeNull();
+    expect(document.querySelector('.avatar-plus')).toBeNull();
+    expect(document.getElementById('profile-photo-input')).toBeNull();
   });
 
   test('⋮ [이 사용자 차단] → 바로 "차단한 사용자입니다."로 바뀌고 사진도 안 보인다', async () => {
