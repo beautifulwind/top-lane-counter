@@ -1,13 +1,16 @@
 import { afterEach, describe, expect, test, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 
 const cap = vi.hoisted(() => ({ native: false }));
 vi.mock('@capacitor/core', () => ({ Capacitor: { isNativePlatform: () => cap.native } }));
 
 const { default: StoreLinks } = await import('../components/StoreLinks');
+const { AppRoutes } = await import('../App');
+const { fakeFetch } = await import('./fakeDdragon');
 const { APP_STORE_URL, INSTAGRAM_URL } = await import('../lib/storeLinks');
 
-afterEach(() => { cleanup(); cap.native = false; });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); cap.native = false; });
 
 describe('스토어 이동 버튼 (SPEC 6-70)', () => {
   test('웹: 세 버튼이 보이고 App Store·인스타그램은 새 탭 링크', () => {
@@ -32,5 +35,34 @@ describe('스토어 이동 버튼 (SPEC 6-70)', () => {
     cap.native = true;
     const { container } = render(<StoreLinks />);
     expect(container.innerHTML).toBe('');
+  });
+
+  describe('배치', () => {
+    const start = (path) => {
+      vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch());
+      vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
+      render(<MemoryRouter initialEntries={[path]}><AppRoutes /></MemoryRouter>);
+    };
+
+    test('다른 페이지 푸터에는 묶음이 있다', async () => {
+      start('/terms');
+      await screen.findByRole('heading', { level: 1, name: '이용약관' });
+      expect(within(screen.getByRole('contentinfo')).getByRole('link', { name: /App Store/ })).toBeDefined();
+    });
+
+    test('로그인 화면: 푸터에는 없고 로그인 창 안의 작은 묶음만 한 개 있다', async () => {
+      start('/login');
+      await screen.findByRole('heading', { level: 1, name: /로그인/ });
+      expect(within(screen.getByRole('contentinfo')).queryByRole('link', { name: /App Store/ })).toBeNull();
+      expect(screen.getAllByRole('link', { name: /App Store/ })).toHaveLength(1);
+      expect(document.querySelector('.login-card .store-links-sm')).not.toBeNull();
+    });
+
+    test('네이티브 앱: 푸터·로그인 모두 없다', async () => {
+      cap.native = true;
+      start('/login');
+      await screen.findByRole('heading', { level: 1, name: /로그인/ });
+      expect(screen.queryByRole('link', { name: /App Store/ })).toBeNull();
+    });
   });
 });

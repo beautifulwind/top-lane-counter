@@ -112,7 +112,7 @@ export default function Layout() {
           <span aria-hidden="true"> · </span>
           <Link to="/terms">이용약관</Link>
         </nav>
-        <StoreLinks />
+        {pathname !== '/login' && <StoreLinks />} {/* 로그인 화면에는 창 안의 작은 묶음만 (SPEC 6-70) */}
         <p>{RIOT_NOTICE}</p>
       </footer>
       <UpdateBanner />
