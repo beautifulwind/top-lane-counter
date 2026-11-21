@@ -105,17 +105,17 @@ test('장인 페이지: 비로그인은 팔로워 수만(목록 버튼 없음), 
   expect(fakeState.followStatusCalls).toEqual([]); // 로그인 전에는 상태를 묻지 않는다
 });
 
-test('장인 페이지: 로그인하면 [팔로워 목록] — 닉네임·팔로우한 날, 20개씩 [더보기]', async () => {
+test('장인 페이지: 내 페이지면 [팔로워 목록] — 닉네임만(063: 팔로우한 날 없음), 20개씩 [더보기]', async () => {
   influencer();
   followers(22);
-  fan();
+  fakeLogin('u-102', { nickname: '탑고수', influencer: 'creator' });
   start('/u/u-102');
   fireEvent.click(await screen.findByRole('button', { name: '팔로워 목록' }));
   const box = (await screen.findByRole('heading', { name: '팔로워' })).closest('section');
   await waitFor(() => expect(box.querySelectorAll('.follower-list li')).toHaveLength(20));
   const first = box.querySelector('.follower-list li');
   expect(first.textContent).toContain('팔로워22'); // 최근 팔로우가 위
-  expect(first.textContent).toContain('2026-11-22 팔로우');
+  expect(first.textContent).not.toMatch(/2026-11-22|팔로우/); // 063: 날짜·「팔로우」 문구 없음
   fireEvent.click(within(box).getByRole('button', { name: '더보기 (2명 남음)' }));
   await waitFor(() => expect(box.querySelectorAll('.follower-list li')).toHaveLength(22));
   fireEvent.click(screen.getByRole('button', { name: '팔로워 목록 닫기' }));

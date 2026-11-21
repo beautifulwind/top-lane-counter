@@ -45,7 +45,11 @@ export async function getFollowStatus(ids) {
 export const getInfluencerBuilds = (id, page = 1) =>
   rpc('influencer_builds', { p_user: String(id ?? ''), p_page: page }, '빌드를 불러오지 못했습니다.');
 
-/** 팔로워 목록 (로그인한 사람만, 최근 순, 20개씩): { follower_count, total, page, size, items: [{ id, nickname, influencer, nickname_state, followed_at }] } */
+/**
+ * 팔로워 목록 (063: 장인 본인·운영자만, 비회원 거부. 최근 순은 서버 안에서만, 20개씩).
+ * 장인과 서로 차단 관계인 팔로워는 목록·total에서 빠진다. 팔로우한 날은 주지 않는다.
+ * { follower_count(= total), total, page, size, items: [{ id, nickname, influencer, nickname_state }] }
+ */
 export const getFollowers = (id, page = 1) =>
   rpc('influencer_followers', { p_user: id, p_page: page }, '팔로워 목록을 불러오지 못했습니다.');
 
@@ -56,5 +60,5 @@ export const searchInfluencers = (query, page = 1) =>
 /** 팔로우 모아보기 (로그인한 사람만): 내가 팔로우한 장인들의 공개 빌드, 최근 수정순 20개씩. { total, page, size, items: [빌드 카드] } */
 export const getFollowedBuilds = (page = 1) => rpc('followed_builds', { p_page: page }, '팔로우한 장인의 빌드를 불러오지 못했습니다.');
 
-/** 내가 팔로우한 장인 (로그인한 사람만, 최근 팔로우 순 20개씩). { total, page, size, items: [{ id, nickname, influencer, followed_at, follower_count }] } */
+/** 내가 팔로우한 장인 (로그인한 정식 회원만 — 063: 비회원 거부, 최근 팔로우 순 20개씩, 날짜는 주지 않음). { total, page, size, items: [{ id, nickname, influencer, follower_count }] } */
 export const getMyFollowing = (page = 1) => rpc('my_following', { p_page: page }, '팔로우한 장인 목록을 불러오지 못했습니다.');

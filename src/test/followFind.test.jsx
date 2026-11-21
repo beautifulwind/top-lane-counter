@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-li
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
-import { TABLES, fakeBuild, fakeGuestLogin, fakeLogin, fakeState } from './fakeSupabase';
+import { TABLES, fakeBuild, fakeLogin, fakeState } from './fakeSupabase';
 import { openMenu } from './menu';
 import { NO_RESULT_TEXT } from '../components/InfluencerSearch';
 import { NO_FOLLOW_TEXT } from '../pages/Following';
@@ -125,7 +125,7 @@ test('모아보기: 로그인 전에는 로그인 안내만', async () => {
 });
 
 test('모아보기: 팔로우한 장인이 없으면 안내 (빌드·장인 탭 모두)', async () => {
-  fakeGuestLogin('u-g', { nickname: '손님' });
+  fakeLogin('u-m', { nickname: '회원' }); // 063: 비회원은 장인 탭에서 안내만 (followPrivacy.test.jsx)
   start('/following');
   expect(await screen.findByText(NO_FOLLOW_TEXT)).toBeTruthy();
   fireEvent.click(screen.getByRole('tab', { name: '팔로우한 장인' }));
@@ -176,7 +176,8 @@ test('모아보기 팔로우한 장인: 목록에서 [팔로우중]을 누르면
   const sec = await screen.findByRole('region', { name: '내가 팔로우한 장인' });
   const rows = [...sec.querySelectorAll('.following-row')];
   expect(rows.map((r) => r.querySelector('.user-nick').textContent)).toEqual(['칭호없음', '탑고수']); // 최근 팔로우 순
-  expect(rows[0].textContent).toContain('프로게이머 · 팔로워 2명 · 2026-11-05 팔로우');
+  expect(rows[0].textContent).toContain('프로게이머 · 팔로워 2명');
+  expect(rows[0].textContent).not.toContain('2026-11-05'); // 063: 팔로우한 날 없음
   expect(within(rows[0]).getByRole('link', { name: /칭호없음/ }).getAttribute('href')).toBe('/u/u-103');
   fireEvent.click(within(rows[0]).getByRole('button', { name: '칭호없음 팔로우 취소' }));
   const again = await within(rows[0]).findByRole('button', { name: '칭호없음 팔로우' });

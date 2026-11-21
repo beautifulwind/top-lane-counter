@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { getFollowedBuilds, getMyFollowing } from '../api/follow';
 import { getChampionMap } from '../api/ddragon';
-import { useAuth } from '../lib/auth';
+import { isGuest, useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
 import { INFLUENCER_KINDS } from '../lib/nickname';
 import { ErrorBox, Loading } from '../components/Status';
@@ -12,14 +12,15 @@ import { InfluencerName } from '../components/UserName';
 import { LayersIcon } from '../components/Icons';
 
 export const NO_FOLLOW_TEXT = '아직 팔로우한 장인이 없습니다. 장인찾기에서 찾아보세요.';
-const day = (ts) => (ts ? String(ts).slice(0, 10) : '');
+export const GUEST_FOLLOWING_TEXT = '비회원은 팔로우한 장인 목록을 볼 수 없습니다. 마이페이지에서 구글·카카오를 연결해 주세요.';
 
 /**
  * 팔로우 모아보기 (/following, 050 · SPEC 6-36). ☰ [장인찾기] 검색 칸의 [내가 팔로우한 장인의 빌드 보기]로 온다.
  * 탭 두 개 (?tab=list로 주소에 남는다):
  *  - 빌드: followed_builds — 팔로우한 장인들의 공개 빌드, 최근 수정순 20개씩 [더보기]. 카드 = 장인 닉네임·챔피언·상대법 이름 → 그 빌드로
- *  - 팔로우한 장인: my_following — 20개씩, 줄마다 [팔로우중](누르면 취소, 다시 누르면 팔로우)
- * 로그인하지 않았으면 로그인 안내만. 게스트도 쓸 수 있다.
+ *  - 팔로우한 장인: my_following — 20개씩, 줄마다 닉네임·장인 표시·유형·팔로워 수 + [팔로우중](누르면 취소, 다시 누르면 팔로우).
+ *    063: 팔로우한 날은 보이지 않는다(DB도 주지 않음). 비회원(게스트)은 이 탭에서 안내만(DB도 거부).
+ * 로그인하지 않았으면 로그인 안내만. 게스트도 빌드 탭은 쓸 수 있다.
  */
 export default function Following() {
   const auth = useAuth();
@@ -46,7 +47,9 @@ export default function Following() {
               className={tab === 'list' ? 'btn btn-small on' : 'btn btn-small'} onClick={() => setTab('list')}>팔로우한 장인</button>
           </div>
           <div id="ft-panel" role="tabpanel" aria-labelledby={tab === 'list' ? 'ft-list' : 'ft-builds'}>
-            {tab === 'list' ? <FollowingList userId={auth.user.id} /> : <FollowedBuilds userId={auth.user.id} />}
+            {tab === 'list'
+              ? (isGuest(auth) ? <p className="notice" role="status">{GUEST_FOLLOWING_TEXT}</p> : <FollowingList userId={auth.user.id} />)
+              : <FollowedBuilds userId={auth.user.id} />}
           </div>
         </>
       )}
@@ -126,7 +129,7 @@ function FollowingList({ userId }) {
               <span className="following-who">
                 <InfluencerName profile={p} linkTo={p.id} />
                 <small className="muted">
-                  {INFLUENCER_KINDS[p.influencer] ?? '장인'} · 팔로워 {Number(count ?? 0).toLocaleString()}명 · {day(p.followed_at)} 팔로우
+                  {INFLUENCER_KINDS[p.influencer] ?? '장인'} · 팔로워 {Number(count ?? 0).toLocaleString()}명
                 </small>
               </span>
               <FollowButton

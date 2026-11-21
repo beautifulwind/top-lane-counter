@@ -140,7 +140,7 @@ select t.fails('[+] 상태: 101명 거부', 'select follow_status(array(select g
 select t.ok('팔로우 취소', unfollow_influencer(:'X') = jsonb_build_object('following', false, 'follower_count', 1));
 select t.ok('팔로우 안 한 장인 취소도 오류 아님', (unfollow_influencer(:'Z') ->> 'follower_count')::int = 0);
 select t.ok('내 팔로우 목록 (W만)', (select (j ->> 'total')::int = 1 and j -> 'items' -> 0 ->> 'id' = :'W' and j -> 'items' -> 0 ->> 'nickname' = 'Faker'
-  and (j -> 'items' -> 0 ->> 'follower_count')::int = 4 and j -> 'items' -> 0 ? 'followed_at' from (select my_following() as j) s));
+  and (j -> 'items' -> 0 ->> 'follower_count')::int = 4 and not (j -> 'items' -> 0 ? 'followed_at') from (select my_following() as j) s));  -- 063: 날짜 없음
 reset role;
 
 -- ===== 4. 호출 횟수 제한 (1분에 30번) =====
@@ -165,28 +165,33 @@ select t.ok('1분이 지나면 다시 가능', (follow_influencer(:'W') ->> 'fol
 reset role;
 delete from follow_rate;
 
--- ===== 5. 팔로워 목록 (로그인한 사용자만, 20개씩) =====
+-- ===== 5. 팔로워 목록 (063부터 장인 본인·운영자만 - 자세한 검사는 follow_privacy_test.sql, 20개씩) =====
 insert into auth.users (id, email) select ('00000000-0000-0000-0000-0000000001' || lpad(i::text, 2, '0'))::uuid, 'f' || i || '@x.com'
   from generate_series(1, 22) i;
 update profiles set nickname = '팔로워' || lpad(right(id::text, 2), 2, '0') where id::text like '00000000-0000-0000-0000-0000000001%';
 insert into influencer_follows (follower_id, influencer_id, created_at)
   select id, :'W', now() - interval '1 hour' - (right(id::text, 2)::int * interval '1 minute')
     from profiles where id::text like '00000000-0000-0000-0000-0000000001%';
+select follower_id as top from influencer_follows where influencer_id = :'W' order by created_at desc, follower_id limit 1 \gset
 set role authenticated;
 set request.jwt.claim.sub = :'GU';
+select t.fails('063: 게스트는 팔로워 목록 거부', format('select influencer_followers(%L)', :'W'), '비회원은 팔로워 목록을 볼 수 없습니다');
+set request.jwt.claim.sub = :'W';
 select influencer_followers(:'W') as fl \gset
-select t.ok('게스트도 팔로워 목록 열람', (:'fl'::jsonb ->> 'total')::int = 26 and (:'fl'::jsonb ->> 'follower_count')::int = 26);
+select t.ok('장인 본인은 팔로워 목록 열람', (:'fl'::jsonb ->> 'total')::int = 26 and (:'fl'::jsonb ->> 'follower_count')::int = 26);
 select t.ok('20개씩', jsonb_array_length(:'fl'::jsonb -> 'items') = 20 and (:'fl'::jsonb ->> 'size')::int = 20);
 select t.ok('2쪽은 나머지 6개', jsonb_array_length(influencer_followers(:'W', 2) -> 'items') = 6);
 select t.ok('최근 팔로우 순 (맨 위는 방금 팔로우한 사람)', (:'fl'::jsonb -> 'items' -> 25) is null
-  and (:'fl'::jsonb -> 'items' -> 0 ->> 'followed_at')::timestamptz > now() - interval '30 minutes');
-select t.ok('팔로워 한 줄: 닉네임/팔로우한 날 (역할/레벨/이메일 없음)', (select bool_and(i ? 'nickname' and i ? 'followed_at'
+  and :'fl'::jsonb -> 'items' -> 0 ->> 'id' = :'top');
+select t.ok('팔로워 한 줄: 닉네임만 (063: 팔로우한 날 없음, 역할/레벨/이메일 없음)', (select bool_and(i ? 'nickname' and not (i ? 'followed_at')
   and not (i ? 'role') and not (i ? 'level') and not (i ? 'email') and not (i ? 'main_title')) from jsonb_array_elements(:'fl'::jsonb -> 'items') i));
 select t.ok('닉네임 없는 게스트는 nickname null', exists (select 1 from jsonb_array_elements(:'fl'::jsonb -> 'items') i
   where i ->> 'id' = :'GN' and i -> 'nickname' = 'null'::jsonb));
-select t.fails('장인 아닌 회원의 팔로워 목록', format('select influencer_followers(%L)', :'V'), '인증된 장인을 찾지 못했습니다');
+set request.jwt.claim.sub = :'OP';
+select t.fails('장인 아닌 회원의 팔로워 목록 (운영자)', format('select influencer_followers(%L)', :'V'), '인증된 장인을 찾지 못했습니다');
+select t.ok('운영자는 남의 장인 목록 열람', (influencer_followers(:'W') ->> 'total')::int = 26);
 set request.jwt.claim.sub = :'U';
-select t.ok('정식 회원도 열람', (influencer_followers(:'W') ->> 'total')::int = 26);
+select t.fails('063: 다른 정식 회원은 거부', format('select influencer_followers(%L)', :'W'), '장인 본인만 볼 수 있습니다');
 reset role;
 set role anon;
 select t.ok('비로그인은 수만 (26)', influencer_follower_count(:'W') = 26);

@@ -22,13 +22,11 @@ import { PHOTO_REPORT_REASONS, removeProfilePhoto, reportProfilePhoto } from '..
 import { useAsync } from '../lib/useAsync';
 import NotFound from './NotFound';
 
-const day = (ts) => (ts ? String(ts).slice(0, 10) : '');
-
 /**
  * 장인 페이지 (/u/:id — 047 공개 프로필을 050에서 빌드 중심으로, SPEC 6-34 · 6-36).
  * 위: 닉네임 + 장인 표시 + 유형 · 팔로워 수 · [팔로우] · 링크(작게). 본문: 그 장인이 처음 만든 공개 빌드(influencer_builds, 최근 수정순, 20개씩 [더보기]).
- * 팔로워 수는 누구나, 팔로워 목록은 로그인한 사람에게만 [팔로워 목록] 버튼(20개씩).
- * 052: ?followers=1(새 팔로워 알림 → /me/followers)로 열면 로그인한 사람에게는 팔로워 목록이 처음부터 펼쳐져 있다.
+ * 팔로워 수는 누구나. [팔로워 목록] 버튼(20개씩)은 063부터 "내 페이지"일 때만(정식 회원) + 운영자(운영자 모드 켜짐)에게만 — DB도 같은 규칙.
+ * 052: ?followers=1(새 팔로워 알림 → /me/followers)로 열면 볼 수 있는 사람에게는 팔로워 목록이 처음부터 펼쳐져 있다.
  * DB가 장인이 아니거나 없는 id·모양이 틀린 id에 모두 null을 주므로 화면도 모두 같은 "없는 페이지".
  * 이메일·라이엇 닉네임·역할·레벨은 DB가 주지 않는다.
  * 062: 장인 프로필 사진(있을 때만 — 없으면 예전 그대로, 보기 전용. 올리기·바꾸기·삭제는 마이페이지 카드에서).
@@ -82,7 +80,9 @@ function Profile({ data, me, signedIn, notice, onDone }) {
   const [builds, setBuilds] = useState({ items: data.first.items, total: Number(data.first.total) || 0, page: 1 });
   const [more, setMore] = useState({ busy: false, error: null });
   const [params] = useSearchParams();
-  const [showFollowers, setShowFollowers] = useState(() => signedIn && params.get('followers') === '1');
+  // 063: 팔로워 목록은 장인 본인(비회원 아님)과 운영자만 (DB influencer_followers도 같은 규칙)
+  const canSeeFollowers = signedIn && !isGuest(auth) && (me === profile.id || auth.isOperator);
+  const [showFollowers, setShowFollowers] = useState(() => canSeeFollowers && params.get('followers') === '1');
   const kind = INFLUENCER_KINDS[profile.influencer];
   // 3b: 링크 옆 ⋮ — 신고(정식 회원) / 삭제(운영진). 장인 페이지는 역할을 주지 않으므로 운영진의 링크인지는 DB가 가른다
   const actions = (l) => <LinkActions link={l} ownerId={profile.id} label="링크 더보기" onDone={onDone} />;
@@ -162,7 +162,7 @@ function Profile({ data, me, signedIn, notice, onDone }) {
         <p className="doc-sub inf-meta">
           {kind && <><span className="inf-kind">{`인증된 ${kind}`}</span>{' · '}</>}
           <span>팔로워 <strong className="follower-count">{follow.count.toLocaleString()}</strong>명</span>
-          {signedIn ? (
+          {canSeeFollowers ? (
             <>
               {' '}
               <button
@@ -187,7 +187,7 @@ function Profile({ data, me, signedIn, notice, onDone }) {
         )}
         {profile.links.length > 0 && <p className="hint">장인이 올린 외부 사이트입니다. 탑신병자가 내용을 보증하지 않습니다.</p>}
       </header>
-      {showFollowers && <Followers id={profile.id} count={follow.count} />}
+      {canSeeFollowers && showFollowers && <Followers id={profile.id} count={follow.count} />}
       {notice && <p className="notice" role="status">{notice}</p>}
 
       <section className="me-section" aria-labelledby="pp-builds">
@@ -239,7 +239,7 @@ function ProfileMenu({ auth, profile, onMode, onLogin, onDone }) {
   );
 }
 
-/** 팔로워 목록 (로그인한 사람만 — DB도 막는다). 최근 팔로우 순, 20개씩 [더보기] */
+/** 팔로워 목록 (장인 본인·운영자만 — DB도 막는다). 닉네임과 장인 표시만(063: 팔로우한 날 없음). 최근 팔로우 순(DB가 정함), 20개씩 [더보기] */
 function Followers({ id, count }) {
   const auth = useAuth();
   const [state, setState] = useState({ items: [], total: 0, page: 0, busy: true, error: null });
@@ -265,10 +265,9 @@ function Followers({ id, count }) {
       {state.page > 0 && state.items.length === 0 && <p className="empty">아직 팔로워가 없습니다.</p>}
       {state.items.length > 0 && (
         <ul className="follower-list">
-          {state.items.filter((f) => !isBlocked(auth, f.id)).map((f) => ( // 061: 내가 차단한 팔로워는 목록에서 뺀다
+          {state.items.filter((f) => !isBlocked(auth, f.id)).map((f) => ( // 061: 내가 차단한 팔로워는 목록에서 뺀다 (063부터 DB도 빼고 센다)
             <li key={f.id}>
               {f.nickname ? <InfluencerName profile={f} linkTo={f.influencer ? f.id : null} /> : <span className="muted">{displayNickname(f, '닉네임을 정하지 않은 사용자')}</span>}
-              <small className="muted">{day(f.followed_at)} 팔로우</small>
             </li>
           ))}
         </ul>

@@ -102,13 +102,15 @@ test('방침·약관 (050 팔로우): 저장 목적·보관 기간·공개 범�
   expect(privacy).toContain('팔로우한 장인이 새 빌드를 올리면 알림을 보내고');
   expect(privacy).toContain('팔로우를 취소하거나, 그 장인의 인증이 해제되거나, 팔로우한 사람 또는 장인이 탈퇴하거나, 오래 쓰지 않은 비회원(게스트) 계정이 정리되면 바로 지웁니다.');
   expect(privacy).toContain('팔로워 수는 누구나');
-  expect(privacy).toContain('팔로워 목록은 로그인한 이용자(비회원 포함)에게');
+  expect(privacy).toContain('팔로워 목록은 그 장인 본인과 운영자만'); // 063
+  expect(privacy).toContain('팔로우한 날은 보이지 않습니다');
   expect(privacy).toContain('팔로우한 장인의 새 빌드·'); // 051·052에서 뒤에 공지·새 팔로워가 붙음
   expect(privacy).toContain('장인 목록에서 장인의 닉네임·유형·직접 지정 여부·인증일·팔로워 수를 조회');
   cleanup();
   start('/terms');
   const sec = (await screen.findByRole('heading', { name: '제4조의3 (장인 팔로우와 알림)' })).closest('section').textContent;
   expect(sec).toContain('언제든 취소할 수 있습니다');
+  expect(sec).toContain('팔로워 목록(닉네임)은 그 장인 본인과 운영자만 볼 수 있습니다'); // 063
   expect(sec).toContain('“팔로우한 장인의 새 빌드”에서 끌 수 있습니다');
   expect(LEGAL).toEqual(before);
   expect(LEGAL.effectiveDate).toBe('2026-12-14');
