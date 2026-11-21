@@ -8,6 +8,7 @@ import { BOARD_NAME } from '../lib/siteNames';
 import { Loading } from '../components/Status';
 import Captcha, { captchaSiteKey } from '../components/Captcha';
 import GuestLinkDialog from '../components/GuestLinkDialog';
+import StoreLinks from '../components/StoreLinks';
 import { ShieldIcon, UserIcon } from '../components/Icons';
 
 export default function Login() {
@@ -80,6 +81,7 @@ export default function Login() {
             </button>
           )}
         </div>
+        <StoreLinks size="sm" />
         {choosing && <GuestLinkDialog provider={choosing} returnTo={from} onClose={() => setChoosing(null)} />}
         {guestOpen && !guest && (
           <GuestStart

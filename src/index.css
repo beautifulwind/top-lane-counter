@@ -1259,3 +1259,23 @@ a.inf-link:hover .user-nick, a.inf-link:focus-visible .user-nick { text-decorati
 .bs-text small { color: var(--muted); font-size: var(--fs-xs); overflow-wrap: anywhere; }
 .bs-note { margin: 0; padding: 12px; color: var(--muted); font-size: var(--fs-sm); }
 .bs-text .bs-summary { color: var(--text); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* 스토어·인스타그램 이동 버튼 (SPEC 6-70) — 흰 바탕 알약은 다크 모드에서도 같은 흰색을 유지(로고 색 보호) */
+.store-links { max-width: calc(var(--page-max) - 2 * var(--gutter)); margin: 0 auto 12px; }
+.store-links-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.store-pill {
+  display: inline-flex; align-items: center; justify-content: center; gap: 6px;
+  min-height: 36px; padding: 0 14px; border-radius: 999px;
+  background: var(--store-pill); color: var(--on-store-pill); border: 1px solid var(--store-pill-line);
+  font: inherit; font-size: var(--fs-sm); font-weight: 600; line-height: 1; text-decoration: none; cursor: pointer;
+}
+.store-pill:hover { background: var(--store-pill-hover); }
+.store-pill:focus-visible { outline: 2px solid var(--brand-ring); outline-offset: 2px; }
+.store-pill-icon { width: 36px; padding: 0; }
+.store-links-soon { margin: 4px 0 0 !important; font-size: var(--fs-xs); color: var(--muted); }
+.store-links-sm { margin: 12px 0 0; width: 100%; max-width: 360px; }
+.store-links-sm .store-links-row { justify-content: center; gap: 6px; }
+.store-links-sm .store-pill { min-height: 30px; padding: 0 10px; font-size: var(--fs-xs); font-weight: 500; }
+.store-links-sm .store-pill svg { width: 15px; height: 15px; }
+.store-links-sm .store-pill-icon { width: 30px; padding: 0; }
+.store-links-sm .store-links-soon { text-align: center; }

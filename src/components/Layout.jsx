@@ -3,6 +3,7 @@ import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-d
 import ErrorBoundary from './ErrorBoundary';
 import { ShieldIcon } from './Icons';
 import SiteMenu from './SiteMenu';
+import StoreLinks from './StoreLinks';
 import UpdateBanner from './UpdateBanner';
 import { needsNickname, needsNicknameFor, useAuth } from '../lib/auth';
 import { noticeText, startFresh } from '../api/auth';
@@ -111,6 +112,7 @@ export default function Layout() {
           <span aria-hidden="true"> · </span>
           <Link to="/terms">이용약관</Link>
         </nav>
+        <StoreLinks />
         <p>{RIOT_NOTICE}</p>
       </footer>
       <UpdateBanner />

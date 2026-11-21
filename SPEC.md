@@ -1534,3 +1534,11 @@ RLS 원칙:
 - **release 서명** (`android/app/build.gradle`): 위 CM_* 4개가 모두 있을 때만 `signingConfigs.release`를 만들고 release 빌드에 쓴다. 없으면(로컬) 예전처럼 서명 없는 release / debug 서명 debug — 로컬 빌드는 그대로.
 - **확인(로컬)**: yaml 파싱, `npm test`, `npm run build`, `npx cap sync android`, 환경 변수 없이 `bundleRelease`(서명 없음), 일회용 테스트 키스토어로 `bundleRelease`(META-INF/UPLOAD.RSA 확인 후 키 삭제), versionCode 단계 스크립트(BUILD_NUMBER=7 → 7). 실제 키스토어 서명·Codemagic 환경은 Codemagic 빌드로 확인.
 - **인스턴스**: 무료 플랜 제한으로 `mac_mini_m2` 사용(`linux_x2`는 현재 요금제에서 시작 전에 실패). 맥(BSD 도구) 기준으로 SDK 경로(ANDROID_SDK_ROOT → ANDROID_HOME → ~/Library/Android/sdk)·`sed -i.bak`·`chmod +x gradlew`를 맞춤. 최대 30분 그대로
+
+### 6-70. 스토어·인스타그램 이동 버튼 (2026-11-21, 웹 화면만, DB·iOS·Android 설정 변경 없음)
+- **목적**: 웹 방문자를 앱(Google Play·App Store)과 인스타그램으로 안내한다. 흰 바탕·얇은 테두리 알약 버튼 3개, 순서 [Google Play] [App Store] [인스타그램 원형 아이콘].
+- **배치**: 푸터(기본 크기), 로그인 화면의 로그인 버튼·비회원 시작 아래(`size="sm"` 작은 변형, 로그인 버튼보다 약하게). 같은 컴포넌트 `src/components/StoreLinks.jsx` 재사용.
+- **동작**: App Store·인스타그램은 새 탭(`target="_blank"`, `rel="noopener noreferrer"`). Google Play는 `src/lib/storeLinks.js`의 `PLAY_STORE_URL`이 `""`이면 이동 없이 "준비 중입니다"(앱의 `role="status"` 안내 방식, 2.5초 뒤 사라짐), 값이 있으면 링크로 바뀐다. 출시 후 `PLAY_STORE_URL`에 `https://play.google.com/store/apps/details?id=com.topsinbyeongja.app` 한 줄만 넣으면 된다.
+- **네이티브 앱 숨김**: `isNativeApp()`(= `Capacitor.isNativePlatform()`)이 참이면 푸터·로그인 모두 아무것도 그리지 않는다 (Apple 심사: 다른 플랫폼 로고).
+- **디자인**: 아이콘은 인라인 SVG(Google Play 삼색, Apple 로고, 인스타그램 그라데이션 원). 모든 요소에 `aria-label`. 줄바꿈은 `flex-wrap`. 알약 색은 `tokens.css`(`--store-pill*`)에만 두고 어두운 사이트 바탕 위에서도 흰색 유지.
+- **확인**: `src/test/storeLinks.test.jsx`(새 탭 속성, 준비 중 안내, 네이티브에서 렌더링 안 함), 전체 테스트 통과.
