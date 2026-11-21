@@ -1576,3 +1576,9 @@ RLS 원칙:
 - **수정**: `src/index.css` 공통 규칙에 체크·라디오·파일·range·color를 뺀 모든 `input`·`textarea`·`select`의 `font-size: max(var(--fs-md), 16px)` 추가(`tokens.css` `--fs-md` = 16px). 칸마다 따로 쓰던 규칙은 그대로(이미 모두 `--fs-md`). **확대를 막는 `user-scalable=no`·`maximum-scale`은 쓰지 않았다** — 저시력 사용자가 직접 확대할 수 있어야 하는 접근성 때문.
 - **확인 화면**: ☰ → 장인찾기, 홈 검색, 게시판 검색·글쓰기·댓글, 마이페이지 계정 설정(닉네임·탈퇴), 문의하기, 운영자 회원 검색.
 - **검사**: `src/test/inputZoom.test.js`(공통 16px 규칙, 입력칸 규칙에 16px 미만 없음, viewport에 확대 금지 없음).
+
+### 6-73. 앱 버전 1.1로 올림 (2026-11-21, 네이티브 설정만, 웹·DB 변경 없음)
+- **iOS**: `ios/App/App.xcodeproj/project.pbxproj`의 `MARKETING_VERSION` 1.0 → **1.1**(Debug·Release 두 줄, `CFBundleShortVersionString`은 `Info.plist`가 `$(MARKETING_VERSION)`으로 따름). 빌드 번호(`CURRENT_PROJECT_VERSION`)는 Codemagic이 올리므로 그대로.
+- **Android**: `android/app/build.gradle`의 `versionName` "1.0" → **"1.1"**. `versionCode`는 Codemagic 빌드 번호로 자동이므로 그대로.
+- **그대로 둔 곳**: `package.json`의 `"version": "0.1.0"`은 앱 스토어 버전과 무관한 npm 패키지 표기라 바꾸지 않았다(필요하면 따로 판단).
+- **반영**: iOS(`ios-testflight`)·Android(`android-aab`) 모두 Codemagic에서 다시 빌드해야 1.1로 올라간다.
