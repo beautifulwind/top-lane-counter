@@ -14,11 +14,12 @@ import { matchupTitle } from '../../lib/josa';
 import { FlagIcon } from '../../components/Icons';
 import WikiReportList from '../../components/WikiReportAdmin';
 import LinkReportList from '../../components/LinkReportAdmin';
+import ProfilePhotoReportList from '../../components/ProfilePhotoReportAdmin';
 import { DismissForm } from '../../components/DismissForm';
 
 /**
  * 운영진: 신고 (/admin/reports). 탭 — "글·댓글 신고"(기본) / "오류 신고"(?tab=wiki, 043 상대법·빌드 내용 오류)
- * / "링크 신고"(?tab=links, 047·048 장인 외부 링크 — 운영자만).
+ * / "링크 신고"(?tab=links, 047·048 장인 외부 링크 — 운영자만) / "프로필 사진 신고"(?tab=photos, 062 — 운영자만).
  * 글·댓글 신고: 자유게시판·문서 댓글. 같은 글·댓글의 신고는 한 줄로 묶는다.
  * [숨기기] = 메모 필수, 작성자에게 알림, 그 대상의 신고는 "처리됨" / [신고 기각] = 메모 선택, 글·댓글은 그대로
  * 자동 숨김은 없다 (운영자가 보고 정한다)
@@ -36,7 +37,7 @@ function ReportsPage() {
   const [params, setParams] = useSearchParams();
   // 'board'(기본) | 'wiki' | 'links'(운영자만 — 047·048 링크 신고 목록·기각은 운영자 전용)
   const asked = params.get('tab');
-  const current = asked === 'wiki' || (asked === 'links' && isOperator) ? asked : 'board';
+  const current = asked === 'wiki' || (['links', 'photos'].includes(asked) && isOperator) ? asked : 'board';
   const tab = (key, label) => {
     const on = key === current;
     return (
@@ -56,8 +57,10 @@ function ReportsPage() {
         {tab('board', '글·댓글 신고')}
         {tab('wiki', '오류 신고')}
         {isOperator && tab('links', '링크 신고')}
+        {isOperator && tab('photos', '프로필 사진 신고')}
       </div>
-      {current === 'wiki' ? <WikiReportList /> : current === 'links' ? <LinkReportList /> : <ReportList />}
+      {current === 'wiki' ? <WikiReportList /> : current === 'links' ? <LinkReportList />
+        : current === 'photos' ? <ProfilePhotoReportList /> : <ReportList />}
     </article>
   );
 }

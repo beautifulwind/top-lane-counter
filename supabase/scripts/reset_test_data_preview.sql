@@ -69,6 +69,9 @@ rows (ord, what, to_delete, to_keep, note) as (
   union all select 15.4, 'ext_links + link_reports (장인 외부 링크 + 링크 신고, 047)',
          case when to_regclass('public.ext_links') is null then 0 else (xpath('/row/c/text()', query_to_xml('select (select count(*) from public.ext_links) + (select count(*) from public.link_reports) as c', false, true, '')))[1]::text::bigint end,
          0, '전부 지움 (047 실행 전이면 0). 허용 사이트 표 link_domains는 설정이라 남김'
+  union all select 15.45, '장인 프로필 사진 + 사진 신고 + 바꾼 기록 (062)',
+         case when to_regclass('public.profile_photo_reports') is null then 0 else (xpath('/row/c/text()', query_to_xml('select (select count(*) from public.profiles where photo_path is not null) + (select count(*) from public.profile_photo_reports) + (select count(*) from public.profile_photo_changes) as c', false, true, '')))[1]::text::bigint end,
+         0, '장인 표시를 지우면 사진도 비워져 파일 경로가 정리 대기열(profile_photo_trash)로 → 매일 사진 정리(media-cleanup)가 Storage에서 지움. 신고·기록은 지움 (062 실행 전이면 0)'
   union all select 15.5, 'influencer_follows + follow_rate + follow_notify_queue (장인 팔로우 / 호출 횟수 / 알림 대기 줄, 050)',
          case when to_regclass('public.influencer_follows') is null then 0 else (xpath('/row/c/text()', query_to_xml('select (select count(*) from public.influencer_follows) + (select count(*) from public.follow_rate) + (select count(*) from public.follow_notify_queue) as c', false, true, '')))[1]::text::bigint end,
          0, '전부 지움 (050 실행 전이면 0). 푸시 설정의 follow_builds 칸은 그대로'

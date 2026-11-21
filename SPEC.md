@@ -682,6 +682,11 @@
 - **counter_status_log**: 숨긴 카운터의 숨김·다시 공개·재검토 요청·다시 제출·거절 기록 (운영자만 읽기)
 - **counter_deletions**: 완전 삭제 기록 — 카운터와 연결하지 않아 카운터가 지워져도 남는다 (운영자만 읽기). 지운 개수(제안·수정 기록·빌드·추천·`comments_count` 문서 댓글)
 - **user_blocks** (061, 6-67): 사용자 차단 — `blocker_id`(차단한 사람)·`blocked_id`(차단된 사람) 둘 다 `profiles(id)` 참조 + **on delete cascade**(누가 탈퇴해도 함께 삭제), `created_at`(DB 시각). 기본 키 (`blocker_id`, `blocked_id`), 검사 `user_blocks_not_self`(자기 자신 차단 불가), 인덱스 `user_blocks_blocked_idx`. RLS: 로그인한 본인이 `blocker_id`인 줄만 읽기·넣기·지우기(정책 3개), 고치기 권한 없음, 비로그인(anon) 권한 없음. 넣기 전 트리거 `user_blocks_check`(운영자 계정 차단 불가 · 한 사람 1000명까지 · 시각은 DB 시각), 넣은 뒤 트리거 `user_blocks_unfollow`(내가 팔로우하던 그 장인 팔로우를 끊음). `my_blocked_ids()`(내가 차단한 id 배열, 비로그인은 빈 배열)
+- **profiles (062 추가 칸, 6-71)**: `photo_path`(장인 프로필 사진 Storage 경로 `사용자id/임의이름.webp|jpg`, 고유, null = 사진 없음), `photo_updated_at`. 누구나 읽기, 사용자가 직접 못 고침 — `set_profile_photo`·`clear_profile_photo`(장인 본인)·`remove_profile_photo`(운영자)로만. 검사: 둘이 함께 있거나 없음 / 경로는 본인 폴더 / 장인일 때만(인증이 끝나면 트리거가 비움)
+- **profile_photo_reports** (062): 프로필 사진 신고 — `owner_id`·`reporter_id`(둘 다 탈퇴하면 함께 삭제), `photo_path`(신고 당시 사진), `reason`(obscene/hate/impersonation/spam/other — 기타는 내용 필수), `detail`(500자), `status`(open/resolved/dismissed), `handled_by`·`handled_at`·`handled_note`, `created_at`. (신고자, 사진) 고유. 아무도 직접 못 읽음 — 함수로만. 사진이 바뀌거나 지워지면 처리 전 신고는 저절로 닫힘
+- **profile_photo_trash** (062): 지울 프로필 사진 경로 대기열 (`path`, `reason` replaced/cleared/withdrawn, `queued_at`) — 트리거만 넣고, `profile_photo_cleanup_list`·`profile_photo_cleanup_done`(service_role만)으로 Edge Function `media-cleanup`이 비운다
+- **profile_photo_changes** (062): 사진을 바꾼 때 (하루 횟수 `profile_photo_daily_max` 세기용, 이틀 지난 줄은 다음에 바꿀 때 지움). 아무도 직접 못 읽음
+- **Storage 버킷 `profile-photos`** (062): 비공개, 파일당 1MB, webp·jpeg. 올리기 = 인증된 장인 본인 폴더만(폴더에 5개까지, 하루 횟수 안), 보기 = 장인의 지금 사진만 누구나 + 본인 폴더, 지우기 = 본인 폴더에서 지금 사진이 아닌 것만, 고치기 없음
 
 RLS 원칙:
 - 승인된 데이터는 누구나 읽기 가능
@@ -690,6 +695,7 @@ RLS 원칙:
 - `role`을 직접 바꾸는 것은 앱에서 불가능. 감독관 지정·해제만 운영자가 DB 함수 `set_moderator`로 한다. 운영자 지정·교체는 Supabase SQL Editor에서만 한다.
 - `role = admin`(운영자)은 DB에서 **1명만** 허용한다.
 - 운영자 권한 판정(`is_admin()`·`is_staff()`)은 role과 운영자 모드(`operator_mode`)를 함께 본다 (034, 6-21). 모드는 운영자 본인만 바꾸고, 운영자가 아닌 사람에게는 권한을 주지 않는다.
+- 장인 프로필 사진(062)은 비공개 버킷이라도 "지금 사진"이면 누구나(비로그인 포함) 서명된 주소로 볼 수 있다. 사진을 바꾸거나 지우거나 운영자가 지우거나 인증이 끝나면 옛 파일은 본인 말고 아무도 못 본다.
 - 차단 목록(`user_blocks`, 061)은 본인 것만 읽고·넣고·지운다. 차단된 사람은 자기가 차단됐는지 알 수 없다. 운영진의 관리 화면(신고·숨긴 글·회원 정보)은 차단과 상관없이 모두 보인다.
 
 ## 8. 개발 단계
@@ -825,6 +831,7 @@ RLS 원칙:
 55. `supabase/migrations/055_withdrawal.sql` (회원 탈퇴 정리 — 6-42. **실행 전 `supabase/scripts/check_withdraw_before.sql`**(1~5번 정상, 6~7번 "한 번 정리" 줄 수와 9~13번 값을 적어 둠) → 055 실행(NOTICE 두 줄의 줄 수가 6번·7번 합계와 같은지) → `check_withdraw_after.sql`(1~14번 정상, 15~19번을 적어 둔 값과 비교). 지금 배포된 화면과도 동작. 새 pg_cron 없음(닉네임 예약 정리는 기존 `influencer-daily`), Edge Function 재배포 없음. 되돌리는 법은 파일 맨 위)
 56. `supabase/migrations/056_core_items_free.sql` (핵심 템트리 1~10개·중복 가능·상점 아이템 전부 — 6-43. **실행 전 `supabase/scripts/check_core_items_before.sql`**(1~3번 정상, 4~7번 값을 적어 둠) → 056 실행 → `check_core_items_after.sql`(1~3번 정상, 4~7번이 적어 둔 값과 같은지). 표·데이터는 안 바꿈, 새 pg_cron·Edge Function 재배포 없음. 지금 배포된 화면(3~6개)과도 동작하고, 새 화면은 056 뒤에 배포. 되돌리는 법은 파일 맨 위)
 61. `supabase/migrations/061_user_blocks.sql` (사용자 차단 — 6-67. 표 `user_blocks`·RLS·트리거 2개·`my_blocked_ids`, `board_page`·`notify_new_comment`·`new_follower_digest`에 차단 거르기. **실행 전 `supabase/scripts/check_blocks_before.sql`**(1~4번 정상, 5~8번 값을 적어 둠) → 061 실행 → `check_blocks_after.sql`(1~11번 정상, 12~15번이 적어 둔 값과 같은지). 지금 배포된 화면과도 동작(차단 표가 없을 때 새 화면은 차단만 "준비 중"). 새 pg_cron·Edge Function 재배포 없음. 되돌리는 법은 파일 맨 위)
+62. `supabase/migrations/062_profile_photo.sql` (장인 프로필 사진 — 6-71. 버킷 `profile-photos`·Storage 규칙 3개, `profiles.photo_path`·`photo_updated_at`, 표 3개, 함수(정하기·지우기·신고·운영자 목록·기각·삭제·정리), 트리거 4개, `public_profile`에 사진 경로, 알림 종류 `profile_photo_removed`(푸시 `my_results`)·처리 기록 `remove_profile_photo`, 설정값 `profile_photo_daily_max`. **실행 전 `supabase/scripts/check_profile_photo_before.sql`**(1~6번 정상, 7~10번 값을 적어 둠) → 062 실행 → `check_profile_photo_after.sql`(1~13번 정상, 14~17번이 적어 둔 값과 같은지) → **Edge Function `media-cleanup`·`web-push` 다시 배포**(11-10·11-11 방법 그대로 — 이 파일 내용으로 바꿔 Deploy). 지금 배포된 화면과도 동작(옛 화면은 사진 칸을 모름). 새 pg_cron 없음(기존 `media-cleanup` 일정이 두 버킷을 같이 정리). 되돌리는 법은 파일 맨 위 — 버킷은 남으므로 대시보드 Storage에서 비우고 삭제)
 - **테스트 데이터 비우기** (마이그레이션 아님, 정식 공개 직전 등 필요할 때): `supabase/scripts/reset_test_data_preview.sql`(읽기만 — 지울·남을 개수)로 확인 → `supabase/scripts/reset_test_data.sql`. 계정(운영자 계정·운영자 모드 상태·테스트용 구글 계정 포함 — 계정은 하나도 지우지 않는다)·프로필·설정값과 트린다미어 상대 말파이트 카운터(지금 문서·공개 빌드·처음 제안)만 남기고, 문의·처리 기록(`moderation_log`, 감독관 지정·해제 기록 포함)·알림·`proposal_reviewing` 등은 모두 비우며, 말파 문서의 수정 기록은 지금 내용 1줄로 정리, 경험치·레벨·칭호는 알림 없이 다시 계산한다. SQL Editor가 RLS를 물으면 **"Run without RLS"**로 실행 ("Run and enable RLS"는 임시 표 `reset_keep`·`reset_admins` 때문에 에러). 운영자 계정이 없거나 끝에서 운영자 role·모드가 바뀌어 있으면 전부 되돌리고 멈춘다. 되돌릴 수 없으므로 순서는 ① 백업 확인 → ② preview → ③ reset → ④ 결과 표 확인.
 - 합쳐서 한 번에 돌리지 않는다: 파일마다 `begin … commit`이라 중간에 실패하면 앞부분만 반영되고, 다시 돌리면 "already exists"가 난다.
 - 새 마이그레이션(010 …)을 만들면 이 목록에 추가한다. `supabase/tests/run.sh`가 빈 DB에 같은 순서로 실행한 뒤 검사용 데이터(`tests/fixtures.sql`)를 넣고 검사한다 (`supabase/tests`는 실제 프로젝트에서 실행하지 않음).
@@ -911,6 +918,7 @@ RLS 원칙:
        body := '{}'::jsonb);
    $$); -- 매일 한국 시간 새벽 4:40
    ```
+   062부터 같은 함수가 `profile-photos` 버킷(장인 프로필 사진)도 정리한다(`profile_photo_cleanup_list`·`profile_photo_cleanup_done`). 062를 실행하기 전 DB면 그 버킷만 건너뛴다. 응답·로그에 버킷별 `buckets: { "board-media": {removed}, "profile-photos": {removed} }`.
 7. 확인: Storage에 `board-media`(Private) 버킷. 사진 붙인 글을 올렸다 지운 뒤 `select * from storage_trash;`에 경로 → 다음 날 Edge Functions → media-cleanup → Logs에 `{"event":"media_cleanup","removed":…}`, 대기열이 비고 Storage에서 파일이 사라짐.
    바로 해 보려면 `select cron.schedule`의 안쪽 `select net.http_post(…)`만 한 번 실행 → `select * from net._http_response order by id desc limit 1;`이 200.
    기록: `select * from cron.job_run_details order by start_time desc limit 5;`. 끄기: `select cron.unschedule('media-cleanup');`
@@ -1542,3 +1550,21 @@ RLS 원칙:
 - **네이티브 앱 숨김**: `isNativeApp()`(= `Capacitor.isNativePlatform()`)이 참이면 푸터·로그인 모두 아무것도 그리지 않는다 (Apple 심사: 다른 플랫폼 로고).
 - **디자인**: 아이콘은 인라인 SVG(Google Play 삼색, Apple 로고, 인스타그램 그라데이션 원). 모든 요소에 `aria-label`. 줄바꿈은 `flex-wrap`. 알약 색은 `tokens.css`(`--store-pill*`)에만 두고 어두운 사이트 바탕 위에서도 흰색 유지.
 - **확인**: `src/test/storeLinks.test.jsx`(새 탭 속성, 준비 중 안내, 네이티브에서 렌더링 안 함), 전체 테스트 통과.
+
+### 6-71. 장인 프로필 사진 (2026-11-21, 062, App Store 심사 가이드 1.2 — UGC 신고·운영자 삭제, DB 실행·Edge Function 배포는 운영자가 Supabase에서)
+- **보이는 곳**: 프로필 화면만 — 마이페이지 프로필 카드(동그라미 아이콘 자리)와 공개 장인 페이지(/u/:id, 이름 옆 64px 동그라미). 빌드 카드·목록·댓글·알림 등 다른 화면은 그대로. **사진이 없으면 예전 화면 그대로**(마이페이지는 기본 아이콘, 공개 프로필은 사진 자리 없음).
+- **올리기·바꾸기·삭제**: 마이페이지 프로필 카드에서만, **인증된 장인**(`profiles.influencer`, 비회원 아님)만. [프로필 사진 올리기] / [사진 바꾸기] · [사진 삭제](한 번 더 묻기). 공개 프로필은 보기 전용(내 페이지도).
+  - 일반 파일 고르기 `<input type="file" accept="image/*">` — 네이티브 플러그인 없음, 앱(iOS·Android)도 같은 방식. 외부 주소 붙여넣기는 없다.
+  - 사진 1장, 고른 파일 **5MB 이하 JPG·PNG·WebP**(GIF·HEIC 등은 「프로필 사진은 JPG·PNG·WebP만 올릴 수 있습니다.」). 브라우저에서 **가운데를 정사각형으로 자동으로 잘라 512×512**(원본이 작으면 키우지 않음)로 줄이고 WebP(안 되는 브라우저는 JPEG)로 다시 저장 → 촬영 위치 등 사진 정보(EXIF)가 빠진다 (`prepareSquare`, `src/lib/imageCompress.js`).
+  - **캐시·옛 파일**: 올릴 때마다 새 이름(`사용자id/임의이름.webp`, 덮어쓰기 없음)이라 주소가 바뀌어 옛 사진이 캐시로 보이지 않는다. 바꾸거나 지우면 화면이 옛 파일을 바로 지우고(Storage 규칙상 본인 폴더의 "지금 사진이 아닌 것"만 지울 수 있음), 놓친 파일·정하기에 실패한 파일은 DB 대기열 + 매일 `media-cleanup`이 지운다. 보기 규칙상 옛 파일은 바뀐 순간부터 본인 말고 아무도 못 본다.
+  - 제한: 24시간에 사진 바꾸기 10번(`xp_rules.profile_photo_daily_max`), 폴더에 파일 5개까지(쓰지 않은 파일은 24시간 뒤 정리). 버킷 파일당 1MB.
+- **비공개 버킷 `profile-photos`** + 서명된 주소(1시간). 보기는 "장인의 지금 사진"이면 누구나(비로그인 포함). 인증이 끝나거나 운영자가 지우면 즉시 못 본다.
+- **신고 (UGC)**: 공개 장인 페이지 ⋮ "장인 더보기" → **[프로필 사진 신고]**(사진이 있을 때, 정식 회원만 — 로그인 전·비회원은 이유와 함께 누를 수 없음, 내 사진 불가, 같은 사진은 한 번). 이유: 음란·잔혹한 사진 / 혐오·욕설 / 다른 사람 사진·사칭 / 광고·홍보 / 기타(내용 필수). 처리 전 신고가 처음 생기면 운영자에게 `report_received` 「새 신고가 들어왔습니다. (프로필 사진)」 → 누르면 신고 화면 "프로필 사진 신고" 탭(화면·휴대폰 알림 같은 주소). 장인이 사진을 바꾸거나 지우면 그 사진의 처리 전 신고는 저절로 닫힌다.
+- **운영자 삭제** (운영자 모드가 켜진 운영자만, **감독관 불가**): ① 신고 화면 `/admin/reports?tab=photos`(사진별로 묶음 — 썸네일·신고 내용·[사진 삭제]·[신고 기각]·[프로필 보기]) ② 공개 장인 페이지 ⋮ [프로필 사진 삭제](운영자에게는 신고 대신) ③ 회원 정보 `/admin/members/:id`의 사진 + [프로필 사진 삭제]. 삭제는 사유 필수 → 장인에게 `profile_photo_removed` 「프로필 사진이 운영 원칙에 따라 삭제됐습니다. 사유: …」(링크 삭제와 같이 알림함 + 휴대폰 알림 `my_results`, 누르면 마이페이지), 그 사진의 처리 전 신고는 "처리됨", 처리 기록 `remove_profile_photo`. 기각은 처리 기록 `dismiss_reports`(대상 회원, 메모 "프로필 사진 · …"). 처리 대기 숫자(관리 메뉴·운영자 페이지)에 "사진 신고".
+- **장인 인증이 끝나면**(해제 등 `influencer`가 비워지는 모든 길) 사진을 **바로 지운다**(트리거, 링크와 같음). **탈퇴**하면 사진 경로가 대기열로(신고 줄은 함께 삭제).
+- **차단(061)과의 관계**: 충돌 없음. 공개 장인 페이지 ⋮에 **[이 사용자 차단]**을 새로 넣었다(로그인 전은 로그인 화면으로, 운영자 계정은 DB가 거부). 차단하면 페이지가 바로 「차단한 사용자입니다.」로 바뀌어 사진·신고 메뉴도 안 보인다. 차단과 신고·운영자 화면은 서로 영향 없음(차단당한 장인도 사진을 바꿀 수 있고, 운영자는 차단과 상관없이 다 본다). 내 페이지에는 ⋮가 없다.
+- **iOS 권한 문구**: `ios/App/App/Info.plist`에 `NSCameraUsageDescription` = 「프로필 사진과 게시글 사진을 찍어 올리기 위해 카메라를 사용합니다.」 — 앱 안 파일 고르기 창의 "사진 찍기"를 누르면 이 문구가 없을 때 앱이 꺼진다(게시글 사진에도 해당하던 문제). 사진 보관함 고르기는 권한이 필요 없다(PHPicker). Android는 `capture` 속성을 쓰지 않아 새 권한 없음. **iOS는 다시 빌드해야 반영**(Codemagic `ios-testflight`).
+- **062 전 DB에서도 동작**: 프로필에 `photo_path` 칸이 없으면 사진 버튼을 숨기고 사진 없이 보인다. 신고 수 세기는 0. `media-cleanup`은 함수가 없으면 그 버킷만 건너뛴다.
+- **DB (062)**: 7장 표·버킷·함수. 되돌리기는 파일 맨 위(사진 연결·신고 기록은 지워지고, 버킷·파일은 대시보드에서 직접 삭제). 확인 SQL `check_profile_photo_before.sql`·`check_profile_photo_after.sql`. 테스트 데이터 비우기 스크립트도 사진 신고·바꾼 기록을 비운다(사진은 장인 표시와 함께 비워져 다음 정리 때 파일 삭제).
+- **Edge Function**: `media-cleanup` — 두 버킷(`board-media`, `profile-photos`)을 차례로 정리, 한 버킷이 실패해도 다른 버킷은 계속. `web-push` — `profile_photo_removed`(제목 "프로필 사진", 주소 /me), 사진 신고 알림 주소. **둘 다 다시 배포 필요**.
+- **검사**: DB `supabase/tests/profile_photo_test.sql`(버킷·표·권한, 올리기 규칙 — 장인만·내 폴더·파일 수·하루 횟수, 정하기 검사 — 모양·남의 파일·형식·크기, 보기 규칙 — 지금 사진만, 지우기 규칙 — 지금 사진은 못 지움, 신고 — 비로그인·비회원·내 사진·중복·기타 내용, 운영자 알림 1번만, 감독관·회원 거부, 기각·삭제·알림·처리 기록, 사진이 바뀌면 신고 닫힘, 차단과 무관, 인증 해제·탈퇴 정리, 정리 목록). 화면 `src/test/profilePhoto.test.jsx`(장인만 버튼, 062 전 DB, 올리기·바꾸기·옛 파일 지우기·실패 시 정리·형식·크기·삭제, 공개 프로필 보기·신고·로그인 전·비회원·내 페이지·차단·운영자 삭제, 운영자 신고 탭·기각, 감독관 탭 없음, 알림 주소(화면·푸시), 가운데 정사각형 자르기). Supabase 흉내 `supabase/tests/supabase_stub.sql`에 Storage 지우기 권한. 기존 검사 2개 기대값 수정: `influencer_links_test.sql`(공개 프로필 칸에 `photo_path`), `withdraw_test.sql`(프로필 삭제 트리거 목록에 `profiles_photo_on_delete`).

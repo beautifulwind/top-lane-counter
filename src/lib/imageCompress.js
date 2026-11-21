@@ -2,6 +2,7 @@
 // - 사진(JPG·PNG·WebP): 긴 변 1600px, WebP(안 되는 브라우저는 JPEG)로 다시 저장 → 400KB 안쪽이 될 때까지 화질·크기를 낮춘다.
 //   다시 저장하면서 촬영 위치 같은 사진 정보(EXIF)가 빠진다.
 // - GIF: 움직임이 사라지므로 줄이지 않고 그대로 (크기만 확인)
+// - 장인 프로필 사진(062, prepareSquare): 가운데를 정사각형으로 잘라 512x512(작으면 그대로)로 줄이고 WebP(안 되면 JPEG)로 다시 저장.
 export const GIF = 'image/gif';
 export const PHOTO_TYPES = ['image/jpeg', 'image/png', 'image/webp'];
 export const ACCEPT = [...PHOTO_TYPES, GIF].join(',');
@@ -80,4 +81,45 @@ async function encode(canvas, q) {
   const jpeg = await toBlob(canvas, 'image/jpeg', q); // WebP로 저장하지 못하는 브라우저
   if (!jpeg) throw new Error('사진을 줄이지 못했습니다. 다른 사진을 골라 주세요.');
   return jpeg;
+}
+
+// ---- 062 장인 프로필 사진 ----
+export const PROFILE_PHOTO_SIDE = 512;
+export const PROFILE_PHOTO_RAW_MAX_BYTES = 5 * 1024 * 1024; // 고른 파일 (줄이기 전)
+const PROFILE_TARGET_BYTES = 300 * 1024;
+const PROFILE_MAX_BYTES = 1024 * 1024; // 버킷 profile-photos 한도 (DB도 다시 검사)
+const PROFILE_QUALITIES = [0.86, 0.76, 0.66];
+
+/**
+ * 고른 파일 → 올릴 정사각형 사진 { blob, mime, ext }. 가운데를 잘라 낸다(자를 곳은 고르지 않음).
+ * 다시 저장하면서 촬영 위치 같은 사진 정보(EXIF)가 빠진다. 못 쓰면 Error (화면에 그대로 보여 줄 문구)
+ */
+export async function prepareSquare(file, { side = PROFILE_PHOTO_SIDE } = {}) {
+  if (!PHOTO_TYPES.includes(file?.type)) throw new Error('프로필 사진은 JPG·PNG·WebP만 올릴 수 있습니다.');
+  if (file.size > PROFILE_PHOTO_RAW_MAX_BYTES) throw new Error('5MB보다 큰 사진은 올릴 수 없습니다.');
+  const image = await loadImage(file);
+  const canvas = drawSquare(image, side);
+  let best = null;
+  for (const q of PROFILE_QUALITIES) {
+    best = await encode(canvas, q);
+    if (best.size <= PROFILE_TARGET_BYTES) return result(best);
+  }
+  if (best.size <= PROFILE_MAX_BYTES) return result(best);
+  throw new Error('사진을 충분히 줄이지 못했습니다. 다른 사진을 골라 주세요.');
+}
+
+/** 가운데 정사각형을 잘라 side 크기로 (원본이 더 작으면 키우지 않는다) */
+function drawSquare(image, side) {
+  const w = image.width;
+  const h = image.height;
+  const crop = Math.min(w, h);
+  const out = Math.max(1, Math.min(side, crop));
+  const canvas = document.createElement('canvas');
+  canvas.width = out;
+  canvas.height = out;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#fff'; // 투명한 PNG는 흰 바탕으로
+  ctx.fillRect(0, 0, out, out);
+  ctx.drawImage(image, Math.round((w - crop) / 2), Math.round((h - crop) / 2), crop, crop, 0, 0, out, out);
+  return canvas;
 }

@@ -271,7 +271,7 @@ select t.ok('추천 표: user_id 빈칸 허용 + on delete set null, 한 사람 
   and (select count(*) = 2 from pg_constraint where conname in ('build_votes_once', 'post_votes_once') and contype = 'u'));
 select t.ok('프로필 삭제 트리거가 게시판 정리보다 먼저(이름 순)',
   (select array_agg(tgname order by tgname) from pg_trigger where tgrelid = 'public.profiles'::regclass and not tgisinternal and tgtype & 8 = 8)
-  = array['profiles_anonymize_on_delete', 'profiles_board_delete', 'profiles_delete_unpublished_builds']::name[]);
+  = array['profiles_anonymize_on_delete', 'profiles_board_delete', 'profiles_delete_unpublished_builds', 'profiles_photo_on_delete']::name[]);  -- 062: 사진 경로를 대기열에 (순서 무관)
 select t.ok('세 탈퇴 함수가 공통 안쪽 함수를 부름',
   (select count(*) = 3 from pg_proc where pronamespace = 'public'::regnamespace
      and proname in ('delete_my_account', 'kakao_unlinked', 'cleanup_guest_accounts') and prosrc like '%withdraw_account_unchecked%'

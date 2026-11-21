@@ -68,7 +68,8 @@ const STAFF: Record<string, (n: PushNotice) => string> = {
   // 043: 상대법·빌드 오류 신고 → 신고 화면 "오류 신고" 탭 (처리 결과 error_report_handled는 휴대폰 알림을 보내지 않는다)
   error_reported: () => '/admin/reports?tab=wiki',
   // 045: 게시판 신고(글·댓글·문서 댓글) → 신고 화면 "글·댓글 신고" 탭 (기본 탭)
-  report_received: () => '/admin/reports',
+  // 062: 프로필 사진 신고(문장이 "(프로필 사진)")는 "프로필 사진 신고" 탭 — 화면 reportsPath(src/lib/notifications.js)와 같은 규칙
+  report_received: (n) => (String(n.message ?? '').includes('(프로필 사진)') ? '/admin/reports?tab=photos' : '/admin/reports'),
   // 046: 새 장인 인증 신청 (운영자만) → 장인 인증 심사 화면
   influencer_applied: () => '/admin/influencers',
 };
@@ -84,6 +85,7 @@ const INFLUENCER: Record<string, { title: string; url: string }> = {
   nickname_reset_soon: { title: '닉네임 안내', url: '/me/settings' },
   nickname_reset: { title: '닉네임 안내', url: '/me/settings' },
   link_removed: { title: '장인 링크', url: '/me/links' }, // 3b: 링크 관리로
+  profile_photo_removed: { title: '프로필 사진', url: '/me' }, // 062: 운영자가 프로필 사진 삭제 → 마이페이지
 };
 // 050 팔로우한 장인의 새 빌드 (푸시 묶음 follow_builds): 화면 followedBuildTitle(src/lib/notifications.js)과 같은 규칙.
 // DB 문장 "팔로우한 장인 {닉네임}의 새 빌드가 (N개 )올라왔습니다."에서 닉네임·개수를 읽는다. 누르면 그 장인 페이지

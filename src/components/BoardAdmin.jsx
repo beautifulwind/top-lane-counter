@@ -18,7 +18,7 @@ export default function BoardAdmin() {
   const [done, setDone] = useState(null);
   const { data, error, loading, retry } = useAsync(async () => {
     const [reports, hidden, champs, pending] = await Promise.all([getOpenReports(auth.isModerator), getHiddenBoard(), getChampionMap(), getPendingCounts(auth.isOperator)]);
-    return { reports, hidden, champs, wikiReports: pending?.wiki_reports ?? null, linkReports: pending?.link_reports ?? null };
+    return { reports, hidden, champs, wikiReports: pending?.wiki_reports ?? null, linkReports: pending?.link_reports ?? null, photoReports: pending?.photo_reports ?? null };
   }, []);
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
@@ -46,6 +46,12 @@ export default function BoardAdmin() {
           // 047·048: 링크 신고 목록·기각은 운영자만
           <Link to="/admin/reports?tab=links" className="btn btn-op">
             처리할 링크 신고{data.linkReports != null && ` ${data.linkReports}건`}
+          </Link>
+        )}
+        {auth.isOperator && (
+          // 062: 프로필 사진 신고 목록·기각·삭제는 운영자만
+          <Link to="/admin/reports?tab=photos" className="btn btn-op">
+            처리할 사진 신고{data.photoReports != null && ` ${data.photoReports}건`}
           </Link>
         )}
       </p>

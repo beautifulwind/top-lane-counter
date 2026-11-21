@@ -19,6 +19,7 @@
 --  탈퇴로 누른 사람만 비운 익명 추천/비추천은 아래 "빌드 추천·비추천"과 "자유게시판 추천"에서 다른 추천과 함께 지워진다.)
 -- (058·059: 탑신병자 커뮤니티 답글·문서 댓글 답글은 댓글과 함께 지워진다. 058의 빌드 댓글은 060에서 표째 없앴다.)
 -- (061: 사용자 차단 목록(user_blocks)을 전부 지운다 - 테스트 계정끼리 걸어 둔 차단이 공개 뒤까지 남지 않게.)
+-- (062: 장인 프로필 사진은 장인 표시와 함께 비워지고 파일은 다음 사진 정리 때 지워진다. 사진 신고·바꾼 기록도 지운다.)
 -- 지움: 그 밖의 카운터·문서·제안·빌드 전부, 빌드 추천·비추천과 그 기록, 자유게시판 글·댓글·추천, 문서 댓글, 신고, 오류 신고(043), 알림, 문의하기 문의·답변(032),
 --       빌드 수정 기록·기여자·등록 간격(038 — 남는 말파 공개 빌드마다 지금 내용으로 "이전" 기록 1줄을 새로 남김),
 --       경험치 기록, 숨김 기록, 운영진 처리 기록(moderation_log, 감독관 지정·해제 기록 포함 전부), 빌드·카운터 상태 기록, 완전 삭제 기록, 도배 방지 시각, 018 백업 표의 내용,
@@ -92,6 +93,8 @@ delete from public.board_last_write;
 -- 1.1 (046) 장인 인증: 처리 전 신청 취소(신청 전 닉네임으로 되돌림) → 변경 예정 닉네임은 임시 닉네임 → 장인 표시 지움 → 신청 기록 비움 (046 실행 전이면 건너뜀)
 --     (047) 장인 외부 링크·링크 신고 비움 (047 실행 전이면 건너뜀, 허용 사이트는 남김)
 --     (050) 장인 팔로우·호출 횟수·알림 대기 줄 비움 (050 실행 전이면 건너뜀)
+--     (062) 장인 표시를 지우면 프로필 사진도 트리거가 비우고 파일 경로를 profile_photo_trash에 넣는다(다음 사진 정리 때 파일 삭제).
+--           사진 신고·사진 바꾼 기록은 비운다 (062 실행 전이면 건너뜀)
 do $$
 begin
   if to_regclass('public.influencer_applications') is not null then
@@ -103,6 +106,11 @@ begin
   if to_regclass('public.ext_links') is not null then
     delete from public.link_reports;
     delete from public.ext_links;
+  end if;
+  if to_regclass('public.profile_photo_reports') is not null then
+    update public.profiles set photo_path = null, photo_updated_at = null where photo_path is not null;  -- 장인 표시를 지울 때 이미 비워짐 (혹시 남은 것)
+    delete from public.profile_photo_reports;
+    delete from public.profile_photo_changes;
   end if;
   if to_regclass('public.influencer_follows') is not null then
     delete from public.follow_notify_queue;
@@ -249,6 +257,8 @@ union all select '오류 신고 (043 실행 전이면 0)', case when to_regclass
 union all select '장인 인증 신청 (046 실행 전이면 0)', case when to_regclass('public.influencer_applications') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.influencer_applications', false, true, '')))[1]::text::integer end
 union all select '  └ 장인 표시·인증 대기·변경 예정이 남은 프로필 (046, 0이어야 함)', case when not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'profiles' and column_name = 'influencer') then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.profiles where influencer is not null or nickname_state is not null', false, true, '')))[1]::text::integer end
 union all select '장인 외부 링크 / 링크 신고 (047 실행 전이면 0)', case when to_regclass('public.ext_links') is null then 0 else (xpath('/row/c/text()', query_to_xml('select (select count(*) from public.ext_links) + (select count(*) from public.link_reports) as c', false, true, '')))[1]::text::integer end
+union all select '장인 프로필 사진 / 사진 신고 / 바꾼 기록 (062 실행 전이면 0)', case when to_regclass('public.profile_photo_reports') is null then 0 else (xpath('/row/c/text()', query_to_xml('select (select count(*) from public.profiles where photo_path is not null) + (select count(*) from public.profile_photo_reports) + (select count(*) from public.profile_photo_changes) as c', false, true, '')))[1]::text::integer end
+union all select '  └ 프로필 사진 정리 대기열 (062, 다음 정리 때 파일 삭제)', case when to_regclass('public.profile_photo_trash') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.profile_photo_trash', false, true, '')))[1]::text::integer end
 union all select '장인 팔로우 / 호출 횟수 / 알림 대기 줄 (050 실행 전이면 0)', case when to_regclass('public.influencer_follows') is null then 0 else (xpath('/row/c/text()', query_to_xml('select (select count(*) from public.influencer_follows) + (select count(*) from public.follow_rate) + (select count(*) from public.follow_notify_queue) as c', false, true, '')))[1]::text::integer end
 union all select '공지 알림 대기 줄 / 새 팔로워 센 기록 (051·052 실행 전이면 0)', (case when to_regclass('public.notice_notify_queue') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.notice_notify_queue', false, true, '')))[1]::text::integer end) + (case when to_regclass('public.new_follower_counted') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.new_follower_counted', false, true, '')))[1]::text::integer end)
 union all select '탈퇴한 장인 닉네임 예약 (055 실행 전이면 0)', case when to_regclass('public.nickname_holds') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.nickname_holds', false, true, '')))[1]::text::integer end

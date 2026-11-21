@@ -31,6 +31,7 @@ create table storage.objects (
 );
 alter table storage.objects enable row level security;
 grant select, insert on storage.objects to anon, authenticated;
+grant delete on storage.objects to authenticated;  -- 062: 지우기 규칙 검사 (진짜 Supabase도 권한은 주고 규칙으로 막는다)
 grant all on storage.objects to service_role;
 create function storage.foldername(name text) returns text[] language sql immutable as $$
   select (string_to_array(name, '/'))[1:greatest(cardinality(string_to_array(name, '/')) - 1, 0)]

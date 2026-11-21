@@ -409,11 +409,14 @@ const PROFILE_COLUMNS_OLD = 'id, nickname, role, xp, level, main_title, is_guest
 const PROFILE_COLUMNS_MODE = `${PROFILE_COLUMNS_OLD}, operator_mode`;
 // 046: 장인(influencer)·인증 대기/닉네임 변경 예정(nickname_state, nickname_reset_at). 046 전 DB면 위 칸으로 한 번 더
 const PROFILE_COLUMNS = `${PROFILE_COLUMNS_MODE}, influencer, nickname_state, nickname_reset_at`;
+// 062: 장인 프로필 사진 경로(photo_path). 062 전 DB면 위 칸으로 한 번 더 (화면은 칸이 없으면 사진 기능을 숨긴다)
+const PROFILE_COLUMNS_PHOTO = `${PROFILE_COLUMNS}, photo_path`;
 const missingColumn = (error) => error?.code === '42703' || /does not exist/.test(error?.message ?? '');
 
 /** 프로필 칸을 골라 읽는 요청(run(칸 목록))을 보낸다. 새 칸이 아직 없으면 옛 칸으로 다시 */
 async function withProfileColumns(run) {
-  let res = await run(PROFILE_COLUMNS);
+  let res = await run(PROFILE_COLUMNS_PHOTO);
+  if (missingColumn(res.error)) res = await run(PROFILE_COLUMNS);
   if (missingColumn(res.error)) res = await run(PROFILE_COLUMNS_MODE);
   return missingColumn(res.error) ? run(PROFILE_COLUMNS_OLD) : res;
 }

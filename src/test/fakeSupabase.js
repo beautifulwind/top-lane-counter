@@ -77,6 +77,7 @@ export const TABLES = {
   influencer_applications: [], // 046 장인 신청 (influencerRpc가 쓴다)
   ext_links: [], // 047 장인 외부 링크 (linkRpc가 쓴다)
   link_domains: LINK_DOMAINS(), // 047 허용 사이트 9개
+  photo_reports: [], // 062 프로필 사진 신고 { id, owner_id, photo_path, reporter_id, reason, detail, status, created_at }
   link_reports: [], // 047 링크 신고 { id, link_id, reporter_id, reason, detail, status, created_at }
   influencer_follows: [], // 050 팔로우 { follower_id, influencer_id, created_at } (followRpc가 쓴다)
   // 014 경험치·칭호 (내 기록만 넣는다 — RLS 흉내는 테스트가 그렇게 넣는 것으로)
@@ -148,7 +149,7 @@ export const fakeState = {
   queryLog: [], inserts: [], insertError: null, pendingCounts: null, pendingCountsAsked: 0, rpcCalls: [], memberCalls: [], memberStats: { total: 0, members: 0, guests: 0, google: 0, kakao: 0, both: 0, new_7d: 0, new_7d_members: 0 }, members: [], memberInfo: {}, memberDetail: {}, deletedWritings: {}, buildRevisions: {}, rpcError: null, rpcErrorCode: null, reviewCalls: [], reviewers: {}, boardError: null,
   functionCalls: [], functionError: null, deleteApple: null, // Edge Function 호출 (017 delete-account, 6-65 Apple 결과)
   anonCalls: [], anonError: null, anonDelay: null, hideCounts: {}, signOutCalls: [], touched: 0, // 비회원 (020)
-  uploads: [], uploadError: null, mediaProblem: null, mediaUsage: EMPTY_USAGE(), // 사진 (023, mediaUsage = media_usage 결과)
+  uploads: [], removed: [], photoProblem: null, uploadError: null, mediaProblem: null, mediaUsage: EMPTY_USAGE(), // 사진 (023, mediaUsage = media_usage 결과)
 };
 const INITIAL_PROFILES = TABLES.profiles.map((p) => ({ ...p }));
 const INITIAL_COUNTERS = TABLES.counters.map((c) => structuredClone(c));
@@ -172,6 +173,7 @@ export function resetFake() {
   TABLES.ext_links = [];
   TABLES.link_domains = LINK_DOMAINS();
   TABLES.link_reports = [];
+  TABLES.photo_reports = [];
   TABLES.influencer_follows = [];
   fakeState.followStatusCalls = [];
   fakeState.searchCalls = [];
@@ -231,6 +233,8 @@ export function resetFake() {
   fakeState.touched = 0;
   fakeState.uploads = [];
   fakeState.uploadError = null;
+  fakeState.removed = [];
+  fakeState.photoProblem = null;
   fakeState.mediaProblem = null;
   fakeState.mediaUsage = EMPTY_USAGE();
 }
@@ -662,6 +666,7 @@ async function rpc(name, args) {
   if (['report_wiki', 'staff_wiki_reports', 'handle_wiki_report'].includes(name)) return wikiReportRpc(name, args);
   if (INFLUENCER_RPCS.includes(name)) return influencerRpc(name, args);
   if (LINK_RPCS.includes(name)) return linkRpc(name, args);
+  if (PHOTO_RPCS.includes(name)) return photoRpc(name, args);
   if (FOLLOW_RPCS.includes(name)) return followRpc(name, args);
   if (TITLE_RPCS.includes(name)) return titleRpc(name, args);
   fakeState.rpcCalls.push({ name, args });
@@ -1126,6 +1131,12 @@ const storage = {
       fakeState.uploads.push({ bucket, path, mime: opts?.contentType, size: blob?.size ?? 0 });
       return { data: { path }, error: null };
     },
+    // 062 프로필 사진: 한 장 서명 / 내 파일 지우기 (지운 경로는 fakeState.removed)
+    createSignedUrl: async (path) => ({ data: { signedUrl: `https://fake.storage/${bucket}/${path}?token=t` }, error: null }),
+    remove: async (paths) => {
+      fakeState.removed.push(...paths.map((path) => ({ bucket, path })));
+      return { data: paths.map((name) => ({ name })), error: null };
+    },
     createSignedUrls: async (paths) => ({
       data: paths.map((path) => ({ path, signedUrl: `https://fake.storage/${bucket}/${path}?token=t`, error: null })),
       error: null,
@@ -1252,6 +1263,76 @@ function influencerRpc(name, args) {
   return null;
 }
 
+// ---------------- 062 장인 프로필 사진 ----------------
+// 흐름만 흉내 낸다 (규칙 자체는 supabase/tests/profile_photo_test.sql). 읽기(올리기 검사·운영자 목록)는 rpcCalls에 넣지 않는다.
+const PHOTO_RPCS = ['profile_photo_upload_problem', 'set_profile_photo', 'clear_profile_photo', 'report_profile_photo',
+  'admin_profile_photo_reports', 'dismiss_profile_photo_reports', 'remove_profile_photo'];
+function photoRpc(name, args) {
+  const reading = ['profile_photo_upload_problem', 'admin_profile_photo_reports'].includes(name);
+  if (!reading) fakeState.rpcCalls.push({ name, args });
+  if (fakeState.rpcError && !reading) return { data: null, error: { message: fakeState.rpcError, code: fakeState.rpcErrorCode ?? '42501' } };
+  const denied = (message) => ({ data: null, error: { message, code: '42501' } });
+  const fail = (message, code = '23514') => ({ data: null, error: { message, code } });
+  const prof = (id) => TABLES.profiles.find((p) => p.id === id);
+  const person = (id) => { const p = prof(id); return p ? { id: p.id, nickname: p.nickname, influencer: p.influencer ?? null, nickname_state: null, role: p.role } : null; };
+  const me = meNow();
+  const closeOpen = (path, status) => TABLES.photo_reports.filter((r) => r.photo_path === path && r.status === 'open').forEach((r) => { r.status = status; });
+  if (name === 'profile_photo_upload_problem') return ok(fakeState.photoProblem);
+  if (!me) return denied('로그인이 필요합니다.');
+  if (name === 'set_profile_photo') {
+    if (!me.influencer) return denied('인증된 장인만 프로필 사진을 올릴 수 있습니다.');
+    if (!String(args.p_path).startsWith(`${me.id}/`)) return fail('사진을 다시 골라 주세요.', '22023');
+    if (me.photo_path && me.photo_path !== args.p_path) closeOpen(me.photo_path, 'dismissed');
+    me.photo_path = args.p_path;
+    return ok(null);
+  }
+  if (name === 'clear_profile_photo') {
+    if (me.photo_path) closeOpen(me.photo_path, 'dismissed');
+    me.photo_path = null;
+    return ok(null);
+  }
+  if (name === 'report_profile_photo') {
+    if (me.is_guest) return denied('비회원은 신고할 수 없습니다. 구글/카카오를 연결하면 할 수 있습니다.');
+    if (args.p_user === me.id) return fail('내 사진은 신고할 수 없습니다.');
+    const owner = prof(args.p_user);
+    if (!owner?.influencer || !owner.photo_path) return fail('신고할 수 없는 사진입니다. 이미 바뀌었거나 지워졌을 수 있습니다.', 'P0002');
+    if (TABLES.photo_reports.some((r) => r.reporter_id === me.id && r.photo_path === owner.photo_path)) return fail('이미 신고한 사진입니다.', '23505');
+    TABLES.photo_reports.push({ id: 9100 + TABLES.photo_reports.length, owner_id: owner.id, photo_path: owner.photo_path, reporter_id: me.id,
+      reason: args.p_reason, detail: args.p_detail, status: 'open', created_at: new Date().toISOString() });
+    return ok(null);
+  }
+  if (!isAdminNow()) return denied(operatorModeOffNow() ? '운영자 모드를 켜야 할 수 있습니다.' : '운영자만 할 수 있습니다.');
+  if (name === 'admin_profile_photo_reports') {
+    const open = TABLES.photo_reports.filter((r) => r.status === 'open');
+    const paths = [...new Set(open.map((r) => r.photo_path))];
+    return ok(structuredClone({
+      total: paths.length, page: 1, size: args.p_size ?? 20,
+      photos: paths.slice(0, args.p_size ?? 20).map((path) => {
+        const rs = open.filter((r) => r.photo_path === path);
+        return { photo_path: path, current: prof(rs[0].owner_id)?.photo_path === path, owner: person(rs[0].owner_id),
+          reports: rs.map((r) => ({ ...r, reporter: person(r.reporter_id) })) };
+      }),
+    }));
+  }
+  const target = prof(args.p_user);
+  if (name === 'dismiss_profile_photo_reports') {
+    const open = TABLES.photo_reports.filter((r) => r.photo_path === target?.photo_path && r.status === 'open');
+    if (!open.length) return fail('처리할 신고가 없습니다.', 'P0002');
+    open.forEach((r) => { r.status = 'dismissed'; });
+    return ok(open.length);
+  }
+  if (name === 'remove_profile_photo') {
+    if (!String(args.p_note ?? '').trim()) return fail('삭제 사유를 적어 주세요. (500자 이하)', '22023');
+    if (!target?.photo_path) return fail('지울 프로필 사진이 없습니다. 이미 바뀌었거나 지워졌을 수 있습니다.', 'P0002');
+    closeOpen(target.photo_path, 'resolved');
+    target.photo_path = null;
+    TABLES.notifications.push({ id: 8500 + TABLES.notifications.length, user_id: target.id, kind: 'profile_photo_removed', read_at: null,
+      message: `프로필 사진이 운영 원칙에 따라 삭제됐습니다. 사유: ${args.p_note}`, created_at: new Date().toISOString() });
+    return ok(null);
+  }
+  return null;
+}
+
 // ---------------- 047 장인 외부 링크 + 공개 프로필 ----------------
 // 흐름만 흉내 낸다 (규칙 자체는 supabase/tests/influencer_links_test.sql). 읽기(내 링크·공개 프로필·빌드 링크)는 rpcCalls에 넣지 않는다.
 function LINK_DOMAINS() {
@@ -1289,7 +1370,7 @@ function linkRpc(name, args) {
       const builds = TABLES.builds.filter((b) => b.author_id === p.id && b.status === 'approved')
         .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
       return ok(structuredClone({
-        id: p.id, nickname: p.nickname, influencer: p.influencer,
+        id: p.id, nickname: p.nickname, influencer: p.influencer, photo_path: p.photo_path ?? null,
         links: links.filter((l) => l.owner_id === p.id && l.build_id == null && visible(l)).sort((a, b) => a.sort - b.sort).map(shape),
         build_count: builds.length,
         builds: builds.slice(0, 10).map((b) => {

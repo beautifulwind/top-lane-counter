@@ -13,6 +13,9 @@ import { matchupTitle } from '../../lib/josa';
 import { titleName, useTitleInfo } from '../../lib/titles';
 import { INFLUENCER_KINDS } from '../../lib/nickname';
 import { useAsync } from '../../lib/useAsync';
+import NoteForm from '../../components/NoteForm';
+import ProfilePhoto from '../../components/ProfilePhoto';
+import { getMemberPhotoPath, removeProfilePhoto } from '../../api/profilePhoto';
 
 const PROVIDER_LABEL = { google: '구글', kakao: '카카오' };
 const WITHDRAWN = WITHDRAWN_USER;
@@ -91,7 +94,38 @@ function Info({ info, onDone }) {
           <RenameMember member={info} onDone={onDone} />
         </div>
       )}
+      {info.influencer && <MemberPhoto member={info} onDone={onDone} />}
     </section>
+  );
+}
+
+/** 062: 장인의 지금 프로필 사진 + [프로필 사진 삭제] (사유 필수, 장인에게 알림). 신고가 없어도 운영자가 바로 지울 수 있다 */
+function MemberPhoto({ member, onDone }) {
+  const [removing, setRemoving] = useState(false);
+  const { data: path, loading } = useAsync(() => getMemberPhotoPath(member.id), [member.id]);
+  if (loading || !path) return null;
+  return (
+    <div className="member-photo" aria-label="프로필 사진">
+      <ProfilePhoto path={path} alt={`${member.nickname} 프로필 사진`} className="inf-hero-photo" fallback={<p className="hint">사진을 불러오지 못했습니다.</p>} />
+      {!removing ? (
+        <div className="row-actions">
+          <button type="button" className="btn btn-small btn-op" onClick={() => setRemoving(true)}>프로필 사진 삭제</button>
+        </div>
+      ) : (
+        <NoteForm
+          id={`remove-member-photo-${member.id}`}
+          label="삭제 사유 (필수, 장인에게 보입니다)"
+          confirmLabel="프로필 사진 삭제 확정"
+          busyLabel="삭제하는 중…"
+          onCancel={() => setRemoving(false)}
+          onSubmit={async (note) => {
+            await removeProfilePhoto(member.id, note);
+            setRemoving(false);
+            onDone('프로필 사진을 삭제했습니다. 장인에게 알림이 갔습니다.');
+          }}
+        />
+      )}
+    </div>
   );
 }
 

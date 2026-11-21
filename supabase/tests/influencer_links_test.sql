@@ -131,7 +131,7 @@ select t.ok('공개 프로필: 장인은 보임 (닉네임/유형/링크 2/빌�
   and (public_profile(:'U') -> 'builds' -> 0 -> 'link' ->> 'url') = 'https://youtu.be/abc'
   and (public_profile(:'U') -> 'links' -> 0 ->> 'url') = 'https://twitch.tv/faker');
 select t.ok('공개 프로필 칸은 이것뿐 (이메일/라이엇/레벨/역할/가입일 없음)',
-  (select array_agg(k order by k) from jsonb_object_keys(public_profile(:'U')) k) = array['build_count', 'builds', 'id', 'influencer', 'links', 'nickname']
+  (select array_agg(k order by k) from jsonb_object_keys(public_profile(:'U')) k) = array['build_count', 'builds', 'id', 'influencer', 'links', 'nickname', 'photo_path']  -- 062: 사진 경로
   and public_profile(:'U')::text not like '%u@x.com%');
 select t.ok(E'장인 아님\u00B7없는 id\u00B7모양 틀린 id\u00B7빈 값은 모두 똑같이 null',
   public_profile(:'V') is null and public_profile('00000000-0000-0000-0000-0000000000ff') is null

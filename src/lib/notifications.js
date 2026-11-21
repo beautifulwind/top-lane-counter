@@ -31,7 +31,8 @@ const STAFF_NEW = {
   // 043: 상대법·빌드 오류 신고 (운영진, 같은 대상의 첫 신고만) → 신고 화면 "오류 신고" 탭
   error_reported: { icon: 'flag', label: (n) => (n.build_id ? '빌드' : '상대법'), to: () => '/admin/reports?tab=wiki' },
   // 045: 게시판 신고 — 글·댓글·문서 댓글 (운영진, 같은 대상의 처음 신고만) → 신고 화면 "글·댓글 신고" 탭(기본 탭). 문서 댓글만 둘째 줄에 매치업
-  report_received: { icon: 'flag', label: '문서 댓글', to: () => '/admin/reports' },
+  // 062: 문장이 "(프로필 사진)"으로 끝나면 신고 화면 "프로필 사진 신고" 탭
+  report_received: { icon: 'flag', label: '문서 댓글', to: (n) => reportsPath(n.message) },
 };
 // 046 장인 인증: DB 문장이 곧 제목(" 사유: …"는 둘째 줄). 운영자 새 신청 → 심사 화면, 신청자 → 신청 화면, 닉네임 바뀜 → 계정 설정.
 // 접수·만료 전 알림의 "{운영자 닉네임}"은 lib/influencer.js 상수로 채운다
@@ -46,7 +47,12 @@ export const INFLUENCER_NOTICE = {
   nickname_reset_soon: { icon: 'bell', to: '/me/settings' },
   nickname_reset: { icon: 'bell', to: '/me/settings' },
   link_removed: { icon: 'ban', to: '/me/links' }, // 047·048 외부 링크 삭제 → 링크 관리 (3b)
+  profile_photo_removed: { icon: 'ban', to: '/me' }, // 062 운영자가 프로필 사진 삭제 → 마이페이지(사진 다시 올리기)
 };
+
+/** 신고 알림이 갈 신고 화면 탭 (062: 프로필 사진 신고는 ?tab=photos). web-push와 같은 규칙 */
+export const PHOTO_REPORT_MESSAGE = '(프로필 사진)';
+export const reportsPath = (message) => (String(message ?? '').includes(PHOTO_REPORT_MESSAGE) ? '/admin/reports?tab=photos' : '/admin/reports');
 // 050 팔로우한 장인의 새 빌드: DB 문장 "팔로우한 장인 {닉네임}의 새 빌드가 (N개 )올라왔습니다."에서 닉네임·개수를 읽어 제목을 만든다.
 // web-push(supabase/functions/web-push/index.ts followedBuildTitle)와 같은 규칙 — 테스트가 둘을 맞춰 본다
 export const FOLLOWED_BUILD_MESSAGE = /^팔로우한 장인 (.+)의 새 빌드가 (?:(\d+)개 )?올라왔습니다\.?$/;

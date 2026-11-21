@@ -1195,6 +1195,16 @@ a.inf-link:hover .user-nick, a.inf-link:focus-visible .user-nick { text-decorati
 .follow-btn.plus { min-width: 40px; font-weight: 900; }
 .inf-hero-top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--gap-sm) var(--gap-md); }
 .inf-hero-top .doc-title { min-width: 0; }
+/* 062 장인 프로필 사진: 공개 프로필 이름 옆 동그라미, 마이페이지 카드 동그라미 안. 색은 tokens.css */
+.inf-hero-name { display: flex; align-items: center; gap: var(--gap-md); min-width: 0; }
+.inf-hero-actions { display: flex; align-items: center; gap: var(--gap-sm); }
+.inf-hero-photo { flex: none; width: 64px; height: 64px; border-radius: 50%; object-fit: cover; border: 2px solid var(--influencer-line); background: var(--soft); }
+.me-avatar.has-photo { overflow: hidden; padding: 0; }
+.me-avatar-img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.photo-editor { display: flex; flex-direction: column; gap: 6px; }
+.photo-editor .row-actions { margin: 0; }
+.photo-editor .notice, .photo-editor .form-error { margin: 0; }
+.photo-confirm { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .inf-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 0; }
 .inf-links { font-size: var(--fs-sm); }
 .inf-links li { padding: 4px 0; border-bottom: 0; }

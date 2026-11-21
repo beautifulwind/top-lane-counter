@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getPublicProfile } from '../api/links';
 import { getFollowStatus, getFollowers, getInfluencerBuilds } from '../api/follow';
 import { getChampionMap } from '../api/ddragon';
@@ -12,8 +12,13 @@ import { InfluencerName } from '../components/UserName';
 import InfluencerBuildCard from '../components/InfluencerBuildCard';
 import { LayersIcon } from '../components/Icons';
 import { INFLUENCER_KINDS, displayNickname } from '../lib/nickname';
-import { isBlocked, useAuth } from '../lib/auth';
-import { BLOCKED_PROFILE, SETTINGS_PATH } from '../lib/blocks';
+import { canVote, isBlocked, isGuest, useAuth } from '../lib/auth';
+import { BLOCKED_PROFILE, SETTINGS_PATH, blockMenuItem } from '../lib/blocks';
+import MoreMenu from '../components/MoreMenu';
+import NoteForm from '../components/NoteForm';
+import { ReportForm } from '../components/BoardParts';
+import ProfilePhoto from '../components/ProfilePhoto';
+import { PHOTO_REPORT_REASONS, removeProfilePhoto, reportProfilePhoto } from '../api/profilePhoto';
 import { useAsync } from '../lib/useAsync';
 import NotFound from './NotFound';
 
@@ -26,6 +31,8 @@ const day = (ts) => (ts ? String(ts).slice(0, 10) : '');
  * 052: ?followers=1(새 팔로워 알림 → /me/followers)로 열면 로그인한 사람에게는 팔로워 목록이 처음부터 펼쳐져 있다.
  * DB가 장인이 아니거나 없는 id·모양이 틀린 id에 모두 null을 주므로 화면도 모두 같은 "없는 페이지".
  * 이메일·라이엇 닉네임·역할·레벨은 DB가 주지 않는다.
+ * 062: 장인 프로필 사진(있을 때만 — 없으면 예전 그대로, 보기 전용. 올리기·바꾸기·삭제는 마이페이지 카드에서).
+ *      ⋮ 메뉴: [프로필 사진 신고](정식 회원, 남의 사진) / [이 사용자 차단](061) / [프로필 사진 삭제](운영자만, 사유 필수 → 장인에게 알림)
  */
 export default function PublicProfile() {
   const { id } = useParams();
@@ -67,6 +74,10 @@ export default function PublicProfile() {
 
 function Profile({ data, me, signedIn, notice, onDone }) {
   const { profile, champs } = data;
+  const auth = useAuth();
+  const navigate = useNavigate();
+  const location = useLocation();
+  const [photoMode, setPhotoMode] = useState(null); // 'report' | 'remove'
   const [follow, setFollow] = useState({ following: data.following, count: Number(data.first.follower_count) || 0 });
   const [builds, setBuilds] = useState({ items: data.first.items, total: Number(data.first.total) || 0, page: 1 });
   const [more, setMore] = useState({ busy: false, error: null });
@@ -96,16 +107,58 @@ function Profile({ data, me, signedIn, notice, onDone }) {
       <header className="me-hero inf-hero">
         <p className="me-hero-label">장인</p>
         <div className="inf-hero-top">
-          <h1 className="doc-title" data-page-title={`${profile.nickname} 프로필`}>
-            <InfluencerName profile={profile} />
-          </h1>
-          {me !== profile.id && (
-            <FollowButton
-              id={profile.id} nickname={profile.nickname} following={follow.following}
-              onChange={(r) => setFollow({ following: !!r?.following, count: Number(r?.follower_count) || 0 })}
+          <div className="inf-hero-name">
+            <ProfilePhoto path={profile.photo_path} alt={`${profile.nickname} 프로필 사진`} className="inf-hero-photo" />
+            <h1 className="doc-title" data-page-title={`${profile.nickname} 프로필`}>
+              <InfluencerName profile={profile} />
+            </h1>
+          </div>
+          <div className="inf-hero-actions">
+            {me !== profile.id && (
+              <FollowButton
+                id={profile.id} nickname={profile.nickname} following={follow.following}
+                onChange={(r) => setFollow({ following: !!r?.following, count: Number(r?.follower_count) || 0 })}
+              />
+            )}
+            <ProfileMenu
+              auth={auth} profile={profile} onMode={setPhotoMode}
+              onLogin={() => navigate('/login', { state: { from: location.pathname } })} onDone={onDone}
             />
-          )}
+          </div>
         </div>
+        {photoMode === 'report' && (
+          <div className="link-action-form">
+            <ReportForm
+              id={`report-photo-${profile.id}`}
+              what="프로필 사진"
+              reasons={PHOTO_REPORT_REASONS}
+              hints={null}
+              note="신고 내용은 운영자만 봅니다."
+              onCancel={() => setPhotoMode(null)}
+              onSubmit={async (reason, detail) => {
+                await reportProfilePhoto(profile.id, reason, detail);
+                setPhotoMode(null);
+                onDone('프로필 사진을 신고했습니다. 운영자가 확인하겠습니다.');
+              }}
+            />
+          </div>
+        )}
+        {photoMode === 'remove' && (
+          <div className="link-action-form">
+            <NoteForm
+              id={`remove-photo-${profile.id}`}
+              label="삭제 사유 (필수, 장인에게 보입니다)"
+              confirmLabel="프로필 사진 삭제 확정"
+              busyLabel="삭제하는 중…"
+              onCancel={() => setPhotoMode(null)}
+              onSubmit={async (note) => {
+                await removeProfilePhoto(profile.id, note);
+                setPhotoMode(null);
+                onDone('프로필 사진을 삭제했습니다. 장인에게 알림이 갔습니다.');
+              }}
+            />
+          </div>
+        )}
         <p className="doc-sub inf-meta">
           {kind && <><span className="inf-kind">{`인증된 ${kind}`}</span>{' · '}</>}
           <span>팔로워 <strong className="follower-count">{follow.count.toLocaleString()}</strong>명</span>
@@ -156,6 +209,33 @@ function Profile({ data, me, signedIn, notice, onDone }) {
         {more.error && <p className="form-error" role="alert">{more.error}</p>}
       </section>
     </article>
+  );
+}
+
+/**
+ * 장인 페이지 ⋮ 메뉴 (062). 내 페이지면 아무것도 없다(사진은 마이페이지에서).
+ *   [프로필 사진 신고]: 사진이 있을 때. 정식 회원만 — 로그인 전·비회원은 누를 수 없는 항목 + 이유. 운영자에게는 신고 대신 [프로필 사진 삭제]
+ *   [이 사용자 차단]: 061과 같음 (차단하면 이 페이지가 바로 "차단한 사용자입니다."로 바뀐다)
+ */
+function ProfileMenu({ auth, profile, onMode, onLogin, onDone }) {
+  if (auth.user?.id === profile.id) return null;
+  const hasPhoto = !!profile.photo_path;
+  const operator = auth.isOperator;
+  const signedOut = auth.status !== 'signedIn';
+  const report = !hasPhoto || operator ? null
+    : canVote(auth) ? { label: '프로필 사진 신고', onSelect: () => onMode('report') }
+      : signedOut ? { label: '프로필 사진 신고', disabled: true, hint: '로그인하면 신고할 수 있습니다.' }
+        : isGuest(auth) ? { label: '프로필 사진 신고', disabled: true, hint: '비회원은 신고할 수 없습니다. 마이페이지에서 구글·카카오를 연결해 주세요.' }
+          : null;
+  return (
+    <MoreMenu
+      label="장인 더보기"
+      items={[
+        report,
+        hasPhoto && operator && { label: '프로필 사진 삭제', op: true, danger: true, onSelect: () => onMode('remove') },
+        blockMenuItem(auth, profile.id, { nickname: profile.nickname }, { onLogin, onDone }),
+      ]}
+    />
   );
 }
 

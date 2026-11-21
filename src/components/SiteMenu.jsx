@@ -27,7 +27,7 @@ export function accountKind(auth) {
 
 /** 처리 대기 건수 풍선 설명: "제안 2 · 빌드 1 · 문의 3" (0인 것은 뺀다) */
 const pendingTitle = (c) =>
-  [['제안', c.proposals], ['빌드', c.builds], ['문의', c.inquiries], ['오류 신고', c.wiki_reports], ['장인 신청', c.influencers], ['링크 신고', c.link_reports]].filter(([, n]) => n > 0).map(([l, n]) => `${l} ${n}`).join(' · ');
+  [['제안', c.proposals], ['빌드', c.builds], ['문의', c.inquiries], ['오류 신고', c.wiki_reports], ['장인 신청', c.influencers], ['링크 신고', c.link_reports], ['사진 신고', c.photo_reports]].filter(([, n]) => n > 0).map(([l, n]) => `${l} ${n}`).join(' · ');
 
 export const logout = () => signOut().catch((e) => alert(e.message));
 
@@ -46,7 +46,7 @@ function usePendingCounts(enabled, open, isOperator) {
     }
     if (!open) return undefined;
     let alive = true;
-    getPendingCounts(isOperator).then((c) => alive && setCounts(c && { ...c, total: c.proposals + c.builds + c.inquiries + c.wiki_reports + c.influencers + c.link_reports }));
+    getPendingCounts(isOperator).then((c) => alive && setCounts(c && { ...c, total: c.proposals + c.builds + c.inquiries + c.wiki_reports + c.influencers + c.link_reports + (c.photo_reports ?? 0) }));
     return () => { alive = false; };
   }, [enabled, open, isOperator]);
   return counts;

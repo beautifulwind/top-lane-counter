@@ -20,10 +20,11 @@ import MyTitles, { LevelBar } from '../components/MyRewards';
 import { matchupTitle } from '../lib/josa';
 import VoteTally from '../components/VoteTally';
 import SectionHead from '../components/SectionHead';
+import ProfilePhoto, { ProfilePhotoEditor } from '../components/ProfilePhoto';
 import { BellIcon, GearIcon, HelpIcon, LayersIcon, LinkIcon, SendIcon, SparklesIcon, UserIcon } from '../components/Icons';
 
 /**
- * 마이페이지 (/me): 맨 위 프로필 카드(닉네임·칭호 태그·Lv·경험치 막대 + [알림 보기]·[계정 설정]), 칭호판,
+ * 마이페이지 (/me): 맨 위 프로필 카드(닉네임·칭호 태그·Lv·경험치 막대 + [알림 보기]·[계정 설정], 장인은 프로필 사진 — 062), 칭호판,
  * 내 제안(승인 제도를 켰을 때만 — 039 뒤로 숨김)·내 빌드 목록과 상태. 레벨·칭호는 MyRewards (SPEC 6장), 알림은 /notifications (027),
  * 로그인 연결·닉네임 바꾸기·회원 탈퇴는 /me/settings (MySettings).
  */
@@ -64,7 +65,13 @@ function ProfileCard({ auth, rewards, loading }) {
   return (
     <header className="me-hero">
       <div className="me-hero-top">
-        <span className="me-avatar" aria-hidden="true"><UserIcon size={28} /></span>
+        {/* 062: 장인 프로필 사진 (없으면 예전 아이콘 그대로) */}
+        <span className={auth.profile.photo_path ? 'me-avatar has-photo' : 'me-avatar'} aria-hidden={auth.profile.photo_path ? undefined : 'true'}>
+          <ProfilePhoto
+            path={auth.profile.photo_path} alt={`${auth.profile.nickname ?? ''} 프로필 사진`} className="me-avatar-img"
+            fallback={<UserIcon size={28} />}
+          />
+        </span>
         <div className="me-hero-text">
           <p className="me-hero-label">마이페이지</p>
           <h1 className="doc-title" data-page-title="마이페이지">
@@ -86,6 +93,8 @@ function ProfileCard({ auth, rewards, loading }) {
           )}
         </div>
       </div>
+      {/* 062: 인증된 장인만 사진 올리기·바꾸기·삭제 (062 전 DB라 photo_path 칸이 없으면 숨김) */}
+      {auth.profile.influencer && !auth.profile.is_guest && 'photo_path' in auth.profile && <ProfilePhotoEditor auth={auth} />}
       {auth.isOperatorAccount ? (
         <p className="hint me-op-hint">
           운영자는 경험치·레벨·칭호가 없습니다 (항상 Lv.0).
