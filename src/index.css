@@ -1146,6 +1146,12 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
 .inf-form fieldset { margin: 0; padding: 0; border: 0; display: flex; flex-direction: column; gap: var(--gap-xs); }
 .inf-form legend { margin-bottom: 4px; font-weight: 700; }
 .inf-form .check-row .hint { display: block; }
+/* 064 장인 인증 신청 사진: 동그라미(+ 배지) 옆에 설명 — 신청서와 [내 신청] 카드 공통 */
+.inf-photo-field { display: flex; align-items: center; gap: var(--gap-md); margin: var(--gap-sm) 0; }
+.inf-photo-field > span, .inf-photo-field > .hint { flex: 1; min-width: 0; }
+.inf-photo-field .hint { display: block; }
+.inf-photo-label { display: block; font-weight: 700; }
+.inf-check-photo { display: flex; align-items: center; gap: var(--gap-md); }
 .riot-id { overflow-wrap: anywhere; }
 .copy-wrap { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; vertical-align: middle; }
 .copy-manual { display: block; width: 100%; margin-top: 4px; font: inherit; }

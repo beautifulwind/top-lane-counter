@@ -74,7 +74,7 @@ select t.fails('비로그인은 못 올림', format($$select pg_temp.up('%s/a.we
 reset role;
 set role authenticated;
 set request.jwt.claim.sub = :'B';
-select t.ok('장인 아님: 올릴 수 없는 이유', profile_photo_upload_problem() = '인증된 장인만 프로필 사진을 올릴 수 있습니다.');
+select t.ok('장인 아님(신청도 없음): 올릴 수 없는 이유 (064 문구)', profile_photo_upload_problem() = '인증된 장인이나 장인 인증을 신청한 회원만 프로필 사진을 올릴 수 있습니다.');
 select t.fails('장인 아니면 못 올림', format($$select pg_temp.up('%s/a.webp')$$, :'B'), 'row-level security');
 set request.jwt.claim.sub = :'G';
 select t.fails('비회원은 못 올림', format($$select pg_temp.up('%s/a.webp')$$, :'G'), 'row-level security');

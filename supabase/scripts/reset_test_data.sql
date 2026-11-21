@@ -95,6 +95,7 @@ delete from public.board_last_write;
 --     (050) 장인 팔로우·호출 횟수·알림 대기 줄 비움 (050 실행 전이면 건너뜀)
 --     (062) 장인 표시를 지우면 프로필 사진도 트리거가 비우고 파일 경로를 profile_photo_trash에 넣는다(다음 사진 정리 때 파일 삭제).
 --           사진 신고·사진 바꾼 기록은 비운다 (062 실행 전이면 건너뜀)
+--     (064) 처리 전 신청을 취소할 때 신청 사진도 트리거가 비우고 profile_photo_trash에 넣는다(다음 사진 정리 때 파일 삭제)
 do $$
 begin
   if to_regclass('public.influencer_applications') is not null then

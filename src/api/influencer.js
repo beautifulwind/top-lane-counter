@@ -19,8 +19,9 @@ async function rpc(name, args, fallback) {
 
 /**
  * 내 장인 상태: { influencer, influencer_at, nickname_state, nickname_reset_at, is_guest, next_apply_at,
+ *   photo_ready(064 DB면 true — 신청 사진을 받을 수 있음),
  *   application: 마지막 신청 { id, kind, nickname, old_nickname, channel_url, official_email, riot_id, opgg_url, status,
- *   created_at, expires_at, ended_at, review_note, retry_now, nickname_reverted, revoked_at, revoke_note } | null }
+ *   created_at, expires_at, ended_at, review_note, retry_now, nickname_reverted, revoked_at, revoke_note, photo_path(064, 심사 중만) } | null }
  */
 export const getMyInfluencerStatus = () => rpc('my_influencer_status', {}, '장인 인증 상태를 불러오지 못했습니다.');
 
@@ -63,7 +64,13 @@ export async function getAllDoneApplications() {
   return items;
 }
 
-export const approveInfluencer = (id, note) => rpc('approve_influencer', { p_id: id, p_note: note }, '승인하지 못했습니다.');
+/**
+ * 승인. photo를 주면(064 DB — 신청 줄에 photo_path 칸이 있을 때) 운영자가 본 신청 사진 경로(없으면 null)와 사진 포함 여부를 함께 보낸다:
+ * photo = { path, withPhoto }. 그 사이 신청자가 사진을 바꿨으면 DB가 거부한다. photo가 없으면 옛 승인(신청 사진이 있으면 DB가 거부).
+ */
+export const approveInfluencer = (id, note, photo) => rpc('approve_influencer', photo
+  ? { p_id: id, p_note: note, p_photo_path: photo.path ?? null, p_with_photo: !!photo.withPhoto }
+  : { p_id: id, p_note: note }, '승인하지 못했습니다.');
 
 /** 반려. revertNickname = 닉네임도 되돌리기, retryNow = 바로 다시 신청 허용 */
 export const rejectInfluencer = (id, note, { revertNickname = false, retryNow = false } = {}) =>

@@ -209,7 +209,8 @@ test('운영자: (a) 신청 — 채널·공식 이메일·확인 메일 문구 �
   fireEvent.change(within(row).getByLabelText(/승인 메모/), { target: { value: '이메일 회신 확인' } });
   fireEvent.click(confirm);
   expect(await screen.findByRole('status')).toHaveTextContent('"기존유저" 님을 장인으로 승인했습니다.');
-  expect(rpcCalls('approve_influencer')).toEqual([{ p_id: 1, p_note: '이메일 회신 확인' }]);
+  // 064 DB: 운영자가 본 신청 사진(없으면 null)과 포함 여부를 함께 보낸다
+  expect(rpcCalls('approve_influencer')).toEqual([{ p_id: 1, p_note: '이메일 회신 확인', p_photo_path: null, p_with_photo: false }]);
   expect(profile('u-old')).toMatchObject({ influencer: 'creator', nickname_state: null });
   expect(await screen.findByText('처리할 장인 신청이 없습니다.')).toBeDefined();
 

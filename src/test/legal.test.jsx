@@ -261,3 +261,25 @@ test('방침·약관 (6-67 사용자 차단): 차단 목록 수집·용도·삭�
   expect(terms).toContain('제6조를 어기면 운영자는 해당 내용을 숨기거나 삭제하고, 이용을 제한할 수 있습니다.');
   expect(LEGAL.effectiveDate).toBe('2026-12-14');
 });
+
+test('방침·약관 (062·064 장인 프로필 사진·신청 사진): 수집·이용·보관·공개 범위·탈퇴 / 시행일 2026-12-14 그대로', async () => {
+  start('/privacy');
+  await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' });
+  const privacy = document.querySelector('article.legal').textContent;
+  expect(privacy).toContain('장인 인증을 신청하면서 고른 신청 사진(선택 사항, 같은 항목)');
+  expect(privacy).toContain('가운데를 정사각형으로 잘라 줄이며, 이때 촬영 위치·기기 정보 같은 사진 속 정보(EXIF)는 빠집니다');
+  expect(privacy).toContain('신청 사진은 운영자가 심사 때 확인해, 승인하면 장인 프로필 사진으로 등록합니다');
+  expect(privacy).toContain('신청 사진은 심사 중에만 보관하며, 신청이 반려·만료·취소되거나 탈퇴하면, 또는 운영자가 사진 없이 승인하면 하루 안에 지웁니다');
+  expect(privacy).toContain('op.gg 링크·신청 사진·처리 메모)은 신청한 본인과 운영자만 보며');
+  expect(privacy).toContain('신청 사진은 승인된 뒤에만 장인 페이지 프로필 사진으로 공개됩니다.');
+  expect(privacy).toContain('닉네임·장인 유형·프로필 사진(올린 경우)·팔로워 수');
+  const removed = [...document.querySelectorAll('li')].find((li) => li.textContent.startsWith('삭제:')).textContent;
+  expect(removed).toContain('장인 프로필 사진과 장인 인증 신청 사진(파일은 하루 안에 삭제)');
+  expect(screen.getAllByText(/2026-12-14/).length).toBeGreaterThan(0);
+  cleanup();
+  start('/terms');
+  await screen.findByRole('heading', { level: 1, name: '이용약관' });
+  const sec = (name) => screen.getByRole('heading', { name }).closest('section').textContent;
+  expect(sec('제4조의2 (장인 인증)')).toContain('신청할 때 프로필 사진을 고를 수 있습니다(선택). 심사 중에는 신청한 본인과 운영자만 보고, 승인되면 장인 페이지 프로필 사진이 됩니다.');
+  expect(document.querySelector('article.legal').textContent).toContain('장인 프로필 사진과 장인 인증 신청 때 고르는 사진도 같습니다.');
+});

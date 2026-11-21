@@ -2,6 +2,7 @@
 // 경로 = 사용자id/임의이름.webp(또는 .jpg). 올릴 때마다 새 이름이라 바꾸면 주소가 바뀌어 옛 사진이 캐시로 보이지 않는다.
 // 올리기는 Storage 규칙이, 정하기·지우기·신고·운영자 삭제는 DB 함수가 검사한다 (장인 본인만·내 폴더·하루 횟수 / 운영자만).
 // 바꾸거나 지우면 옛 파일은 화면이 바로 지우고(본인 폴더·지금 사진이 아닌 것만 가능), 놓친 파일은 매일 media-cleanup이 지운다.
+// 064: 장인 인증을 신청한 회원도 같은 버킷에 "신청 사진"을 올린다(심사 중에는 본인·운영자만 봄, 승인되면 장인 사진).
 import { db } from './supabase';
 import { prepareSquare } from '../lib/imageCompress';
 
@@ -84,6 +85,35 @@ export async function changeProfilePhoto(userId, file, oldPath = null) {
 /** 내 사진 지우기 (사진 없이 예전처럼 보인다) */
 export async function deleteMyProfilePhoto(oldPath) {
   await rpc('clear_profile_photo', {}, '프로필 사진을 지우지 못했습니다.');
+  await removeFile(oldPath);
+}
+
+// ---- 장인 인증 신청 사진 (064, SPEC 6-76) — 같은 버킷·같은 경로 모양. 심사 중에는 본인·운영자만 보고, 승인되면 장인 사진이 된다 ----
+
+/**
+ * 줄여 둔 사진(prepareSquare 결과) 올리기 → 내 심사 중 신청에 붙이기 → 옛 신청 사진 지우기. 돌려주는 값: 새 경로.
+ * 붙이기가 실패하면 방금 올린 파일도 지운다. 신청서는 신청이 접수된 뒤 이걸 부른다(그 전에는 올릴 권한이 없다)
+ */
+export async function uploadApplicationPhoto(userId, prepared, oldPath = null) {
+  const path = await upload(userId, prepared);
+  try {
+    await rpc('set_application_photo', { p_path: path }, '신청 사진을 정하지 못했습니다.');
+  } catch (e) {
+    await removeFile(path);
+    throw e;
+  }
+  if (oldPath && oldPath !== path) await removeFile(oldPath);
+  return path;
+}
+
+/** 심사 중 신청 사진 바꾸기 (처음 올리기 포함): 고른 파일 → 가운데 정사각형 512px → 올리기 → 신청에 붙이기 */
+export async function changeApplicationPhoto(userId, file, oldPath = null) {
+  return uploadApplicationPhoto(userId, await prepareSquare(file), oldPath);
+}
+
+/** 심사 중 신청 사진 지우기 (사진 없이 심사) */
+export async function deleteApplicationPhoto(oldPath) {
+  await rpc('clear_application_photo', {}, '신청 사진을 지우지 못했습니다.');
   await removeFile(oldPath);
 }
 

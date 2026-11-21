@@ -150,6 +150,7 @@ export const fakeState = {
   functionCalls: [], functionError: null, deleteApple: null, // Edge Function 호출 (017 delete-account, 6-65 Apple 결과)
   anonCalls: [], anonError: null, anonDelay: null, hideCounts: {}, signOutCalls: [], touched: 0, // 비회원 (020)
   uploads: [], removed: [], photoProblem: null, uploadError: null, mediaProblem: null, mediaUsage: EMPTY_USAGE(), // 사진 (023, mediaUsage = media_usage 결과)
+  before064: false, // 064(신청 사진) 전 DB 흉내: 내 장인 상태에 photo_ready 없음, 신청 줄에 photo_path 칸 없음
 };
 const INITIAL_PROFILES = TABLES.profiles.map((p) => ({ ...p }));
 const INITIAL_COUNTERS = TABLES.counters.map((c) => structuredClone(c));
@@ -235,6 +236,7 @@ export function resetFake() {
   fakeState.uploadError = null;
   fakeState.removed = [];
   fakeState.photoProblem = null;
+  fakeState.before064 = false;
   fakeState.mediaProblem = null;
   fakeState.mediaUsage = EMPTY_USAGE();
 }
@@ -1165,13 +1167,16 @@ function influencerRpc(name, args) {
   const notify = (userId, kind, message) => TABLES.notifications.push({
     id: 7000 + TABLES.notifications.length, user_id: userId, kind, message, created_at: new Date().toISOString(), read_at: null,
   });
+  // 064 전 DB면 신청 줄에 photo_path 칸이 없다
+  const appOut = (x) => { const c = structuredClone(x); if (fakeState.before064) delete c.photo_path; else c.photo_path ??= null; return c; };
   if (name === 'my_influencer_status') {
     if (!meRow) return { data: null, error: { message: '로그인해 주세요.', code: '42501' } };
     const last = [...apps].reverse().find((a) => a.user_id === meRow.id) ?? null;
     return ok({
       influencer: meRow.influencer ?? null, influencer_at: meRow.influencer_at ?? null, nickname_state: meRow.nickname_state ?? null,
       nickname_reset_at: meRow.nickname_reset_at ?? null, is_guest: !!meRow.is_guest, next_apply_at: fakeState.influencerNextAt,
-      application: last && structuredClone(last),
+      application: last && appOut(last),
+      ...(fakeState.before064 ? {} : { photo_ready: true }), // 064
     });
   }
   if (name === 'apply_influencer') {
@@ -1181,7 +1186,7 @@ function influencerRpc(name, args) {
       id, user_id: meRow.id, kind: args.p_kind, nickname: args.p_nickname, old_nickname: meRow.nickname, channel_url: args.p_channel_url,
       official_email: args.p_email, riot_id: args.p_riot_id, opgg_url: args.p_opgg_url, status: 'pending',
       created_at: new Date(now).toISOString(), expires_at: new Date(now + 14 * 86400000).toISOString(), extended_count: 0,
-      ended_at: null, review_note: null, retry_now: false, nickname_reverted: null, revoked_at: null, revoke_note: null,
+      ended_at: null, review_note: null, retry_now: false, nickname_reverted: null, revoked_at: null, revoke_note: null, photo_path: null,
     });
     Object.assign(meRow, { nickname: args.p_nickname, nickname_state: 'pending' });
     notify(meRow.id, 'influencer_received', args.p_kind === 'grandmaster'
@@ -1190,7 +1195,8 @@ function influencerRpc(name, args) {
     return ok(id);
   }
   const a = apps.find((x) => x.id === args.p_id);
-  const end = (status, extra = {}) => Object.assign(a, { status, ended_at: new Date().toISOString(), official_email: null, riot_id: null, ...extra });
+  // 064: 신청이 끝나면 신청 사진 칸을 비운다 (DB는 파일을 대기열로)
+  const end = (status, extra = {}) => Object.assign(a, { status, ended_at: new Date().toISOString(), official_email: null, riot_id: null, photo_path: null, ...extra });
   if (name === 'cancel_influencer_application') {
     end('cancelled');
     Object.assign(prof(a.user_id), { nickname_state: null });
@@ -1203,7 +1209,7 @@ function influencerRpc(name, args) {
       const u = prof(x.user_id);
       const o = u && TABLES.profiles.find((p) => p.id !== u.id && p.nickname && p.nickname.toLowerCase() === u.nickname?.toLowerCase());
       return {
-        ...structuredClone(x), kind_label: KIND_LABEL[x.kind], reviewer: x.reviewer ?? null, recent_rejections: 0,
+        ...appOut(x), kind_label: KIND_LABEL[x.kind], reviewer: x.reviewer ?? null, recent_rejections: 0,
         user: u ? { id: u.id, nickname: u.nickname, role: u.role, level: u.level, main_title: u.main_title ?? null, is_guest: !!u.is_guest,
           influencer: u.influencer ?? null, nickname_state: u.nickname_state ?? null } : null,
         overlap: x.status === 'pending' && o ? { id: o.id, nickname: o.nickname, role: o.role } : null,
@@ -1214,8 +1220,19 @@ function influencerRpc(name, args) {
     return ok({ total: rows.length, page, size, items: rows.slice((page - 1) * size, page * size) });
   }
   if (name === 'approve_influencer') {
+    // 064: 4개 인자면 운영자가 본 사진과 지금 신청 사진이 같아야 한다. 옛 2개 인자는 신청 사진이 있으면 거부
+    const photo = a.photo_path ?? null;
+    const aware = 'p_photo_path' in args;
+    if (!aware && photo) return { data: null, error: { message: '신청 사진을 확인해야 승인할 수 있습니다. 화면을 새로고침해 주세요.', code: 'TL409' } };
+    if (aware && (args.p_photo_path ?? null) !== photo) {
+      return { data: null, error: { message: '신청자가 프로필 사진을 바꿨습니다. 새로고침한 뒤 사진을 다시 확인하고 승인해 주세요.', code: 'TL409' } };
+    }
+    const take = aware && args.p_with_photo && photo;
     end('approved', { review_note: args.p_note, reviewer: meRow.nickname });
-    Object.assign(prof(a.user_id), { influencer: a.kind, influencer_at: new Date().toISOString(), nickname_state: null });
+    Object.assign(prof(a.user_id), { influencer: a.kind, influencer_at: new Date().toISOString(), nickname_state: null },
+      take ? { photo_path: photo } : {});
+    notify(a.user_id, 'influencer_approved', `장인 인증이 완료됐습니다. 이제 닉네임 앞에 "장인" 표시가 붙습니다.${
+      take ? ' 신청 때 고른 프로필 사진도 등록됐습니다.' : photo ? ' 프로필 사진은 운영 원칙에 따라 등록하지 않았습니다.' : ''}`);
     return ok(null);
   }
   if (name === 'reject_influencer') {
@@ -1266,7 +1283,8 @@ function influencerRpc(name, args) {
 // ---------------- 062 장인 프로필 사진 ----------------
 // 흐름만 흉내 낸다 (규칙 자체는 supabase/tests/profile_photo_test.sql). 읽기(올리기 검사·운영자 목록)는 rpcCalls에 넣지 않는다.
 const PHOTO_RPCS = ['profile_photo_upload_problem', 'set_profile_photo', 'clear_profile_photo', 'report_profile_photo',
-  'admin_profile_photo_reports', 'dismiss_profile_photo_reports', 'remove_profile_photo'];
+  'admin_profile_photo_reports', 'dismiss_profile_photo_reports', 'remove_profile_photo',
+  'set_application_photo', 'clear_application_photo']; // 064 신청 사진
 function photoRpc(name, args) {
   const reading = ['profile_photo_upload_problem', 'admin_profile_photo_reports'].includes(name);
   if (!reading) fakeState.rpcCalls.push({ name, args });
@@ -1284,6 +1302,15 @@ function photoRpc(name, args) {
     if (!String(args.p_path).startsWith(`${me.id}/`)) return fail('사진을 다시 골라 주세요.', '22023');
     if (me.photo_path && me.photo_path !== args.p_path) closeOpen(me.photo_path, 'dismissed');
     me.photo_path = args.p_path;
+    return ok(null);
+  }
+  if (name === 'set_application_photo' || name === 'clear_application_photo') {
+    // 064: 내 심사 중 신청에 사진 붙이기·비우기
+    const app = TABLES.influencer_applications.find((x) => x.user_id === me.id && x.status === 'pending');
+    if (!app) return fail('심사 중인 장인 인증 신청이 없습니다.', 'P0002');
+    if (name === 'clear_application_photo') { app.photo_path = null; return ok(null); }
+    if (!String(args.p_path).startsWith(`${me.id}/`)) return fail('사진을 다시 골라 주세요.', '22023');
+    app.photo_path = args.p_path;
     return ok(null);
   }
   if (name === 'clear_profile_photo') {

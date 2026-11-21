@@ -8,7 +8,9 @@ import { CharCount, ConfirmInline } from '../components/BoardParts';
 import CopyButton from '../components/CopyButton';
 import { InfluencerName } from '../components/UserName';
 import SectionHead from '../components/SectionHead';
-import { SparklesIcon, SendIcon } from '../components/Icons';
+import { SparklesIcon, SendIcon, UserIcon } from '../components/Icons';
+import { ApplicationPhotoEditor, ApplicationPhotoPicker } from '../components/ProfilePhoto';
+import { uploadApplicationPhoto } from '../api/profilePhoto';
 import { isGuest, useAuth } from '../lib/auth';
 import { fmtDateTime } from '../lib/format';
 import { josaOf } from '../lib/josa';
@@ -20,6 +22,8 @@ import { useAsync } from '../lib/useAsync';
  * 장인 인증 신청 (046, SPEC 6-33 · /me/influencer): 유형 고르기 → 유형별 칸과 안내 → 보내기.
  * 내 신청 상태(접수 → 확인 중 → 승인·반려·만료)와 [신청 취소], 반려 사유와 다시 신청할 수 있는 때.
  * 신청하면 닉네임이 희망 닉네임으로 바뀌므로(인증 대기) 보낸 뒤·취소한 뒤 내 프로필을 다시 읽는다.
+ * 064(SPEC 6-76): 프로필 사진(선택) — 신청서에서 동그라미로 고르면 미리보기만 하고, 신청이 접수된 뒤 올린다.
+ * 심사 중에는 [내 신청]의 동그라미로 바꾸기·지우기. 064 전 DB(photo_ready 없음)면 사진 칸을 숨긴다.
  */
 export default function InfluencerApply() {
   return (
@@ -66,13 +70,17 @@ function ApplyPage() {
           )}
           {auth.isOperatorAccount && <p className="hint">운영자 계정은 장인 인증을 신청할 수 없습니다.</p>}
           {data.influencer && <Certified status={data} profile={auth.profile} />}
-          {app && app.status !== 'approved' && <StatusCard app={app} next={next} onDone={after} />}
+          {app && app.status !== 'approved' && (
+            <StatusCard app={app} next={next} onDone={after} photoReady={!!data.photo_ready} userId={auth.user.id} />
+          )}
           {yielding && !data.influencer && (
             <p className="warn" role="note">
               지금 닉네임은 장인 인증을 받은 분과 같아 바뀔 예정입니다. 먼저 <Link to="/me/settings">계정 설정</Link>에서 새 닉네임을 정한 뒤 신청해 주세요.
             </p>
           )}
-          {canApply && <ApplyForm current={auth.profile?.nickname ?? ''} onDone={after} />}
+          {canApply && (
+            <ApplyForm current={auth.profile?.nickname ?? ''} onDone={after} photoReady={!!data.photo_ready} userId={auth.user.id} />
+          )}
         </>
       )}
     </article>
@@ -96,8 +104,8 @@ function Certified({ status, profile }) {
 
 const STEPS = ['접수', '확인 중', '결과'];
 
-/** 마지막 신청: 단계(접수 → 확인 중 → 결과) + 상태별 안내 + [신청 취소] */
-function StatusCard({ app, next, onDone }) {
+/** 마지막 신청: 단계(접수 → 확인 중 → 결과) + 상태별 안내 + 신청 사진(심사 중, 064) + [신청 취소] */
+function StatusCard({ app, next, onDone, photoReady = false, userId }) {
   const [cancelling, setCancelling] = useState(false);
   const pending = app.status === 'pending';
   const at = pending ? 1 : 2;
@@ -126,6 +134,17 @@ function StatusCard({ app, next, onDone }) {
         {app.riot_id && <li>라이엇 닉네임 {app.riot_id}</li>}
       </ul>
 
+      {pending && photoReady && (
+        <div className="inf-photo-field" aria-label="신청 프로필 사진">
+          <ApplicationPhotoEditor
+            key={app.id} userId={userId} initialPath={app.photo_path ?? null} nickname={app.nickname} fallback={<UserIcon size={28} />}
+          />
+          <small className="hint">
+            프로필 사진 (선택) — 동그라미를 눌러 올리거나 바꿀 수 있습니다. 심사 중에는 나와 운영자만 보고, 승인되면 장인 페이지 프로필 사진이 됩니다.
+            운영자가 부적절하다고 보면 사진 없이 승인될 수 있습니다.
+          </small>
+        </div>
+      )}
       {pending && (
         <>
           {byEmail(app.kind) ? <EmailGuide email={app.official_email} /> : <FriendGuide />}
@@ -210,9 +229,10 @@ function FriendGuide() {
 
 const EMPTY = { kind: '', channelUrl: '', email: '', riotId: '', opggUrl: '' };
 
-/** 신청서: 유형 → 희망 닉네임 → 유형별 칸 + 안내 → [신청 보내기] */
-function ApplyForm({ current, onDone }) {
+/** 신청서: 유형 → 프로필 사진(선택, 064) → 희망 닉네임 → 유형별 칸 + 안내 → [신청 보내기] */
+function ApplyForm({ current, onDone, photoReady = false, userId }) {
   const [v, setV] = useState({ ...EMPTY, nickname: current });
+  const [photo, setPhoto] = useState(null); // 줄여 둔 사진 { blob, mime, ext } — 신청이 접수된 뒤 올린다
   const [busy, setBusy] = useState(false);
   const [problem, setProblem] = useState(null);
   const set = (k) => (e) => setV({ ...v, [k]: e.target.value });
@@ -225,9 +245,18 @@ function ApplyForm({ current, onDone }) {
     setProblem(null);
     try {
       await applyInfluencer(v);
-      await onDone(byEmail(v.kind)
+      // 064: 신청이 접수돼야 올릴 권한이 생긴다. 사진이 실패해도 신청은 그대로 — [내 신청]에서 다시 올리면 된다
+      let photoNote = '';
+      if (photoReady && photo) {
+        try {
+          await uploadApplicationPhoto(userId, photo);
+        } catch (err) {
+          photoNote = ` 다만 프로필 사진은 올리지 못했습니다. (${err.message}) 아래 [내 신청]의 동그라미를 눌러 다시 올려 주세요.`;
+        }
+      }
+      await onDone((byEmail(v.kind)
         ? '신청을 보냈습니다. 적어 주신 공식 이메일로 확인 메일이 갑니다. 14일 안에 "본인입니다"라고 회신해 주세요.'
-        : `신청을 보냈습니다. 14일 안에 운영자 인증 계정에 친구 요청을 보내 주세요. ${operatorIdLabel()}`);
+        : `신청을 보냈습니다. 14일 안에 운영자 인증 계정에 친구 요청을 보내 주세요. ${operatorIdLabel()}`) + photoNote);
     } catch (err) {
       setProblem(err.message);
       setBusy(false);
@@ -247,6 +276,19 @@ function ApplyForm({ current, onDone }) {
             </label>
           ))}
         </fieldset>
+
+        {photoReady && (
+          <div className="inf-photo-field" role="group" aria-labelledby="inf-photo-label">
+            <ApplicationPhotoPicker value={photo} onChange={setPhoto} fallback={<UserIcon size={28} />} />
+            <span>
+              <span id="inf-photo-label" className="inf-photo-label">프로필 사진 (선택)</span>
+              <small className="hint">
+                고르지 않아도 신청할 수 있습니다. 심사 중에는 나와 운영자만 보고, 승인되면 장인 페이지 프로필 사진이 됩니다.
+                운영자가 부적절하다고 보면 사진 없이 승인될 수 있습니다.
+              </small>
+            </span>
+          </div>
+        )}
 
         <label htmlFor="inf-nickname">희망 닉네임</label>
         <input id="inf-nickname" value={v.nickname} onChange={set('nickname')} autoComplete="off" />

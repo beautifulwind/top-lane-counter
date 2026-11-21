@@ -8,6 +8,7 @@ import { ErrorBox, Loading } from '../../components/Status';
 import NoteForm from '../../components/NoteForm';
 import CopyButton from '../../components/CopyButton';
 import UserName from '../../components/UserName';
+import ProfilePhoto from '../../components/ProfilePhoto';
 import { RenameMember, RevokeInfluencer } from '../../components/InfluencerAdmin';
 import { SparklesIcon } from '../../components/Icons';
 import { useAuth } from '../../lib/auth';
@@ -113,11 +114,15 @@ function ApplicationRow({ app: a, onDone }) {
   const [mode, setMode] = useState(null); // 'approve' | 'reject'
   const [revert, setRevert] = useState(false);
   const [retryNow, setRetryNow] = useState(false);
+  const [noPhoto, setNoPhoto] = useState(false); // 064: 사진은 빼고 승인
   const [busy, setBusy] = useState(false);
   const [rowError, setRowError] = useState(null);
   const pending = a.status === 'pending';
   const kindLabel = a.kind_label ?? INFLUENCER_KINDS[a.kind] ?? a.kind;
   const staffOverlap = a.overlap && a.overlap.role !== 'user';
+  // 064 DB면 줄에 photo_path 칸이 있다 (값이 없으면 사진 없이 신청). 그 전 DB면 옛 승인
+  const photoAware = Object.prototype.hasOwnProperty.call(a, 'photo_path');
+  const photoPath = a.photo_path ?? null;
 
   const extend = async () => {
     setBusy(true);
@@ -163,6 +168,8 @@ function ApplicationRow({ app: a, onDone }) {
       {a.direct ? <p className="hint">운영자가 신청·확인 절차 없이 직접 지정했습니다.</p>
         : byEmail(a.kind) ? <EmailCheck app={a} /> : <FriendCheck app={a} />}
 
+      {pending && photoAware && <PhotoCheck nickname={a.nickname} path={photoPath} />}
+
       {!pending && (
         <p className="hint">
           {STATUS_LABEL[a.status] ?? a.status}
@@ -188,12 +195,19 @@ function ApplicationRow({ app: a, onDone }) {
           id={`approve-influencer-${a.id}`}
           label={`승인 메모 (필수, 기록용 — 예: ${byEmail(a.kind) ? '이메일 회신 확인' : '친구 요청 확인, op.gg 그랜드마스터'})`}
           confirmLabel="승인 확정"
-          onCancel={() => setMode(null)}
+          onCancel={() => { setMode(null); setNoPhoto(false); }}
           onSubmit={async (note) => {
-            await approveInfluencer(a.id, note);
-            onDone(`"${a.nickname}" 님을 장인으로 승인했습니다.`);
+            await approveInfluencer(a.id, note, photoAware ? { path: photoPath, withPhoto: !!photoPath && !noPhoto } : undefined);
+            onDone(`"${a.nickname}" 님을 장인으로 승인했습니다.${photoPath && noPhoto ? ' 신청 사진은 등록하지 않았습니다.' : ''}`);
           }}
-        />
+        >
+          {photoAware && photoPath && (
+            <label className="check-row">
+              <input type="checkbox" checked={noPhoto} onChange={(e) => setNoPhoto(e.target.checked)} />
+              <span>사진은 빼고 승인 <small className="hint">신청 사진이 부적절할 때. 사진은 지워지고, 승인 알림 끝에 「프로필 사진은 운영 원칙에 따라 등록하지 않았습니다.」가 붙습니다.</small></span>
+            </label>
+          )}
+        </NoteForm>
       )}
       {mode === 'reject' && (
         <NoteForm
@@ -224,6 +238,23 @@ function ApplicationRow({ app: a, onDone }) {
         </div>
       )}
     </li>
+  );
+}
+
+/**
+ * 신청 프로필 사진 (064, 심사 중만). 운영자(운영자 모드)만 볼 수 있다 — Storage 규칙. 승인하면 이 사진이 장인 페이지에 공개되므로
+ * 음란·혐오·사칭·광고 사진이면 [사진은 빼고 승인] 또는 반려. 승인할 때 이 경로를 함께 보내서, 그 사이 신청자가 바꿨으면 DB가 거부한다.
+ */
+function PhotoCheck({ nickname, path }) {
+  return (
+    <div className="inf-check inf-check-photo" aria-label="신청 프로필 사진">
+      {path ? (
+        <>
+          <ProfilePhoto path={path} alt={`${nickname} 신청 프로필 사진`} className="inf-hero-photo" fallback={<span className="hint">사진을 불러오지 못했습니다.</span>} />
+          <p className="hint">신청 프로필 사진 — 승인하면 장인 페이지에 공개됩니다. 부적절하면 [사진은 빼고 승인]을 고르거나 반려합니다.</p>
+        </>
+      ) : <p className="hint">신청 프로필 사진: 없음</p>}
+    </div>
   );
 }
 
