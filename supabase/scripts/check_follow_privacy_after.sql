@@ -23,10 +23,12 @@ from (
     (select string_agg((p.prosrc not like '%followed_at%')::text, ' / ' order by p.proname) from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public' and p.proname in ('influencer_followers_unchecked', 'my_following_unchecked')),
     'true / true', '순서는 서버 안에서만 created_at으로'
-  union all select 5, '팔로워 목록에 차단 거르기 (user_blocks)',
-    (select (p.prosrc like '%public.user_blocks%')::text from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+  union all select 5, '팔로워 목록 차단 거르기 (user_blocks 읽음 / 장인 본인이 볼 때만 - 운영자는 전부)',
+    (select (p.prosrc like '%public.user_blocks%')::text || ' / '
+            || (p.prosrc like '%own constant boolean := p_user = (select auth.uid())%' and p.prosrc like '%(not own or not exists%')::text
+       from pg_proc p join pg_namespace n on n.oid = p.pronamespace
       where n.nspname = 'public' and p.proname = 'influencer_followers_unchecked'),
-    'true', null
+    'true / true', null
   union all select 6, '실행 권한 (로그인: 팔로워 목록·내 팔로우 / 비로그인: 둘 중 하나라도 / 안쪽 함수: 누구든)',
     (has_function_privilege('authenticated', 'public.influencer_followers(uuid,integer)', 'execute')
        and has_function_privilege('authenticated', 'public.my_following(integer)', 'execute'))::text
@@ -46,11 +48,11 @@ from (
   union all select 9, '차단 줄 수', (select count(*)::text from public.user_blocks), '(실행 전 7번과 같음)', null
   union all select 10, '장인 수 / 회원 수 (프로필)',
     (select count(*) filter (where influencer is not null) || ' / ' || count(*) from public.profiles), '(실행 전 8번과 같음)', null
-  union all select 11, '팔로워 목록에서 빠질 줄 수 (장인과 팔로워 사이에 차단이 있는 팔로우)',
+  union all select 11, '장인 본인의 팔로워 목록에서 빠질 줄 수 (장인과 팔로워 사이에 차단이 있는 팔로우)',
     (select count(*)::text from public.influencer_follows f
       where exists (select 1 from public.user_blocks b
                      where (b.blocker_id = f.follower_id and b.blocked_id = f.influencer_id)
                         or (b.blocker_id = f.influencer_id and b.blocked_id = f.follower_id))),
-    '(실행 전 9번과 같음)', '줄은 그대로, 목록에서만 빠진다'
+    '(실행 전 9번과 같음)', '줄은 그대로, 장인 본인이 보는 목록에서만 빠진다 (운영자에게는 보임)'
 ) rows
 order by ord;

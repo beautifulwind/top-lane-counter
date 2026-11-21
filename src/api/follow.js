@@ -47,7 +47,7 @@ export const getInfluencerBuilds = (id, page = 1) =>
 
 /**
  * 팔로워 목록 (063: 장인 본인·운영자만, 비회원 거부. 최근 순은 서버 안에서만, 20개씩).
- * 장인과 서로 차단 관계인 팔로워는 목록·total에서 빠진다. 팔로우한 날은 주지 않는다.
+ * 장인 본인이 볼 때는 장인과 차단 관계(어느 쪽이든)인 팔로워가 목록·total에서 빠진다. 운영자가 남의 목록을 보면 전부. 팔로우한 날은 주지 않는다.
  * { follower_count(= total), total, page, size, items: [{ id, nickname, influencer, nickname_state }] }
  */
 export const getFollowers = (id, page = 1) =>

@@ -239,9 +239,11 @@ function ProfileMenu({ auth, profile, onMode, onLogin, onDone }) {
   );
 }
 
-/** 팔로워 목록 (장인 본인·운영자만 — DB도 막는다). 닉네임과 장인 표시만(063: 팔로우한 날 없음). 최근 팔로우 순(DB가 정함), 20개씩 [더보기] */
+/**
+ * 팔로워 목록 (장인 본인·운영자만 — DB도 막는다). 닉네임과 장인 표시만(063: 팔로우한 날 없음). 최근 팔로우 순(DB가 정함), 20개씩 [더보기].
+ * 차단 관계(장인↔팔로워, 어느 쪽이든)는 장인 본인이 볼 때만 DB가 빼고 센다. 운영자가 남의 목록을 볼 때는 차단과 상관없이 전부.
+ */
 function Followers({ id, count }) {
-  const auth = useAuth();
   const [state, setState] = useState({ items: [], total: 0, page: 0, busy: true, error: null });
   const load = async (page) => {
     setState((s) => ({ ...s, busy: true, error: null }));
@@ -265,7 +267,7 @@ function Followers({ id, count }) {
       {state.page > 0 && state.items.length === 0 && <p className="empty">아직 팔로워가 없습니다.</p>}
       {state.items.length > 0 && (
         <ul className="follower-list">
-          {state.items.filter((f) => !isBlocked(auth, f.id)).map((f) => ( // 061: 내가 차단한 팔로워는 목록에서 뺀다 (063부터 DB도 빼고 센다)
+          {state.items.map((f) => ( // 차단 관계는 DB가 가른다 — 장인 본인에게는 빼고 세고, 운영자에게는 전부 (063)
             <li key={f.id}>
               {f.nickname ? <InfluencerName profile={f} linkTo={f.influencer ? f.id : null} /> : <span className="muted">{displayNickname(f, '닉네임을 정하지 않은 사용자')}</span>}
             </li>

@@ -1,4 +1,4 @@
-// 팔로우 목록 공개 범위 (063, SPEC 6-74): [팔로워 목록]은 내 페이지(정식 회원)·운영자에게만, 날짜 없음, 차단 관계는 목록·남은 수에서 빠짐,
+// 팔로우 목록 공개 범위 (063, SPEC 6-74): [팔로워 목록]은 내 페이지(정식 회원)·운영자에게만, 날짜 없음, 장인 본인에게는 차단 관계가 목록·남은 수에서 빠짐(운영자는 전부),
 // 팔로우한 장인 목록도 날짜 없음, 비회원은 팔로우한 장인 목록 대신 안내
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
@@ -84,14 +84,27 @@ test('내 페이지: 내가 차단한 팔로워·나를 차단한 팔로워는 �
   expect(within(box).queryByRole('button', { name: /더보기/ })).toBeNull();
 });
 
-test('운영자(모드 켜짐)는 남의 장인 페이지에서도 [팔로워 목록] — 모드를 끄면 없다', async () => {
-  setup(2);
+test('운영자(모드 켜짐)는 남의 장인 페이지에서도 [팔로워 목록] — 차단 관계와 상관없이 전부(날짜 없음), 모드를 끄면 없다', async () => {
+  setup(4);
+  TABLES.user_blocks.push(
+    { blocker_id: 'u-102', blocked_id: 'u-f4', created_at: '2026-11-20T00:00:00Z' }, // 장인이 차단
+    { blocker_id: 'u-f3', blocked_id: 'u-102', created_at: '2026-11-20T00:00:00Z' }, // 장인을 차단
+    { blocker_id: 'u-op', blocked_id: 'u-f2', created_at: '2026-11-20T00:00:00Z' }, // 운영자 자신이 차단
+  );
   fakeLogin('u-op', { nickname: '영자', role: 'admin' });
+  start('/u/u-102');
+  fireEvent.click(await screen.findByRole('button', { name: '팔로워 목록' }));
+  await waitFor(() => expect(followerNames()).toEqual(['팔로워04', '팔로워03', '팔로워02', '팔로워01']));
+  expect(screen.getByRole('heading', { name: '팔로워' }).closest('section').textContent).not.toMatch(/2026-11|팔로우/);
+  cleanup();
+  // 같은 데이터를 장인 본인이 보면 차단 관계(f3·f4)가 빠진다
+  owner();
   start('/u/u-102');
   fireEvent.click(await screen.findByRole('button', { name: '팔로워 목록' }));
   await waitFor(() => expect(followerNames()).toEqual(['팔로워02', '팔로워01']));
   cleanup();
   TABLES.profiles.find((p) => p.id === 'u-op').operator_mode = false;
+  fakeLogin('u-op', { nickname: '영자', role: 'admin' });
   start('/u/u-102');
   await screen.findByRole('heading', { name: '처음 만든 빌드' });
   expect(listButton()).toBeNull();

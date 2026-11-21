@@ -1652,12 +1652,13 @@ function followRpc(name, args) {
     return ok(Object.fromEntries([...new Set(args.p_users ?? [])].map((u) => [u, isInf(u) && TABLES.influencer_follows.some((f) => f.follower_id === meRow.id && f.influencer_id === u)])));
   }
   if (name === 'influencer_followers') {
-    // 063: 게스트 거부, 장인 본인·운영자(모드 켜짐)만, 장인과 서로 차단 관계인 팔로워는 빼고 센다, 날짜 없음
+    // 063: 게스트 거부, 장인 본인·운영자(모드 켜짐)만, 장인 본인이 볼 때만 장인과 차단 관계인 팔로워를 빼고 센다(운영자는 전부), 날짜 없음
     if (meRow.is_guest) return { data: null, error: { message: '비회원은 팔로워 목록을 볼 수 없습니다. 마이페이지에서 구글·카카오를 연결해 주세요.', code: '42501' } };
     if (args.p_user !== meRow.id && !isAdminNow()) return { data: null, error: { message: '팔로워 목록은 장인 본인만 볼 수 있습니다.', code: '42501' } };
     if (!isInf(args.p_user)) return { data: null, error: { message: '인증된 장인을 찾지 못했습니다.', code: 'P0002' } };
     const blockedPair = (a, b) => TABLES.user_blocks.some((r) => (r.blocker_id === a && r.blocked_id === b) || (r.blocker_id === b && r.blocked_id === a));
-    const all = TABLES.influencer_follows.filter((f) => f.influencer_id === args.p_user && !blockedPair(f.follower_id, args.p_user))
+    const own = args.p_user === meRow.id;
+    const all = TABLES.influencer_follows.filter((f) => f.influencer_id === args.p_user && !(own && blockedPair(f.follower_id, args.p_user)))
       .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
     const page = Math.max(1, args.p_page ?? 1);
     return ok(structuredClone({

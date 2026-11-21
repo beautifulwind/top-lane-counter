@@ -1,6 +1,7 @@
 -- 로컬 검사 전용 (supabase/tests/run.sh). 실제 Supabase SQL Editor에서 실행하지 말 것.
 -- 063: 팔로우 목록 공개 범위 - 팔로워 목록은 장인 본인·운영자(운영자 모드 켜짐)만, 게스트 거부, 남의 장인·감독관·운영자 모드 끈 운영자 거부,
---      장인과 팔로워 사이 차단(어느 쪽이든)은 목록·total에서 뺌(공개 팔로워 수는 그대로), 응답에 followed_at 없음(순서는 그대로),
+--      장인 본인이 볼 때만 장인과 팔로워 사이 차단(어느 쪽이든)을 목록·total에서 뺌(운영자는 전부, 공개 팔로워 수는 그대로),
+--      응답에 followed_at 없음(순서는 그대로),
 --      내 팔로우 목록은 나만·게스트 거부·followed_at 없음, 함수 모양·권한 그대로
 \set ON_ERROR_STOP 1
 \set QUIET 1
@@ -125,14 +126,31 @@ select t.ok('쪽 나누기: 팔로우 27줄 - 차단 3명(F2·F3·새 1명) = 24
   and position('00000000-0000-0000-0000-000000000301' in (a::text || b::text)) = 0
   and position(:'F2' in (a::text || b::text)) = 0 and position(:'F3' in (a::text || b::text)) = 0
   from (select influencer_followers(:'W') as a, influencer_followers(:'W', 2) as b) s));
-select influencer_followers(:'W') as wl, influencer_followers(:'W', 2) as wl2 \gset
 reset role;
 
 -- ===== 4. 운영자 =====
+-- 운영자도 F1을 차단해 둔다 (운영자 자신의 차단도 운영자의 열람에는 영향 없음)
+insert into user_blocks (blocker_id, blocked_id) values (:'OP', :'F1');
 set role authenticated;
 set request.jwt.claim.sub = :'OP';
-select t.ok('운영자: 남의 장인 목록 열람 - 장인 본인이 보는 것과 같음 (차단 거르기는 목록 주인 기준)', influencer_followers(:'W') = :'wl'::jsonb
-  and influencer_followers(:'W', 2) = :'wl2'::jsonb);
+select influencer_followers(:'W') as ol \gset
+select t.ok('운영자: 남의 장인 목록은 차단과 상관없이 전부 (27 = 팔로우 줄 전체, F2·F3·새 1명·운영자가 차단한 F1 포함)',
+  (:'ol'::jsonb ->> 'total')::int = 27 and (:'ol'::jsonb ->> 'follower_count')::int = 27
+  and position('00000000-0000-0000-0000-000000000301' in :'ol') > 0);  -- W가 차단한 새 1명도 1쪽에 보임 (F1·F2·F3은 2쪽 - 아래 검사)
+select t.ok('운영자: 순서 그대로 - 1쪽 맨 위는 새 20명 중 가장 최근(…301), 2쪽 7명 F1, F2, F3, F4, G, U, Z, 겹침 없음',
+  :'ol'::jsonb -> 'items' -> 0 ->> 'id' = '00000000-0000-0000-0000-000000000301'
+  and (select string_agg(i ->> 'id', ',' order by n) from jsonb_array_elements(influencer_followers(:'W', 2) -> 'items') with ordinality x(i, n))
+      = concat_ws(',', :'F1', :'F2', :'F3', :'F4', :'G', :'U', :'Z')
+  and (select count(distinct i ->> 'id') from (select jsonb_array_elements(:'ol'::jsonb -> 'items') i
+       union all select jsonb_array_elements(influencer_followers(:'W', 2) -> 'items')) s) = 27);
+select t.ok('운영자에게도 날짜 없음 (칸 id·nickname·influencer·nickname_state만)',
+  (select bool_and((select array_agg(k order by k) from jsonb_object_keys(i) k) = array['id', 'influencer', 'nickname', 'nickname_state'])
+     from jsonb_array_elements(:'ol'::jsonb -> 'items') i)
+  and position('followed_at' in :'ol') = 0 and position('created_at' in :'ol') = 0);
+set request.jwt.claim.sub = :'W';
+select t.ok('같은 때 장인 본인은 여전히 차단 관계를 뺀 24 (운영자의 F1 차단은 무관)', (influencer_followers(:'W') ->> 'total')::int = 24
+  and position(:'F1' in influencer_followers(:'W')::text) > 0);
+set request.jwt.claim.sub = :'OP';
 select t.fails('운영자: 장인 아닌 회원은 장인을 찾지 못함', format('select influencer_followers(%L)', :'V'), '인증된 장인을 찾지 못했습니다');
 reset role;
 update profiles set operator_mode = false where id = :'OP';
@@ -141,6 +159,15 @@ set request.jwt.claim.sub = :'OP';
 select t.fails('운영자 모드를 끄면 일반 회원과 같음 (거부)', format('select influencer_followers(%L)', :'W'), '장인 본인만');
 reset role;
 update profiles set operator_mode = true where id = :'OP';
+-- 운영자 자신이 장인이면 자기 목록은 장인 본인 규칙 (운영자가 차단한 F1 제외)
+update profiles set influencer = 'pro', influencer_at = now() where id = :'OP';
+insert into influencer_follows (follower_id, influencer_id, created_at) values (:'F1', :'OP', now() - interval '1 hour'), (:'F2', :'OP', now() - interval '2 hours');
+set role authenticated;
+set request.jwt.claim.sub = :'OP';
+select t.ok('운영자가 장인일 때 자기 목록: 자기가 차단한 F1은 빠짐 (F2만)', (select (j ->> 'total')::int = 1 and j -> 'items' -> 0 ->> 'id' = :'F2'
+  from (select influencer_followers(:'OP') as j) s));
+reset role;
+update profiles set influencer = null, influencer_at = null where id = :'OP';
 
 -- ===== 5. 내가 팔로우한 장인 =====
 set role authenticated;

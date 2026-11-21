@@ -38,11 +38,11 @@ from (
     (select count(*)::text from public.user_blocks), '(이 값을 적어 둠)', '063 뒤 같아야 함'
   union all select 8, '적어 둘 값: 장인 수 / 회원 수 (프로필)',
     (select count(*) filter (where influencer is not null) || ' / ' || count(*) from public.profiles), '(이 값을 적어 둠)', '063 뒤 같아야 함'
-  union all select 9, '적어 둘 값: 팔로워 목록에서 빠질 줄 수 (장인과 팔로워 사이에 차단이 있는 팔로우)',
+  union all select 9, '적어 둘 값: 장인 본인의 팔로워 목록에서 빠질 줄 수 (장인과 팔로워 사이에 차단이 있는 팔로우)',
     (select count(*)::text from public.influencer_follows f
       where exists (select 1 from public.user_blocks b
                      where (b.blocker_id = f.follower_id and b.blocked_id = f.influencer_id)
                         or (b.blocker_id = f.influencer_id and b.blocked_id = f.follower_id))),
-    '(이 값을 적어 둠)', '063 뒤에도 같은 수 (줄은 지우지 않고 목록에서만 뺀다)'
+    '(이 값을 적어 둠)', '063 뒤에도 같은 수 (줄은 지우지 않고 장인 본인이 보는 목록에서만 뺀다)'
 ) rows
 order by ord;
