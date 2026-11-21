@@ -26,6 +26,10 @@ a:hover { text-decoration: underline; }
 input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]), textarea, select {
   background: var(--field); color: var(--text); font-family: inherit;
 }
+/* iOS 사파리·앱은 글자가 16px보다 작은 입력칸에 포커스하면 화면을 확대하고 되돌리지 않는다 → 모든 글자 입력칸을 16px(--fs-md) 이상으로 고정 (칸별 규칙이 빠져도 안전하게, 확대 자체를 막는 viewport 설정은 쓰지 않음) */
+input:not([type="checkbox"]):not([type="radio"]):not([type="file"]):not([type="range"]):not([type="color"]), textarea, select {
+  font-size: max(var(--fs-md), 16px);
+}
 ::placeholder { color: var(--muted); opacity: 1; }
 :is(a, button, input, textarea, select, summary, [tabindex]):focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 :is(input, textarea, select):focus-visible { outline-offset: 0; border-color: var(--brand); }

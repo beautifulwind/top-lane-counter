@@ -1568,3 +1568,11 @@ RLS 원칙:
 - **DB (062)**: 7장 표·버킷·함수. 되돌리기는 파일 맨 위(사진 연결·신고 기록은 지워지고, 버킷·파일은 대시보드에서 직접 삭제). 확인 SQL `check_profile_photo_before.sql`·`check_profile_photo_after.sql`. 테스트 데이터 비우기 스크립트도 사진 신고·바꾼 기록을 비운다(사진은 장인 표시와 함께 비워져 다음 정리 때 파일 삭제).
 - **Edge Function**: `media-cleanup` — 두 버킷(`board-media`, `profile-photos`)을 차례로 정리, 한 버킷이 실패해도 다른 버킷은 계속. `web-push` — `profile_photo_removed`(제목 "프로필 사진", 주소 /me), 사진 신고 알림 주소. **둘 다 다시 배포 필요**.
 - **검사**: DB `supabase/tests/profile_photo_test.sql`(버킷·표·권한, 올리기 규칙 — 장인만·내 폴더·파일 수·하루 횟수, 정하기 검사 — 모양·남의 파일·형식·크기, 보기 규칙 — 지금 사진만, 지우기 규칙 — 지금 사진은 못 지움, 신고 — 비로그인·비회원·내 사진·중복·기타 내용, 운영자 알림 1번만, 감독관·회원 거부, 기각·삭제·알림·처리 기록, 사진이 바뀌면 신고 닫힘, 차단과 무관, 인증 해제·탈퇴 정리, 정리 목록). 화면 `src/test/profilePhoto.test.jsx`(장인만 버튼, 062 전 DB, 올리기·바꾸기·옛 파일 지우기·실패 시 정리·형식·크기·삭제, 공개 프로필 보기·신고·로그인 전·비회원·내 페이지·차단·운영자 삭제, 운영자 신고 탭·기각, 감독관 탭 없음, 알림 주소(화면·푸시), 가운데 정사각형 자르기). Supabase 흉내 `supabase/tests/supabase_stub.sql`에 Storage 지우기 권한. 기존 검사 2개 기대값 수정: `influencer_links_test.sql`(공개 프로필 칸에 `photo_path`), `withdraw_test.sql`(프로필 삭제 트리거 목록에 `profiles_photo_on_delete`).
+
+
+### 6-72. 장인찾기 등 입력칸을 누르면 화면이 확대되던 문제 수정 (2026-11-21, 웹 화면 CSS만, DB·iOS·Android 설정 변경 없음)
+- **증상**: 모바일·앱에서 ☰ 메뉴 [장인찾기]를 누르면(검색 칸에 자동으로 커서가 들어감) 화면이 확대되고 줄어들지 않았다.
+- **원인**: 장인찾기 검색 칸(`.inf-search-input`, `type="search"`)에 글자 크기 규칙이 없어 브라우저 기본값(약 13px)이었다. iOS는 16px보다 작은 입력칸에 커서가 들어가면 화면을 자동 확대하고 되돌리지 않는다. 칸별 규칙이 없던 다른 입력칸(운영자 회원 검색, 복사 칸, 도메인 추가 등)도 같은 위험이 있었다. viewport 메타(`width=device-width, initial-scale=1, viewport-fit=cover`)와 가로 스크롤·transform·zoom 요소는 원인이 아니었다.
+- **수정**: `src/index.css` 공통 규칙에 체크·라디오·파일·range·color를 뺀 모든 `input`·`textarea`·`select`의 `font-size: max(var(--fs-md), 16px)` 추가(`tokens.css` `--fs-md` = 16px). 칸마다 따로 쓰던 규칙은 그대로(이미 모두 `--fs-md`). **확대를 막는 `user-scalable=no`·`maximum-scale`은 쓰지 않았다** — 저시력 사용자가 직접 확대할 수 있어야 하는 접근성 때문.
+- **확인 화면**: ☰ → 장인찾기, 홈 검색, 게시판 검색·글쓰기·댓글, 마이페이지 계정 설정(닉네임·탈퇴), 문의하기, 운영자 회원 검색.
+- **검사**: `src/test/inputZoom.test.js`(공통 16px 규칙, 입력칸 규칙에 16px 미만 없음, viewport에 확대 금지 없음).
