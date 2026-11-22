@@ -1353,9 +1353,28 @@ a.inf-link:hover .user-nick, a.inf-link:focus-visible .user-nick { text-decorati
 .store-links-sm .store-pill-icon { width: 30px; padding: 0; }
 .store-links-sm .store-links-soon { text-align: center; }
 
-/* 첫 화면 "등록된 빌드 수" (SPEC 6-78) */
-.build-count { margin: calc(-1 * var(--gap-sm)) 0 var(--gap-lg); font-size: var(--fs-sm); color: var(--muted); }
-.build-count strong { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
+/* 첫 화면 "등록된 빌드 수" 알약 배지 — 제목 오른쪽 옆, 못 들어가면 제목 아래 줄 (SPEC 6-78) */
+.home-title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-bottom: 6px; }
+.home-title-row .doc-title { margin: 0; }
+.build-count { margin: 0; max-width: 100%; }
+.build-count-visual {
+  display: inline-flex; align-items: center; gap: 8px; max-width: 100%; box-sizing: border-box;
+  padding: 6px 18px; border: 3px solid var(--brand); border-radius: 999px; background: var(--brand-tint);
+  font-size: 15px; line-height: 1.2; color: var(--text); white-space: nowrap;
+}
+.build-count-dot { flex: none; width: 9px; height: 9px; border-radius: 50%; background: var(--brand); animation: build-count-blink 1.4s ease-in-out infinite; }
+.build-count-num { color: var(--brand); font-size: 24px; font-weight: 700; font-variant-numeric: tabular-nums; }
+@keyframes build-count-blink { 50% { opacity: .25; } }
+/* 폰(약 390px): 제목 옆 한 줄에 들어가도록 여백을 조금 줄인다 */
+@media (max-width: 420px) {
+  .build-count-visual { padding: 6px 14px; gap: 6px; }
+}
+/* 아주 좁은 폰(320px 근처): 글자·여백을 줄여 한 줄에 */
+@media (max-width: 360px) {
+  .build-count-visual { padding: 4px 12px; gap: 6px; font-size: 13px; }
+  .build-count-num { font-size: 20px; }
+}
+@media (prefers-reduced-motion: reduce) { .build-count-dot { animation: none; } }
 
 /* 앱 푸터의 작은 단색 인스타그램 링크 (SPEC 6-78) — 글씨는 작게, 눌리는 영역은 44px 이상 */
 .store-links-native { margin-bottom: 0; }

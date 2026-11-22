@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { getChampions } from '../api/ddragon';
 import { getPublicBuildCount } from '../api/buildCount';
 import { champMatch, tokenize } from '../lib/championSearch';
+import BuildCountBadge from '../components/BuildCountBadge';
 import BuildSearch from '../components/BuildSearch';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
@@ -29,12 +30,11 @@ export default function Home() {
 
   return (
     <>
-      <h1 className="doc-title">챔피언 선택</h1>
+      <div className="home-title-row">
+        <h1 className="doc-title">챔피언 선택</h1>
+        {buildCount > 0 && <BuildCountBadge count={buildCount} />}
+      </div>
       <p className="lead">라인에서 만난 상대를 고르면, 그 챔피언을 이기는 상대법과 공략을 볼 수 있습니다.</p>
-
-      {buildCount > 0 && (
-        <p className="build-count">지금까지 <strong>{buildCount.toLocaleString('ko-KR')}개</strong>의 빌드가 등록되었습니다.</p>
-      )}
 
       <BuildSearch champions={champions ?? []} value={query} onChange={setQuery} />
 
