@@ -1078,9 +1078,47 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
 }
 .build-tab.on { border-color: var(--brand); background: var(--soft); color: var(--brand-dark); }
 .build-tab-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.build-tab-ups { display: inline-flex; align-items: center; gap: 2px; color: var(--muted); font-size: var(--fs-sm); }
+.build-tab-ups { flex: none; white-space: nowrap; display: inline-flex; align-items: center; gap: 2px; color: var(--muted); font-size: var(--fs-sm); }
 .build-tab.on .build-tab-ups { color: inherit; }
 .new-build { flex: none; }
+.build-more { flex: none; padding: 0 10px; }
+/* 좁은 폰(420px 이하, Matchup.jsx NARROW와 같은 값): [+ 새 빌드] 옆에 탭이 다 안 들어가면 탭 줄을 한 줄 전체로 쓰고
+   [더보기]·[+ 새 빌드]는 아랫줄 오른쪽으로 (탭이 너무 좁아지지 않게). 클래스는 화면이 재서 붙인다 */
+@media (max-width: 420px) {
+  .build-tabs-row.wrap { flex-wrap: wrap; justify-content: flex-end; }
+  .build-tabs-row.wrap .build-tabs { flex-basis: 100%; }
+}
+
+/* 빌드 [더보기] 창 (6-77): 제목·[닫기]는 고정, 목록만 스크롤. PC는 가운데, 폰(600px 이하)은 바닥에서 올라온다 */
+.dialog-panel.build-picker { display: flex; flex-direction: column; max-height: min(60vh, 560px); overflow: hidden; }
+.build-picker-list {
+  flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+  list-style: none; margin: 0; padding: 2px;
+}
+.build-picker-list li + li { margin-top: 6px; }
+.build-pick {
+  display: flex; align-items: center; gap: 8px; width: 100%; min-height: var(--tap-min); padding: 8px 12px; text-align: left;
+  border: 1px solid var(--line-hover); border-radius: var(--radius); background: var(--raised); color: var(--text);
+  font: inherit; font-weight: 700; cursor: pointer; position: relative;
+}
+.build-pick.on { border-color: var(--brand); background: var(--soft); color: var(--brand-dark); }
+.build-pick.on .build-tab-ups { color: inherit; }
+.build-pick-check { flex: none; width: 1em; text-align: center; }
+.build-pick-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.build-pick .build-tab-ups { flex: none; }
+.build-picker-actions { flex: none; margin-top: var(--gap-sm); }
+@media (hover: hover) { .build-pick:hover:not(.on) { border-color: var(--text); } }
+@media (max-width: 600px) {
+  .dialog-backdrop.sheet {
+    align-items: flex-end;
+    padding: calc(var(--gutter) + env(safe-area-inset-top)) 0 0;
+  }
+  .dialog-backdrop.sheet .build-picker {
+    max-width: none; max-height: 70vh; border-bottom: 0; border-radius: var(--radius) var(--radius) 0 0;
+    padding-bottom: calc(var(--pad-card) + env(safe-area-inset-bottom));
+    padding-left: calc(var(--pad-card) + env(safe-area-inset-left)); padding-right: calc(var(--pad-card) + env(safe-area-inset-right));
+  }
+}
 .build-panel { margin-top: var(--gap-md); }
 .build-name { margin: 0; font-size: var(--fs-xl); }
 

@@ -38,6 +38,13 @@ test('장인 빌드가 추천 수가 낮아도 요약으로 올라오고 칩이 
   expect(chip()).toHaveLength(1);
 });
 
+test('장인 빌드에 한 줄 요약이 비어 있어도 칩이 붙는다 (요약은 문서 요약으로, 6-77)', async () => {
+  const row = await show([fakeBuild(101, plain, { up_count: 9, summary: '일반 요약' }), fakeBuild(102, PRO, { up_count: 1, summary: null })]);
+  expect(row.textContent).not.toContain('일반 요약');
+  expect(chip()).toHaveLength(1);
+  expect(row.getAttribute('href')).toBe('/champion/Darius/counter/Quinn?build=102');
+});
+
 test('장인 빌드가 여럿이면 추천 수 가장 많은 것, 동점이면 기존 정렬(점수→최신)', async () => {
   let row = await show([fakeBuild(101, PRO, { up_count: 2, summary: '장인 둘' }), fakeBuild(102, PRO2, { up_count: 5, summary: '장인 다섯' })]);
   expect(row.textContent).toContain('장인 다섯');

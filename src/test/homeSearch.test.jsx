@@ -91,6 +91,8 @@ test('빌드 제목: 단어 순서가 바뀌어도, 초성이 섞여도 빌드�
   const o = await opt(/빛망 감전 견제/);
   expect(o).toHaveAttribute('href', '/champion/Darius/counter/Quinn?build=110');
   expect(o).toHaveTextContent('장인 빌드');
+  expect(o.querySelector('strong').textContent).toBe('장인 빌드 빛망 감전 견제'); // 6-77: 상대법 탭과 같은 BuildTitle
+  expect(o.querySelector('.inf-build-tag').textContent).toBe('장인 빌드');
   expect(o).toHaveTextContent('퀸으로 다리우스');
   fireEvent.change(await box(), { target: { value: 'ㅂㅁ 퀸' } });
   expect(await opt(/빛망 감전 견제/)).toBeDefined();

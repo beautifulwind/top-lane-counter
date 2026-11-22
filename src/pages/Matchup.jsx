@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../api/ddragon';
 import { getMatchup } from '../api/content';
@@ -23,6 +23,7 @@ import { matchupTitle } from '../lib/josa';
 import { patchMinor } from '../lib/buildContent';
 import { buildTitleText } from '../lib/wikiBuild';
 import BuildTitle from '../components/BuildTitle';
+import BuildPicker from '../components/BuildPicker';
 import BuildLinkBox from '../components/BuildLinkBox';
 import LinkActions from '../components/LinkActions';
 import VideoLink from '../components/VideoLink';
@@ -266,18 +267,70 @@ export default function Matchup() {
   );
 }
 
+/** 좁은 폰: [+ 새 빌드] 옆에 탭이 안 들어가면 탭 줄을 한 줄 전체로 쓰고 버튼은 아랫줄로 (index.css와 같은 420px) */
+const NARROW = '(max-width: 420px)';
+
+/**
+ * 빌드 탭 줄 모양 (6-77): { wrap: 탭 줄을 한 줄 전체로, more: [더보기]를 보일까 }.
+ * 탭 줄의 지금 폭이 아니라 "탭 전체 길이"를 줄 폭과 비교한다 → 줄을 바꿔 탭 칸이 넓어져도 결과가 그대로라 버튼이 나왔다 사라졌다 하지 않는다.
+ * - PC·넓은 폰: [+ 새 빌드] 옆 자리에 다 안 들어가면 [더보기]
+ * - 좁은 폰: [+ 새 빌드] 옆에 안 들어가면 줄을 바꾸고, 한 줄 전체로도 안 들어갈 때만 [더보기]
+ * - 빌드가 하나면 고를 것이 없어 [더보기]도 없다
+ */
+function tabsLayout(row, tabs) {
+  const kids = [...tabs.children];
+  if (kids.length < 2) return { wrap: false, more: false };
+  const gap = parseFloat(getComputedStyle(tabs).columnGap) || 0;
+  const content = kids.reduce((sum, k) => sum + k.offsetWidth, 0) + gap * (kids.length - 1) + 4; // 4 = 탭 줄 좌우 여백
+  const newBtn = row.querySelector('.new-build');
+  const rowGap = parseFloat(getComputedStyle(row).columnGap) || 0;
+  const beside = content > row.clientWidth - (newBtn ? newBtn.offsetWidth + rowGap : 0) + 1;
+  const narrow = !!window.matchMedia?.(NARROW).matches;
+  if (!narrow) return { wrap: false, more: beside };
+  return { wrap: beside, more: content > row.clientWidth + 1 };
+}
+
 /**
  * 빌드 탭: 가로로 넘긴다 (폰). 이름(없으면 "빌드 N", 장인 빌드면 앞에 "장인 빌드") + 추천 수. ←→·Home·End로 옮기면 바로 그 빌드가 보인다.
+ * 6-77: 탭이 화면 폭을 넘치면 [더보기]가 나타나고, 누르면 빌드 전부를 담은 창(BuildPicker)에서 고른다.
+ * 넘치는지는 개수가 아니라 실제 폭으로 잰다 (tabsLayout) — 넓은 PC에서 다 보이면 버튼이 없다.
  */
 function BuildTabs({ builds, selected, onSelect, newTo }) {
   const refs = useRef({});
   const moved = useRef(false);
+  const list = useRef(null);
+  const moreBtn = useRef(null);
+  const [layout, setLayout] = useState({ wrap: false, more: false });
+  const [picking, setPicking] = useState(false);
   useEffect(() => {
     const el = refs.current[selected.id];
     el?.scrollIntoView?.({ block: 'nearest', inline: 'nearest' });
     if (moved.current) el?.focus();
     moved.current = false;
   }, [selected.id]);
+
+  // 탭 줄이 넘치는지: 처음·빌드가 바뀔 때·창 크기나 줄 폭이 바뀔 때·글꼴을 다 받은 뒤 다시 잰다
+  useLayoutEffect(() => {
+    const el = list.current;
+    const row = el?.parentElement;
+    if (!el || !row) return undefined;
+    let alive = true;
+    const check = () => {
+      if (!alive) return;
+      const next = tabsLayout(row, el);
+      setLayout((prev) => (prev.wrap === next.wrap && prev.more === next.more ? prev : next));
+    };
+    check();
+    const ro = typeof ResizeObserver === 'function' ? new ResizeObserver(check) : null;
+    ro?.observe(row);
+    window.addEventListener('resize', check);
+    document.fonts?.ready?.then(check).catch(() => {});
+    return () => {
+      alive = false;
+      ro?.disconnect();
+      window.removeEventListener('resize', check);
+    };
+  }, [builds]);
 
   const onKeyDown = (e) => {
     const at = builds.findIndex((b) => b.id === selected.id);
@@ -290,9 +343,24 @@ function BuildTabs({ builds, selected, onSelect, newTo }) {
     else onSelect(next.id);
   };
 
+  // 창에서 고르면: 그 빌드로 바꾸고 그 탭으로 초점 (탭 줄은 위 효과가 그 탭까지 스크롤)
+  const pick = (id) => {
+    setPicking(false);
+    if (id === selected.id) refs.current[id]?.focus();
+    else {
+      moved.current = true;
+      onSelect(id);
+    }
+  };
+  // 고르지 않고 닫으면 [더보기]로 초점
+  const close = () => {
+    setPicking(false);
+    moreBtn.current?.focus();
+  };
+
   return (
-    <div className="build-tabs-row">
-      <div className="build-tabs" role="tablist" aria-label="빌드 고르기" onKeyDown={onKeyDown}>
+    <div className={layout.wrap ? 'build-tabs-row wrap' : 'build-tabs-row'}>
+      <div ref={list} className="build-tabs" role="tablist" aria-label="빌드 고르기" onKeyDown={onKeyDown}>
         {builds.map((b, i) => {
           const on = b.id === selected.id;
           return (
@@ -316,7 +384,20 @@ function BuildTabs({ builds, selected, onSelect, newTo }) {
           );
         })}
       </div>
+      {layout.more && (
+        <button
+          ref={moreBtn}
+          type="button"
+          className="btn btn-small build-more"
+          aria-haspopup="dialog"
+          aria-expanded={picking}
+          onClick={() => setPicking(true)}
+        >
+          더보기<span className="sr-only"> (빌드 {builds.length}개 전체에서 고르기)</span>
+        </button>
+      )}
       <Link to={newTo} className="btn btn-small new-build">+ 새 빌드</Link>
+      {picking && <BuildPicker builds={builds} selectedId={selected.id} onPick={pick} onClose={close} />}
     </div>
   );
 }

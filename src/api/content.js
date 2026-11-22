@@ -43,8 +43,9 @@ export async function getCountersFor(targetId) {
 /** 카운터 한 줄의 요약·맨 앞 빌드 (blocked = 내가 차단한 사람 — 그 사람의 빌드는 건너뛴다) */
 export function withTopBuild(c, blocked = null) {
   const top = topBuild(c.builds, blocked);
-  // topBuildId: 챔피언 화면 링크가 ?build=로 이 빌드를 먼저 보여 준다 / topInfluencer: 요약으로 올라온 빌드가 장인 빌드일 때만 (챔피언 화면의 "장인 빌드" 칩)
-  return { ...c, summary: top?.summary || c.docSummary || '', topBuildId: top?.id ?? null, topInfluencer: !!top?.summary && !!one(top.author)?.influencer };
+  // topBuildId: 챔피언 화면 링크가 ?build=로 이 빌드를 먼저 보여 준다 / topInfluencer: 맨 앞 빌드가 장인 빌드면 (챔피언 화면의 "장인 빌드" 칩)
+  // 6-77: 그 빌드의 요약이 비어 있어도 칩을 붙인다 (상대법 화면 빌드 탭과 같은 조건 — 작성자가 지금 장인인가)
+  return { ...c, summary: top?.summary || c.docSummary || '', topBuildId: top?.id ?? null, topInfluencer: !!one(top?.author)?.influencer };
 }
 
 /** 매치업 문서 (없으면 null) */
