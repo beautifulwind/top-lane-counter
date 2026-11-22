@@ -60,7 +60,7 @@ test('운영자: 문서 댓글도 ⋮ [운영진 삭제] → staff_delete_doc_co
   TABLES.doc_comments.push(fakeDocComment(1, { author_id: 'u-x', author: OTHER, body: '욕설 문서 댓글' }));
   asOp();
   start('/champion/Darius/counter/Quinn');
-  const sec = (await screen.findByRole('heading', { name: /4\. 댓글/ })).closest('section');
+  const sec = (await screen.findByRole('heading', { name: /^댓글$/ })).closest('section');
   pickMore(within(sec), '운영진 삭제', '댓글 더보기');
   fireEvent.change(within(sec).getByLabelText('삭제 사유 (필수, 작성자에게 보입니다)'), { target: { value: '욕설' } });
   fireEvent.click(within(sec).getByRole('button', { name: '삭제 확정' }));

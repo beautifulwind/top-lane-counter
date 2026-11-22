@@ -25,7 +25,7 @@ const MATCHUP = '/champion/Darius/counter/Quinn';
 const asOp = () => fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
 const rpcs = (name) => fakeState.rpcCalls.filter((c) => c.name === name).map((c) => c.args);
 const ago = (min) => new Date(Date.now() - min * 60_000).toISOString();
-const section = async () => (await screen.findByRole('heading', { name: /4\. 댓글/ })).closest('section');
+const section = async () => (await screen.findByRole('heading', { name: /^댓글$/ })).closest('section');
 
 test('고치기 시간 계산: 글 60분, 댓글 10분, 유예를 받았으면 그때까지', () => {
   const rules = { post: 60, comment: 10, grace: 5 };
@@ -40,11 +40,12 @@ test('고치기 시간 계산: 글 60분, 댓글 10분, 유예를 받았으면 �
   expect(canEditNow('doc_comment', graced, rules, t0 + 15 * 60_000)).toBe(false);
 });
 
-test('비로그인: 매치업 문서 "4. 댓글" — 목차, 댓글 보임, 로그인 안내', async () => {
+test('비로그인: 매치업 문서 "댓글"(번호 없음, 6-83) — 목차, 댓글 보임, 로그인 안내', async () => {
   TABLES.doc_comments.push(fakeDocComment(1, { author_id: 'u-x', author: OTHER, body: '퀸 꿀팁' }));
   start(MATCHUP);
   const sec = await section();
-  expect(within(sec).getByRole('heading').textContent).toBe('4. 댓글');
+  expect(within(sec).getByRole('heading').textContent.trim()).toBe('댓글');
+  expect(sec.querySelector('.section-title .num')).toBeNull(); // 앞의 "4." 없음
   expect(sec.querySelector('.count-badge').textContent).toBe('1개');
   expect(within(sec).getByText('퀸 꿀팁')).toBeDefined();
   expect(within(sec).getByText(/하면 댓글을 달 수 있습니다/)).toBeDefined();

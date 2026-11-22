@@ -46,10 +46,10 @@ test('상대법 화면 순서: 빌드 탭 → (고른 빌드) 한 줄 요약 →
   await screen.findByRole('heading', { level: 1, name: '퀸으로 다리우스 이기는 법' });
   const toc = screen.getByRole('navigation', { name: '목차' });
   expect(within(toc).getAllByRole('link').map((a) => a.textContent)).toEqual(['빌드', '레벨별 딜교법', '특이사항', '댓글']);
-  await screen.findByRole('heading', { name: /4\. 댓글/ });
+  await screen.findByRole('heading', { name: /^댓글$/ });
   const heads = [...document.querySelectorAll('.section-title')].map((h) => h.textContent.replace(/\s+/g, ' ').trim());
   expect(heads.slice(0, 3)).toEqual(['1. 빌드', '2. 레벨별 딜교법', '3. 특이사항']);
-  expect(heads[3]).toMatch(/^4\. 댓글/);
+  expect(heads[3]).toBe("댓글"); // 6-83: 앞 번호 "4." 없음 (1~3은 그대로)
   const summary = document.querySelector('.doc-summary');
   expect(summary).not.toBeNull();
   const after = (a, b) => !!(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);

@@ -43,7 +43,7 @@ const day = (ts) => (ts ? String(ts).slice(0, 10) : null);
 /**
  * 상대법 화면 (038): 플레이할 챔피언 vs 상대 챔피언. 빌드(공략 한 벌)가 여러 개 → 가로로 넘기는 탭으로 고른다.
  * 처음에는 추천 → 점수 → 최신 순으로 맨 앞 빌드. ?build=빌드 id로 고른 빌드를 주소에 남긴다 (공유·뒤로 가기).
- * 댓글: 상대법 전체 댓글(4. 댓글) 하나 — 059부터 답글(2단계, 정식 회원만). 058의 빌드 댓글은 없앴다 (6-60).
+ * 댓글: 상대법 전체 댓글(제목 「댓글」, 번호 없음 — 6-83) 하나 — 059부터 답글(2단계, 정식 회원만). 058의 빌드 댓글은 없앴다 (6-60).
  */
 export default function Matchup() {
   const { targetId, counterId } = useParams();
@@ -269,7 +269,7 @@ export default function Matchup() {
         />
       )}
 
-      <DocComments counterRowId={data.matchup.counter.id} auth={auth} live num={4} preload={data.preload} />
+      <DocComments counterRowId={data.matchup.counter.id} auth={auth} live preload={data.preload} />
     </article>
   );
 }

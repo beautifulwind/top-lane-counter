@@ -120,7 +120,7 @@ test('글 보기: 글·댓글·내 추천을 한꺼번에 요청한다', async (
 
 // ---------------- 문서 댓글 답글 (059) ----------------
 
-const docSection = async () => (await screen.findByRole('heading', { name: /4\. 댓글/ })).closest('section');
+const docSection = async () => (await screen.findByRole('heading', { name: /^댓글$/ })).closest('section');
 
 test('문서 댓글에 [답글] → p_parent로 올리고 부모 밑에 보임, 답글에는 [답글]이 없다 / 빌드 카드 아래 빌드 댓글 칸은 없다', async () => {
   TABLES.doc_comments.push(fakeDocComment(21, { author_id: 'u-x', author: OTHER, body: '부모 문서 댓글' }));

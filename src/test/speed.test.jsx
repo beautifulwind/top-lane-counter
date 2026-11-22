@@ -48,7 +48,7 @@ test('상대법 화면: Data Dragon·편집자 수·링크·댓글·규칙이 �
   expect(screen.queryByRole('heading', { name: /1\. 빌드/ })).toBeNull(); // 아직 로딩 중 (Data Dragon을 기다린다)
   release();
   expect(await screen.findByRole('heading', { name: /1\. 빌드/ })).toBeDefined();
-  expect(await screen.findByRole('heading', { name: /4\. 댓글/ })).toBeDefined();
+  expect(await screen.findByRole('heading', { name: /^댓글$/ })).toBeDefined();
   // 댓글 칸은 미리 보낸 요청 결과를 쓴다 — 다시 읽지 않는다
   expect(asked('doc_comments')).toHaveLength(1);
   expect(asked('xp_rules')).toHaveLength(1);
@@ -193,7 +193,7 @@ test('로그인한 사용자: 인증이 정해질 때까지 로딩만 보이고,
   start(`${MATCHUP}?build=103`);
   expect(screen.getByRole('status').textContent).toBe('불러오는 중…'); // 비어 보이지 않고 같은 로딩 표시
   expect(asked('counters')).toHaveLength(0); // 인증 확인 전에는 시작하지 않는다
-  expect(await screen.findByRole('heading', { name: /4\. 댓글/ })).toBeDefined();
+  expect(await screen.findByRole('heading', { name: /^댓글$/ })).toBeDefined();
   await new Promise((r) => setTimeout(r, 100));
   for (const t of ['counters', 'builds', 'build_votes', 'build_editor_counts', 'build_links', 'doc_comments']) expect(asked(t)).toHaveLength(1);
   expect(screen.getByRole('tab', { selected: true }).textContent).toMatch(/빌드 3/); // ?build= 지정 그대로
@@ -202,7 +202,7 @@ test('로그인한 사용자: 인증이 정해질 때까지 로딩만 보이고,
 
 test('비로그인 사용자: 예전처럼 바로 한 번 불러온다', async () => {
   start(MATCHUP);
-  expect(await screen.findByRole('heading', { name: /4\. 댓글/ })).toBeDefined();
+  expect(await screen.findByRole('heading', { name: /^댓글$/ })).toBeDefined();
   await new Promise((r) => setTimeout(r, 100));
   for (const t of ['counters', 'builds', 'build_editor_counts', 'build_links', 'doc_comments']) expect(asked(t)).toHaveLength(1);
   expect(asked('build_votes')).toHaveLength(0);

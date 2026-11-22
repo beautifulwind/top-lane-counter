@@ -51,7 +51,7 @@ export function threadComments(comments) {
  * open: 새 댓글을 달 수 있나 (글·문서가 보이는 상태), closedHint: 못 달 때 안내 (없으면 안내 없이 폼만 숨김)
  * live: 글·문서가 보이는 상태인가 (아니면 고치기·신고·답글 숨김 — 숨긴 것은 운영진만 봄)
  * rules: 고치기 시간 { post, comment, grace }
- * num: 칸 제목 번호 (매치업 문서 4), 개수는 제목 옆 "N개" 알약. heading=false면 제목 없이
+ * num: 칸 제목 번호 (없으면 번호 없이 — 매치업 문서 댓글은 6-83부터 번호 없음), 개수는 제목 옆 "N개" 알약. heading=false면 제목 없이
  * idPrefix: 한 화면에 댓글 칸이 둘일 때 입력칸·줄 id가 겹치지 않게 ('comment' = 예전 id 그대로)
  * mediaRules: 사진 숫자 (ops.media일 때만 — 탑신병자 커뮤니티 댓글)
  */
