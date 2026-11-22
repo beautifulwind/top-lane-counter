@@ -7,7 +7,8 @@ import { patchMinor } from '../lib/buildContent';
 
 const day = (ts) => (ts ? String(ts).slice(0, 10) : '');
 
-function ChampIcon({ champ }) {
+/** 챔피언 동그라미 아이콘 (36px). 전체 빌드 목록(6-81)도 쓴다 */
+export function ChampIcon({ champ }) {
   if (!champ?.icon) return <span className="ico missing inf-champ" />;
   return <img className="ico inf-champ" src={champ.icon} alt="" width={36} height={36} loading="lazy" />;
 }

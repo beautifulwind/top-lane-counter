@@ -49,6 +49,17 @@ export const buildLabel = (b, index = 0) => b.name || `빌드 ${b.seq ?? index +
 /** 장인 빌드 (046): 처음 만든 분(작성자)이 지금 인증된 장인이면. 해제·탈퇴하면 author가 바뀌어 저절로 사라진다 */
 export const isInfluencerBuild = (b) => !!b?.author?.influencer;
 
+/**
+ * 전체 빌드 목록 정렬 (6-81): 장인 빌드가 먼저 → 그 안에서 추천(up_count) 많은 순 → 같으면 최신순.
+ * 일반 빌드도 같은 기준. (상대법 화면의 compareBuilds와 달리 "추천 − 비추천" 점수는 보지 않는다)
+ */
+export function compareAllBuilds(a, b) {
+  return Number(isInfluencerBuild(b)) - Number(isInfluencerBuild(a))
+    || (b.up ?? 0) - (a.up ?? 0)
+    || String(b.created_at ?? '').localeCompare(String(a.created_at ?? ''))
+    || b.id - a.id;
+}
+
 /** 글자로 쓰는 빌드 이름 (안내 문장·읽는 이름): 장인 빌드면 "장인 빌드 이름"(이름이 없으면 "장인 빌드") */
 export const buildTitleText = (b, index = 0) =>
   (isInfluencerBuild(b) ? (b.name ? `장인 빌드 ${b.name}` : '장인 빌드') : buildLabel(b, index));

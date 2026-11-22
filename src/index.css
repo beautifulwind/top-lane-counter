@@ -1357,6 +1357,17 @@ a.inf-link:hover .user-nick, a.inf-link:focus-visible .user-nick { text-decorati
 .home-title-row { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; margin-bottom: 6px; }
 .home-title-row .doc-title { margin: 0; }
 .build-count { margin: 0; max-width: 100%; }
+/* 6-81: 배지는 전체 빌드 목록(/builds)으로 가는 링크 — 모양은 그대로, 오른쪽 작은 ›, 눌리는 높이 44px 이상, 누름·초점 표시 */
+a.build-count {
+  display: inline-flex; align-items: center; min-height: 44px; border-radius: 999px; color: inherit; text-decoration: none;
+  -webkit-tap-highlight-color: transparent;
+}
+a.build-count:hover { text-decoration: none; }
+a.build-count:hover .build-count-visual, a.build-count:active .build-count-visual { background: var(--brand-tint-press); }
+a.build-count:active .build-count-visual { transform: scale(.97); }
+a.build-count:focus-visible { outline: none; }
+a.build-count:focus-visible .build-count-visual { outline: 3px solid var(--text); outline-offset: 2px; }
+.build-count-go { flex: none; margin-right: -6px; color: var(--brand); }
 .build-count-visual {
   display: inline-flex; align-items: center; gap: 8px; max-width: 100%; box-sizing: border-box;
   padding: 6px 18px; border: 3px solid var(--brand); border-radius: 999px; background: var(--brand-tint);
@@ -1374,7 +1385,7 @@ a.inf-link:hover .user-nick, a.inf-link:focus-visible .user-nick { text-decorati
   .build-count-visual { padding: 4px 12px; gap: 6px; font-size: 13px; }
   .build-count-num { font-size: 20px; }
 }
-@media (prefers-reduced-motion: reduce) { .build-count-dot { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .build-count-dot { animation: none; } a.build-count:active .build-count-visual { transform: none; } }
 
 /* 앱 푸터의 작은 단색 인스타그램 링크 (SPEC 6-78) — 글씨는 작게, 눌리는 영역은 44px 이상 */
 .store-links-native { margin-bottom: 0; }
@@ -1444,3 +1455,8 @@ a.inf-link:hover .user-nick, a.inf-link:focus-visible .user-nick { text-decorati
 .seq-progress { margin: 0; font-size: var(--fs-sm); font-weight: 700; color: var(--brand-dark); }
 .seq-panel .vote-notice { margin: 0; }
 .seq-mismatch { margin: 0; color: var(--text); }
+
+/* 전체 빌드 목록 /builds (SPEC 6-81) — 장인 빌드 카드 줄(inf-build-card)과 같은 모양 */
+.all-builds .all-build { min-height: 44px; }
+.all-build-meta { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.all-build-meta .skill-key { padding: 0 5px; font-size: var(--fs-xs); }

@@ -96,6 +96,7 @@ const InfluencerApply = lazyPage(() => import('./pages/InfluencerApply'));
 const MyLinks = lazyPage(() => import('./pages/MyLinks')); // 047 장인 링크 관리
 const PublicProfile = lazyPage(() => import('./pages/PublicProfile')); // 047 장인 공개 프로필
 const Following = lazyPage(() => import('./pages/Following')); // 050 팔로우 모아보기
+const AllBuilds = lazyPage(() => import('./pages/AllBuilds')); // 6-81 전체 빌드 목록 (첫 화면 빌드 수 배지)
 const Resubmit = lazyPage(() => import('./pages/Resubmit'));
 const ResubmitBuild = lazyPage(() => import('./pages/ResubmitBuild'));
 const Privacy = lazyPage(() => import('./pages/Privacy'));
@@ -164,6 +165,7 @@ export function AppRoutes() {
           <Route path="u/:id" element={<PublicProfile />} />
           <Route path="me/followers" element={<MyFollowers />} />
           <Route path="following" element={<Following />} />
+          <Route path="builds" element={<AllBuilds />} />
           <Route path="notifications" element={<Notifications />} />
           <Route path="inquiries" element={<Inquiries />} />
           <Route path="me/proposals/:id" element={<MyProposal />} />

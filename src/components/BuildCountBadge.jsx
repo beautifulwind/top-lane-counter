@@ -1,4 +1,6 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ChevronIcon } from './Icons';
 
 export const COUNT_UP_MS = 1200;
 
@@ -32,18 +34,20 @@ function useCountUp(target) {
 }
 
 /**
- * 제목 옆 "지금까지 N개의 빌드" 알약 배지 (SPEC 6-78).
- * 눈에 보이는 부분은 aria-hidden(올라가는 중간 숫자를 읽지 않게), 스크린리더에는 최종 숫자가 든 문장 하나만 준다(aria-live 아님).
+ * 제목 옆 "지금까지 N개의 빌드" 알약 배지 (SPEC 6-78). 6-81: 누르면 전체 빌드 목록(/builds) — 링크, 오른쪽 작은 › 화살표.
+ * 눈에 보이는 부분은 aria-hidden(올라가는 중간 숫자를 읽지 않게), 스크린리더에는 최종 숫자 문장 + "전체 빌드 목록 보기"만 준다(aria-live 아님).
  */
 export default function BuildCountBadge({ count }) {
   const shown = useCountUp(count);
   return (
-    <p className="build-count">
+    <Link to="/builds" className="build-count">
       <span className="sr-only">{`지금까지 ${fmt(count)}개의 빌드가 등록되었습니다.`}</span>
+      <span className="sr-only"> 전체 빌드 목록 보기</span>
       <span className="build-count-visual" aria-hidden="true">
         <span className="build-count-dot" />
         <span className="build-count-text">지금까지 <strong className="build-count-num">{fmt(shown)}</strong>개의 빌드</span>
+        <ChevronIcon size={16} className="build-count-go" />
       </span>
-    </p>
+    </Link>
   );
 }

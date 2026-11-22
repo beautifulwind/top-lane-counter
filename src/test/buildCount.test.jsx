@@ -4,7 +4,7 @@ import { act, cleanup, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { AppRoutes } from '../App';
 import { resetCountUp } from '../components/BuildCountBadge';
-import { BUILD_COUNT_TTL_MS, invalidateBuildCount } from '../api/buildCount';
+import { BUILD_COUNT_TTL_MS, COUNT_SELECT, invalidateBuildCount } from '../api/buildCount';
 import { fakeFetch } from './fakeDdragon';
 import { TABLES, fakeBuild, fakeLogin, fakeState } from './fakeSupabase';
 
@@ -18,7 +18,7 @@ beforeEach(() => {
 afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers(); });
 
 const start = () => render(<MemoryRouter initialEntries={['/']}><AppRoutes /></MemoryRouter>);
-const asked = () => fakeState.queryLog.filter((q) => q.table === 'builds' && q.select === 'id').length;
+const asked = () => fakeState.queryLog.filter((q) => q.table === 'builds' && q.select === COUNT_SELECT).length;
 const notice = () => document.querySelector('.build-count');
 const spoken = () => notice()?.querySelector('.sr-only')?.textContent;
 const visible = () => notice()?.querySelector('.build-count-visual');

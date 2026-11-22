@@ -45,6 +45,7 @@
   --soft-line: rgba(254, 154, 0, .4);  /* 주황 태그·강조 칸 테두리 */
   --brand-ring: rgba(255, 185, 0, .5); /* 1위 순위 둘레 */
   --brand-tint: rgba(254, 154, 0, .16); /* 주황 16% 배경 (등록된 빌드 수 배지, 6-78) */
+  --brand-tint-press: rgba(254, 154, 0, .30); /* 주황 30% — 빌드 수 배지를 누르거나 마우스를 올렸을 때 (6-81) */
   --brand-gradient: linear-gradient(to top right, #e17100, #ffb900); /* 상단 로고 */
 
   /* 상단 막대 (반투명 + 뒤 흐림) */
