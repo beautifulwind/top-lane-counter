@@ -451,6 +451,7 @@
   | `inquiry_received` (운영진만, 033) | 말풍선 | DB 문장 (「새 문의가 들어왔습니다. (분류: 오류 신고)」) | — | `/admin/inquiries` |
   | `level_up` · `level_down` | 오르는 선 | DB 문장 | — | `/me` |
   | `title_earned` · `title_revoked` | 그 칭호 색 훈장 | DB 문장 | — | `/me` |
+  | `build_edited` (067, 6-84) | 빌드(겹친 층) | DB 문장의 「빌드를」 → 「빌드(가렌 vs 다리우스)를」 (예: 「고침이님이 회원님의 빌드(가렌 vs 다리우스)를 수정했습니다 (2번 수정)」) | — | 운영자 몫 `/admin/builds/:id/history` · 작성자·기여자 몫 그 빌드의 상대법 화면(`?build=`) |
   제안·빌드 알림은 DB에 메모만 저장돼 있어 제목은 화면이 만든다. 매치업 이름은 알림을 읽을 때 제안·빌드·카운터·글을 같이 읽어 만든다(RLS로 내 것만).
 - **읽음 처리**: 화면을 열면 그 화면 맨 위 알림 번호까지 내 안 읽은 알림을 **한 번에** 읽음(`mark_all_notifications_read(p_upto)`, 처리 시각을 돌려줌). 안 읽은 게 없으면 부르지 않는다. **"새" 표시**(왼쪽 주황 막대 + 진한 글자 + "새" 태그)는 그 방문 동안 남는다 — 안 읽었던 것과 이번에 읽음 처리된 것([더 보기]로 불러온 아래 알림 포함).
 - **더 보기**: 20개씩, 지금 맨 아래 알림 번호보다 작은 것을 이어서 (`(user_id, id desc)` 색인).
@@ -571,6 +572,7 @@
   |---|---|---|---|
   | 운영진 알림 `staff_new` | 운영자·감독관 | `proposal_submitted`(새 제안·재검토 뒤 다시 낸 제안) · `build_submitted`(새 빌드 제안) · `inquiry_received`(새 문의) | "운영진 알림: 새 제안·새 빌드·새 글·새 문의·새 오류 신고·새 신고" (승인 제도를 끈 지금은 운영자 "새 상대법·새 빌드·새 글·새 문의·새 오류 신고·새 신고", 감독관 "새 문의·새 오류 신고·새 신고". `error_reported`(043)·`report_received`(045)도 이 묶음 — 6-30·6-31) |
   | 내 제안 결과 `my_results` | 제안자 | `proposal_approved` · `proposal_rejected` · `build_approved` · `build_rejected` · `revision_request`(재검토 요청) · `counter_restored` · `build_restored`(다시 공개) | "내 제안 결과: 승인·거절·재검토 요청·다시 공개" |
+  | 빌드 수정 `build_edits` (067, 6-84) | 운영자·빌드 원 작성자·이전 기여자 | `build_edited`(빌드 수정·되돌리기) | 「빌드 수정: 내가 만들거나 고친 빌드를 다른 사람이 고쳤을 때」(운영자: 「… 누가 빌드를 고치거나 되돌렸을 때 (운영자는 모든 빌드)」), 기본 켜짐. 끄면 알림 자체를 만들지 않음. Edge Function은 그대로라 잠금 화면 제목은 「탑신병자」, 누르면 `/notifications` |
   그 밖의 종류(재검토 요청 취소, 빌드 숨김, 레벨·칭호, 댓글, 문의 답변, 감독관 지정 등)는 푸시하지 않는다 (사이트 알림에는 그대로 쌓임).
 - **기존 규칙 그대로**: 감독관에게 안 가는 알림(빌드·계정 문의·운영진 제안 등)과 처리한 본인 제외는 알림 줄을 만들 때(`notify`·`notify_staff`) 이미 걸러지므로, 푸시는 "생긴 줄"만 따라간다. **운영자 모드를 끈 운영자**에게는 운영진 알림을 푸시하지 않는다(받는 사람이 지금 감독관이거나 모드가 켜진 운영자일 때만 — `push_wanted`). 운영진 종류가 운영진이 아닌 사람에게 있으면(해제 뒤 등) 보내지 않는다.
 - **흐름**: `notifications` insert → 트리거 `notifications_push`(`push_on_notification`)가 `push_wanted(받는 사람, 종류)`(종류 묶음 + 지금 역할·운영자 모드 + 종류별 설정 + 기기가 있는가)를 보고, 대상이면 **pg_net**으로 Edge Function `web-push`에 `{ notification_id }`만 보낸다(헤더 `x-push-secret`). pg_net은 커밋 뒤에 나가므로 처리가 되돌려지면 푸시도 없다. 주소·비밀 값은 Vault(`push_function_url`·`push_webhook_secret`)에서 읽고, 없거나 실패해도 **알림 저장은 그대로**(경고만).
@@ -607,7 +609,7 @@
 - **기여자** `build_editors`: 시초 말고 그 빌드를 고친 사람(처음·마지막 시각, 횟수). `build_contributors`가 시초(맨 앞, `is_origin: true` — 닉네임 글자와 별개 칸이라 닉네임으로 흉내 낼 수 없음) + 처음 고친 순서로 돌려준다. 수정 기록 1년 정리와 상관없이 남고, 탈퇴하면 빠진다(시초가 탈퇴하면 시초 줄은 이름 없이 남음).
 - **경험치**: 새 상대법 +100(키 `matchup:<상대법 id>`, 공개 중), 새 빌드 +30(키 `build:<id>`, 공개 중, 첫 빌드 제외), **수정 0**. 위키로 등록한 것은 그날(한국 시간) 먼저 등록한 순서대로 합계 **200**(`create_daily_cap`)까지. 숨기면 회수·다시 공개하면 다시(회수 이유 「상대법 숨김」·「상대법 삭제」). 예전 승인 기록(`proposal:<id>`·승인 빌드)은 그대로라 이전으로 경험치가 바뀌지 않는다.
 - **칭호**: 도구혐오자·단단묵직·백정주인은 "승인된 새 카운터·문서 수정 제안 + 내가 시초인 공개 상대법 + 공개 빌드(첫 빌드 제외)" 수. 탑신병자·장군·비주류는 기준 그대로(위키 상대법의 비주류 여부는 첫 빌드가 공개될 때 고정).
-- **알림·푸시**: `matchup_created` 「새 상대법이 등록됐습니다.」·`build_created` 「새 빌드가 등록됐습니다.」 — **운영자만**(감독관 X), 처리자 본인 제외, 상대법·빌드 연결(`counter_id`·`build_id`). 푸시 묶음 `staff_new`(운영진 알림). 운영자 모드를 끄면 목록·빨간 점·읽음 처리·푸시에서 빠진다(034·037과 같음). 수정마다 알림은 없다. `push_targets`가 `counter_id`·챔피언 id도 돌려준다(Edge Function 이동 주소는 2단계).
+- **알림·푸시**: `matchup_created` 「새 상대법이 등록됐습니다.」·`build_created` 「새 빌드가 등록됐습니다.」 — **운영자만**(감독관 X), 처리자 본인 제외, 상대법·빌드 연결(`counter_id`·`build_id`). 푸시 묶음 `staff_new`(운영진 알림). 운영자 모드를 끄면 목록·빨간 점·읽음 처리·푸시에서 빠진다(034·037과 같음). 수정마다 알림은 없다(067부터는 빌드 수정·되돌리기를 운영자·작성자·이전 기여자에게 `build_edited`로 알림 — 6-84). `push_targets`가 `counter_id`·챔피언 id도 돌려준다(Edge Function 이동 주소는 2단계).
 - **승인 제도 스위치** `xp_rules.approval_on`(038 = 1 켜짐). 0이 되면 옛 화면의 제안·승인 대기 빌드 등록을 DB가 「이제 승인 없이 바로 등록합니다. 화면을 새로고침해 주세요.」로 거부(위키 함수는 그대로). 039가 0으로 바꾼다 — 그 전에 운영자가 승인 대기·재검토 중인 것을 모두 처리한다.
 - **기존 데이터 이전** (`wiki_backfill_matchups()`, 038 끝에서 한 번, 039에서 한 번 더 — 다시 불러도 같은 결과): 상대법마다 `matchup_docs` 내용을 공개(숨김 포함) 빌드에 복사, 번호, 첫 빌드(처음 제안과 함께 공개된 빌드), 빌드마다 `migrate` 기록 1줄, 승인된 문서 수정 제안자를 기여자로. 시초 = 빌드 작성자(말파이트 첫 빌드 = 처음 제안자). `matchup_docs`·`doc_revisions`·제안은 지우지 않고 보관.
   - 038 ~ 039 사이 옛 길: 빌드가 공개되면 번호·문서 내용을 채우고(`builds_wiki_fill`), 문서가 바뀌면 아직 문서와 같은 내용인 빌드에도 반영(`matchup_docs_to_builds`, `migrate` 기록·기여자).
@@ -676,7 +678,7 @@
 - **build_vote_log.first_up**: 그 사람이 그 빌드에 처음 누른 추천인가 (추천 경험치 대상, 투표할 때 고정)
 - **notifications**: `user_id`, `kind`, `proposal_id`, `build_id`, `post_id`, `counter_id`(문서 댓글 알림), `message`, `created_at`, `read_at`(확인하면 채워짐) — 본인만 읽기, 만들기·읽음 처리는 DB 함수만. 색인 `(user_id, id desc)`(027), 만든 지 `xp_rules.notification_keep_days`(90)일 지나면 `purge_old_notifications()`가 지운다(pg_cron 매일)
 - **push_subscriptions** (037): 웹 푸시 기기 알림 주소 — `user_id`(프로필 삭제 시 함께 삭제), `endpoint`(고유, https), `p256dh`, `auth`, `created_at`. 본인만 읽기·넣기·지우기(고치기 없음), 한 사람 최대 10대. 만료(404·410)는 Edge Function이 `push_forget`(service_role)으로 지움
-- **push_settings** (037): 웹 푸시 종류별 켜기/끄기 — `user_id`(PK, 프로필 삭제 시 함께 삭제), `staff_new`, `my_results`(기본 켜짐), `updated_at`. 본인만 읽기·넣기·고치기. `notifications` insert 트리거 `notifications_push`가 `push_wanted`로 판단해 pg_net → Edge Function `web-push`
+- **push_settings** (037): 웹 푸시 종류별 켜기/끄기 — `user_id`(PK, 프로필 삭제 시 함께 삭제), `staff_new`, `my_results`(기본 켜짐), `updated_at`. (050 `follow_builds`, 051 `notice`, 052 `new_followers`(기본 꺼짐), 067 `build_edits`(기본 켜짐, 끄면 빌드 수정 알림을 만들지 않음)도 이 표.) 본인만 읽기·넣기·고치기. `notifications` insert 트리거 `notifications_push`가 `push_wanted`로 판단해 pg_net → Edge Function `web-push`
 - **builds (038 추가 칸)**: `name`(선택 1~20자), `seq`(상대법 안 번호), `summary`·`level_notes`·`lane_cautions`(빌드별 공략), `updated_at`·`updated_by`(마지막 수정), `wiki`(위키로 등록). **counters (038)**: `first_build_id`, `wiki`
 - **build_revisions** (038): 빌드 등록·수정 기록 — `build_id`(빌드와 함께 삭제), `counter_id`, `editor_id`(탈퇴하면 비움), `kind`(migrate/create/edit/revert), `before`·`after`(전후 내용), `version`, `created_at`. 아무도 직접 못 읽음, 1년 뒤 삭제
 - **build_editors** (038): 기여자 — `build_id`, `user_id`(탈퇴하면 삭제), `first_at`, `last_at`, `edits`. `build_contributors()`로만
@@ -1753,3 +1755,22 @@ RLS 원칙:
 ### 6-83. 매치업 문서 댓글 제목 앞 번호 「4.」 지움 (2026-11-22, 웹 화면만, DB·Edge Function·iOS·Android 설정 변경 없음)
 - 상대법 화면 댓글 칸 제목 「4. 댓글」 → 「댓글」. 아이콘·「N개」 알약·목차 링크(#comments)·스크린리더 제목 이름(「댓글」)은 그대로, 1~3번(빌드·레벨별 딜교법·특이사항)의 번호도 그대로.
 - `Matchup.jsx`에서 `DocComments`에 번호(num=4)를 넘기지 않는다(운영자 미리보기는 원래 번호 없음). 검사: `docComments.test.jsx` 제목 글자·번호 칸 없음.
+
+### 6-84. 빌드 수정 알림 (2026-11-22, DB 067 + 웹 화면, Edge Function·iOS·Android 설정 변경 없음 — 앱 1.2 묶음)
+- **DB 067** (`supabase/migrations/067_build_edit_notify.sql`, 실행 전후 확인 `scripts/check_build_edit_notify_before.sql`·`check_build_edit_notify_after.sql`, 로컬 검사 `tests/build_edit_notify_test.sql`, 맨 위 주석에 되돌리기 SQL):
+  - **잡는 곳**: 수정 기록 표 `build_revisions`에 `edit`(edit_build)·`revert`(revert_build → revert_build_unchecked) 줄이 생긴 직후 트리거 `build_revisions_notify` 하나. 새 수정 경로도 수정 기록을 남기면 빠지지 않는다. 등록(`create`)·이전(`migrate`)은 알리지 않는다. 기존 함수는 고치지 않았다.
+  - **실패해도 수정은 그대로**: 알림 만들기를 서브 트랜잭션(begin … exception)으로 감싸, 실패하면 경고 로그(「빌드 수정 알림을 만들지 못했습니다 …」)만 남기고 수정 저장은 성공한다(알림이 반쯤 남지 않음).
+  - **받는 사람** (한 사람에게 한 줄, 수정한 본인 제외, 탈퇴한 사람은 프로필이 없어 저절로 빠짐): ① 운영자(admin — DB 규칙상 1명, 감독관 제외, 운영자 모드와 관계없이 보임) ② 빌드 원 작성자 ③ 이전 기여자(`build_editors`) — **최근에 고친 순 50명까지**. 여럿에 해당하면 작성자 > 기여자 > 운영자 순으로 문장 하나. 운영자가 고쳐도 작성자·기여자는 받고, 작성자가 자기 빌드를 고쳐도 운영자·기여자는 받는다.
+  - **차단(061)**: 받는 사람과 수정한 사람 사이에 어느 쪽이든 차단이 있으면 작성자·기여자 몫은 만들지 않는다(차단한 사람의 활동을 알리지 않는 061 규칙과 같음). 운영자 몫은 관리용이라 차단과 관계없다.
+  - **설정**: `push_settings.build_edits`(기본 켜짐)를 끈 사람에게는 알림 자체를 만들지 않는다(앱 안 알림·휴대폰 알림 모두). 푸시 묶음 `push_group('build_edited') = 'build_edits'`, `push_wanted`가 이 칸을 본다.
+  - **문장** (DB `build_edit_message`): 운영자 「○○님이 △△님의 빌드를 수정했습니다.」(자기 빌드면 「○○님이 자기 빌드를 …」), 작성자 「○○님이 회원님의 빌드를 …」, 기여자 「○○님이 회원님이 참여한 빌드를 …」, 되돌리기는 「…를 되돌렸습니다.」. 닉네임은 그대로 보인다(이미 빌드 기여자 목록에 공개된 정보이고, 감추면 받는 사람이 장난 수정을 알아볼 수 없다).
+  - **10분 묶기**: 같은 사람이 같은 빌드를 10분 안에 또 고치면 받는 사람마다 아직 안 읽은 그 알림을 「… (N번 수정)」으로 고치고 시각을 최근으로(새 줄 없음 → 휴대폰도 처음 한 번만 울림). 읽었거나 10분이 지나면 새 줄. 다른 사람의 수정은 따로.
+  - **탈퇴**: 새 표 `build_edit_notices`(알림 ↔ 받는 사람·빌드·수정한 사람·작성자 id, 몇 번 수정, 마지막이 수정/되돌리기). 수정한 사람·작성자가 탈퇴하면(on delete set null) 트리거가 문장을 다시 만들어 닉네임이 「탈퇴한 사용자」로 바뀐다. 받는 사람이 탈퇴하거나 빌드·알림이 지워지면 함께 지워진다. RLS 켬 + 정책 없음(아무도 직접 못 읽음).
+  - 기존 빌드·투표·수정 기록·알림·알림 설정 데이터는 바꾸지 않는다(실행 전후 확인이 줄 수·가장 큰 id·내용 지문 비교 — 알림 전체는 "실행 직후 기준", build_edited를 뺀 알림은 늘 같아야 함). 되돌리기 SQL을 실행하면 066 상태와 구조가 같다(로컬 `pg_dump -s` 비교).
+  - 테스트 데이터 초기화 스크립트(`reset_test_data*.sql`)에 짝 표를 더했다(067 전이면 건너뜀).
+- **화면**: 알림 목록(`lib/notifications.js`)이 「빌드를」 자리에 「빌드(가렌 vs 다리우스)를」을 넣는다(빌드·상대법을 못 읽으면 문장 그대로). 운영자 몫(「회원님」이 없는 문장)은 `/admin/builds/:id/history`, 작성자·기여자 몫은 그 빌드의 상대법 화면(`?build=`, 볼 수 없으면 이동 없음). 아이콘은 빌드(겹친 층).
+- **알림 설정** (`PushSettings.jsx`): 누구나 「빌드 수정: 내가 만들거나 고친 빌드를 다른 사람이 고쳤을 때」(운영자: 「빌드 수정: 누가 빌드를 고치거나 되돌렸을 때 (운영자는 모든 빌드)」) + 「같은 사람이 10분 안에 또 고치면 한 알림으로 묶습니다. 끄면 알림 목록에도 쌓이지 않습니다.」 067 전 DB면 저장할 때 새 칸 없이 다시 저장한다.
+- **휴대폰 알림**: Edge Function `web-push`는 바꾸지 않았다 → 모르는 종류 규칙대로 제목 「탑신병자」, 내용은 DB 문장, 누르면 `/notifications`.
+- **옛 앱(1.1 이하)**: 모르는 종류는 종 아이콘 + DB 문장만, 누르는 곳 없음(1.0 첫 앱·1.1·1.2 직전 코드로 직접 실행해 확인). 옛 앱이 알림 설정을 저장해도 `build_edits`는 건드리지 않는다(보내는 칸만 고침).
+- **바뀐 예전 규칙**: 043(6-30)의 「되돌려도 작성자·수정자에게 알림 없음」은 이제 「되돌리면 작성자·되돌려진 수정자에게 빌드 수정 알림만」(`wiki_report_revert_test.sql` 고침). 처리 기록·경험치 등 다른 결과는 그대로.
+- **검사**: `notifications.test.jsx`(문장·상대법 끼워 넣기·운영자/작성자/기여자 이동·못 읽는 빌드), `push.test.jsx`(설정 칸·문구·저장, 067 전 DB 다시 저장, 휴대폰 알림 모양), SQL `build_edit_notify_test.sql`(받는 사람별·중복 없음·설정·차단·탈퇴·50명 상한·되돌리기·10분 묶기·실패해도 저장).

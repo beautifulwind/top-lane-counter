@@ -20,6 +20,7 @@
 -- (058·059: 탑신병자 커뮤니티 답글·문서 댓글 답글은 댓글과 함께 지워진다. 058의 빌드 댓글은 060에서 표째 없앴다.)
 -- (061: 사용자 차단 목록(user_blocks)을 전부 지운다 - 테스트 계정끼리 걸어 둔 차단이 공개 뒤까지 남지 않게.)
 -- (066: 빌드 저장(북마크, build_bookmarks)을 전부 지운다 - 테스트 계정이 저장한 빌드가 공개 뒤까지 남지 않게. 빌드를 지우면 함께 지워지지만 남는 빌드의 저장도 지운다.)
+-- (067: 빌드 수정 알림의 짝 표(build_edit_notices)는 알림과 함께 전부 지운다. 남는 말파 빌드의 '이전(migrate)' 기록 1줄은 수정 알림을 만들지 않는다.)
 -- (062: 장인 프로필 사진은 장인 표시와 함께 비워지고 파일은 다음 사진 정리 때 지워진다. 사진 신고·바꾼 기록도 지운다.)
 -- 지움: 그 밖의 카운터·문서·제안·빌드 전부, 빌드 추천·비추천과 그 기록, 자유게시판 글·댓글·추천, 문서 댓글, 신고, 오류 신고(043), 알림, 문의하기 문의·답변(032),
 --       빌드 수정 기록·기여자·등록 간격(038 — 남는 말파 공개 빌드마다 지금 내용으로 "이전" 기록 1줄을 새로 남김),
@@ -203,6 +204,7 @@ $$;
 -- ---------------------------------------------------------------------
 set constraints all immediate;
 delete from public.xp_events;
+do $$ begin if to_regclass('public.build_edit_notices') is not null then execute 'delete from public.build_edit_notices'; end if; end $$; -- 067 빌드 수정 알림 짝 (알림을 지우면 함께 지워지지만 먼저 비움)
 delete from public.notifications;
 delete from public.hide_log;
 do $$ begin if to_regclass('public.proposal_reviewing') is not null then execute 'delete from public.proposal_reviewing'; end if; end $$; -- 031 "검토 중" 표시

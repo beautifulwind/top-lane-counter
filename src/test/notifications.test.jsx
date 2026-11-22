@@ -162,3 +162,29 @@ test('알림 시각: 방금 전 / N분 전 / N시간 전 / 날짜', () => {
   expect(noticeTime('2026-11-04T02:00:00Z', now)).toBe('10시간 전');
   expect(noticeTime('2026-11-01T12:00:00Z', now)).toMatch(/^2026-11-0[12]$/);
 });
+
+test('빌드 수정 알림(067): 문장에 「(퀸 vs 다리우스)」, 운영자 몫은 수정 기록 화면, 작성자·기여자 몫은 그 빌드의 상대법 화면', async () => {
+  TABLES.builds.push(fakeBuild(121, { nickname: '기존유저', level: 1, main_title: null }, { author_id: ME }));
+  TABLES.notifications.push(
+    noti('build_edited', { build_id: 121, counter_id: 1, message: '고침이님이 회원님의 빌드를 수정했습니다.' }),
+    noti('build_edited', { build_id: 121, counter_id: 1, message: '고침이님이 회원님이 참여한 빌드를 되돌렸습니다. (3번 수정)' }),
+    noti('build_edited', { build_id: 121, counter_id: 1, message: '탈퇴한 사용자가 유저님의 빌드를 수정했습니다. (2번 수정)' }),
+  );
+  fakeLogin(ME);
+  start('/notifications');
+  const author = await rowOf('고침이님이 회원님의 빌드(퀸 vs 다리우스)를 수정했습니다');
+  expect(href(author)).toBe('/champion/Darius/counter/Quinn?build=121');
+  expect(author.querySelector('.noti-icon.build svg')).not.toBeNull();
+  const contributor = await rowOf('고침이님이 회원님이 참여한 빌드(퀸 vs 다리우스)를 되돌렸습니다 (3번 수정)');
+  expect(href(contributor)).toBe('/champion/Darius/counter/Quinn?build=121');
+  const staff = await rowOf('탈퇴한 사용자가 유저님의 빌드(퀸 vs 다리우스)를 수정했습니다 (2번 수정)');
+  expect(href(staff)).toBe('/admin/builds/121/history');
+});
+
+test('빌드 수정 알림(067): 빌드를 읽을 수 없으면(숨김·삭제) 문장 그대로, 작성자 몫은 이동 없음', async () => {
+  TABLES.notifications.push(noti('build_edited', { build_id: 999, message: '고침이님이 회원님의 빌드를 수정했습니다.' }));
+  fakeLogin(ME);
+  start('/notifications');
+  const row = await rowOf('고침이님이 회원님의 빌드를 수정했습니다');
+  expect(href(row)).toBeNull();
+});

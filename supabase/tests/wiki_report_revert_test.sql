@@ -269,8 +269,11 @@ select t.ok('기여자: 되돌린 범위만 고친 두 사람 빠짐, 운영자�
 select t.ok('처리 기록 revert (운영자, 메모)', exists (select 1 from moderation_log
   where action = 'revert' and target_kind = 'build' and target_id = pg_temp.id('b1')::text and actor_id = :'OP' and note = '장난 수정 되돌림'));
 select t.ok('경험치 그대로', (select xp from profiles where id = :'U') = :uxp);
-select t.ok('되돌려도 작성자·수정자에게 알림 없음', not exists (select 1 from notifications where user_id in (:'U', :'V', :'W')
-  and created_at >= (select max(created_at) from build_revisions where kind = 'revert')));
+-- 067(6-84)부터 되돌리기도 빌드 수정 알림(build_edited)을 보낸다 (043 때는 알림 없음). 그 밖의 알림은 여전히 없음
+select t.ok('되돌리면 작성자·되돌려진 수정자에게 빌드 수정 알림만 (067)', not exists (select 1 from notifications where user_id in (:'U', :'V', :'W')
+  and created_at >= (select max(created_at) from build_revisions where kind = 'revert') and kind <> 'build_edited')
+  and (select count(*) from notifications where kind = 'build_edited' and user_id = :'U' and message = '영자님이 회원님의 빌드를 되돌렸습니다.') = 1
+  and (select count(*) from notifications where kind = 'build_edited' and user_id in (:'V', :'W') and message = '영자님이 회원님이 참여한 빌드를 되돌렸습니다.') = 2);
 set role authenticated;
 set request.jwt.claim.sub = :'W';
 select t.fails('편집 중이던 사람(버전 3)은 TL412', format('select edit_build(%s, 3, %L)', pg_temp.id('b1'),

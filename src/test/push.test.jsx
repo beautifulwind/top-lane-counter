@@ -174,6 +174,31 @@ test('운영자 모드를 끈 운영자: 운영진 알림이 오지 않는다는
   expect(await screen.findByText('운영자 모드를 끈 동안에는 오지 않습니다.')).toBeDefined();
 });
 
+test('빌드 수정 알림(067): 누구나 보이고 기본 켜짐, 끄면 build_edits=false로 저장 (운영자는 문구가 "모든 빌드")', async () => {
+  fakeLogin('u-1', { nickname: '탑고수' });
+  start('/me/settings');
+  const box = await screen.findByRole('checkbox', { name: /빌드 수정: 내가 만들거나 고친 빌드를 다른 사람이 고쳤을 때/ });
+  expect(box).toBeChecked();
+  expect(screen.getByText('같은 사람이 10분 안에 또 고치면 한 알림으로 묶습니다. 끄면 알림 목록에도 쌓이지 않습니다.')).toBeDefined();
+  fireEvent.click(box);
+  await waitFor(() => expect(TABLES.push_settings).toEqual([expect.objectContaining({ user_id: 'u-1', build_edits: false, my_results: true })]));
+  expect(box).not.toBeChecked();
+  cleanup();
+  fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0 });
+  start('/me/settings');
+  expect(await screen.findByRole('checkbox', { name: /빌드 수정: 누가 빌드를 고치거나 되돌렸을 때 \(운영자는 모든 빌드\)/ })).toBeChecked();
+});
+
+test('067 실행 전 DB: 설정 저장은 build_edits 칸 없이 다시 시도해 성공한다', async () => {
+  fakeState.buildEditsMissing = true;
+  fakeLogin('u-1', { nickname: '탑고수' });
+  start('/me/settings');
+  fireEvent.click(await screen.findByRole('checkbox', { name: /팔로우한 장인의 새 빌드/ }));
+  await waitFor(() => expect(TABLES.push_settings).toEqual([expect.objectContaining({ user_id: 'u-1', follow_builds: false })]));
+  expect('build_edits' in TABLES.push_settings[0]).toBe(false);
+  expect(screen.queryByRole('alert')).toBeNull();
+});
+
 test('저장된 설정을 읽어 보여 준다', async () => {
   TABLES.push_settings.push({ user_id: 'u-1', staff_new: true, my_results: false });
   fakeLogin('u-1', { nickname: '탑고수' });
@@ -230,6 +255,10 @@ describe('describePush: 잠금 화면 내용이 알림 목록과 같은 곳으�
     expect(describeNotification({ ...n, counter, build: { counter } }).to).toBe(push.url);
     // 상대법 정보가 없으면(옛 DB) 알림 목록으로
     expect(describePush({ id: 3, kind, message: null, proposal_id: null, build_id: 12 }).url).toBe('/notifications');
+  });
+  test('build_edited (067): Edge Function은 그대로 — 휴대폰 알림은 「탑신병자」 + DB 문장, 누르면 알림 목록 (그 줄에서 다시 이동)', () => {
+    const n = { id: 5, kind: 'build_edited', message: '고침이님이 회원님의 빌드를 수정했습니다.', proposal_id: null, build_id: 12, counter_id: 4 };
+    expect(describePush(n)).toEqual({ title: '탑신병자', body: '고침이님이 회원님의 빌드를 수정했습니다.', url: '/notifications', tag: 'n-5' });
   });
   test('post_created (042): 새 글로 — 알림 목록과 같은 곳, 글 번호가 없으면 알림 목록', () => {
     const n = { id: 4, kind: 'post_created', message: '새 글이 올라왔습니다. 「탑 라인 질문」', proposal_id: null, build_id: null, post_id: 31 };

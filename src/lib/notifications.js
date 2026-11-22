@@ -94,6 +94,19 @@ const BOARD_ICON = {
   comment_reply: 'comment',
 };
 
+// 067 빌드 수정 알림: DB 문장(supabase/migrations/067 build_edit_message)으로 누구 몫인지 안다
+export function buildEditAudience(message) {
+  const m = String(message ?? '');
+  if (m.includes('회원님이 참여한 빌드')) return 'contributor';
+  if (m.includes('회원님의 빌드')) return 'author';
+  return 'staff';
+}
+/** "…빌드를 수정했습니다." → "…빌드(가렌 vs 다리우스)를 수정했습니다." (상대법을 모르면 문장 그대로) */
+export function buildEditTitle(message, vs) {
+  const m = String(message ?? '빌드가 수정됐습니다.').replace(/\.$/, '').replace(/\. \((\d+번 수정)\)$/, ' ($1)');
+  return vs ? m.replace('빌드를', `빌드(${vs})를`) : m;
+}
+
 /**
  * 칭호 알림 문장("칭호 '장군'을 얻었습니다…")에서 칭호 한 줄. 도감(my_title_book의 items)에서 이름으로 찾고(한정판 포함),
  * 도감을 못 읽었거나 이름이 가려진 칭호(비밀)면 예전 고정 목록(TITLES)으로. 못 찾으면 null
@@ -196,6 +209,19 @@ export function describeNotification(n, name = (id) => id, titleBook = []) {
   }
   if (n.kind === 'new_followers') {
     return { icon: 'users', title: String(n.message ?? '오늘 새 팔로워가 생겼습니다').replace(/\.$/, ''), subject: null, detail: null, to: NEW_FOLLOWERS_PATH };
+  }
+  if (n.kind === 'build_edited') {
+    // 067: 빌드 수정·되돌리기. 운영자 몫("○○님이 △△님의 빌드를…")은 수정 기록 화면으로, 작성자·기여자 몫("회원님의"·"회원님이 참여한")은 그 빌드의 상대법 화면으로
+    const c = n.build?.counter ?? n.counter;
+    const vs = c ? `${name(c.counter_champion)} vs ${name(c.target_champion)}` : null;
+    const staff = buildEditAudience(n.message) === 'staff';
+    return {
+      icon: 'build',
+      title: buildEditTitle(n.message, vs),
+      subject: null,
+      detail: null,
+      to: staff ? (n.build_id ? `/admin/builds/${n.build_id}/history` : null) : n.counter?.status === 'approved' || n.build ? wikiPath(n) : null,
+    };
   }
   const inf = INFLUENCER_NOTICE[n.kind];
   if (inf) {
