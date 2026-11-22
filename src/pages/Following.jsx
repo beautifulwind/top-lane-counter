@@ -11,11 +11,12 @@ import FollowButton from '../components/FollowButton';
 import { InfluencerName } from '../components/UserName';
 import { LayersIcon } from '../components/Icons';
 
-export const NO_FOLLOW_TEXT = '아직 팔로우한 장인이 없습니다. 장인찾기에서 찾아보세요.';
+export const NO_FOLLOW_TEXT = '아직 팔로우한 장인이 없습니다. 상단의 돋보기(장인 찾기)로 찾아보세요.';
 export const GUEST_FOLLOWING_TEXT = '비회원은 팔로우한 장인 목록을 볼 수 없습니다. 마이페이지에서 구글·카카오를 연결해 주세요.';
 
 /**
- * 팔로우 모아보기 (/following, 050 · SPEC 6-36). ☰ [장인찾기] 검색 칸의 [내가 팔로우한 장인의 빌드 보기]로 온다.
+ * 팔로우 모아보기 (/following, 050 · SPEC 6-36). 상단 돋보기(장인 찾기) 검색 칸의 [내가 팔로우한 장인의 빌드 보기],
+ * 내 목록(/lists, 6-82) [팔로우한 장인] 탭의 링크로 온다.
  * 탭 두 개 (?tab=list로 주소에 남는다):
  *  - 빌드: followed_builds — 팔로우한 장인들의 공개 빌드, 최근 수정순 20개씩 [더보기]. 카드 = 장인 닉네임·챔피언·상대법 이름 → 그 빌드로
  *  - 팔로우한 장인: my_following — 20개씩, 줄마다 닉네임·장인 표시·유형·팔로워 수 + [팔로우중](누르면 취소, 다시 누르면 팔로우).
@@ -111,7 +112,8 @@ function FollowedBuilds({ userId }) {
   );
 }
 
-function FollowingList({ userId }) {
+/** 내가 팔로우한 장인 목록 — 내 목록(/lists) [팔로우한 장인] 탭도 쓴다 */
+export function FollowingList({ userId }) {
   const list = usePaged((page) => async () => ({ page: await getMyFollowing(page) }), [userId]);
   const [now, setNow] = useState({}); // 이 화면에서 바꾼 것 { 장인 id: { following, follower_count } }
   if (list.loading && !list.data) return <Loading />;

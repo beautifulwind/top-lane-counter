@@ -1,6 +1,7 @@
 // 빌드 접근 계층. 화면 컴포넌트는 이 모듈만 호출한다.
 // 권한은 DB가 막는다: 등록은 RLS + 검사 트리거(승인 대기로만), 투표는 vote_build(), 승인·거절·숨기기·다시 공개는 운영자 전용 함수.
 import { getBuildLinks } from './links';
+import { getSavedInCounter } from './bookmarks';
 import { db } from './supabase';
 import { invalidateSearchIndex } from './searchIndex';
 import { invalidateBuildCount } from './buildCount';
@@ -56,7 +57,8 @@ const unwrap = (r) => {
 };
 
 /**
- * 상대법의 공개된 빌드 (추천 수 → 점수 → 최신순). userId를 주면 내 표(mine: 1 | -1 | null)도 붙인다.
+ * 상대법의 공개된 빌드 (추천 수 → 점수 → 최신순). userId를 주면 내 표(mine: 1 | -1 | null)와 저장 여부(saved, 066)도 붙인다.
+ * 저장 여부는 못 읽어도(066 전·오류) false — 빌드 화면은 그대로 열린다.
  * 빌드·내 표·편집자 수·링크는 서로 기다릴 필요가 없어 한 번에 보낸다 (내 표는 빌드 id 대신 builds 관계로 상대법을 좁힌다).
  * 오류는 예전 순서(빌드 → 내 표)대로 먼저 난 쪽을 던진다.
  */
@@ -72,13 +74,16 @@ export async function getBuilds(counterRowId, userId = null) {
     )
     : []);
   const sideReq = settle(Promise.all([getBuildEditorCounts(counterRowId), getBuildLinks(counterRowId)]));
+  const savedReq = getSavedInCounter(userId, counterRowId); // 실패하지 않는다 (빈 Set)
   const rows = unwrap(await rowsReq);
   const votes = unwrap(await votesReq);
   const [editors, links] = rows.length > 0 ? unwrap(await sideReq) : [{}, {}];
+  const saved = await savedReq;
   return rows
     .map((b) => ({
       ...shape(b), mine: votes.find((v) => v.build_id === b.id)?.value ?? null, editors: editors[b.id] ?? 0,
       link: links[b.id] ?? null, // 047: 장인 빌드 링크 (공개된 것만)
+      saved: saved.has(b.id), // 066: 내가 저장한 빌드
     }))
     .sort(compareBuilds);
 }

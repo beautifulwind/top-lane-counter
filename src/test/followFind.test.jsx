@@ -1,11 +1,10 @@
-// 장인 팔로우 화면 3 앞부분 (050, SPEC 6-36): ☰ [장인찾기] 검색 칸 · 팔로우 모아보기 /following
+// 장인 팔로우 화면 3 앞부분 (050, SPEC 6-36): 장인 찾기 검색 칸(6-82부터 상단 바 돋보기) · 팔로우 모아보기 /following
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
 import { TABLES, fakeBuild, fakeLogin, fakeState } from './fakeSupabase';
-import { openMenu } from './menu';
 import { NO_RESULT_TEXT } from '../components/InfluencerSearch';
 import { NO_FOLLOW_TEXT } from '../pages/Following';
 
@@ -22,36 +21,43 @@ const where = () => screen.getByTestId('where').textContent;
 const inf = (id, nickname, influencer = 'creator') => TABLES.profiles.push({ id, nickname, role: 'user', level: 3, main_title: null, influencer, email: `${id}@x.com` });
 const follow = (who, whom, at = '2026-11-10T00:00:00Z') => TABLES.influencer_follows.push({ follower_id: who, influencer_id: whom, created_at: at });
 
+/** 상단 바 돋보기 [장인 찾기]를 눌러 검색 칸을 연다 (6-82) */
 async function openSearch() {
-  const menu = await openMenu();
-  const btn = menu.getByRole('button', { name: '장인찾기' });
+  const btn = await screen.findByRole('button', { name: '장인 찾기' });
   fireEvent.click(btn);
-  return { menu, btn, box: await menu.findByRole('searchbox', { name: '장인 닉네임' }) };
+  const panel = within(await screen.findByRole('dialog', { name: '장인 찾기' }));
+  return { menu: panel, btn, box: await panel.findByRole('searchbox', { name: '장인 닉네임' }) };
 }
 
-// ---------------- ☰ [장인찾기] ----------------
+// ---------------- 상단 바 돋보기 [장인 찾기] (050 → 6-82) ----------------
 
-test('[장인찾기]: 알림과 탑신병자 커뮤니티 사이, 누르면 아래에 검색 칸 / 다시 누르거나 바깥을 누르면 접힘', async () => {
+test('[장인 찾기]: 상단 바 돋보기(☰ 왼쪽), 누르면 아래에 검색 칸 / 다시 누르기·Esc·[X]·바깥을 누르면 닫히고 초점은 돋보기로', async () => {
   fakeLogin('u-1', { nickname: '팬' });
   start('/');
   const { menu, btn, box } = await openSearch();
-  const names = [...document.querySelectorAll('.menu-list > li > .menu-item')].map((el) => el.textContent.trim());
-  expect(names.indexOf('장인찾기')).toBe(names.indexOf('알림') + 1);
-  expect(names.indexOf('탑신병자 커뮤니티')).toBe(names.indexOf('장인찾기') + 1);
+  const bar = document.querySelector('.topbar');
+  expect([...bar.querySelectorAll('button')].map((b) => b.getAttribute('aria-label'))).toEqual(['장인 찾기', '메뉴 열기']);
   expect(btn.getAttribute('aria-expanded')).toBe('true');
-  expect(document.activeElement).toBe(box); // 펼치면 바로 입력
+  expect(document.activeElement).toBe(box); // 열면 바로 입력
   expect(menu.getByText('장인 닉네임을 한 글자 이상 넣어 주세요.')).toBeTruthy();
-  fireEvent.click(btn);
-  expect(menu.queryByRole('searchbox')).toBeNull();
+  fireEvent.keyDown(box, { key: 'Escape' });
+  expect(screen.queryByRole('dialog', { name: '장인 찾기' })).toBeNull();
   expect(btn.getAttribute('aria-expanded')).toBe('false');
-  fireEvent.click(btn);
-  await menu.findByRole('searchbox');
-  fireEvent.pointerDown(document.querySelector('.menu-account')); // 메뉴 안 다른 곳
-  await waitFor(() => expect(menu.queryByRole('searchbox')).toBeNull());
-  expect(screen.getByRole('dialog', { name: '메뉴' })).toBeTruthy(); // 메뉴는 그대로
+  expect(document.activeElement).toBe(btn);
+  await openSearch();
+  fireEvent.click(screen.getByRole('button', { name: '장인 찾기 닫기' }));
+  expect(screen.queryByRole('dialog', { name: '장인 찾기' })).toBeNull();
+  await openSearch();
+  fireEvent.click(document.querySelector('.top-search-backdrop'));
+  expect(screen.queryByRole('dialog', { name: '장인 찾기' })).toBeNull();
+  // ☰ 메뉴에는 [장인찾기]가 없고 [내 목록 보기]가 있다
+  fireEvent.click(screen.getByRole('button', { name: '메뉴 열기' }));
+  const names = [...document.querySelectorAll('.menu-list > li > .menu-item')].map((el) => el.textContent.trim());
+  expect(names).toContain('내 목록 보기');
+  expect(names.some((n) => n.includes('장인찾기') || n.includes('장인 찾기'))).toBe(false);
 });
 
-test('로그인 전에도 검색: 닉네임·유형·팔로워 수, 장인이 아닌 회원·개인정보는 없음, 누르면 장인 페이지로 가며 메뉴가 닫힘', async () => {
+test('로그인 전에도 검색: 닉네임·유형·팔로워 수, 장인이 아닌 회원·개인정보는 없음, 누르면 장인 페이지로 가며 검색 칸이 닫힘', async () => {
   inf('u-fk', 'Faker', 'pro');
   inf('u-fm', 'Fakeman');
   TABLES.profiles.push({ id: 'u-plain', nickname: 'Fakeplain', role: 'user', level: 1, main_title: null });
@@ -73,7 +79,7 @@ test('로그인 전에도 검색: 닉네임·유형·팔로워 수, 장인이 �
   expect(document.body.textContent).not.toContain('@x.com');
   fireEvent.click(rows[0]);
   await waitFor(() => expect(where()).toBe('/u/u-fk'));
-  expect(screen.queryByRole('dialog', { name: '메뉴' })).toBeNull();
+  expect(screen.queryByRole('dialog', { name: '장인 찾기' })).toBeNull();
   expect(await screen.findByRole('heading', { level: 1 })).toHaveProperty('textContent', expect.stringContaining('Faker'));
 });
 
@@ -106,12 +112,12 @@ test('검색: 20개씩 [더보기]', async () => {
   expect(menu.queryByRole('button', { name: /더보기/ })).toBeNull();
 });
 
-test('검색 칸의 [내가 팔로우한 장인의 빌드 보기] → /following (메뉴 닫힘)', async () => {
+test('검색 칸의 [내가 팔로우한 장인의 빌드 보기] → /following (검색 칸 닫힘)', async () => {
   start('/');
   const { menu } = await openSearch();
   fireEvent.click(menu.getByRole('link', { name: '내가 팔로우한 장인의 빌드 보기' }));
   await waitFor(() => expect(where()).toBe('/following'));
-  expect(screen.queryByRole('dialog', { name: '메뉴' })).toBeNull();
+  expect(screen.queryByRole('dialog', { name: '장인 찾기' })).toBeNull();
 });
 
 // ---------------- 팔로우 모아보기 /following ----------------

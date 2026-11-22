@@ -7,8 +7,7 @@ import { useUnreadCount, useUnreadRefresher } from '../lib/unread';
 import { isGuest, useAuth } from '../lib/auth';
 import { isCurrentNav, navItemsFor } from '../lib/navItems';
 import { promptInstall, useInstallKind } from '../lib/install';
-import { BellIcon, ChevronIcon, DownloadIcon, HelpIcon, MenuIcon, MessageIcon, SearchIcon, ShieldIcon, UserIcon, XIcon } from './Icons';
-import InfluencerSearch from './InfluencerSearch';
+import { BellIcon, BookmarkIcon, DownloadIcon, HelpIcon, MenuIcon, MessageIcon, SearchIcon, ShieldIcon, UserIcon, XIcon } from './Icons';
 import UserName from './UserName';
 
 /**
@@ -31,7 +30,7 @@ const pendingTitle = (c) =>
 
 export const logout = () => signOut().catch((e) => alert(e.message));
 
-const ICONS = { user: UserIcon, message: MessageIcon, shield: ShieldIcon, bell: BellIcon, help: HelpIcon, search: SearchIcon };
+const ICONS = { user: UserIcon, message: MessageIcon, shield: ShieldIcon, bell: BellIcon, help: HelpIcon, search: SearchIcon, bookmark: BookmarkIcon };
 
 /**
  * 관리 메뉴의 처리 대기 건수 (운영진만, 033). 메뉴를 열 때마다 새로 센다 — 처리하고 돌아오면 줄어 있도록.
@@ -57,7 +56,7 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input, select, textarea, [ta
 /**
  * 상단 바 오른쪽 ☰ + 오른쪽에서 나오는 메뉴 패널 (SPEC 3장 상단 바·메뉴). PC·폰 같은 방식.
  * - 패널 맨 위: 닉네임·Level·칭호(비회원 표시) / 로그인 전 [로그인 · 가입] / 닉네임 전 [닉네임 정하기]
- * - 항목: src/lib/navItems.js (마이페이지·알림●·자유게시판·관리(운영자, 보라)), 맨 아래 [로그아웃](비회원·로그인 전에는 없음)
+ * - 항목: src/lib/navItems.js (마이페이지·알림●·내 목록 보기(6-82)·자유게시판·관리(운영자, 보라)), 맨 아래 [로그아웃](비회원·로그인 전에는 없음)
  * - 새 알림 빨간 점: ☰와 메뉴의 [알림] 둘 다
  * - 닫힘: 바깥 누르기, Esc, [X], 항목을 눌러 이동, 로그아웃. 열리면 초점이 패널 안으로, 닫히면 ☰로 돌아온다
  * 상단 바에 뒤 흐림(backdrop-filter)이 있어 그 안의 fixed가 바에 갇히므로 패널은 body에 그린다.
@@ -73,25 +72,15 @@ export default function SiteMenu() {
   const installKindNow = useInstallKind(); // 'prompt'(안드로이드) | 'ios' | 숨김
   const [showIosGuide, setShowIosGuide] = useState(false);
   const [open, setOpen] = useState(false);
-  const [searching, setSearching] = useState(false); // 050 [장인찾기] 검색 칸이 펼쳐져 있나
-  const searchItem = useRef(null);
   const pending = usePendingCounts(kind === 'moderator' || kind === 'operator', open, kind === 'operator');
   const opener = useRef(null);
   const panel = useRef(null);
 
   const close = useCallback((backToButton = true) => {
     setOpen(false);
-    setSearching(false);
     if (backToButton) opener.current?.focus();
   }, []);
 
-  // 050: 검색 칸 바깥(메뉴 안 다른 곳)을 누르면 검색 칸만 접는다 (뒤 흐린 곳을 누르면 메뉴 전체가 닫힌다)
-  useEffect(() => {
-    if (!searching) return undefined;
-    const away = (e) => { if (!searchItem.current?.contains(e.target)) setSearching(false); };
-    document.addEventListener('pointerdown', away);
-    return () => document.removeEventListener('pointerdown', away);
-  }, [searching]);
   // 열린 동안 뒤 화면 스크롤 막기
   useEffect(() => {
     if (!open) return undefined;
@@ -159,23 +148,6 @@ export default function SiteMenu() {
               <ul className="menu-list">
                 {navItemsFor('menu', kind).map((it) => {
                   const Icon = ICONS[it.icon];
-                  if (it.panel === 'influencerSearch') {
-                    // 050 [장인찾기]: 누르면 바로 아래에 검색 칸, 다시 누르거나 바깥을 누르면 접힌다
-                    return (
-                      <li key={it.key} ref={searchItem} className={searching ? 'menu-search open' : 'menu-search'}>
-                        <button
-                          type="button" className={searching ? 'menu-item on' : 'menu-item'}
-                          aria-expanded={searching} aria-controls={searching ? 'menu-inf-search' : undefined}
-                          onClick={() => setSearching((v) => !v)}
-                        >
-                          {Icon && <Icon size={20} className="menu-icon" />}
-                          <span className="menu-label">{it.label}</span>
-                          <ChevronIcon size={18} className="menu-chevron" />
-                        </button>
-                        {searching && <InfluencerSearch id="menu-inf-search" onGo={go} />}
-                      </li>
-                    );
-                  }
                   const here = isCurrentNav(it, pathname);
                   const dot = it.dot === 'unread' && unread > 0;
                   const waiting = it.count === 'pending' && pending?.total > 0 ? pending : null;

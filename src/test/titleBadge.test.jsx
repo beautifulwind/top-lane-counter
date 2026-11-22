@@ -128,7 +128,7 @@ test('마이페이지: 장착 가능한 한정판 [대표로 설정] → 닉네�
 
   fireEvent.click(screen.getByRole('button', { name: /^참가자/ }));
   expect(within(screen.getByRole('group', { name: '칭호 참가자' })).queryByRole('button')).toBeNull();
-  fireEvent.click(screen.getByRole('button', { name: /^장인/ }));
+  fireEvent.click(within(screen.getByRole('main')).getByRole('button', { name: /^장인/ })); // 본문만 (상단 바 [장인 찾기] 돋보기 제외)
   expect(within(screen.getByRole('group', { name: '칭호 장인' })).queryByRole('button')).toBeNull();
 
   fireEvent.click(screen.getByRole('button', { name: /^티확찢/ }));

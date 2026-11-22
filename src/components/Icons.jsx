@@ -50,6 +50,15 @@ export const FlagIcon = (p) => <Line {...p}><path d="M4 22V4" /><path d="M4 4h13
 export const MessageIcon = (p) => <Line {...p}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" /></Line>;
 /** 돋보기 (검색) */
 export const SearchIcon = (p) => <Line {...p}><circle cx="11" cy="11" r="7" /><path d="M21 21l-4.3-4.3" /></Line>;
+/** 책갈피 (빌드 저장, 066). filled = 저장됨 */
+export const BookmarkIcon = ({ filled = false, size = 18, className }) => (
+  <svg
+    width={size} height={size} viewBox="0 0 24 24" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2"
+    strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" focusable="false" className={className}
+  >
+    <path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z" />
+  </svg>
+);
 /** 더하기 (추가 칸) */
 export const PlusIcon = (p) => <Line {...p}><path d="M12 5v14M5 12h14" /></Line>;
 /** 사람 (마이페이지) */

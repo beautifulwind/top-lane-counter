@@ -29,7 +29,7 @@ const addLimited = () => {
 };
 const owns = (key) => TABLES.user_titles.push({ user_id: ME, title_key: key, earned_at: '2026-11-05T03:00:00Z' });
 const asUser = () => fakeLogin(ME);
-const tile = async (name) => (await screen.findByRole('list', { name: '칭호판' })) && screen.getByRole('button', { name: new RegExp(`^${name}`) });
+const tile = async (name) => (await screen.findByRole('list', { name: '칭호판' })) && within(screen.getByRole('main')).getByRole('button', { name: new RegExp(`^${name}`) }); // 본문만 (상단 바 [장인 찾기] 돋보기와 겹치지 않게)
 
 test('칭호 칸: 활동 칭호만 "얻은 수 / 전체 수"로 센다, 장인·한정판은 "특별 칭호" 구역', async () => {
   addLimited();

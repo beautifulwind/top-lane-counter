@@ -1,0 +1,115 @@
+import { useEffect, useRef } from 'react';
+import { Link, useLocation, useSearchParams } from 'react-router-dom';
+import { getMySavedBuilds } from '../api/bookmarks';
+import { getChampionMap } from '../api/ddragon';
+import { canWrite, isBlocked, isGuest, useAuth } from '../lib/auth';
+import { useAsync } from '../lib/useAsync';
+import { ErrorBox, Loading } from '../components/Status';
+import BuildRow, { BUILD_ROWS_STEP, shownCount } from '../components/BuildRow';
+import { BookmarkIcon } from '../components/Icons';
+import { FollowingList, GUEST_FOLLOWING_TEXT } from './Following';
+
+export const NO_SAVED_TEXT = '아직 저장한 빌드가 없습니다. 빌드 카드의 추천 버튼 옆 [저장]을 누르면 여기에 모입니다.';
+
+/**
+ * 내 목록 (/lists, SPEC 6-82). ☰ 메뉴 [내 목록 보기]로 온다. 위쪽 탭 두 개 (?tab=following으로 주소에 남는다):
+ *  - 저장한 빌드 (기본): my_saved_builds — 최근 저장순, 줄 모양은 전체 빌드 목록(/builds)과 같은 BuildRow.
+ *    20개씩 [더보기](펼친 개수 ?n=), 차단한 사람의 빌드는 숨기고 개수 안내, 지금 볼 수 없는(숨김) 빌드 수 안내.
+ *  - 팔로우한 장인: 팔로우 모아보기(/following)의 목록 그대로 (063 규칙: 내 것만, 팔로우한 날 없음, 비회원은 안내만).
+ * 로그인하지 않았으면 로그인 안내만. 닉네임 전이면 목록은 보이고 저장하려면 닉네임이 필요하다고 알려 준다 (/following과 같은 규칙).
+ */
+export default function MyLists() {
+  const auth = useAuth();
+  const location = useLocation();
+  const [search, setSearch] = useSearchParams();
+  const tab = search.get('tab') === 'following' ? 'following' : 'saved';
+  const setTab = (t) => setSearch(t === 'following' ? { tab: 'following' } : {}, { replace: true });
+
+  if (auth.status === 'loading') return <Loading />;
+  return (
+    <article className="me-page following-page my-lists">
+      <h1 className="doc-title page-title"><BookmarkIcon size={26} className="title-icon" /> 내 목록</h1>
+      {auth.status !== 'signedIn' ? (
+        <p className="notice" role="status">
+          로그인하면 저장한 빌드와 팔로우한 장인을 모아 볼 수 있습니다.{' '}
+          <Link to="/login" state={{ from: `${location.pathname}${location.search}` }}>로그인</Link>
+        </p>
+      ) : (
+        <>
+          <div className="following-tabs" role="tablist" aria-label="내 목록">
+            <button type="button" role="tab" id="ml-saved" aria-selected={tab === 'saved'} aria-controls="ml-panel"
+              className={tab === 'saved' ? 'btn btn-small on' : 'btn btn-small'} onClick={() => setTab('saved')}>저장한 빌드</button>
+            <button type="button" role="tab" id="ml-following" aria-selected={tab === 'following'} aria-controls="ml-panel"
+              className={tab === 'following' ? 'btn btn-small on' : 'btn btn-small'} onClick={() => setTab('following')}>팔로우한 장인</button>
+          </div>
+          <div id="ml-panel" role="tabpanel" aria-labelledby={tab === 'following' ? 'ml-following' : 'ml-saved'}>
+            {tab === 'following' ? (
+              <>
+                {isGuest(auth) ? <p className="notice" role="status">{GUEST_FOLLOWING_TEXT}</p> : <FollowingList userId={auth.user.id} />}
+                <p className="hint"><Link to="/following">팔로우한 장인의 빌드 모아 보기</Link></p>
+              </>
+            ) : (
+              <SavedBuilds userId={auth.user.id} />
+            )}
+          </div>
+        </>
+      )}
+    </article>
+  );
+}
+
+function SavedBuilds({ userId }) {
+  const auth = useAuth();
+  const [params, setParams] = useSearchParams();
+  const n = shownCount(params.get('n'));
+  const { data, error, loading, retry } = useAsync(async () => {
+    const [saved, champs] = await Promise.all([getMySavedBuilds(), getChampionMap().catch(() => ({}))]);
+    return { saved, champs };
+  }, [userId]);
+  const listRef = useRef(null);
+  const focusFrom = useRef(null); // [더보기] 뒤 새로 보인 첫 줄로 초점
+
+  useEffect(() => {
+    if (focusFrom.current == null) return;
+    const link = listRef.current?.querySelectorAll('li > a')[focusFrom.current];
+    focusFrom.current = null;
+    link?.focus();
+  });
+
+  if (loading && !data) return <Loading />;
+  if (error) return <ErrorBox error={error} onRetry={retry} />;
+
+  const { items, total, hidden, limit } = data.saved;
+  const visible = items.filter((b) => !isBlocked(auth, b.author_id));
+  const blocked = items.length - visible.length;
+  const shown = visible.slice(0, n);
+  const more = () => {
+    focusFrom.current = shown.length;
+    const next = new URLSearchParams(params);
+    next.set('n', String(n + BUILD_ROWS_STEP));
+    setParams(next, { replace: true });
+  };
+
+  return (
+    <section aria-label="저장한 빌드">
+      {!canWrite(auth) && <p className="hint">닉네임을 정하면 빌드를 저장할 수 있습니다.</p>}
+      {total > 0 && (
+        <p className="hint">{`저장한 빌드 ${total}개 (최대 ${limit}개) · 최근에 저장한 순서입니다. 나만 볼 수 있습니다.`}</p>
+      )}
+      {hidden > 0 && <p className="hint" role="note">{`지금은 볼 수 없는 빌드 ${hidden}개는 뺐습니다. (숨겨진 빌드나 상대법 — 다시 공개되면 돌아옵니다)`}</p>}
+      {blocked > 0 && <p className="hint" role="note">{`차단한 사용자의 빌드 ${blocked}개는 숨겼습니다.`}</p>}
+      {visible.length === 0 ? (
+        <p className="empty">{total === 0 ? NO_SAVED_TEXT : '보여 줄 빌드가 없습니다.'}</p>
+      ) : (
+        <ul className="profile-builds inf-build-list all-builds saved-builds" ref={listRef}>
+          {shown.map((b) => <BuildRow key={b.id} b={b} champs={data.champs} />)}
+        </ul>
+      )}
+      {shown.length < visible.length && (
+        <div className="actions">
+          <button type="button" className="btn" onClick={more}>{`더보기 (${shown.length}/${visible.length})`}</button>
+        </div>
+      )}
+    </section>
+  );
+}

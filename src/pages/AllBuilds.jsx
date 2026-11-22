@@ -1,22 +1,15 @@
 import { useEffect, useRef } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { getAllPublicBuilds } from '../api/allBuilds';
 import { getChampionMap } from '../api/ddragon';
 import { isBlocked, useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
-import BuildTitle from '../components/BuildTitle';
-import { ChampIcon } from '../components/InfluencerBuildCard';
-import { LayersIcon, ThumbIcon } from '../components/Icons';
+import BuildRow, { BUILD_ROWS_STEP, shownCount } from '../components/BuildRow';
+import { LayersIcon } from '../components/Icons';
 
 /** 한 번에 더 보이는 개수 */
-export const ALL_BUILDS_STEP = 20;
-
-/** 주소의 ?n= (몇 개까지 펼쳤나) → 20의 배수, 최소 20 */
-const shownCount = (raw) => {
-  const n = Number.parseInt(raw ?? '', 10);
-  return Number.isFinite(n) && n > ALL_BUILDS_STEP ? Math.ceil(n / ALL_BUILDS_STEP) * ALL_BUILDS_STEP : ALL_BUILDS_STEP;
-};
+export const ALL_BUILDS_STEP = BUILD_ROWS_STEP;
 
 /**
  * 전체 빌드 목록 /builds (SPEC 6-81) — 첫 화면 "지금까지 N개의 빌드" 배지를 누르면 온다. 누구나(비로그인·닉네임 없음도) 본다.
@@ -48,7 +41,6 @@ export default function AllBuilds() {
   const visible = data.rows.filter((b) => !isBlocked(auth, b.author_id));
   const hidden = data.rows.length - visible.length;
   const shown = visible.slice(0, n);
-  const name = (id) => data.champs[id]?.name ?? id;
   const more = () => {
     focusFrom.current = shown.length;
     const next = new URLSearchParams(params);
@@ -69,25 +61,7 @@ export default function AllBuilds() {
         <p className="empty">{data.rows.length === 0 ? '아직 공개된 빌드가 없습니다.' : '보여 줄 빌드가 없습니다.'}</p>
       ) : (
         <ul className="profile-builds inf-build-list all-builds" ref={listRef}>
-          {shown.map((b) => (
-            <li key={b.id}>
-              <Link className="inf-build-card all-build" to={`/champion/${b.target}/counter/${b.mine}?build=${b.id}`}>
-                <span className="inf-build-champs" aria-hidden="true">
-                  <ChampIcon champ={data.champs[b.mine]} />
-                  <span className="vs">vs</span>
-                  <ChampIcon champ={data.champs[b.target]} />
-                </span>
-                <span className="inf-build-text">
-                  <strong className="inf-build-matchup">{`${name(b.mine)} vs ${name(b.target)}`}</strong>
-                  <span className="inf-build-name"><BuildTitle build={b} /></span>
-                  <small className="muted all-build-meta">
-                    <span className="skill-group">선마 <kbd className="skill-key">{b.max_skill ?? '?'}</kbd></span>
-                    <span className="vote-count"><ThumbIcon size={12} /><span className="sr-only">추천 </span>{b.up}</span>
-                  </small>
-                </span>
-              </Link>
-            </li>
-          ))}
+          {shown.map((b) => <BuildRow key={b.id} b={b} champs={data.champs} />)}
         </ul>
       )}
 

@@ -27,6 +27,15 @@ const RULES = [
   [/failed to fetch|networkerror|load failed|network request failed|fetch failed/i, MSG.network],
 ];
 
+/** 빌드 저장(북마크, 066) 안내 — 추천 버튼과 같은 방식(6-79) */
+export const SAVE_MSG = {
+  login: '로그인하면 빌드를 저장할 수 있습니다.',
+  nickname: '닉네임을 정하면 빌드를 저장할 수 있습니다.',
+  notPublic: '지금은 공개되지 않은 빌드라 저장할 수 없습니다. 화면을 새로고침해 주세요.',
+  saved: '저장했습니다. 메뉴의 [내 목록 보기]에서 볼 수 있습니다.',
+  unsaved: '저장을 해제했습니다.',
+};
+
 /** 서버·네트워크 오류 → 이용자 문장. 모르는 사유는 서버 문장을 그대로 덧붙인다(한글일 때만) */
 export function voteErrorText(error) {
   const msg = String(error?.message ?? error ?? '');

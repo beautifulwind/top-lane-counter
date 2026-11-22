@@ -77,7 +77,8 @@ export default function Matchup() {
   // 정렬 순서는 불러온 그대로(누를 때마다 탭이 뒤바뀌지 않게). 새로 불러오면 비운다
   const [voted, setVoted] = useState({});
   useEffect(() => { setVoted((m) => (Object.keys(m).length ? {} : m)); }, [data]);
-  const onVoted = useCallback((id, next) => setVoted((m) => ({ ...m, [id]: next })), []);
+  // 066: 저장(북마크) 결과 { saved }도 같은 곳에 합쳐 둔다 (추천 결과와 서로 지우지 않게 합친다)
+  const onVoted = useCallback((id, next) => setVoted((m) => ({ ...m, [id]: { ...m[id], ...next } })), []);
   // 기다리는 동안에도 빌드와 무관한 Data Dragon은 미리 받아 둔다 (캐시돼 있어 로더가 같은 요청을 다시 보내지 않음, 실패는 로더가 다시 시도)
   useEffect(() => {
     [getChampionMap, getItems, getRunes, getSummonerSpells].forEach((f) => f().catch(() => {}));

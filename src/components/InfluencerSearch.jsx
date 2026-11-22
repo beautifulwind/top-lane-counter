@@ -10,7 +10,7 @@ export const SEARCH_WAIT_MS = 300;
 export const NO_RESULT_TEXT = '찾는 장인이 없습니다. 닉네임의 일부만 넣어 다시 찾아보세요.';
 
 /**
- * ☰ 메뉴 [장인찾기] 아래 검색 칸 (050, SPEC 6-36). 로그인하지 않아도 쓸 수 있다.
+ * 장인 찾기 검색 칸 (050, SPEC 6-36 — 6-82부터 상단 바 돋보기 TopSearch 안). 로그인하지 않아도 쓸 수 있다.
  * 한 글자 이상(앞뒤 빈칸 빼고, 20자까지) → 입력을 멈추고 0.3초 뒤 search_influencers. 늦게 온 옛 결과는 버린다.
  * 결과: 장인 표시 + 닉네임 · 유형 · 팔로워 N명, 누르면 장인 페이지(/u/:id). 20개씩 [더보기].
  * 아래에 [내가 팔로우한 장인의 빌드 보기] → /following. onGo: 링크를 눌러 이동할 때 메뉴를 닫는다.
@@ -64,7 +64,7 @@ export default function InfluencerSearch({ id, onGo }) {
   };
 
   return (
-    <div className="inf-search" id={id} role="search" aria-label="장인찾기">
+    <div className="inf-search" id={id} role="search" aria-label="장인 찾기">
       <label className="sr-only" htmlFor={`${id}-q`}>장인 닉네임</label>
       <input
         ref={input} id={`${id}-q`} type="search" className="inf-search-input" value={q} maxLength={20}

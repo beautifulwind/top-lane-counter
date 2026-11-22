@@ -19,6 +19,7 @@
 --  탈퇴로 누른 사람만 비운 익명 추천/비추천은 아래 "빌드 추천·비추천"과 "자유게시판 추천"에서 다른 추천과 함께 지워진다.)
 -- (058·059: 탑신병자 커뮤니티 답글·문서 댓글 답글은 댓글과 함께 지워진다. 058의 빌드 댓글은 060에서 표째 없앴다.)
 -- (061: 사용자 차단 목록(user_blocks)을 전부 지운다 - 테스트 계정끼리 걸어 둔 차단이 공개 뒤까지 남지 않게.)
+-- (066: 빌드 저장(북마크, build_bookmarks)을 전부 지운다 - 테스트 계정이 저장한 빌드가 공개 뒤까지 남지 않게. 빌드를 지우면 함께 지워지지만 남는 빌드의 저장도 지운다.)
 -- (062: 장인 프로필 사진은 장인 표시와 함께 비워지고 파일은 다음 사진 정리 때 지워진다. 사진 신고·바꾼 기록도 지운다.)
 -- 지움: 그 밖의 카운터·문서·제안·빌드 전부, 빌드 추천·비추천과 그 기록, 자유게시판 글·댓글·추천, 문서 댓글, 신고, 오류 신고(043), 알림, 문의하기 문의·답변(032),
 --       빌드 수정 기록·기여자·등록 간격(038 — 남는 말파 공개 빌드마다 지금 내용으로 "이전" 기록 1줄을 새로 남김),
@@ -132,6 +133,9 @@ begin
   end if;
   if to_regclass('public.user_blocks') is not null then  -- 061: 사용자 차단
     delete from public.user_blocks;
+  end if;
+  if to_regclass('public.build_bookmarks') is not null then  -- 066: 빌드 저장(북마크)
+    delete from public.build_bookmarks;
   end if;
 end;
 $$;
@@ -262,6 +266,7 @@ union all select '장인 프로필 사진 / 사진 신고 / 바꾼 기록 (062 �
 union all select '  └ 프로필 사진 정리 대기열 (062, 다음 정리 때 파일 삭제)', case when to_regclass('public.profile_photo_trash') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.profile_photo_trash', false, true, '')))[1]::text::integer end
 union all select '장인 팔로우 / 호출 횟수 / 알림 대기 줄 (050 실행 전이면 0)', case when to_regclass('public.influencer_follows') is null then 0 else (xpath('/row/c/text()', query_to_xml('select (select count(*) from public.influencer_follows) + (select count(*) from public.follow_rate) + (select count(*) from public.follow_notify_queue) as c', false, true, '')))[1]::text::integer end
 union all select '공지 알림 대기 줄 / 새 팔로워 센 기록 (051·052 실행 전이면 0)', (case when to_regclass('public.notice_notify_queue') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.notice_notify_queue', false, true, '')))[1]::text::integer end) + (case when to_regclass('public.new_follower_counted') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.new_follower_counted', false, true, '')))[1]::text::integer end)
+union all select '빌드 저장·북마크 (066 실행 전이면 0)', case when to_regclass('public.build_bookmarks') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.build_bookmarks', false, true, '')))[1]::text::integer end
 union all select '탈퇴한 장인 닉네임 예약 (055 실행 전이면 0)', case when to_regclass('public.nickname_holds') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.nickname_holds', false, true, '')))[1]::text::integer end
 union all select '알림', count(*) from public.notifications
 union all select '  └ 게시판 신고 알림 report_received (045, 0이어야 함)', count(*) from public.notifications where kind = 'report_received'

@@ -4,6 +4,7 @@ import BackButton from './BackButton';
 import ErrorBoundary from './ErrorBoundary';
 import { ShieldIcon } from './Icons';
 import SiteMenu from './SiteMenu';
+import TopSearch from './TopSearch';
 import StoreLinks from './StoreLinks';
 import UpdateBanner from './UpdateBanner';
 import { needsNickname, needsNicknameFor, useAuth } from '../lib/auth';
@@ -53,7 +54,10 @@ export default function Layout() {
             <span className="tagline">{SITE_TAGLINE}</span>
           </span>
         </nav>
-        <SiteMenu />
+        <div className="top-actions">
+          <TopSearch />
+          <SiteMenu />
+        </div>
       </header>
       {auth.loginError && (
         <div className="login-error" role="alert">

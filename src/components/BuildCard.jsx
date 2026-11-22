@@ -2,14 +2,15 @@ import { WITHDRAWN_USER, displayNickname } from '../lib/nickname';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { voteBuild } from '../api/builds';
+import { saveBuild, unsaveBuild } from '../api/bookmarks';
 import { canWrite, isGuest, useAuth } from '../lib/auth';
 import GuestHint from './GuestHint';
 import VoteNotice, { useVoteNotice } from './VoteNotice';
-import { GO_DELAY_MS, MSG, voteErrorText } from '../lib/voteMessages';
+import { GO_DELAY_MS, MSG, SAVE_MSG, voteErrorText } from '../lib/voteMessages';
 import { patchMinor } from '../lib/buildContent';
 import UserName from './UserName';
 import SkillSequenceView from './SkillSequenceView';
-import { ThumbIcon } from './Icons';
+import { BookmarkIcon, ThumbIcon } from './Icons';
 
 export function Icon({ entry, size = 32, round = false, fallback = '?' }) {
   if (!entry) {
@@ -135,6 +136,7 @@ export default function BuildCard({ build, items, runes, spells, interactive = f
  * 추천/비추천 (로그인한 정식 회원만, 한 사람 한 표, 같은 버튼 다시 누르면 취소, 내 빌드는 못 누름). 운영자 [빌드 숨기기]는 ⋮ 메뉴 (Matchup).
  * SPEC 6-79: 눌러도 못 하는 경우에는 버튼을 끄지 않고(aria-disabled) 눌렀을 때 이유를 화면 글로 보여 준다.
  * 로그인·닉네임이 필요하면 안내를 먼저 보여 주고 잠깐(GO_DELAY_MS) 뒤에 그 화면으로 보낸다.
+ * 066 [저장]: 같은 줄 비추천 버튼 오른쪽 책갈피. 누르면 저장, 다시 누르면 해제(나만 봄). 로그인·닉네임 안내는 추천과 같고, 비회원·내 빌드도 저장할 수 있다.
  */
 function BuildActions({ build, onVoted }) {
   const auth = useAuth();
@@ -142,6 +144,8 @@ function BuildActions({ build, onVoted }) {
   const location = useLocation();
   const [votes, setVotes] = useState({ up: build.up, down: build.down, mine: build.mine ?? null });
   const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(!!build.saved);
+  const [saving, setSaving] = useState(false);
   const [notice, showNotice, clearNotice] = useVoteNotice();
   const [announce, setAnnounce] = useState('');
   const [guestHint, setGuestHint] = useState(false);
@@ -187,6 +191,26 @@ function BuildActions({ build, onVoted }) {
     return undefined;
   };
 
+  const toggleSave = async () => {
+    if (saving || going.current) return undefined;
+    if (!signedIn) return goAfterNotice(`${SAVE_MSG.login} 로그인 화면으로 이동합니다.`, '/login');
+    if (!canWrite(auth)) return goAfterNotice(`${SAVE_MSG.nickname} 닉네임 정하기로 이동합니다.`, '/welcome');
+    if (closed && !saved) return showNotice({ kind: 'info', text: SAVE_MSG.notPublic });
+    setSaving(true);
+    clearNotice();
+    try {
+      const next = saved ? await unsaveBuild(build.id) : await saveBuild(build.id);
+      setSaved(!!next?.saved);
+      setAnnounce(next?.saved ? SAVE_MSG.saved : SAVE_MSG.unsaved);
+      onVoted?.(build.id, { saved: !!next?.saved }); // 다른 빌드를 봤다가 돌아와도 그대로
+    } catch (e) {
+      showNotice({ kind: 'error', text: e.message });
+    } finally {
+      setSaving(false);
+    }
+    return undefined;
+  };
+
   const unavailable = own || closed;
   const cls = (on, down) => ['vote', on && 'on', on && down && 'down', unavailable && 'is-disabled'].filter(Boolean).join(' ');
   return (
@@ -213,6 +237,16 @@ function BuildActions({ build, onVoted }) {
           disabled={busy}
         >
           <ThumbIcon down /> {votes.down}
+        </button>
+        <button
+          type="button"
+          className={saved ? 'vote bookmark on' : 'vote bookmark'}
+          aria-pressed={saved}
+          aria-label="빌드 저장"
+          onClick={toggleSave}
+          disabled={saving}
+        >
+          <BookmarkIcon filled={saved} /> <span className="bookmark-text" aria-hidden="true">{saved ? '저장됨' : '저장'}</span>
         </button>
         {own && <span className="own-badge">내 빌드</span>}
         <span className={score > 0 ? 'score plus' : score < 0 ? 'score minus' : 'score'}>점수 {score > 0 ? `+${score}` : score}</span>

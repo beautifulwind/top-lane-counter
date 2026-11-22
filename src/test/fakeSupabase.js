@@ -98,6 +98,8 @@ export const TABLES = {
   doc_comments: [],
   // 061 사용자 차단 { blocker_id, blocked_id, created_at } (RLS 흉내: 본인 것만 보이고·넣고·지운다. 고치기 없음)
   user_blocks: [],
+  // 066 빌드 저장(북마크) { user_id, build_id, created_at } (RLS 흉내: 본인 줄만 읽음. 넣기·지우기는 save_build/unsave_build로만)
+  build_bookmarks: [],
   // 032 문의하기 (user = select가 붙여 주는 보낸 사람 관계)
   inquiries: [],
   // 017 닉네임 변경 기록 (본인 것만 넣는다)
@@ -194,6 +196,8 @@ export function resetFake() {
   TABLES.doc_comments = [];
   TABLES.user_blocks = [];
   fakeState.blocksMissing = false; // true = 061 실행 전 DB (차단 표 없음)
+  TABLES.build_bookmarks = [];
+  fakeState.bookmarksMissing = false; // true = 066 실행 전 DB (저장 표·함수 없음)
   TABLES.nickname_changes = [];
   TABLES.inquiries = [];
   TABLES.push_subscriptions = [];
@@ -305,6 +309,12 @@ function visibleRows(table) {
     });
   }
   if (table === 'build_votes') return rows.map((v) => ({ ...v, builds: { counter_id: TABLES.builds.find((b) => b.id === v.build_id)?.counter_id ?? null } }));
+  // 066 RLS 흉내: 내 저장만 (비로그인은 권한 없음 → run이 오류). builds!inner(counter_id) 관계를 붙여 준다
+  if (table === 'build_bookmarks') {
+    const mine = fakeState.session?.user.id;
+    return rows.filter((r) => mine && r.user_id === mine)
+      .map((r) => ({ ...r, builds: { counter_id: TABLES.builds.find((b) => b.id === r.build_id)?.counter_id ?? null } }));
+  }
   if (table === 'doc_comments') {
     const all = rows.map(withCounter);
     // RLS 흉내: 숨긴 댓글·숨긴 카운터의 댓글은 운영자에게만
@@ -374,6 +384,11 @@ function query(table) {
     if (fakeState.error) return { data: null, error: { message: fakeState.error } };
     const me = fakeState.session?.user.id;
     if (table === 'user_blocks') return runBlocks(me);
+    if (table === 'build_bookmarks') {
+      if (fakeState.bookmarksMissing) return { data: null, error: { code: 'PGRST205', message: "Could not find the table 'public.build_bookmarks' in the schema cache" } };
+      if (!me) return { data: null, error: { code: '42501', message: 'permission denied for table build_bookmarks' } };
+      if (removing || inserted || patch || upserted) return { data: null, error: { code: '42501', message: 'permission denied for table build_bookmarks' } };
+    }
     if (removing) {
       // RLS 흉내: 보이는(본인) 줄만 지워진다
       TABLES[table] = TABLES[table].filter((r) => !rows.includes(r));
@@ -762,6 +777,40 @@ async function rpc(name, args) {
   if (board) return board;
   const wiki = wikiRpc(name, args);
   if (wiki) return wiki;
+  // 066 빌드 저장: DB 함수처럼 (로그인 → 닉네임 → 공개 빌드 → 500개 한도, 이미 저장했으면 그대로)
+  if (['save_build', 'unsave_build', 'my_saved_builds'].includes(name)) {
+    fakeState.rpcCalls.push({ name, args });
+    if (fakeState.bookmarksMissing) return { data: null, error: { code: 'PGRST202', message: `Could not find the function public.${name} in the schema cache` } };
+    const me = fakeState.session?.user.id;
+    if (!me) return { data: null, error: { code: '42501', message: '로그인이 필요합니다.' } };
+    const mineRows = () => TABLES.build_bookmarks.filter((r) => r.user_id === me);
+    if (name === 'unsave_build') {
+      TABLES.build_bookmarks = TABLES.build_bookmarks.filter((r) => !(r.user_id === me && r.build_id === args.p_build));
+      return { data: { saved: false, count: mineRows().length }, error: null };
+    }
+    if (name === 'my_saved_builds') {
+      const all = mineRows().slice().sort((x, y) => String(y.created_at).localeCompare(String(x.created_at)) || y.build_id - x.build_id);
+      const items = all.map((r) => {
+        const b = TABLES.builds.find((x) => x.id === r.build_id);
+        const c = b && (b.counter ?? (TABLES.counters ?? []).find((k) => k.id === b.counter_id));
+        if (!b || b.status !== 'approved' || c?.status !== 'approved') return null;
+        const author = Array.isArray(b.author) ? b.author[0] : b.author;
+        return {
+          id: b.id, name: b.name ?? null, seq: b.seq ?? null, max_skill: b.max_skill ?? null, up: b.up_count ?? 0, created_at: b.created_at ?? null,
+          author_id: b.author_id ?? null, influencer: author?.influencer ?? null, target: c.target_champion, mine: c.counter_champion, saved_at: r.created_at,
+        };
+      }).filter(Boolean);
+      return { data: { total: all.length, hidden: all.length - items.length, limit: 500, items }, error: null };
+    }
+    if (!TABLES.profiles.find((p) => p.id === me)?.nickname) return { data: null, error: { code: '42501', message: '닉네임을 정한 뒤에 저장할 수 있습니다.' } };
+    const b = TABLES.builds.find((x) => x.id === args.p_build);
+    const c = b && (b.counter ?? (TABLES.counters ?? []).find((k) => k.id === b.counter_id));
+    if (!b || b.status !== 'approved' || c?.status !== 'approved') return { data: null, error: { code: '23514', message: '공개된 빌드만 저장할 수 있습니다.' } };
+    if (mineRows().some((r) => r.build_id === b.id)) return { data: { saved: true, count: mineRows().length }, error: null };
+    if (mineRows().length >= 500) return { data: null, error: { code: '23514', message: '저장은 500개까지 할 수 있습니다. 안 보는 빌드를 해제해 주세요.' } };
+    TABLES.build_bookmarks.push({ user_id: me, build_id: b.id, created_at: new Date(Date.now() + TABLES.build_bookmarks.length).toISOString() });
+    return { data: { saved: true, count: mineRows().length }, error: null };
+  }
   if (name === 'vote_build') {
     // DB 함수처럼: 한 사람 한 표, null = 취소, 추천 수 다시 세기
     const me = fakeState.session?.user.id;

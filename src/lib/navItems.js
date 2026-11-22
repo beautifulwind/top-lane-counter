@@ -1,6 +1,6 @@
 // 사이트 메뉴 항목 (SPEC 3장 상단 바·메뉴): 여기 한 곳에서만 정한다.
 // 지금은 ☰ 메뉴 패널(menu)이 읽고, 나중에 앱으로 낼 때 아래 탭 바(tab)도 같은 목록을 읽는다.
-// 상단 바 밖으로 꺼내 보일 항목은 bar: true (지금은 없음 — 상단 바는 로고와 ☰만).
+// 상단 바 밖으로 꺼내 보일 항목은 bar: true (6-82: 돋보기 [장인 찾기] 하나 — 누르면 상단 바 아래에 검색 칸).
 // needs: 'any'(누구나) | 'signedIn'(로그인 — 비회원·닉네임 전 포함) | 'staff'(운영자·감독관)
 // 로그인·로그아웃은 페이지 이동이 아니라 계정 동작이라 이 목록 밖(SiteMenu)에서 처리한다.
 import { BOARD_NAME } from './siteNames';
@@ -10,8 +10,10 @@ export const NAV_ITEMS = [
   { key: 'me', to: '/me', label: '마이페이지', icon: 'user', needs: 'signedIn', menu: true, tab: true, bar: false },
   // 새 알림 빨간 점은 [알림] 옆 (☰에도). 로그인한 사람 모두 (비회원·닉네임 전·운영자 포함)
   { key: 'notifications', to: '/notifications', label: '알림', icon: 'bell', needs: 'signedIn', menu: true, tab: true, bar: false, dot: 'unread' },
-  // 장인찾기 (050): 이동이 아니라 펼침 — 누르면 바로 아래에 검색 칸(InfluencerSearch). 누구나 (로그인 전 포함)
-  { key: 'influencers', to: null, panel: 'influencerSearch', label: '장인찾기', icon: 'search', needs: 'any', menu: true, tab: false, bar: false },
+  // 6-82: ☰ [장인찾기] 자리에 [내 목록 보기] → /lists (저장한 빌드·팔로우한 장인). 로그인 전에도 보이고, 누르면 로그인 안내
+  { key: 'lists', to: '/lists', label: '내 목록 보기', icon: 'bookmark', needs: 'any', menu: true, tab: false, bar: false },
+  // 장인 찾기 (050 → 6-82): ☰ 메뉴에서 상단 바 돋보기로 옮김. 누르면 상단 바 아래에 검색 칸(InfluencerSearch). 누구나 (로그인 전 포함)
+  { key: 'influencers', to: null, panel: 'influencerSearch', label: '장인 찾기', icon: 'search', needs: 'any', menu: false, tab: false, bar: true },
   { key: 'board', to: '/board', label: BOARD_NAME, icon: 'message', needs: 'any', menu: true, tab: true, bar: false },
   // 문의하기 (032): 로그인한 사람 모두 (비회원·닉네임 전 포함). 답변은 알림과 이 화면으로
   { key: 'inquiries', to: '/inquiries', label: '문의하기', icon: 'help', needs: 'signedIn', menu: true, tab: false, bar: false },
