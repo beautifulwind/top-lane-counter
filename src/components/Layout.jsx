@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { Link, Navigate, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import BackButton from './BackButton';
 import ErrorBoundary from './ErrorBoundary';
 import { ShieldIcon } from './Icons';
 import SiteMenu from './SiteMenu';
@@ -43,6 +44,7 @@ export default function Layout() {
     <div className="app">
       <header className="topbar">
         <nav className="top-nav" aria-label="사이트">
+          <BackButton />
           <span className="brand-wrap">
             <Link to="/" className="brand">
               <span className="brand-logo"><ShieldIcon size={18} /></span>

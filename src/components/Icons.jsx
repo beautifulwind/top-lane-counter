@@ -20,6 +20,8 @@ const Line = ({ size = 18, className, children }) => (
 
 /** 방패 (상단 로고) */
 export const ShieldIcon = (p) => <Line {...p}><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" /></Line>;
+/** 왼쪽 화살표 (상단 뒤로 가기) */
+export const ArrowLeftIcon = (p) => <Line {...p}><path d="M19 12H5" /><path d="M11 6l-6 6 6 6" /></Line>;
 /** 내려받기 (앱 설치) */
 export const DownloadIcon = (p) => <Line {...p}><path d="M12 3v12" /><path d="M7 11l5 5 5-5" /><path d="M5 21h14" /></Line>;
 /** 반짝 (추천·카운터 목록) */

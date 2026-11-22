@@ -31,9 +31,22 @@ describe('스토어 이동 버튼 (SPEC 6-70)', () => {
     expect(screen.getByRole('status').textContent).toBe('준비 중입니다');
   });
 
-  test('네이티브 앱(iOS·Android)에서는 아무것도 그리지 않는다', () => {
+  test('네이티브 앱(iOS·Android): 스토어 배지는 없고 작은 단색 [인스타그램] 링크만 (6-78)', () => {
     cap.native = true;
     const { container } = render(<StoreLinks />);
+    expect(screen.queryByText(/Google Play|App Store/)).toBeNull();
+    expect(screen.queryByRole('button')).toBeNull();
+    expect(container.querySelector('.store-pill')).toBeNull();
+    const ig = screen.getByRole('link', { name: '인스타그램' });
+    expect(ig.getAttribute('href')).toBe(INSTAGRAM_URL);
+    expect(ig.getAttribute('target')).toBe('_blank');
+    expect(ig.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(container.querySelector('linearGradient, [fill*="url("]')).toBeNull(); // 공식 그라데이션 로고 아님
+  });
+
+  test('네이티브 앱의 작은 변형(size="sm", 로그인 창)은 예전처럼 아무것도 그리지 않는다', () => {
+    cap.native = true;
+    const { container } = render(<StoreLinks size="sm" />);
     expect(container.innerHTML).toBe('');
   });
 
@@ -58,11 +71,22 @@ describe('스토어 이동 버튼 (SPEC 6-70)', () => {
       expect(document.querySelector('.login-card .store-links-sm')).not.toBeNull();
     });
 
-    test('네이티브 앱: 푸터·로그인 모두 없다', async () => {
+    test('네이티브 앱 로그인 화면: 인스타그램 링크도 없다 (예전 그대로)', async () => {
       cap.native = true;
       start('/login');
       await screen.findByRole('heading', { level: 1, name: /로그인/ });
       expect(screen.queryByRole('link', { name: /App Store/ })).toBeNull();
+      expect(screen.queryByRole('link', { name: /인스타그램/ })).toBeNull();
+    });
+
+    test('네이티브 앱 다른 화면 푸터: 인스타그램 링크만 있다', async () => {
+      cap.native = true;
+      start('/terms');
+      await screen.findByRole('heading', { level: 1, name: '이용약관' });
+      const footer = within(screen.getByRole('contentinfo'));
+      expect(footer.getByRole('link', { name: '인스타그램' })).toBeDefined();
+      expect(footer.queryByRole('link', { name: /App Store/ })).toBeNull();
+      expect(footer.queryByText(/Google Play/)).toBeNull();
     });
   });
 });

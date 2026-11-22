@@ -1,6 +1,7 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getChampions } from '../api/ddragon';
+import { getPublicBuildCount } from '../api/buildCount';
 import { champMatch, tokenize } from '../lib/championSearch';
 import BuildSearch from '../components/BuildSearch';
 import { useAsync } from '../lib/useAsync';
@@ -11,6 +12,13 @@ import { CrosshairIcon } from '../components/Icons';
 export default function Home() {
   const { data: champions, error, loading, retry } = useAsync(getChampions, []);
   const [query, setQuery] = useState('');
+  // 등록된 빌드 수 (6-78): 챔피언 격자를 기다리지 않고 따로 받는다. 실패·0개면 조용히 숨긴다
+  const [buildCount, setBuildCount] = useState(0);
+  useEffect(() => {
+    let live = true;
+    getPublicBuildCount().then((n) => { if (live) setBuildCount(n); }, () => {});
+    return () => { live = false; };
+  }, []);
 
   const tokens = useMemo(() => tokenize(query), [query]);
   // 격자: 모든 단어가 맞는 챔피언 (이름·초성·영문·별명, 6-61). 단어가 둘 이상이면 후보 목록이 주인공이라 격자는 숨긴다
@@ -23,6 +31,10 @@ export default function Home() {
     <>
       <h1 className="doc-title">챔피언 선택</h1>
       <p className="lead">라인에서 만난 상대를 고르면, 그 챔피언을 이기는 상대법과 공략을 볼 수 있습니다.</p>
+
+      {buildCount > 0 && (
+        <p className="build-count">지금까지 <strong>{buildCount.toLocaleString('ko-KR')}개</strong>의 빌드가 등록되었습니다.</p>
+      )}
 
       <BuildSearch champions={champions ?? []} value={query} onChange={setQuery} />
 

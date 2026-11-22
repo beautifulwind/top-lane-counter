@@ -1352,3 +1352,23 @@ a.inf-link:hover .user-nick, a.inf-link:focus-visible .user-nick { text-decorati
 .store-links-sm .store-pill svg { width: 15px; height: 15px; }
 .store-links-sm .store-pill-icon { width: 30px; padding: 0; }
 .store-links-sm .store-links-soon { text-align: center; }
+
+/* 첫 화면 "등록된 빌드 수" (SPEC 6-78) */
+.build-count { margin: calc(-1 * var(--gap-sm)) 0 var(--gap-lg); font-size: var(--fs-sm); color: var(--muted); }
+.build-count strong { color: var(--text); font-weight: 700; font-variant-numeric: tabular-nums; }
+
+/* 앱 푸터의 작은 단색 인스타그램 링크 (SPEC 6-78) — 글씨는 작게, 눌리는 영역은 44px 이상 */
+.store-links-native { margin-bottom: 0; }
+.insta-text-link {
+  display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0;
+  color: var(--muted); font-size: var(--fs-xs); text-decoration: none;
+}
+.insta-text-link:hover { color: var(--text); text-decoration: underline; }
+
+/* 상단 바 ← 뒤로 가기 (SPEC 6-78) — 44px 눌림 영역, 왼쪽 안전 영역은 .app 이 이미 띄운다 */
+.back-btn {
+  position: relative; flex: none; width: 44px; height: 44px; margin-left: -10px; margin-right: -4px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--on-bar); cursor: pointer;
+}
+.back-btn:hover { background: var(--on-bar-hover); border-color: var(--on-bar-line); }

@@ -21,9 +21,9 @@ const topbar = () => within(document.querySelector('.topbar'));
 // 패널 안 링크·버튼 글자를 화면 순서대로 ('' = [X] 닫기)
 const menuNames = () => [...document.querySelectorAll('.menu-panel a, .menu-panel button')].map((el) => el.textContent.trim());
 
-test('상단 바에는 로고(사이트 이름 → 홈)와 ☰만', async () => {
+test('홈의 상단 바에는 로고(사이트 이름 → 홈)와 ☰만 (하위 화면에는 왼쪽에 ← 뒤로 가기가 더 있다, 6-78)', async () => {
   fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
-  start('/board');
+  start('/');
   await menuButton();
   expect(topbar().getAllByRole('link').map((a) => a.getAttribute('href'))).toEqual(['/']);
   expect(topbar().getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['메뉴 열기']);

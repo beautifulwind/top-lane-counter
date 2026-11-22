@@ -3,6 +3,7 @@
 import { getBuildLinks } from './links';
 import { db } from './supabase';
 import { invalidateSearchIndex } from './searchIndex';
+import { invalidateBuildCount } from './buildCount';
 import { getItems, getLatestVersion, getRunes, getSummonerSpells } from './ddragon';
 import { START_GOLD_MAX, compareBuilds, toProposalBuild, toRow } from '../lib/buildContent';
 import { toWikiPayload } from '../lib/wikiBuild';
@@ -40,7 +41,7 @@ const READ_ONLY_RPC = new Set(['vote_build', 'build_contributors', 'admin_build_
 async function rpc(name, args, fallback) {
   const { data, error } = await db().rpc(name, args);
   if (error) throw friendly(error, fallback);
-  if (!READ_ONLY_RPC.has(name)) invalidateSearchIndex(); // 빌드 등록·수정·숨김 등 → 홈 검색 목록 새로 (6-61)
+  if (!READ_ONLY_RPC.has(name)) { invalidateSearchIndex(); invalidateBuildCount(); } // 빌드 등록·수정·숨김 등 → 홈 검색 목록·빌드 수 새로 (6-61, 6-78)
   return data;
 }
 

@@ -6,7 +6,8 @@ const SOON = '준비 중입니다';
 
 /**
  * [Google Play] [App Store] [인스타그램] 알약 버튼 묶음 (SPEC 6-70).
- * 웹 브라우저에서만 보인다 — iOS·Android 앱 안에서는 아무것도 그리지 않는다(Apple 심사: 다른 플랫폼 로고).
+ * 웹 브라우저에서는 알약 3개. iOS·Android 앱 안에서는 스토어 배지를 그리지 않고(Apple 심사 2.3.10: 다른 플랫폼 로고),
+ * 작은 단색 [인스타그램] 글자 링크만 보인다 (6-78). 앱의 size="sm"(로그인 창)은 예전처럼 아무것도 그리지 않는다.
  * size="sm"은 로그인 창용 작은 변형.
  */
 export default function StoreLinks({ size = 'md' }) {
@@ -16,7 +17,7 @@ export default function StoreLinks({ size = 'md' }) {
     return () => clearTimeout(timer.current);
   }, []);
 
-  if (isNativeApp()) return null;
+  if (isNativeApp()) return size === 'sm' ? null : <InstagramTextLink />;
 
   const showSoon = () => {
     setSoon(true);
@@ -44,6 +45,22 @@ export default function StoreLinks({ size = 'md' }) {
         </a>
       </div>
       {soon && <p className="store-links-soon" role="status">{SOON}</p>}
+    </div>
+  );
+}
+
+/** 앱 푸터용: 단색 작은 아이콘 + "인스타그램". 공식 그라데이션 로고는 쓰지 않는다 */
+function InstagramTextLink() {
+  return (
+    <div className="store-links store-links-native">
+      <a className="insta-text-link" href={INSTAGRAM_URL} target="_blank" rel="noopener noreferrer">
+        <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false" fill="none" stroke="currentColor" strokeWidth="2">
+          <rect x="3.5" y="3.5" width="17" height="17" rx="5" />
+          <circle cx="12" cy="12" r="4" />
+          <circle cx="17.2" cy="6.8" r=".6" fill="currentColor" stroke="none" />
+        </svg>
+        <span>인스타그램</span>
+      </a>
     </div>
   );
 }
