@@ -1,9 +1,11 @@
 import { WITHDRAWN_USER, displayNickname } from '../lib/nickname';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { voteBuild } from '../api/builds';
 import { canWrite, isGuest, useAuth } from '../lib/auth';
 import GuestHint from './GuestHint';
+import VoteNotice, { useVoteNotice } from './VoteNotice';
+import { GO_DELAY_MS, MSG, voteErrorText } from '../lib/voteMessages';
 import { patchMinor } from '../lib/buildContent';
 import UserName from './UserName';
 import { ThumbIcon } from './Icons';
@@ -50,7 +52,7 @@ export function BuildAuthor({ build }) {
  * interactive: 추천/비추천 누르기 (상대법 화면에서만). 아니면 숫자만 보인다.
  * authorExtra: 작성자 닉네임 옆에 붙일 것 (050: 상대법 화면의 장인 [+] 팔로우 버튼)
  */
-export default function BuildCard({ build, items, runes, spells, interactive = false, authorExtra = null }) {
+export default function BuildCard({ build, items, runes, spells, interactive = false, authorExtra = null, onVoted = null }) {
   const r = build.runes;
   return (
     <article className="build" aria-label={`빌드: ${displayNickname(build.author)}`}>
@@ -114,7 +116,7 @@ export default function BuildCard({ build, items, runes, spells, interactive = f
       </div>
 
       {interactive ? (
-        <BuildActions build={build} />
+        <BuildActions build={build} onVoted={onVoted} />
       ) : (
         build.up !== undefined && (
           <div className="votes">
@@ -127,75 +129,94 @@ export default function BuildCard({ build, items, runes, spells, interactive = f
   );
 }
 
-/** 추천/비추천 (로그인한 사람만, 한 사람 한 표, 같은 버튼 다시 누르면 취소, 내 빌드는 못 누름). 운영자 [빌드 숨기기]는 ⋮ 메뉴 (Matchup) */
-function BuildActions({ build }) {
+/**
+ * 추천/비추천 (로그인한 정식 회원만, 한 사람 한 표, 같은 버튼 다시 누르면 취소, 내 빌드는 못 누름). 운영자 [빌드 숨기기]는 ⋮ 메뉴 (Matchup).
+ * SPEC 6-79: 눌러도 못 하는 경우에는 버튼을 끄지 않고(aria-disabled) 눌렀을 때 이유를 화면 글로 보여 준다.
+ * 로그인·닉네임이 필요하면 안내를 먼저 보여 주고 잠깐(GO_DELAY_MS) 뒤에 그 화면으로 보낸다.
+ */
+function BuildActions({ build, onVoted }) {
   const auth = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const [votes, setVotes] = useState({ up: build.up, down: build.down, mine: build.mine ?? null });
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState(null);
+  const [notice, showNotice, clearNotice] = useVoteNotice();
+  const [announce, setAnnounce] = useState('');
   const [guestHint, setGuestHint] = useState(false);
+  const going = useRef(null);
+  useEffect(() => {
+    return () => clearTimeout(going.current);
+  }, []);
   const signedIn = auth.status === 'signedIn';
   const own = signedIn && build.author_id === auth.user.id;
+  const closed = !!build.status && build.status !== 'approved'; // 공개 중이 아닌 빌드(서버가 거절) — 상대법 화면에는 원래 안 나온다
   const score = votes.up - votes.down;
 
+  const goAfterNotice = (text, to) => {
+    showNotice({ kind: 'info', text });
+    if (going.current) return; // 이미 이동하는 중
+    going.current = setTimeout(() => navigate(to, { state: { from: location.pathname + '#builds' } }), GO_DELAY_MS);
+  };
+
   const vote = async (value) => {
-    if (!signedIn) {
-      navigate('/login', { state: { from: location.pathname + '#builds' } });
-      return;
-    }
-    if (!canWrite(auth)) {
-      navigate('/welcome', { state: { from: location.pathname + '#builds' } });
-      return;
-    }
-    if (own || busy) return;
+    if (busy || going.current) return;
+    if (!signedIn) return goAfterNotice(`${MSG.login} 로그인 화면으로 이동합니다.`, '/login');
+    if (!canWrite(auth)) return goAfterNotice(`${MSG.nickname} 닉네임 정하기로 이동합니다.`, '/welcome');
+    if (own) return showNotice({ kind: 'info', text: MSG.ownBuild });
+    if (closed) return showNotice({ kind: 'info', text: MSG.notPublic });
     if (isGuest(auth)) {
       setGuestHint(true); // 비회원은 추천·비추천 불가 (DB 트리거도 막는다)
-      return;
+      return undefined;
     }
     setBusy(true);
-    setError(null);
+    clearNotice();
+    setGuestHint(false);
     try {
-      const next = await voteBuild(build.id, votes.mine === value ? null : value);
+      const cancel = votes.mine === value;
+      const next = await voteBuild(build.id, cancel ? null : value);
       setVotes({ up: next.up, down: next.down, mine: next.mine ?? null });
+      setAnnounce(`${value === 1 ? '추천' : '비추천'}${cancel ? '을 취소했습니다' : '했습니다'}.`);
+      onVoted?.(build.id, { up: next.up, down: next.down, mine: next.mine ?? null }); // 6-79: 빌드 탭·[더보기] 창의 추천 수도 같이
     } catch (e) {
-      setError(e.message);
+      showNotice({ kind: 'error', text: voteErrorText(e) });
     } finally {
       setBusy(false);
     }
+    return undefined;
   };
 
-  const title = own ? '내 빌드에는 투표할 수 없습니다' : !signedIn ? '로그인하면 투표할 수 있습니다' : undefined;
+  const unavailable = own || closed;
+  const cls = (on, down) => ['vote', on && 'on', on && down && 'down', unavailable && 'is-disabled'].filter(Boolean).join(' ');
   return (
     <>
       <div className="votes">
         <button
           type="button"
-          className={votes.mine === 1 ? 'vote on' : 'vote'}
+          className={cls(votes.mine === 1, false)}
           aria-pressed={votes.mine === 1}
           aria-label={`추천 ${votes.up}`}
+          aria-disabled={unavailable || undefined}
           onClick={() => vote(1)}
-          disabled={own || busy}
-          title={title}
+          disabled={busy}
         >
           <ThumbIcon /> {votes.up}
         </button>
         <button
           type="button"
-          className={votes.mine === -1 ? 'vote on down' : 'vote'}
+          className={cls(votes.mine === -1, true)}
           aria-pressed={votes.mine === -1}
           aria-label={`비추천 ${votes.down}`}
+          aria-disabled={unavailable || undefined}
           onClick={() => vote(-1)}
-          disabled={own || busy}
-          title={title}
+          disabled={busy}
         >
           <ThumbIcon down /> {votes.down}
         </button>
         {own && <span className="own-badge">내 빌드</span>}
         <span className={score > 0 ? 'score plus' : score < 0 ? 'score minus' : 'score'}>점수 {score > 0 ? `+${score}` : score}</span>
       </div>
-      {error && <p className="form-error" role="alert">{error}</p>}
+      <span className="sr-only" role="status">{announce}</span>
+      <VoteNotice notice={notice} />
       {guestHint && <GuestHint what="추천·비추천을 누를" />}
     </>
   );

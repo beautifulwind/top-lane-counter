@@ -1,11 +1,13 @@
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import {
   POST_COMMENT_OPS, deleteMyPost, getEditRules, getPost, hidePost, reportPost, restorePost, staffDeletePost, votePost,
 } from '../api/board';
-import { canModerate, canVote, isBlocked, isGuest, useAuth } from '../lib/auth';
+import { canModerate, canWrite, isBlocked, isGuest, useAuth } from '../lib/auth';
 import { BLOCKED_POST, SETTINGS_PATH, blockMenuItem } from '../lib/blocks';
 import GuestHint from '../components/GuestHint';
+import VoteNotice, { useVoteNotice } from '../components/VoteNotice';
+import { GO_DELAY_MS, MSG, voteErrorText } from '../lib/voteMessages';
 import { useAsync } from '../lib/useAsync';
 import { canEditNow, useNow } from '../lib/editWindow';
 import { ErrorBox, Loading } from '../components/Status';
@@ -103,29 +105,55 @@ function PostActions({ post, mine, auth, onDone }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [mode, setMode] = useState(null); // 'delete' | 'report' | 'hide' | 'staffDelete'
-  const [vote, setVote] = useState({ up: post.up_count, mine: post.voted, busy: false, error: null });
-  const signedIn = canVote(auth); // 추천·신고는 닉네임이 있고 비회원이 아니어야
+  const [vote, setVote] = useState({ up: post.up_count, mine: post.voted, busy: false });
+  const [notice, showNotice, clearNotice] = useVoteNotice();
+  const [announce, setAnnounce] = useState('');
+  const [guestHint, setGuestHint] = useState(false);
+  const going = useRef(null);
+  useEffect(() => {
+    return () => clearTimeout(going.current);
+  }, []);
   const visible = post.status === 'visible';
   const canHide = canModerate(auth, post.author_id, post.author);
+  const signedIn = auth.status === 'signedIn' && canWrite(auth) && !isGuest(auth); // 신고 메뉴용: 정식 회원 + 닉네임
   const now = useNow();
 
+  // 6-79: 로그인 전·닉네임 전·비회원·내 글에서도 버튼은 보이고, 누르면 이유를 화면 글로 알려 준다
+  const goAfterNotice = (text, to) => {
+    showNotice({ kind: 'info', text });
+    if (going.current) return;
+    going.current = setTimeout(() => navigate(to, { state: { from: location.pathname } }), GO_DELAY_MS);
+  };
   const toggleVote = async () => {
-    setVote((v) => ({ ...v, busy: true, error: null }));
+    if (vote.busy || going.current) return;
+    if (auth.status !== 'signedIn') return goAfterNotice(`${MSG.login} 로그인 화면으로 이동합니다.`, '/login');
+    if (!canWrite(auth)) return goAfterNotice(`${MSG.nickname} 닉네임 정하기로 이동합니다.`, '/welcome');
+    if (mine) return showNotice({ kind: 'info', text: MSG.ownPost });
+    if (isGuest(auth)) {
+      setGuestHint(true);
+      return undefined;
+    }
+    setVote((v) => ({ ...v, busy: true }));
+    clearNotice();
+    setGuestHint(false);
     try {
       const r = await votePost(post.id);
-      setVote({ up: r.up, mine: r.mine, busy: false, error: null });
+      setVote({ up: r.up, mine: r.mine, busy: false });
+      setAnnounce(r.mine ? '추천했습니다.' : '추천을 취소했습니다.');
     } catch (e) {
-      setVote((v) => ({ ...v, busy: false, error: e.message }));
+      setVote((v) => ({ ...v, busy: false }));
+      showNotice({ kind: 'error', text: voteErrorText(e) });
     }
+    return undefined;
   };
 
   return (
     <div className="post-actions">
       <div className="row-actions">
-        {signedIn && !mine && visible ? (
+        {visible ? (
           <button
-            type="button" className={vote.mine ? 'vote vote-btn on' : 'vote vote-btn'}
-            aria-pressed={vote.mine} onClick={toggleVote} disabled={vote.busy}
+            type="button" className={['vote', 'vote-btn', vote.mine && 'on', mine && 'is-disabled'].filter(Boolean).join(' ')}
+            aria-pressed={vote.mine} aria-disabled={mine || undefined} onClick={toggleVote} disabled={vote.busy}
           >
             <ThumbIcon /> 추천 {vote.up}
           </button>
@@ -149,8 +177,9 @@ function PostActions({ post, mine, auth, onDone }) {
           ]}
         />
       </div>
-      {vote.error && <p className="form-error" role="alert">{vote.error}</p>}
-      {isGuest(auth) && !mine && visible && <GuestHint what="추천·신고를 할" />}
+      <span className="sr-only" role="status">{announce}</span>
+      <VoteNotice notice={notice} />
+      {guestHint && <GuestHint what="추천·신고를 할" />}
       {mode === 'delete' && (
         <ConfirmInline
           question={post.comment_count > 0 ? '글을 지우시겠습니까? 달린 댓글도 함께 보이지 않게 됩니다.' : '글을 지우시겠습니까?'}

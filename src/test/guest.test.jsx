@@ -270,12 +270,14 @@ test('비회원이 추천을 누르면 투표 대신 연결 안내', async () =>
   expect(fakeState.rpcCalls.filter((c) => c.name === 'vote_build')).toEqual([]);
 });
 
-test('탑신병자 커뮤니티 글: 비회원은 [추천]·[신고] 없이 안내만, 댓글·답글도 못 쓴다 (안내만)', async () => {
+test('탑신병자 커뮤니티 글: 비회원은 [추천]을 누르면 안내만, [신고] 없음, 댓글·답글도 못 쓴다 (안내만)', async () => {
   TABLES.posts.push(fakePost(1));
   guestWithName();
   start('/board/1');
+  // 6-79: 추천 버튼은 보이고(눌러도 서버 호출 없음), 누르면 연결 안내가 뜬다
+  fireEvent.click(await screen.findByRole('button', { name: /추천/ }));
   expect(await screen.findByText(/비회원은 추천·신고를 할 수 없습니다/)).toBeDefined();
-  expect(screen.queryByRole('button', { name: /추천/ })).toBeNull();
+  expect(fakeState.rpcCalls.filter((c) => c.name === 'vote_post')).toEqual([]);
   expect(screen.queryByRole('button', { name: '신고' })).toBeNull();
   expect(screen.getByText(/비회원은 댓글을 달 수 없습니다/)).toBeDefined();
   expect(screen.queryByRole('textbox')).toBeNull();

@@ -1391,3 +1391,13 @@ a.inf-link:hover .user-nick, a.inf-link:focus-visible .user-nick { text-decorati
   border: 1px solid transparent; border-radius: var(--radius-sm); background: transparent; color: var(--on-bar); cursor: pointer;
 }
 .back-btn:hover { background: var(--on-bar-hover); border-color: var(--on-bar-line); }
+
+/* 추천 안내 (SPEC 6-79): 눌렀을 때 이유·서버 거절 사유를 화면 글로. 끌 수 없는 경우는 흐리게(aria-disabled) 두되 눌리게 한다 */
+.vote.is-disabled { cursor: default; opacity: .6; }
+.vote-notice {
+  display: flex; align-items: flex-start; gap: 8px; margin: var(--gap-sm) 0 0; padding: 10px 12px;
+  border: 1px solid; border-radius: var(--radius-sm); font-size: var(--fs-sm); line-height: 1.5; overflow-wrap: anywhere;
+}
+.vote-notice svg { flex: none; margin-top: 2px; }
+.vote-notice-error { color: var(--warn); background: var(--warn-soft); border-color: var(--warn-line); font-weight: 600; }
+.vote-notice-info { color: var(--text); background: var(--soft); border-color: var(--soft-line); }

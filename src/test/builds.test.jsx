@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 // 승인 제도 화면은 지금 꺼 두었다(lib/features.js). 코드는 남아 있으므로 켠 채로 검사한다 — 끈 상태는 approvalOff.test.jsx
 vi.mock('../lib/features', async (importOriginal) => ({ ...(await importOriginal()), APPROVAL_ENABLED: true }));
-import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
@@ -54,7 +54,10 @@ test('비로그인: 추천을 누르면 로그인 화면으로, [+ 새 빌드]�
   start(MATCHUP);
   await screen.findByText(/퀸으로 다리우스 이기는 법/);
   click('추천 5', card('탑고수'));
-  expect(where()).toBe('/login');
+  // 6-79: 이동 전에 한 줄 안내를 보여 주고 잠깐 뒤 로그인 화면으로
+  expect(document.querySelector('.vote-notice-info')).toHaveTextContent('로그인하면 추천할 수 있습니다.');
+  expect(where()).toBe(MATCHUP);
+  await waitFor(() => expect(where()).toBe('/login'));
   expect(rpcCalls('vote_build')).toEqual([]);
   cleanup();
   start(MATCHUP);
@@ -90,8 +93,14 @@ test('내가 이미 누른 표가 보이고, 내 빌드에는 못 누른다', as
   fireEvent.click(screen.getByRole('tab', { name: /^빌드 2/ }));
   const mine = card('탑고수');
   expect(within(mine).getByText('내 빌드')).toBeDefined();
-  expect(within(mine).getByRole('button', { name: '추천 5' })).toBeDisabled();
-  expect(within(mine).getByRole('button', { name: '비추천 1' })).toBeDisabled();
+  // 6-79: 흐리게(aria-disabled) 두되 눌리고, 누르면 이유가 화면 글로 뜬다 (서버 호출 없음)
+  const up = within(mine).getByRole('button', { name: '추천 5' });
+  expect(up).toHaveAttribute('aria-disabled', 'true');
+  expect(up).not.toBeDisabled();
+  expect(within(mine).getByRole('button', { name: '비추천 1' })).toHaveAttribute('aria-disabled', 'true');
+  fireEvent.click(up);
+  expect(mine.querySelector('.vote-notice-info')).toHaveTextContent('내가 쓴 빌드에는 추천·비추천할 수 없습니다.');
+  expect(rpcCalls('vote_build')).toEqual([]);
 });
 
 test('투표 실패하면 이유를 보여 주고 숫자는 그대로', async () => {
@@ -100,8 +109,50 @@ test('투표 실패하면 이유를 보여 주고 숫자는 그대로', async ()
   await screen.findByText(/퀸으로 다리우스 이기는 법/);
   fakeState.rpcError = '공개된 빌드에만 투표할 수 있습니다.';
   click('추천 5', card('탑고수'));
-  expect(await screen.findByRole('alert')).toHaveTextContent('공개된 빌드에만 투표할 수 있습니다.');
+  const alert = await screen.findByRole('alert');
+  expect(alert).toHaveTextContent('지금은 공개되지 않은 빌드라 추천할 수 없습니다. 화면을 새로고침해 주세요.');
+  expect(alert.className).toContain('vote-notice-error');
   expect(within(card('탑고수')).getByRole('button', { name: '추천 5' })).toBeDefined();
+});
+
+test('추천하면 빌드 탭의 추천 수도 바뀐다, 다른 빌드를 봤다가 돌아와도 내 표가 남는다 (6-79)', async () => {
+  asUser();
+  start(MATCHUP);
+  await screen.findByText(/퀸으로 다리우스 이기는 법/);
+  const before = tabs();
+  expect(before.some((t) => /추천 5$/.test(t))).toBe(true);
+  click('추천 5', card('탑고수')); // 처음 고른 빌드(추천 가장 많은 탑고수 빌드)
+  await within(card('탑고수')).findByRole('button', { name: '추천 6' });
+  expect(tabs().some((t) => /추천 6$/.test(t))).toBe(true);
+  expect(tabs().some((t) => /추천 5$/.test(t))).toBe(false);
+  // 다른 빌드로 갔다가 돌아오면 내 표가 그대로 (예전에는 불러올 때 값으로 돌아가 "취소"가 안 됐다)
+  const tabEls = screen.getAllByRole('tab');
+  fireEvent.click(tabEls[1]);
+  expect(screen.queryByRole('article', { name: '빌드: 탑고수' })).toBeNull();
+  fireEvent.click(screen.getAllByRole('tab')[0]);
+  const back = within(card('탑고수')).getByRole('button', { name: '추천 6' });
+  expect(back).toHaveAttribute('aria-pressed', 'true');
+  fireEvent.click(back);
+  expect(await within(card('탑고수')).findByRole('button', { name: '추천 5' })).toHaveAttribute('aria-pressed', 'false');
+  expect(rpcCalls('vote_build').at(-1)).toEqual({ p_build_id: 102, p_value: null });
+});
+
+test('서버 거절 사유가 알아볼 문장으로 바뀐다 (6-79)', async () => {
+  asUser();
+  start(MATCHUP);
+  await screen.findByText(/퀸으로 다리우스 이기는 법/);
+  const cases = [
+    ['로그인이 필요해요.', '로그인하면 추천할 수 있습니다.'],
+    ['닉네임을 정한 뒤에 투표할 수 있어요.', '닉네임을 정하면 추천할 수 있습니다.'],
+    ['내 빌드에는 투표할 수 없어요.', '내가 쓴 빌드에는 추천·비추천할 수 없습니다.'],
+    ['비회원은 따봉·비추를 누를 수 없어요. 구글·카카오를 연결하면 할 수 있어요.', '비회원은 추천할 수 없습니다. 구글·카카오를 연결하면 할 수 있습니다.'],
+    ['TypeError: Failed to fetch', '인터넷 연결이 불안정합니다. 잠시 뒤 다시 눌러 주세요.'],
+  ];
+  for (const [server, shown] of cases) {
+    fakeState.rpcError = server;
+    click('추천 5', card('탑고수'));
+    expect(await screen.findByRole('alert')).toHaveTextContent(shown);
+  }
 });
 
 test('빌드 탭: 추천 많은 순(같으면 점수), 처음엔 맨 앞 빌드, 이름이 없으면 "빌드 N", 누르면 ?build=로 남는다', async () => {

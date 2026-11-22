@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../api/ddragon';
 import { getMatchup } from '../api/content';
@@ -73,6 +73,11 @@ export default function Matchup() {
     [targetId, counterId, userId],
     { enabled: auth.status !== 'loading' }, // 로그인 확인이 끝난 뒤 한 번만 불러온다 (확인 전·후로 두 번 도는 것 방지). 기다리는 동안은 같은 로딩 표시
   );
+  // 6-79: 추천을 누른 결과 {빌드 id: {up, down, mine}} — 빌드 탭·[더보기] 창의 추천 수와, 다른 빌드를 봤다가 돌아왔을 때 내 표 표시에 쓴다.
+  // 정렬 순서는 불러온 그대로(누를 때마다 탭이 뒤바뀌지 않게). 새로 불러오면 비운다
+  const [voted, setVoted] = useState({});
+  useEffect(() => { setVoted((m) => (Object.keys(m).length ? {} : m)); }, [data]);
+  const onVoted = useCallback((id, next) => setVoted((m) => ({ ...m, [id]: next })), []);
   // 기다리는 동안에도 빌드와 무관한 Data Dragon은 미리 받아 둔다 (캐시돼 있어 로더가 같은 요청을 다시 보내지 않음, 실패는 로더가 다시 시도)
   useEffect(() => {
     [getChampionMap, getItems, getRunes, getSummonerSpells].forEach((f) => f().catch(() => {}));
@@ -118,7 +123,7 @@ export default function Matchup() {
   }
 
   // 061: 내가 차단한 사람이 처음 만든 빌드는 보이지 않는다 (탭·선택·"빌드 N"에서 모두 빠진다)
-  const builds = data.builds.filter((b) => !isBlocked(auth, b.author_id));
+  const builds = data.builds.filter((b) => !isBlocked(auth, b.author_id)).map((b) => (voted[b.id] ? { ...b, ...voted[b.id] } : b));
   const doc = data.matchup.doc;
   const wanted = Number(search.get('build')) || null;
   const index = Math.max(0, builds.findIndex((b) => b.id === wanted));
@@ -221,6 +226,7 @@ export default function Matchup() {
         <BuildPanel
           key={selected.id}
           build={selected}
+          onVoted={onVoted}
           index={index}
           doc={doc}
           auth={auth}
@@ -403,7 +409,7 @@ function BuildTabs({ builds, selected, onSelect, newTo }) {
 }
 
 /** 고른 빌드 한 벌: 이름·패치·최근 수정 → 한 줄 결론 → 룬·주문·아이템·선마·추천 → 레벨별 딜교법 → 특이사항 → [빌드 수정]·[수정 기록] */
-function BuildPanel({ build, index, doc, auth, data, path, isOperator, canHide, lastOne, hiding, setHiding, onHidden, reportItem, blockItem, reportBox, canLink, onLinkSaved, follow }) {
+function BuildPanel({ build, onVoted, index, doc, auth, data, path, isOperator, canHide, lastOne, hiding, setHiding, onHidden, reportItem, blockItem, reportBox, canLink, onLinkSaved, follow }) {
   const [showPeople, setShowPeople] = useState(false);
   const peopleBtn = useRef(null);
   const label = buildTitleText(build, index);
@@ -470,7 +476,7 @@ function BuildPanel({ build, index, doc, auth, data, path, isOperator, canHide, 
       </nav>
 
       <BuildCard
-        build={build} {...data} interactive
+        build={build} {...data} interactive onVoted={onVoted}
         authorExtra={follow && (
           // 050: 장인이 처음 만든 빌드의 작성자 옆 [+] (내 빌드·장인 아닌 작성자는 없음). 닉네임을 누르면 장인 페이지 — 그대로
           <>{' '}<FollowButton plus id={build.author_id} nickname={build.author?.nickname} following={follow.following} onChange={follow.onChange} /></>

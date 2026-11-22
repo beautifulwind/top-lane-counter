@@ -102,8 +102,11 @@ test('비로그인 글 보기: 본문·댓글, 추천은 숫자만, 댓글은 �
   const c = within(screen.getByRole('list', { name: '댓글' })).getByRole('listitem');
   expect(c.textContent).toContain('좋은 글');
   expect(within(c).getByText('수정됨')).toBeDefined();
-  expect(screen.getByLabelText('추천 2')).toBeDefined();
-  expect(screen.queryByRole('button', { name: /추천/ })).toBeNull();
+  // 6-79: 비로그인도 추천 버튼이 보이고, 누르면 안내 뒤 로그인 화면으로 (서버 호출 없음)
+  const upBtn = screen.getByRole('button', { name: '추천 2' });
+  fireEvent.click(upBtn);
+  expect(document.querySelector('.vote-notice-info')).toHaveTextContent('로그인하면 추천할 수 있습니다.');
+  expect(rpcs('vote_post')).toEqual([]);
   // 비로그인: ⋮에는 [이 사용자 차단]만 (061 — 누르면 로그인으로)
   expect(moreNames(screen, '글 더보기')).toEqual(['이 사용자 차단']);
   expect(moreNames(screen, '댓글 더보기')).toEqual(['이 사용자 차단']);
@@ -166,7 +169,12 @@ test('내 글: ⋮ [고치기] → 수정됨, [지우기] → 달린 댓글과 �
   expect(await screen.findByText('글을 고쳤습니다.')).toBeDefined();
   expect(screen.getByRole('heading', { level: 1 }).textContent).toBe('글 1 (고침)');
   expect(document.querySelector('.post-meta .edited').textContent).toBe('수정됨');
-  expect(screen.queryByRole('button', { name: /추천/ })).toBeNull(); // 내 글은 추천 못 함
+  // 6-79: 내 글에도 흐린 추천 버튼이 있고, 누르면 이유가 화면 글로 뜬다 (서버 호출 없음)
+  const own = screen.getByRole('button', { name: /추천/ });
+  expect(own).toHaveAttribute('aria-disabled', 'true');
+  fireEvent.click(own);
+  expect(document.querySelector('.vote-notice-info')).toHaveTextContent('내가 쓴 글에는 추천할 수 없습니다.');
+  expect(rpcs('vote_post')).toEqual([]);
 
   pickMore(screen, '지우기', '글 더보기');
   const confirm = screen.getByRole('group', { name: '글을 지우시겠습니까? 달린 댓글도 함께 보이지 않게 됩니다.' });
