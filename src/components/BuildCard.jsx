@@ -8,6 +8,7 @@ import VoteNotice, { useVoteNotice } from './VoteNotice';
 import { GO_DELAY_MS, MSG, voteErrorText } from '../lib/voteMessages';
 import { patchMinor } from '../lib/buildContent';
 import UserName from './UserName';
+import SkillSequenceView from './SkillSequenceView';
 import { ThumbIcon } from './Icons';
 
 export function Icon({ entry, size = 32, round = false, fallback = '?' }) {
@@ -112,6 +113,7 @@ export default function BuildCard({ build, items, runes, spells, interactive = f
             <small className="muted">선마</small>
             <kbd className="skill-key">{build.max_skill ?? '?'}</kbd>
           </span>
+          <SkillSequenceView sequence={build.skill_sequence} />
         </div>
       </div>
 

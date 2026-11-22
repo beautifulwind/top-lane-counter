@@ -66,6 +66,7 @@ function BuildNewForm() {
       </p>
       <WikiBuildForm
         game={data.game}
+        champion={counterId}
         initial={emptyWikiBuild()}
         author={auth.profile}
         copyFrom={data.from}

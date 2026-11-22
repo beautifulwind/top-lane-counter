@@ -12,7 +12,8 @@ const PERSON = 'nickname, role, level, main_title, is_guest, influencer, nicknam
 const BUILD_FIELDS =
   'id, counter_id, author_id, proposal_id, runes, summoner_spells, starting_items, core_items, max_skill, patch, ' +
   'up_count, down_count, status, created_at, version, edited_at, ' +
-  'name, seq, summary, level_notes, lane_cautions, updated_at'; // 038: 빌드 = 공략 한 벌
+  'name, seq, summary, level_notes, lane_cautions, updated_at, ' + // 038: 빌드 = 공략 한 벌
+  'skill_sequence'; // 065: 스킬 순서 상세 — DB 065를 먼저 실행해야 한다 (칸이 없으면 빌드 읽기가 통째로 실패)
 const AUTHOR = `author:profiles!builds_author_id_fkey(${PERSON})`;
 const COUNTER = 'counter:counters!builds_counter_id_fkey(id, target_champion, counter_champion, status)';
 const REVIEW_FIELDS =

@@ -99,6 +99,7 @@ function BuildEditForm() {
           <WikiBuildForm
             key={`${build.id}-${build.version}`}
             game={data.game}
+            champion={counterId}
             initial={wikiBuildToForm(build)}
             unchangedFrom={wikiBuildToForm(build)}
             author={build.author}

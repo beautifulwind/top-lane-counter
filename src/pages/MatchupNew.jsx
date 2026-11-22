@@ -124,6 +124,7 @@ function MatchupNewForm() {
           <WikiBuildForm
             key={`${target.id}-${mine.id}-${from?.id ?? ''}`}
             game={data.game}
+            champion={mine.id}
             initial={from ? { ...wikiBuildToForm({ ...(from.build ?? {}), ...from.content }), name: '' } : emptyWikiBuild()}
             author={auth.profile}
             submitLabel="상대법 등록"

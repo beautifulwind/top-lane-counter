@@ -120,7 +120,7 @@
   - DB: 가격표 `item_prices.kind`에 종류(`set_item_prices(패치, 가격, 종류)`가 같이 저장) → `check_core_items` 트리거가 새 등록·핵심 템트리를 바꿀 때·제안만 검사(056부터는 가격표에 있는지만) (예전 빌드를 그대로 승인하면 통과 — 022 강타 검사와 같은 방식).
 - 아이템 검색칸 예시 "판금장화 ex) ㅍㄱㅈㅎ" (초성 검색)
 - 고르기 목록에는 소환사의 협곡 상점에서 살 수 있는 아이템만 나온다 (모드별 사본·특정 챔피언 전용 제외)
-- 스킬: **선마**(첫 번째로 마스터할 스킬) Q·W·E 중 하나 (묶음 C에서 1·2·3레벨 스킬·선마 순서를 없앰, 6-9)
+- 스킬: **선마**(첫 번째로 마스터할 스킬) Q·W·E 중 하나 (묶음 C에서 1·2·3레벨 스킬·선마 순서를 없앰, 6-9) + **스킬 순서 상세**(선택, 1렙부터 Q·W·E·R을 원하는 레벨까지, 위키 빌드만 — 6-80, 065). 둘 다 쓸 수 있다
 - 패치 버전: 등록 시점의 최신 Data Dragon 버전을 자동 기록
 - **"구버전" 판정**: 지금 패치와 **앞 두 자리**(예: 16.21)가 다르면. 빌드 카드에는 "구버전" 글자를 보이지 않고 "패치 16.21"만 보인다(2026-11-07). 판정은 운영자 승인 잠금에만 쓰고 정렬에는 쓰지 않는다
 - **추천 / 비추천** (2026-11-04 "따봉/비추"에서 이름 바꿈, 025. 로그인한 사람만, 한 빌드에 한 사람 한 표, 같은 버튼을 다시 누르면 취소·다른 버튼은 바꾸기, 본인 빌드에는 투표 불가 → "내 빌드" 표시). 운영자도 남의 빌드에 투표할 수 있다. 공개된 빌드에만 (숨긴 빌드·숨긴 카운터의 빌드 불가)
@@ -650,7 +650,7 @@
 - **matchup_docs**: `counter_id`, `level_notes`(jsonb: 필수 1/2/3/6 + 추가 레벨 — 010에서 9·11 필수 해제), `lane_cautions`(화면 이름: 특이사항), `summary`(목록에 보일 한 줄 요약), `updated_by`, `updated_at`
 - **doc_revisions**: 승인된 문서 수정 기록 (되돌리기용). `kind`: `create` / `edit` / `revert` / `admin_edit`(운영자가 고쳐서 승인 — 바로 앞 같은 제안의 줄이 제안 원본, 공개 안 됨), `note`(되돌리기·고쳐서 승인 메모)
 - **edit_proposals**: `id`, `type`(`new_counter` / `doc_edit`), `target_champion`, `counter_champion`, `counter_id`, `proposer_id`, `content`(jsonb), `build`(jsonb, 새 카운터 제안만 필수 — `clean_build`로 검사), `approved_content`·`approved_build`(운영자가 고쳐서 승인한 내용, 안 고쳤으면 비움), `status`, `reject_reason`, `revision_note`·`revision_requested_at`·`resubmitted_at`(재검토), `version`(제안자가 고칠 때·다시 제출할 때 +1, 운영자 처리 때 비교)·`edited_at`(승인 대기 중 마지막으로 고친 때), `reviewed_by`, `reviewed_at`, `created_at`
-- **builds**: `id`, `counter_id`, `author_id`(탈퇴하면 비움), `proposal_id`(새 카운터 제안과 함께 공개된 첫 빌드면 그 제안), `runes`(jsonb), `summoner_spells`, `starting_items`, `core_items`(순서 있음), `max_skill`(선마 Q/W/E, 018 — 예전 `skill_order`·`early_skills`는 지움), `patch`, `up_count`·`down_count`(트리거가 셈), `status`(pending/approved/rejected/hidden/revision_requested), `approve_note`, `reject_reason`, `hide_reason`, `hidden_at`, `original_build`(운영자가 고쳐서 승인했으면 작성자 원본), `revision_note`·`revision_requested_at`·`resubmitted_at`(재검토), `version`·`edited_at`(작성자가 고치기, 제안과 같음), `reviewed_by`, `reviewed_at`, `created_at` — 넣기는 내용 칸만(검사 트리거 `check_new_build`), 상태 변경은 운영자 함수만
+- **builds**: `id`, `counter_id`, `author_id`(탈퇴하면 비움), `proposal_id`(새 카운터 제안과 함께 공개된 첫 빌드면 그 제안), `runes`(jsonb), `summoner_spells`, `starting_items`, `core_items`(순서 있음), `max_skill`(선마 Q/W/E, 018 — 예전 `skill_order`·`early_skills`는 지움), `skill_sequence`(스킬 순서 상세 "QEWQ…", Q/W/E/R 1~18글자, 없으면 null — 065, 6-80. 옛 이름 `skill_order`는 쓰지 않음), `patch`, `up_count`·`down_count`(트리거가 셈), `status`(pending/approved/rejected/hidden/revision_requested), `approve_note`, `reject_reason`, `hide_reason`, `hidden_at`, `original_build`(운영자가 고쳐서 승인했으면 작성자 원본), `revision_note`·`revision_requested_at`·`resubmitted_at`(재검토), `version`·`edited_at`(작성자가 고치기, 제안과 같음), `reviewed_by`, `reviewed_at`, `created_at` — 넣기는 내용 칸만(검사 트리거 `check_new_build`), 상태 변경은 운영자 함수만
 - **build_votes**: `build_id`, `user_id`, `value`(+1 / −1) — (build_id, user_id) 고유. 본인 것만 읽기, 쓰기는 `vote_build()`만
 - **build_status_log**: 빌드 승인·거절·숨김·다시 공개·재검토 요청·요청 취소·다시 제출 기록 + 메모·사유 + 처리자 (운영자만 읽기)
 - **build_vote_log**: 표가 바뀔 때마다 한 줄 (`build_id`, `counter_id`, `author_id`, `voter_id`, `old_value`, `new_value`, `created_at`) — 빌드·카운터와 연결하지 않음, 운영자만 읽기, 6단계 경험치 계산용
@@ -1697,3 +1697,20 @@ RLS 원칙:
 - **운영자 경우**: 코드·SQL에 **운영자 전용 거절은 없다**(역할 검사 없음, 운영자 모드·감독관도 무관). 운영자가 "화면에서는 보이는데 서버가 거절"하려면 — ① 내가 쓴 빌드·글(흐린 버튼+이유), ② 닉네임 없음, ③ 다른 운영자·감독관이 그 사이 빌드나 상대법을 숨김(화면은 아직 옛 상태 → 거절 문장 「…새로고침해 주세요.」). 숨겨진 상대법의 빌드·승인 대기 빌드는 상대법 화면에 아예 나오지 않는다(`getMatchup`은 승인된 상대법만, `getBuilds`는 승인된 빌드만) — 운영자 화면(`/admin/…`)의 빌드 카드는 추천 버튼이 없는 읽기 전용. 그래서 "숨겨진 상대법 밑 빌드"는 화면에서 누를 수 있는 경우가 아니다.
 - **터치·접근성**: 추천 버튼 높이 44px 이상 그대로(.vote), `aria-label`·`aria-pressed` 유지, 흐린 버튼은 `aria-disabled`(스크린리더가 "사용할 수 없음"으로 읽고 눌러서 이유를 들을 수 있음). 안내 상자는 흐름 안(고정 위치 아님)이라 뒤로가기 버튼·[더보기] 창(z-index 50)·앱 푸터·빌드 수 배지와 겹치지 않는다.
 - **검사**: `src/test/voteNotice.test.jsx`(문장 변환 표, 8초 사라짐, 닉네임 전·로그인 전 안내→이동·한 번만, 글 거절 사유, 성공 상태 문장, 운영자 내 빌드·남의 빌드·사이에 숨김), `builds.test.jsx`(로그인 전 안내 뒤 이동, 내 빌드 흐림+이유, 거절 문장, 탭 추천 수 갱신·내 표 유지), `board.test.jsx`(비로그인·내 글 버튼), `guest.test.jsx`(비회원 글 추천 버튼). 앱 반영은 다음 앱 빌드 때.
+
+### 6-80. 빌드 스킬 순서 상세 입력 (2026-11-22, 065 — DB 먼저 실행 후 웹 push, iOS·Android는 다음 앱 빌드 때)
+- **무엇**: 선마(Q/W/E, 필수)는 그대로 두고, 1렙부터 찍는 스킬 순서를 **원하는 레벨까지만** 적는 선택 칸을 더한다. 둘 다 쓸 수 있다. 위키 빌드(새 상대법·새 빌드·빌드 수정)에서만 — 옛 제안·다시 제출 흐름(`clean_build`)은 그대로.
+- **저장**: `builds.skill_sequence` text — "QEWQQRE…"(1번째 글자 = 1렙), Q·W·E·R 1~18글자, 없으면 null. R(궁)도 사람이 직접 적는다(자동으로 채우지 않음).
+- **규칙 (기본)**: Q·W·E 각 5번, R 3번 — 첫 R 6렙·두 번째 11렙·세 번째 16렙부터. Q·W·E는 그 레벨/2 올림 번까지(3렙에 Q 2번까지). 화면 `src/lib/skillSequence.js`와 DB `skill_sequence_problem`이 같은 규칙·같은 문구.
+- **예외 표** (`SEQ_EXCEPTIONS` = DB `skill_sequence_mode`, 새 예외는 두 곳에 한 줄씩): **hidden**(상세 입력 숨김, DB도 거부) 아펠리오스 / **loose**(형식 Q·W·E·R 1~18칸만 검사 — 표가 지금 게임과 조금 달라도 정상 빌드를 막지 않게) 우디르·제이스·엘리스·니달리·카르마. 표에 없는 챔피언은 기본 규칙.
+- **입력 화면** (`SkillSequenceInput`, 선마 줄 아래): [상세하게 작성](aria-expanded, 적은 순서가 있으면 열린 채로) → 적은 칸 + **깜빡이는 다음 칸 하나**(위에 작은 레벨 숫자, R 칸은 주황) → 큰 [Q][W][E][R] 버튼(48px). PC는 이 칸 안에서 q·w·e·r 키, Backspace = 하나 지우기. 칸 아래 「N렙까지 작성하셨습니다 (N/18)」(`role="status"`).
+  - 규칙에 안 맞는 버튼은 흐리게(`aria-disabled`, 끄지 않음) — 누르면 이유(「R은 6렙부터 찍을 수 있습니다.」「3렙에는 Q를 2번까지…」, `role="alert"`, 6-79 안내 상자 모양).
+  - 고치기는 "여기부터 다시"만: [← 하나 지우기], 적은 칸을 누르면 그 레벨부터 지우고 다시 적기(「N렙부터 다시 적어 주세요.」), [전부 지우기]. 중간 칸만 바꾸기는 없다(뒤 칸이 규칙에 어긋날 수 있어서). 사라진 칸 대신 스킬 버튼으로 초점.
+  - 선마와 어긋나면(순서에서 처음 5번 찍은 Q·W·E ≠ 선마) 안내만: 「선마와 순서가 다릅니다. 선마는 E인데, 적은 순서에서는 Q를 먼저 5번 찍었습니다.」 — 저장은 막지 않는다. (말투 규칙 때문에 "~요"가 아닌 "~습니다")
+  - 예외(loose) 챔피언은 「이 챔피언은 스킬 찍는 규칙이 달라 레벨 규칙은 검사하지 않습니다…」, 버튼은 형식만.
+- **보기 화면** (`SkillSequenceView`, 빌드 카드 스킬 줄 "선마 [Q]" 옆): 순서가 있을 때만 [상세하게 보기](44px, aria-expanded) → 18px 글자 칸이 이어서(R 주황, 6칸마다 살짝 띄움, 좁으면 다음 줄 — 가로 스크롤 없음). 칸은 `aria-hidden`, 스크린리더는 「스킬 순서: 1렙 Q, 2렙 E, …」 한 문장. 등록 미리보기·운영자 화면 카드에도 같이 보인다.
+- **DB 검사 2단**: ① 표 규칙 `builds_skill_sequence_format`(어느 길로 넣어도 `^[QWER]{1,18}$`) ② 등록(`wiki_insert_build` — `create_matchup`·`create_build`가 모두 거침)·수정(`edit_build`)·되돌리기(`revert_build_unchecked`)에서 플레이할 챔피언(`counters.counter_champion`) 기준 `check_skill_sequence`. 수정·되돌리기는 **순서가 바뀐 때만** 검사(규칙이 바뀌어도 옛 빌드의 다른 칸 수정이 막히지 않게). 문자열이 아닌 값(숫자 등)·소문자·다른 글자·19칸 이상은 `clean_wiki_build`가 거부하고, 빈 글자는 null로 받는다.
+- **위키 구조와의 관계**: `wiki_snapshot`에 `skill_sequence` → 순서만 고쳐도 수정 기록이 남고 되돌릴 수 있다. 065 전 기록에는 키가 없다 = 순서 없음(되돌리면 null). **"똑같은 빌드" 판정(`build_signature`)에는 넣지 않는다** — 순서만 다른 빌드는 같은 빌드로 보고 막는다. 순서만 고치면 글만 고친 것처럼 패치 번호 그대로. 추천·기여자·수정 횟수 규칙, RLS·권한은 그대로. 운영자 수정 기록 비교(`buildDiff`)에 "스킬 순서" 줄(Q W E … 띄어 씀).
+- **옛 앱(1.1 이하) 호환**: 옛 앱은 이 칸을 모르고 보내지 않는다 → `edit_build`는 `p_build`에 `skill_sequence` 키가 **아예 없으면 원래 순서를 그대로** 둔다. 새 화면은 늘 키를 보내고, 비었으면 `null`로 지운다(`toWikiPayload`). 옛 앱의 등록은 null로 저장. 옛 앱은 읽는 칸 목록에 새 칸이 없어 오류 없이 무시.
+- **배포 순서**: 065 → 웹 push. 새 화면은 `builds` 읽기에 `skill_sequence` 칸을 넣었으므로(`api/builds.js` `BUILD_FIELDS`), 065 전에 웹이 올라가면 빌드 불러오기가 통째로 실패한다. 065만 먼저 실행된 상태는 지금 화면·옛 앱 모두 그대로 동작. 확인 `supabase/scripts/check_skill_sequence_before.sql` / `_after.sql`, 되돌리기 SQL은 065 맨 위 주석.
+- **테스트**: `supabase/tests/skill_sequence_test.sql`(규칙·예외·우회 거부·옛 앱 칸 없음 유지·null 지움·순서만 수정 기록·되돌리기·같은 빌드), `src/test/skillSequence.test.jsx`.

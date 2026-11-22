@@ -56,6 +56,7 @@ export const WIKI_PAYLOAD = (extra = {}) => ({
   starting_items: ['1055', '2003'],
   core_items: ['3053', '3047', '6631'],
   max_skill: 'Q',
+  skill_sequence: null, // 065: 새 화면은 늘 보낸다 (안 적었으면 null)
   patch: '99.1.1',
   name: null,
   summary: '착취로 짧게 딜교',

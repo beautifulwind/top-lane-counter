@@ -780,8 +780,9 @@ async function rpc(name, args) {
 
 // ---------------- 038 상대법 = 빌드 묶음 (위키) ----------------
 // DB 함수처럼: 바로 공개, 남의 빌드 수정은 정식 회원만, 버전이 다르면 TL412. fakeState.contributors = { 빌드id: [기여자] }
-const BUILD_KEYS = ['runes', 'summoner_spells', 'starting_items', 'core_items', 'max_skill', 'patch', 'name', 'summary', 'level_notes', 'lane_cautions'];
-const pickBuild = (p) => Object.fromEntries(BUILD_KEYS.map((k) => [k, p[k] ?? null]));
+const BUILD_KEYS = ['runes', 'summoner_spells', 'starting_items', 'core_items', 'max_skill', 'patch', 'name', 'summary', 'level_notes', 'lane_cautions', 'skill_sequence'];
+// 065: 수정 때 skill_sequence 키가 아예 없으면(옛 앱) 원래 값 그대로 — DB edit_build와 같음
+const pickBuild = (p, old = null) => Object.fromEntries(BUILD_KEYS.map((k) => [k, k === 'skill_sequence' && old && !(k in p) ? old[k] ?? null : p[k] ?? null]));
 function newWikiBuild(counterId, payload) {
   const mine = meNow();
   const seq = Math.max(0, ...TABLES.builds.filter((b) => b.counter_id === counterId).map((b) => b.seq ?? 0)) + 1;
@@ -818,7 +819,7 @@ function wikiRpc(name, args) {
       return { data: null, error: { code: '42501', message: '다른 분의 빌드는 구글·카카오로 로그인한 회원만 수정할 수 있습니다. 비회원은 새 빌드를 등록하거나 내 빌드를 수정할 수 있습니다.' } };
     }
     if (args.p_version !== b.version) return { data: null, error: { code: 'TL412', message: '다른 분이 먼저 수정했습니다. 최신 내용을 확인해 주세요.' } };
-    Object.assign(b, pickBuild(args.p_build), { version: b.version + 1, updated_at: new Date().toISOString() });
+    Object.assign(b, pickBuild(args.p_build, b), { version: b.version + 1, updated_at: new Date().toISOString() });
     return ok(b.version);
   }
   if (name === 'build_editor_counts') { // 046: fakeState.editorCounts = { 빌드id: N } (없으면 0)

@@ -46,7 +46,7 @@ export function docDiff(before, after) {
 /**
  * 빌드 한 벌(043 수정 기록의 전후 내용 = wiki_snapshot 모양) 비교. before가 null이면 처음 등록(전부 추가).
  * game = { items, runes, spells } (Data Dragon) — 아이디 대신 이름으로 보여 준다 (게임 데이터에 없으면 아이디 그대로).
- * [{ key, label, before, after, changed }] — 이름, 패치, 특성, 주문, 시작 아이템, 템트리, 선마, 그다음 글(요약·레벨·특이사항)
+ * [{ key, label, before, after, changed }] — 이름, 패치, 특성, 주문, 시작 아이템, 템트리, 선마, 스킬 순서(065, 예전 기록엔 없음 = 빈칸), 그다음 글(요약·레벨·특이사항)
  */
 export function buildDiff(before, after, game = {}) {
   const field = (key, label, b, a) => ({ key, label, before: b ?? '', after: a ?? '', changed: (b ?? '') !== (a ?? '') });
@@ -72,6 +72,7 @@ export function buildDiff(before, after, game = {}) {
     starting: names(s.starting_items, game.items).join('\n'),
     core: names(s.core_items, game.items).join('\n'),
     skill: s.max_skill ?? '',
+    sequence: s.skill_sequence ? [...s.skill_sequence].join(' ') : '',
   } : null);
   const x = parts(before);
   const y = parts(after) ?? {};
@@ -84,6 +85,7 @@ export function buildDiff(before, after, game = {}) {
     field('starting', '시작 아이템', x?.starting, y.starting),
     field('core', '템트리', x?.core, y.core),
     field('skill', '선마', x?.skill, y.skill),
+    field('sequence', '스킬 순서', x?.sequence, y.sequence),
     ...docDiff(doc(before), doc(after) ?? { summary: '', level_notes: {}, lane_cautions: '' }),
   ];
 }

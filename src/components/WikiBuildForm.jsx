@@ -9,10 +9,11 @@ import WikiBuildFields from './WikiBuildFields';
  * copyFrom: { build, label } — [지금 빌드 내용 가져오기]로 채울 빌드 (새 빌드)
  * onSubmit(value): 실패하면 Error를 던진다 → 폼 아래에 보여 준다. errorExtra(error): 오류 아래에 덧붙일 것 (예: [최신 내용 불러오기])
  * before: 빌드 이름 칸 위에 넣을 것 (챔피언 고르기 등)
+ * champion: 플레이할 챔피언 id (스킬 순서 예외 표 — 065)
  */
 export default function WikiBuildForm({
   game, initial, author, onSubmit, submitLabel, busyLabel = '등록하는 중…', cancelTo, unchangedFrom = null,
-  copyFrom = null, errorExtra = null, before = null,
+  copyFrom = null, errorExtra = null, before = null, champion = null,
 }) {
   const [value, setValue] = useState(initial);
   const [busy, setBusy] = useState(false);
@@ -22,7 +23,7 @@ export default function WikiBuildForm({
   const submit = async (e) => {
     e.preventDefault();
     if (busy) return;
-    const problem = wikiBuildProblem(value, game)
+    const problem = wikiBuildProblem(value, game, champion)
       ?? (unchangedFrom && sameWikiBuild(unchangedFrom, value) ? '바뀐 내용이 없습니다.' : null);
     if (problem) {
       setError({ message: problem });
@@ -56,7 +57,7 @@ export default function WikiBuildForm({
           </small>
         </div>
       )}
-      <WikiBuildFields game={game} value={value} onChange={setValue} author={author} />
+      <WikiBuildFields game={game} value={value} onChange={setValue} author={author} champion={champion} />
 
       {error && (
         <div className="form-error" role="alert">

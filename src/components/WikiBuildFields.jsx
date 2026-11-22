@@ -4,9 +4,10 @@ import BuildFields from './BuildFields';
 
 /**
  * 빌드 한 벌 입력 (새 상대법·새 빌드·빌드 수정 공용): 빌드 이름(선택) → 한 줄 요약 → 룬·주문·아이템·선마 → 레벨별 딜교법 → 특이사항.
+ * champion: 플레이할 챔피언 id (스킬 순서 예외 표, 065).
  * 감싸는 <form className="doc-form">은 각 화면이 그린다. value = wikiBuild.emptyWikiBuild 모양 (빌드 칸과 글 칸이 한 객체), game = getBuildGame() 결과, author = 미리보기 작성자
  */
-export default function WikiBuildFields({ game, value, onChange, author }) {
+export default function WikiBuildFields({ game, value, onChange, author, champion = null }) {
   const name = value.name ?? '';
   return (
     <>
@@ -32,7 +33,7 @@ export default function WikiBuildFields({ game, value, onChange, author }) {
           <fieldset className="pick-group build-in-doc">
             <legend>룬·주문·아이템·선마 (필수)</legend>
             <div className="build-form">
-              <BuildFields game={game} value={value} onChange={onChange} author={author} />
+              <BuildFields game={game} value={value} onChange={onChange} author={author} withSequence champion={champion} />
             </div>
           </fieldset>
         )}

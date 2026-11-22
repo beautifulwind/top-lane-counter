@@ -10,13 +10,16 @@ import { ITEM_LIMITS, NO_SPELLS, SKILLS, buildProblem, startGold, startGoldMax }
 import BuildCard, { Icon } from './BuildCard';
 import { XIcon } from './Icons';
 import { CORE_ORDER } from '../lib/itemKinds';
+import { seqMode } from '../lib/skillSequence';
+import SkillSequenceInput from './SkillSequenceInput';
 
 /**
  * 빌드 입력 (룬·주문·아이템·스킬 + 미리보기). 빌드 등록·새 카운터 제안·다시 제출 공용.
  * game = { items, runes, spells, latest, startGoldMax } (Data Dragon + 시작템 합계 상한), value = 등록 화면 값(buildContent.emptyBuild 모양)
  * author: 미리보기에 보일 작성자 프로필
+ * withSequence: 스킬 순서 상세 입력을 보인다 (065: 위키 빌드만 — 옛 제안·다시 제출은 저장하지 않으므로 안 보임), champion: 플레이할 챔피언 id
  */
-export default function BuildFields({ game, value: build, onChange, author }) {
+export default function BuildFields({ game, value: build, onChange, author, withSequence = false, champion = null }) {
   const set = (patch) => onChange({ ...build, ...patch });
   const problem = buildProblem(build, game);
   return (
@@ -46,7 +49,7 @@ export default function BuildFields({ game, value: build, onChange, author }) {
         kindOrder={CORE_ORDER}
         onChange={(core_items) => set({ core_items })}
       />
-      <SkillPicker value={build} onChange={set} />
+      <SkillPicker value={build} onChange={set} withSequence={withSequence && seqMode(champion) !== 'hidden'} champion={champion} />
 
       <fieldset className="pick-group">
         <legend>빌드 미리보기</legend>
@@ -347,8 +350,8 @@ function PickedItem({ id, movable, entry, name, onRemove }) {
   );
 }
 
-/** 스킬: 선마(첫 번째로 마스터할 스킬) 하나만 */
-function SkillPicker({ value, onChange }) {
+/** 스킬: 선마(첫 번째로 마스터할 스킬) 하나 + (위키 빌드) 스킬 찍는 순서 상세 (선택, 065) */
+function SkillPicker({ value, onChange, withSequence, champion }) {
   return (
     <fieldset className="pick-group">
       <legend>스킬</legend>
@@ -359,6 +362,14 @@ function SkillPicker({ value, onChange }) {
         ))}
       </div>
       <small className="hint">첫 번째로 마스터할 스킬을 골라 주세요.</small>
+      {withSequence && (
+        <SkillSequenceInput
+          value={value.skill_sequence ?? ''}
+          onChange={(skill_sequence) => onChange({ skill_sequence })}
+          champion={champion}
+          maxSkill={value.max_skill}
+        />
+      )}
     </fieldset>
   );
 }
