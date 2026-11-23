@@ -201,7 +201,7 @@ function Profile({ data, me, signedIn, notice, onDone }) {
         {builds.items.length === 0 ? (
           <p className="empty">공개된 빌드가 없습니다.</p>
         ) : (
-          <ul className="profile-builds inf-build-list">
+          <ul className="build-cards">
             {builds.items.map((b) => <InfluencerBuildCard key={b.id} b={b} champs={champs} linkActions={actions} />)}
           </ul>
         )}

@@ -104,7 +104,7 @@ function FollowedBuilds({ userId }) {
   return (
     <section aria-label="팔로우한 장인의 빌드">
       <p className="hint">팔로우한 장인이 처음 만든 공개 빌드를 최근 수정한 순서로 보여 줍니다.</p>
-      <ul className="profile-builds inf-build-list">
+      <ul className="build-cards">
         {list.items.map((b) => <InfluencerBuildCard key={b.id} b={b} champs={list.data.champs} showAuthor />)}
       </ul>
       <MoreButton list={list} unit="개" />

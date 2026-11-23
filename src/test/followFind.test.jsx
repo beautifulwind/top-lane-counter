@@ -162,6 +162,8 @@ test('모아보기 빌드: 팔로우한 장인들의 공개 빌드만, 최근 �
   expect(top.querySelector('.inf-build-matchup').textContent).toBe('퀸으로 다리우스');
   expect(top.querySelectorAll('img.inf-champ')).toHaveLength(2);
   expect(top.getAttribute('href')).toBe('/champion/Darius/counter/Quinn?build=102');
+  expect(top.closest('li')).toHaveClass('build-card', 'is-influencer'); // 6-87: 왼쪽 주황선 카드 (장인의 빌드만 모은 목록)
+  expect(sec.querySelector('ul')).toHaveClass('build-cards');
   expect(cards()[1].querySelector('.inf-build-name').textContent).toBe('빌드 3'); // 103: 11월 3일 수정
   fireEvent.click(within(sec).getByRole('button', { name: '더보기 (4개 남음)' }));
   await waitFor(() => expect(cards()).toHaveLength(24)); // 102 + 103 + 묶음 22개

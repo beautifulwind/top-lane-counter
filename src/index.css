@@ -1151,19 +1151,23 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
   flex: 1 1 auto; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
   list-style: none; margin: 0; padding: 2px;
 }
-.build-picker-list li + li { margin-top: 6px; }
+.build-picker-list li + li { margin-top: var(--gap-sm); }
+/* [더보기] 창 줄도 같은 왼쪽 강조선 카드 (6-87): 장인 빌드 주황·일반 회색, 지금 고른 빌드는 ✓·주황 테두리·옅은 주황 바탕 (왼쪽 선은 그대로) */
 .build-pick {
   display: flex; align-items: center; gap: 8px; width: 100%; min-height: var(--tap-min); padding: 8px 12px; text-align: left;
-  border: 1px solid var(--line-hover); border-radius: var(--radius); background: var(--raised); color: var(--text);
+  border: 1px solid var(--line); border-left: 4px solid var(--line-strong); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--paper); color: var(--text);
   font: inherit; font-weight: 700; cursor: pointer; position: relative;
 }
-.build-pick.on { border-color: var(--brand); background: var(--soft); color: var(--brand-dark); }
+.build-pick.is-influencer { border-left-color: var(--brand); }
+.build-pick.on { border-top-color: var(--brand); border-right-color: var(--brand); border-bottom-color: var(--brand); background: var(--soft); color: var(--brand-dark); }
 .build-pick.on .build-tab-ups { color: inherit; }
+.build-pick:active:not(.on) { background: var(--raised); }
 .build-pick-check { flex: none; width: 1em; text-align: center; }
 .build-pick-name { flex: 1; min-width: 0; overflow-wrap: anywhere; }
 .build-pick .build-tab-ups { flex: none; }
 .build-picker-actions { flex: none; margin-top: var(--gap-sm); }
-@media (hover: hover) { .build-pick:hover:not(.on) { border-color: var(--text); } }
+@media (hover: hover) { .build-pick:hover:not(.on) { background: var(--raised); border-top-color: var(--line-hover); border-right-color: var(--line-hover); border-bottom-color: var(--line-hover); } }
 @media (max-width: 600px) {
   .dialog-backdrop.sheet {
     align-items: flex-end;
@@ -1515,6 +1519,42 @@ a.build-count:focus-visible .build-count-visual { outline: 3px solid var(--text)
 .seq-mismatch { margin: 0; color: var(--text); }
 
 /* 전체 빌드 목록 /builds (SPEC 6-81) — 장인 빌드 카드 줄(inf-build-card)과 같은 모양 */
+/* 빌드 줄 = 왼쪽 강조선 카드 (SPEC 6-87): /builds·저장한 빌드(BuildRow), 장인 페이지·팔로우 모아보기(InfluencerBuildCard), [더보기] 창(.build-pick, 위).
+   카드 하나에 빌드 하나, 1px 테두리 + 카드 바탕, 카드 사이 8px. 왼쪽 4px 선: 장인 빌드 주황(--brand)·일반 회색(--line-strong), 왼쪽은 직각·나머지 12px.
+   마우스를 올리거나 누르면 바탕·테두리가 한 단계 진해지고(왼쪽 선은 그대로), 키보드 초점은 카드 안쪽 주황 윤곽. 누르는 칸 44px 이상. 새 색 없음(기존 토큰만). */
+ul.build-cards { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--gap-sm); scroll-margin-top: calc(64px + env(safe-area-inset-top)); }
+ul.build-cards > li.build-card {
+  display: block; padding: 0; min-width: 0;
+  border: 1px solid var(--line); border-left: 4px solid var(--line-strong); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  background: var(--paper);
+}
+ul.build-cards > li.build-card.is-influencer { border-left-color: var(--brand); }
+.build-card > .build-card-link {
+  min-height: var(--tap-min); padding: 8px 12px; border-radius: 0 calc(var(--radius-sm) - 1px) calc(var(--radius-sm) - 1px) 0;
+}
+.build-card > .build-card-link:focus-visible { outline-offset: -3px; }
+.build-card > .inf-video { margin: 0; padding: 0 12px 8px; }
+.build-card:active { background: var(--raised); border-top-color: var(--line-hover); border-right-color: var(--line-hover); border-bottom-color: var(--line-hover); }
+@media (hover: hover) {
+  .build-card:hover { background: var(--raised); border-top-color: var(--line-hover); border-right-color: var(--line-hover); border-bottom-color: var(--line-hover); }
+}
+
+/* 쪽 번호 (SPEC 6-87): 이전 · 1 2 3 … · 다음. 모든 칸 44px 이상, 폰(480px 이하)은 1 … 5 … 12로 줄여 320px에서도 한 줄 */
+.pagination { margin-top: var(--gap-lg); }
+.pagination ul { list-style: none; margin: 0; padding: 0; display: flex; justify-content: center; align-items: center; gap: var(--gap-xs); }
+.pagination li { margin: 0; padding: 0; }
+.pg-btn {
+  min-width: var(--tap-min); min-height: var(--tap-min); padding: 0 8px; display: inline-flex; align-items: center; justify-content: center;
+  border: 1px solid var(--line-hover); border-radius: var(--radius-sm); background: var(--raised); color: var(--text);
+  font: inherit; font-weight: 700; line-height: 1; cursor: pointer;
+}
+.pg-step { padding: 0 12px; }
+@media (hover: hover) { .pg-btn:hover:not(:disabled):not(.on) { background: var(--raised-hover); } }
+.pg-btn.on { border-color: var(--brand); background: var(--soft); color: var(--brand-dark); cursor: default; }
+.pg-btn:disabled { opacity: .4; cursor: default; }
+.pg-gap { min-width: 20px; text-align: center; color: var(--muted); }
+@media (max-width: 480px) { .pg-step { padding: 0; font-size: var(--fs-xl); } }
+
 .all-builds .all-build { min-height: 44px; }
 .all-build-meta { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
 .all-build-meta .skill-key { padding: 0 5px; font-size: var(--fs-xs); }

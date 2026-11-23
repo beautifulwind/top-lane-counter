@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import BuildTitle from './BuildTitle';
 import { ThumbIcon } from './Icons';
+import { isInfluencerBuild } from '../lib/wikiBuild';
 
 /**
  * 빌드 [더보기] 창 (6-77): 상대법 빌드 탭이 화면 밖으로 넘칠 때 빌드 전부를 세로 목록으로 보여 주고 고르게 한다.
@@ -65,7 +66,7 @@ export default function BuildPicker({ builds, selectedId, onPick, onClose }) {
                 <button
                   ref={(el) => { items.current[b.id] = el; }}
                   type="button"
-                  className={on ? 'build-pick on' : 'build-pick'}
+                  className={`build-pick${on ? ' on' : ''}${isInfluencerBuild(b) ? ' is-influencer' : ''}`}
                   aria-current={on ? 'true' : undefined}
                   onClick={() => onPick(b.id)}
                 >

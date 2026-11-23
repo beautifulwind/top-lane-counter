@@ -1,5 +1,6 @@
 // 6-81: 첫 화면 "지금까지 N개의 빌드" 배지 → 전체 빌드 목록 /builds
-// 누구나 봄, 정렬(장인 → 추천 → 최신), 줄 내용, 상대법으로 이동, 20개씩 [더보기](주소에 기억), 차단 숨김 안내, 숨긴 상대법 제외, 배지 = 목록 개수
+// 누구나 봄, 정렬(장인 → 추천 → 최신), 줄 내용, 상대법으로 이동, 20개씩 쪽 번호(?page=에 기억), 차단 숨김 안내, 숨긴 상대법 제외, 배지 = 목록 개수
+// 6-87: 안내 문장 없음(목록 이름만), 줄 = 왼쪽 강조선 카드(장인 주황 is-influencer·일반 회색), 이전 · 1 2 3 … · 다음
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
@@ -7,6 +8,7 @@ import { AppRoutes } from '../App';
 import { resetCountUp } from '../components/BuildCountBadge';
 import { getPublicBuildCount, invalidateBuildCount } from '../api/buildCount';
 import { compareAllBuilds } from '../lib/wikiBuild';
+import { pageItems } from '../components/Pagination';
 import { fakeFetch } from './fakeDdragon';
 import { TABLES, fakeBuild, fakeLogin, fakeState } from './fakeSupabase';
 
@@ -67,7 +69,8 @@ test('비로그인도 본다: 공개 빌드만(숨긴 상대법·승인 대기 �
   seed();
   start('/builds');
   expect(await screen.findByRole('heading', { level: 1, name: /전체 빌드/ })).toBeDefined();
-  expect(screen.getByText(/공개된 빌드 6개/)).toBeDefined();
+  expect(screen.queryByText(/장인 빌드가 먼저|누르면 그 상대법으로 갑니다/)).toBeNull(); // 6-87: 제목 아래 안내 문장 삭제
+  expect(screen.getByRole('list', { name: '공개된 빌드 6개' })).toBeDefined(); // 스크린리더용 이름은 남김
   expect(rows().map((li) => li.querySelector('a').getAttribute('href'))).toEqual([
     '/champion/Darius/counter/Garen?build=203', // 장인, 추천 1, 11-05
     '/champion/Vayne/counter/Teemo?build=202', // 장인, 추천 1, 11-02
@@ -86,6 +89,11 @@ test('비로그인도 본다: 공개 빌드만(숨긴 상대법·승인 대기 �
   expect(third.textContent).toContain('착취');
   expect(third.querySelector('.skill-key').textContent).toBe('E');
   expect(third.querySelector('.vote-count').textContent).toBe('추천 9');
+  // 강조선 = 장인 빌드 뱃지와 같은 판정 (뱃지가 있는 줄만 주황)
+  expect(rows().map((li) => li.classList.contains('is-influencer'))).toEqual([true, true, false, false, false, false]);
+  expect(rows().every((li) => li.classList.contains('build-card'))).toBe(true);
+  expect(rows().map((li) => !!li.querySelector('.inf-build-tag'))).toEqual(rows().map((li) => li.classList.contains('is-influencer')));
+  expect(screen.queryByRole('navigation', { name: '쪽 이동' })).toBeNull(); // 20개 이하면 쪽 번호 없음
 });
 
 test('닉네임을 정하기 전인 회원도 본다', async () => {
@@ -104,29 +112,80 @@ test('줄을 누르면 그 상대법 화면(그 빌드를 고른 채로)', async
   expect(where()).toBe('/champion/Darius/counter/Garen?build=201');
 });
 
-test('20개씩 [더보기] — 펼친 개수는 주소에 남아 상대법에 갔다 와도 그대로, 다 보이면 버튼이 없다', async () => {
+const pager = () => screen.getByRole('navigation', { name: '쪽 이동' });
+const pagerLabels = () => within(pager()).getAllByRole('listitem').map((li) => li.textContent);
+
+test('20개씩 쪽 번호 — 쪽은 주소(?page=)에 남아 상대법에 갔다 와도 그대로, 쪽을 바꾸면 목록 맨 위로', async () => {
   many(45);
+  const scroll = vi.fn();
+  Element.prototype.scrollIntoView = scroll;
   start('/builds');
   await waitFor(() => expect(rows()).toHaveLength(20));
-  fireEvent.click(screen.getByRole('button', { name: '더보기 (20/45)' }));
-  await waitFor(() => expect(rows()).toHaveLength(40));
-  expect(where()).toBe('/builds?n=40');
-  expect(document.activeElement).toBe(rows()[20].querySelector('a')); // 새로 보인 첫 줄로 초점
-  fireEvent.click(rows()[25].querySelector('a'));
+  expect(pagerLabels()).toEqual(['이전', '1', '2', '3', '다음']);
+  expect(within(pager()).getByRole('button', { name: '1쪽' })).toHaveAttribute('aria-current', 'page');
+  expect(within(pager()).getByRole('button', { name: '이전 쪽' })).toBeDisabled();
+  fireEvent.click(within(pager()).getByRole('button', { name: '2쪽' }));
+  await waitFor(() => expect(where()).toBe('/builds?page=2'));
+  expect(rows()).toHaveLength(20);
+  expect(rows()[0].querySelector('a').getAttribute('href')).toMatch(/build=320$/); // 21번째 (추천 많은 순)
+  expect(within(pager()).getByRole('button', { name: '2쪽' })).toHaveAttribute('aria-current', 'page');
+  expect(scroll).toHaveBeenCalled(); // 목록 맨 위로
+  expect(document.activeElement).toBe(rows()[0].querySelector('a')); // 새 쪽의 첫 줄로 초점
+  fireEvent.click(rows()[5].querySelector('a'));
   expect(where()).toMatch(/^\/champion\/Darius\/counter\/Garen\?build=/);
   nav(-1);
-  await waitFor(() => expect(rows()).toHaveLength(40));
-  fireEvent.click(screen.getByRole('button', { name: '더보기 (40/45)' }));
-  await waitFor(() => expect(rows()).toHaveLength(45));
-  expect(screen.queryByRole('button', { name: /더보기/ })).toBeNull();
+  await waitFor(() => expect(where()).toBe('/builds?page=2'));
+  await waitFor(() => expect(rows()[0].querySelector('a').getAttribute('href')).toMatch(/build=320$/)); // 뒤로 와도 같은 쪽
+  fireEvent.click(within(pager()).getByRole('button', { name: '다음 쪽' }));
+  await waitFor(() => expect(where()).toBe('/builds?page=3'));
+  expect(rows()).toHaveLength(5); // 마지막 쪽 45 - 40
+  expect(within(pager()).getByRole('button', { name: '다음 쪽' })).toBeDisabled();
+  fireEvent.click(within(pager()).getByRole('button', { name: '1쪽' }));
+  await waitFor(() => expect(where()).toBe('/builds')); // 1쪽이면 주소에 없음
+  delete Element.prototype.scrollIntoView;
 });
 
-test('23개(지금 정도)면 20개 + [더보기 (20/23)] 한 번', async () => {
+test('?page=이 이상하면 1쪽, 너무 크면 마지막 쪽 (예전 ?n= 주소도 죽지 않음)', async () => {
+  many(45);
+  const first = start('/builds?page=abc');
+  await waitFor(() => expect(rows()).toHaveLength(20));
+  expect(within(pager()).getByRole('button', { name: '1쪽' })).toHaveAttribute('aria-current', 'page');
+  first.unmount();
+  const second = start('/builds?page=99');
+  await waitFor(() => expect(rows()).toHaveLength(5));
+  expect(within(pager()).getByRole('button', { name: '3쪽' })).toHaveAttribute('aria-current', 'page');
+  second.unmount();
+  start('/builds?n=40');
+  await waitFor(() => expect(rows()).toHaveLength(20));
+});
+
+test('23개(지금 정도)면 20개 + 3개, 쪽 번호 이전 · 1 2 · 다음', async () => {
   many(23);
   start('/builds');
   await waitFor(() => expect(rows()).toHaveLength(20));
-  fireEvent.click(screen.getByRole('button', { name: '더보기 (20/23)' }));
-  await waitFor(() => expect(rows()).toHaveLength(23));
+  expect(pagerLabels()).toEqual(['이전', '1', '2', '다음']);
+  fireEvent.click(within(pager()).getByRole('button', { name: '2쪽' }));
+  await waitFor(() => expect(rows()).toHaveLength(3));
+});
+
+test('쪽이 많으면 일부만: 1 … 4 5 6 … 12 (폰에서는 1 … 5 … 12), 사이가 한 쪽뿐이면 그 번호', () => {
+  const text = (page, pages, compact) => pageItems(page, pages, compact).map((i) => (i.kind === 'gap' ? '…' : i.n)).join(' ');
+  expect(text(1, 1)).toBe('');
+  expect(text(1, 3)).toBe('1 2 3');
+  expect(text(5, 7)).toBe('1 2 3 4 5 6 7');
+  expect(text(5, 12)).toBe('1 … 4 5 6 … 12');
+  expect(text(1, 12)).toBe('1 2 … 12');
+  expect(text(2, 12)).toBe('1 2 3 … 12');
+  expect(text(3, 12)).toBe('1 2 3 4 … 12');
+  expect(text(4, 12)).toBe('1 2 3 4 5 … 12'); // 사이가 한 쪽(2)뿐이면 점 대신 번호
+  expect(text(11, 12)).toBe('1 … 10 11 12');
+  expect(text(12, 12)).toBe('1 … 11 12');
+  expect(text(5, 12, true)).toBe('1 … 5 … 12');
+  expect(text(1, 12, true)).toBe('1 … 12');
+  expect(text(2, 12, true)).toBe('1 2 … 12');
+  expect(text(12, 12, true)).toBe('1 … 12');
+  expect(text(3, 4, true)).toBe('1 2 3 4'); // 4쪽 이하는 폰에서도 전부
+  expect(text(3, 5, true)).toBe('1 … 3 … 5');
 });
 
 test('내가 차단한 사람의 빌드는 숨기고 몇 개 숨겼는지 알려 준다 (개수 문장은 전체 기준)', async () => {
@@ -138,7 +197,7 @@ test('내가 차단한 사람의 빌드는 숨기고 몇 개 숨겼는지 알려
   expect(await screen.findByText('차단한 사용자의 빌드 1개는 숨겼습니다.')).toHaveAttribute('role', 'note');
   await waitFor(() => expect(rows()).toHaveLength(5));
   expect(rows().some((li) => li.querySelector('a').getAttribute('href').endsWith('build=201'))).toBe(false);
-  expect(screen.getByText(/공개된 빌드 6개/)).toBeDefined();
+  expect(screen.getByRole('list', { name: '공개된 빌드 6개' })).toBeDefined();
 });
 
 test('빌드가 없으면 안내, 불러오기 실패면 오류와 다시 시도', async () => {

@@ -1,11 +1,11 @@
-import { useEffect, useRef } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { getMySavedBuilds } from '../api/bookmarks';
 import { getChampionMap } from '../api/ddragon';
 import { canWrite, isBlocked, isGuest, useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
-import BuildRow, { BUILD_ROWS_STEP, shownCount } from '../components/BuildRow';
+import BuildRow from '../components/BuildRow';
+import Pagination, { usePaging } from '../components/Pagination';
 import { BookmarkIcon } from '../components/Icons';
 import { FollowingList, GUEST_FOLLOWING_TEXT } from './Following';
 
@@ -13,8 +13,8 @@ export const NO_SAVED_TEXT = '아직 저장한 빌드가 없습니다. 빌드 �
 
 /**
  * 내 목록 (/lists, SPEC 6-82). ☰ 메뉴 [내 목록 보기]로 온다. 위쪽 탭 두 개 (?tab=following으로 주소에 남는다):
- *  - 저장한 빌드 (기본): my_saved_builds — 최근 저장순, 줄 모양은 전체 빌드 목록(/builds)과 같은 BuildRow.
- *    20개씩 [더보기](펼친 개수 ?n=), 차단한 사람의 빌드는 숨기고 개수 안내, 지금 볼 수 없는(숨김) 빌드 수 안내.
+ *  - 저장한 빌드 (기본): my_saved_builds — 최근 저장순, 줄 모양은 전체 빌드 목록(/builds)과 같은 BuildRow(왼쪽 강조선 카드).
+ *    20개씩 쪽 번호(이전 · 1 2 3 … · 다음, 쪽은 ?page=, 6-87), 차단한 사람의 빌드는 숨기고 개수 안내, 지금 볼 수 없는(숨김) 빌드 수 안내.
  *  - 팔로우한 장인: 팔로우 모아보기(/following)의 목록 그대로 (063 규칙: 내 것만, 팔로우한 날 없음, 비회원은 안내만).
  * 로그인하지 않았으면 로그인 안내만. 닉네임 전이면 목록은 보이고 저장하려면 닉네임이 필요하다고 알려 준다 (/following과 같은 규칙).
  */
@@ -60,35 +60,19 @@ export default function MyLists() {
 
 function SavedBuilds({ userId }) {
   const auth = useAuth();
-  const [params, setParams] = useSearchParams();
-  const n = shownCount(params.get('n'));
   const { data, error, loading, retry } = useAsync(async () => {
     const [saved, champs] = await Promise.all([getMySavedBuilds(), getChampionMap().catch(() => ({}))]);
     return { saved, champs };
   }, [userId]);
-  const listRef = useRef(null);
-  const focusFrom = useRef(null); // [더보기] 뒤 새로 보인 첫 줄로 초점
-
-  useEffect(() => {
-    if (focusFrom.current == null) return;
-    const link = listRef.current?.querySelectorAll('li > a')[focusFrom.current];
-    focusFrom.current = null;
-    link?.focus();
-  });
+  const visible = (data?.saved.items ?? []).filter((b) => !isBlocked(auth, b.author_id));
+  const pg = usePaging(visible.length);
 
   if (loading && !data) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
 
   const { items, total, hidden, limit } = data.saved;
-  const visible = items.filter((b) => !isBlocked(auth, b.author_id));
   const blocked = items.length - visible.length;
-  const shown = visible.slice(0, n);
-  const more = () => {
-    focusFrom.current = shown.length;
-    const next = new URLSearchParams(params);
-    next.set('n', String(n + BUILD_ROWS_STEP));
-    setParams(next, { replace: true });
-  };
+  const shown = visible.slice(pg.start, pg.end);
 
   return (
     <section aria-label="저장한 빌드">
@@ -101,15 +85,11 @@ function SavedBuilds({ userId }) {
       {visible.length === 0 ? (
         <p className="empty">{total === 0 ? NO_SAVED_TEXT : '보여 줄 빌드가 없습니다.'}</p>
       ) : (
-        <ul className="profile-builds inf-build-list all-builds saved-builds" ref={listRef}>
+        <ul className="build-cards all-builds saved-builds" ref={pg.listRef}>
           {shown.map((b) => <BuildRow key={b.id} b={b} champs={data.champs} />)}
         </ul>
       )}
-      {shown.length < visible.length && (
-        <div className="actions">
-          <button type="button" className="btn" onClick={more}>{`더보기 (${shown.length}/${visible.length})`}</button>
-        </div>
-      )}
+      <Pagination {...pg} />
     </section>
   );
 }

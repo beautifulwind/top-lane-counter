@@ -74,6 +74,8 @@ test('탭이 넘치면 [더보기] → 창에 빌드 전부, 장인 빌드에는
   // 줄마다 배지 붙은 빌드: 108·103·101 = 지금 장인이 처음 만든 빌드 전부
   const tagged = list.filter((b) => b.querySelector('.inf-build-tag')).map((b) => b.querySelector('.build-pick-name').textContent);
   expect(tagged).toEqual(['장인 빌드 장인 여덟', '장인 빌드', '장인 빌드 장인 하나']);
+  // 6-87: 줄도 왼쪽 강조선 카드 — 배지가 있는 줄만 주황(is-influencer), 나머지는 회색
+  expect(list.map((b) => b.classList.contains('is-influencer'))).toEqual(list.map((b) => !!b.querySelector('.inf-build-tag')));
   // 탭 줄과 창의 이름이 똑같다 (같은 BuildTitle)
   const tabNames = screen.getAllByRole('tab').map((t) => t.querySelector('.build-tab-name').textContent);
   expect(list.map((b) => b.querySelector('.build-pick-name').textContent)).toEqual(tabNames);

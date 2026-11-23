@@ -186,7 +186,7 @@ test('숨겨진 빌드는 빼고 개수 안내, 차단한 사람의 빌드는 �
   expect(rows()[0].querySelector('a').getAttribute('href')).toMatch(/build=102$/);
 });
 
-test('20개씩 [더보기] — 펼친 개수는 주소에 남아 빌드를 봤다 와도 그대로', async () => {
+test('20개씩 쪽 번호 — 쪽은 주소에 남아 빌드를 봤다 와도 그대로 (6-87)', async () => {
   fakeLogin('u-me', { nickname: '나' });
   for (let i = 0; i < 23; i += 1) {
     TABLES.builds.push(fakeBuild(400 + i, null, {}));
@@ -194,13 +194,18 @@ test('20개씩 [더보기] — 펼친 개수는 주소에 남아 빌드를 봤�
   }
   start('/lists');
   await waitFor(() => expect(rows()).toHaveLength(20));
-  fireEvent.click(screen.getByRole('button', { name: '더보기 (20/23)' }));
-  await waitFor(() => expect(rows()).toHaveLength(23));
-  expect(where()).toBe('/lists?n=40');
-  expect(document.activeElement).toBe(rows()[20].querySelector('a'));
-  fireEvent.click(rows()[21].querySelector('a'));
+  const pager = () => screen.getByRole('navigation', { name: '쪽 이동' });
+  expect(screen.queryByRole('button', { name: /더보기/ })).toBeNull();
+  fireEvent.click(within(pager()).getByRole('button', { name: '2쪽' }));
+  await waitFor(() => expect(rows()).toHaveLength(3));
+  expect(where()).toBe('/lists?page=2');
+  expect(document.activeElement).toBe(rows()[0].querySelector('a'));
+  fireEvent.click(rows()[1].querySelector('a'));
   nav(-1);
-  await waitFor(() => expect(rows()).toHaveLength(23));
+  await waitFor(() => expect(where()).toBe('/lists?page=2'));
+  await waitFor(() => expect(rows()).toHaveLength(3));
+  fireEvent.click(screen.getByRole('tab', { name: '팔로우한 장인' })); // 탭을 바꾸면 쪽 번호는 버린다
+  await waitFor(() => expect(where()).toBe('/lists?tab=following'));
 });
 
 test('[팔로우한 장인] 탭: 내가 팔로우한 장인 목록(063 — 날짜 없음), 비회원은 안내만, 모아보기 링크', async () => {
