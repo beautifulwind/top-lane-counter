@@ -62,8 +62,8 @@ from (
   union all select 12, '적어 둘 값: 빌드 수정 기록 (줄 수 / 가장 큰 id / 내용 지문)',
     (select count(*) || ' / ' || coalesce(max(id), 0) || ' / ' || md5(coalesce(string_agg(r::text, '|' order by r.id), '')) from public.build_revisions r),
     '(이 값을 적어 둠)', '실행 전 값과 같아야 함'
-  union all select 13, '적어 둘 값: 알림 설정 (줄 수 / 기존 칸 내용 지문 - 새 칸 build_edits는 빼고)',
-    (select count(*) || ' / ' || md5(coalesce(string_agg(concat_ws(',', s.user_id, s.staff_new, s.my_results, s.follow_builds, s.notice, s.new_followers, s.updated_at), '|' order by s.user_id::text), ''))
+  union all select 13, '적어 둘 값: 알림 설정 (줄 수 / 기존 칸 7개만 이름으로 직접 골라 비교: user_id·staff_new·my_results·follow_builds·notice·new_followers·updated_at / 내용 지문)',
+    (select count(*) || ' / 비교 칸 ' || (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'push_settings' and column_name in ('user_id','staff_new','my_results','follow_builds','notice','new_followers','updated_at')) || '개 / ' || md5(coalesce(string_agg(concat_ws(',', s.user_id, s.staff_new, s.my_results, s.follow_builds, s.notice, s.new_followers, s.updated_at), '|' order by s.user_id::text), ''))
        from public.push_settings s),
     '(이 값을 적어 둠)', '실행 전 값과 같아야 함'
   union all select 14, '적어 둘 값: 알림 전체 (줄 수 / 가장 큰 id / 내용 지문 - 읽음 표시는 빼고)',
