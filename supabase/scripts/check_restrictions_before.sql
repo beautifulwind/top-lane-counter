@@ -4,7 +4,7 @@
 --   - 1~7번: [지금 값]이 [정상 값]과 모두 맞으면 068을 실행해도 된다. 하나라도 다르면 실행하지 말고 알려 주세요.
 --   - 8~17번은 "적어 둘 값"이다. 068 실행 뒤 check_restrictions_after.sql의 같은 이름 줄과 비교한다(같아야 한다 - 068은 기존 데이터를 바꾸지 않는다).
 --     (그 사이 사이트에서 누가 글을 쓰거나 추천하면 달라질 수 있다 - 사람이 적은 시간에 이어서 실행해 주세요.)
---   - 18번은 다시 정의하는 기존 함수 29개의 본문·설정 지문이다. 068 뒤 "검사 한 줄을 뺀 본문" 지문과 같아야 한다(그 한 줄만 바뀜).
+--   - 18번은 다시 정의하는 기존 함수 29개의 본문·설정 지문이다(본문의 줄바꿈 CR은 빼고 계산 - 붙여 넣기 방식과 무관하게 같은 값). 068 뒤 "검사 한 줄을 뺀 본문" 지문과 같아야 한다(그 한 줄만 바뀜).
 -- =====================================================================
 select ord as "순서", what as "항목", now_value as "지금 값", ok_value as "정상 값", memo as "메모"
 from (
@@ -87,7 +87,7 @@ from (
     (select count(*) || ' / ' || md5(coalesce(string_agg((to_jsonb(p) - 'last_seen_at')::text, '|' order by p.id), '')) from public.profiles p),
     '(이 값을 적어 둠)', '068 뒤 같아야 함'
   union all select 18, '적어 둘 값: 다시 정의할 기존 함수 29개 (본문·보안·search_path·권한 지문)',
-    (select count(*) || ' / ' || md5(string_agg(p.proname || '(' || oidvectortypes(p.proargtypes) || ')' || p.prosrc || p.prosecdef::text
+    (select count(*) || ' / ' || md5(string_agg(p.proname || '(' || oidvectortypes(p.proargtypes) || ')' || replace(p.prosrc, E'\r', '') || p.prosecdef::text
                                               || coalesce(array_to_string(p.proconfig, ','), '') || coalesce(p.proacl::text, ''), '|' order by p.proname))
        from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname in (
       'apply_influencer','begin_edit','create_build','create_comment','create_doc_comment','create_matchup','create_post',

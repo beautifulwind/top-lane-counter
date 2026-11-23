@@ -150,7 +150,7 @@ from (
     '실행 전 17번과 같음', null
   union all select 23, '기존 함수 29개: 검사 한 줄을 뺀 본문·보안·search_path·권한 지문',
     (select count(*) || ' / ' || md5(string_agg(p.proname || '(' || oidvectortypes(p.proargtypes) || ')'
-            || replace(p.prosrc, E'\n  _can_write constant boolean := public.assert_can_write();  -- 068 활동 제한: 다른 검사보다 먼저 (제한 중이면 사유·풀리는 시각 문장)', '')
+            || replace(replace(p.prosrc, E'\r', ''), E'\n  _can_write constant boolean := public.assert_can_write();  -- 068 활동 제한: 다른 검사보다 먼저 (제한 중이면 사유·풀리는 시각 문장)', '')
             || p.prosecdef::text || coalesce(array_to_string(p.proconfig, ','), '') || coalesce(p.proacl::text, ''), '|' order by p.proname))
        from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname in (
       'apply_influencer','begin_edit','create_build','create_comment','create_doc_comment','create_matchup','create_post',
