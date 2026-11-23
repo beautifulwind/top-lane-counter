@@ -161,7 +161,7 @@ function ProfileLinksForm({ mine, onEdit, onSaved }) {
         })}
         <div className="row-actions">
           <button type="button" className="btn" onClick={() => setRows([...rows, ''])} disabled={rows.length >= max}>+ 링크 추가</button>
-          <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? '저장하는 중…' : '저장'}</button>
+          <button type="submit" className="btn btn-primary" data-write disabled={busy}>{busy ? '저장하는 중…' : '저장'}</button>
         </div>
         {rows.length >= max && <p className="hint">프로필 링크는 {max}개까지 올릴 수 있습니다.</p>}
         {error && <p className="form-error" role="alert">{error}</p>}

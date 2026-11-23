@@ -3,13 +3,16 @@
 // 읽기는 RLS가 정한다 (본인 것 / 운영자 전부 / 감독관은 "계정·탈퇴" 빼고).
 import { db } from './supabase';
 
-/** 분류 (보이는 순서). DB 검사(032)와 같은 키 */
+/** 분류 (보이는 순서). DB 검사(032, 068 appeal)와 같은 키 */
 export const INQUIRY_CATEGORIES = {
   bug: '오류 신고',
   idea: '건의',
   account: '계정·탈퇴',
+  appeal: '이의 제기', // 068: 활동 제한·경고에 대한 이의 — 계정·탈퇴처럼 운영자만 본다
   other: '기타',
 };
+/** 운영자만 읽고 답하는 분류 (감독관 제외) */
+export const ADMIN_ONLY_CATEGORIES = ['account', 'appeal'];
 // 글자 수 (화면 안내용 — 실제 검사는 DB, 숫자는 xp_rules: inquiry_min·inquiry_max·inquiry_answer_max·inquiry_daily_max)
 export const INQUIRY_MIN = 5;
 export const INQUIRY_MAX = 1000;

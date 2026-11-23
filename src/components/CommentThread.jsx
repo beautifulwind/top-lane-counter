@@ -217,9 +217,9 @@ function Comment({
           <MoreMenu
             label={`${what} 더보기`}
             items={[
-              editable && { label: '고치기', onSelect: startEdit, disabled: busy },
+              editable && { label: '고치기', write: true, onSelect: startEdit, disabled: busy },
               mine && { label: '지우기', danger: true, onSelect: () => setMode('delete') },
-              signedIn && !mine && visible && !canHide && { label: '신고', onSelect: () => setMode('report') },
+              signedIn && !mine && visible && !canHide && { label: '신고', write: true, onSelect: () => setMode('report') },
               isGuest(auth) && !mine && visible && {
                 label: '신고', disabled: true, hint: '비회원은 신고할 수 없습니다. 마이페이지에서 구글·카카오를 연결해 주세요.',
               },
@@ -248,7 +248,7 @@ function Comment({
           {deadline && <small className="hint edit-deadline">{fmtTime(deadline)}까지 저장할 수 있습니다.</small>}
           <div className="comment-form-foot">
             <CharCount value={body} max={COMMENT_MAX} />
-            <button type="submit" className="btn btn-small" disabled={busy || (!body.trim() && media.length === 0) || body.trim().length > COMMENT_MAX}>
+            <button type="submit" className="btn btn-small" data-write disabled={busy || (!body.trim() && media.length === 0) || body.trim().length > COMMENT_MAX}>
               {busy ? '저장하는 중…' : '고친 내용 저장'}
             </button>
             <button type="button" className="btn btn-small" disabled={busy} onClick={cancelEdit}>취소</button>
@@ -263,7 +263,7 @@ function Comment({
       )}
       {onReply && mode === null && (
         <div className="comment-actions">
-          <button type="button" className="link-btn reply-btn" aria-expanded={replying} onClick={onReply}>
+          <button type="button" className="link-btn reply-btn" aria-expanded={replying} onClick={onReply} data-write={!replying || undefined}>
             {replying ? '답글 닫기' : '답글'}
           </button>
         </div>
@@ -373,7 +373,7 @@ function CommentForm({ ops, parentId, replyTo = null, auth, mediaRules, onDone, 
       )}
       <div className="comment-form-foot">
         <CharCount value={body} max={COMMENT_MAX} />
-        <button type="submit" className="btn btn-small btn-primary" disabled={busy || (n === 0 && media.length === 0) || n > COMMENT_MAX}>
+        <button type="submit" className="btn btn-small btn-primary" data-write disabled={busy || (n === 0 && media.length === 0) || n > COMMENT_MAX}>
           {busy ? '올리는 중…' : `${what} 올리기`}
         </button>
         {onCancel && <button type="button" className="btn btn-small" disabled={busy} onClick={onCancel}>취소</button>}

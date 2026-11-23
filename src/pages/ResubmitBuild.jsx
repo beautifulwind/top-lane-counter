@@ -111,7 +111,7 @@ function Editor({ b, data, crumbs }) {
         <BuildFields game={data.game} value={build} onChange={setBuild} author={auth.profile} />
         {error && <p className="form-error" role="alert">{error}</p>}
         <div className="actions">
-          <button type="submit" className="btn" disabled={!!problem || busy}>{busy ? (resubmit ? '보내는 중…' : '저장하는 중…') : resubmit ? '다시 보내기' : '고친 내용 저장'}</button>
+          <button type="submit" className="btn" data-write disabled={!!problem || busy}>{busy ? (resubmit ? '보내는 중…' : '저장하는 중…') : resubmit ? '다시 보내기' : '고친 내용 저장'}</button>
           <Link to={`/me/builds/${b.id}`} className="btn">취소</Link>
         </div>
       </form>

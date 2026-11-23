@@ -229,7 +229,7 @@ function ProfileMenu({ auth, profile, onMode, onLogin, onDone }) {
   const operator = auth.isOperator;
   const signedOut = auth.status !== 'signedIn';
   const report = !hasPhoto || operator ? null
-    : canVote(auth) ? { label: '프로필 사진 신고', onSelect: () => onMode('report') }
+    : canVote(auth) ? { label: '프로필 사진 신고', write: true, onSelect: () => onMode('report') }
       : signedOut ? { label: '프로필 사진 신고', disabled: true, hint: '로그인하면 신고할 수 있습니다.' }
         : isGuest(auth) ? { label: '프로필 사진 신고', disabled: true, hint: '비회원은 신고할 수 없습니다. 마이페이지에서 구글·카카오를 연결해 주세요.' }
           : null;

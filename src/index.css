@@ -370,6 +370,27 @@ kbd {
 .login-error-actions { display: flex; gap: var(--gap-sm); margin-top: var(--gap-md); }
 .login-error-actions .btn { min-height: 36px; display: inline-flex; align-items: center; }
 
+/* 068 활동 제한: 모든 화면 위 띠, 흐린 쓰기 버튼, 막혔을 때 아래쪽 안내 상자 */
+.restriction-band { color: var(--text); }
+.restriction-band strong { color: var(--warn); }
+.restriction-band p { overflow-wrap: anywhere; }
+.restriction-band-hint { display: block; margin-top: 4px; color: var(--muted); }
+.is-restricted [data-write] { opacity: .45; }
+.restriction-toast {
+  position: fixed; z-index: 60; left: var(--gutter); right: var(--gutter); bottom: calc(var(--gutter) + env(safe-area-inset-bottom, 0px));
+  max-width: 560px; margin: 0 auto; padding: var(--pad-box) var(--pad-card);
+  border: 1px solid var(--warn-line); border-radius: var(--radius); background: var(--paper); color: var(--text);
+  font-size: var(--fs-sm); box-shadow: var(--shadow-pop);
+}
+.restriction-toast p { margin: 0; overflow-wrap: anywhere; }
+.restriction-toast strong { color: var(--warn); }
+.restrict-form .restrict-days { border: 1px solid var(--line); border-radius: var(--radius); margin: 0 0 var(--gap-sm); padding: var(--gap-sm) var(--gap-md); min-width: 0; display: flex; flex-direction: column; gap: var(--gap-sm); }
+.restrict-form .restrict-days legend { font-weight: 600; font-size: var(--fs-sm); padding: 0 4px; }
+.restrict-form .restrict-days .row-actions { flex-wrap: wrap; }
+.restrict-form input[type="number"] { max-width: 160px; padding: 8px 10px; font: inherit; font-size: var(--fs-md); border: 1px solid var(--line-strong); border-radius: var(--radius-sm); }
+.restriction-log .hint { margin: 2px 0 0; }
+.restrict-form .btn.on { background: var(--op-soft); border-color: var(--op); color: var(--op-dark); }
+
 /* 마이페이지: 로그인 연결 */
 .me-section { margin-top: var(--gap-xl); }
 .identity-list { list-style: none; padding: 0; margin: var(--gap-md) 0 0; display: flex; flex-direction: column; gap: var(--gap-md); max-width: 360px; }

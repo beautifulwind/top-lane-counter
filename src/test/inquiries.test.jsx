@@ -37,7 +37,7 @@ test('보내기: 분류와 내용(5자 이상)이 있어야 버튼이 켜지고,
   const send = await screen.findByRole('button', { name: '문의 보내기' });
   expect(screen.getByText(/하루에 3건까지/)).toBeDefined();
   expect(screen.getByText(/개인정보는 적지 말아 주세요/)).toBeDefined();
-  expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['분류를 골라 주세요', '오류 신고', '건의', '계정·탈퇴', '기타']);
+  expect(screen.getAllByRole('option').map((o) => o.textContent)).toEqual(['분류를 골라 주세요', '오류 신고', '건의', '계정·탈퇴', '이의 제기', '기타']);
   expect(send.disabled).toBe(true);
   fireEvent.change(screen.getByLabelText('내용'), { target: { value: '짧음' } });
   fireEvent.change(screen.getByLabelText('분류'), { target: { value: 'bug' } });
@@ -168,7 +168,7 @@ test('운영자: 계정·탈퇴도 보이고, 분류를 옮길 수 있다 (옮�
   fireEvent.click(within(first).getByRole('button', { name: '분류 옮기기' }));
   const move = within(first).getByRole('button', { name: '옮기기 확정' });
   expect(move.disabled).toBe(true);
-  expect(within(first).getAllByRole('option').map((o) => o.textContent)).toEqual(['분류를 골라 주세요', '오류 신고', '건의', '계정·탈퇴']); // 지금 분류는 뺌
+  expect(within(first).getAllByRole('option').map((o) => o.textContent)).toEqual(['분류를 골라 주세요', '오류 신고', '건의', '계정·탈퇴', '이의 제기']); // 지금 분류는 뺌
   fireEvent.change(within(first).getByLabelText('옮길 분류'), { target: { value: 'account' } });
   fireEvent.click(move);
   expect(await screen.findByText('분류를 "계정·탈퇴"(으)로 옮겼습니다.')).toBeDefined();

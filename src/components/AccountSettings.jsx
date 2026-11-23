@@ -201,7 +201,7 @@ function NicknameChange({ auth }) {
               <small className="hint">저장하면 {rule.days}일 동안 다시 바꿀 수 없습니다.</small>
               {formError && <p className="form-error" role="alert">{formError}</p>}
               <div className="note-form-actions">
-                <button type="submit" className="btn btn-small" disabled={busy}>{busy ? '저장하는 중…' : '고친 내용 저장'}</button>
+                <button type="submit" className="btn btn-small" data-write disabled={busy}>{busy ? '저장하는 중…' : '고친 내용 저장'}</button>
                 <button type="button" className="btn btn-small" onClick={close} disabled={busy}>취소</button>
               </div>
             </form>

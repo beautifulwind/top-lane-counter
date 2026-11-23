@@ -22,7 +22,7 @@ export default function LinkActions({ link, ownerId, owner, label = '링크 더�
   const canRemove = !mine && canModerate(auth, ownerId, owner);
   const signedOut = auth.status !== 'signedIn';
   const reportItem = mine || canRemove ? null
-    : canVote(auth) ? { label: '링크 신고', onSelect: () => setMode('report') }
+    : canVote(auth) ? { label: '링크 신고', write: true, onSelect: () => setMode('report') }
       : signedOut ? { label: '링크 신고', disabled: true, hint: '로그인하면 신고할 수 있습니다.' }
         : isGuest(auth) ? { label: '링크 신고', disabled: true, hint: '비회원은 신고할 수 없습니다. 마이페이지에서 구글·카카오를 연결해 주세요.' }
           : null;

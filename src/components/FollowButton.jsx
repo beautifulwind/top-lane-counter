@@ -50,6 +50,7 @@ export default function FollowButton({ id, nickname, following = false, onChange
         title={following ? '팔로우중입니다. 누르면 취소합니다.' : '팔로우하면 새 빌드 알림을 받습니다.'}
         onClick={press}
         disabled={busy}
+        data-write={!following || undefined} /* 068: 팔로우는 막고 취소는 그대로 */
       >
         {following ? '팔로우중' : plus ? '+' : '팔로우'}
       </button>

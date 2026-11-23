@@ -7,6 +7,8 @@ import SiteMenu from './SiteMenu';
 import TopSearch from './TopSearch';
 import StoreLinks from './StoreLinks';
 import UpdateBanner from './UpdateBanner';
+import RestrictionBanner from './RestrictionBanner';
+import { useRestriction } from '../lib/restriction';
 import { needsNickname, needsNicknameFor, useAuth } from '../lib/auth';
 import { noticeText, startFresh } from '../api/auth';
 import { usePageTitle } from '../lib/pageTitle';
@@ -22,6 +24,7 @@ export default function Layout() {
   const auth = useAuth();
   const mainRef = useRef(null);
   const navigate = useNavigate();
+  const restricted = !!useRestriction(auth.user?.id).restriction; // 068: 쓰기 버튼(data-write)을 흐리게
   // 잠금 화면 알림을 눌러 돌아오면 그 주소로 (037)
   useEffect(() => {
     const stop = onOpenPath((path) => navigate(path));
@@ -42,7 +45,7 @@ export default function Layout() {
     return <Navigate to="/welcome" replace state={{ from: pathname + search }} />;
   }
   return (
-    <div className="app">
+    <div className={restricted ? 'app is-restricted' : 'app'}>
       <header className="topbar">
         <nav className="top-nav" aria-label="사이트">
           <BackButton />
@@ -98,6 +101,7 @@ export default function Layout() {
           <p>{siteNotice}</p>
         </div>
       )}
+      <RestrictionBanner userId={auth.user?.id} />
       {noNickname && pathname !== '/welcome' && (
         <div className="login-notice nickname-band" role="status">
           <p>닉네임을 정하면 제안·빌드·투표·글·댓글을 쓸 수 있습니다. 둘러보기는 지금도 됩니다.</p>

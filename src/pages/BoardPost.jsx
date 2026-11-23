@@ -153,7 +153,7 @@ function PostActions({ post, mine, auth, onDone }) {
         {visible ? (
           <button
             type="button" className={['vote', 'vote-btn', vote.mine && 'on', mine && 'is-disabled'].filter(Boolean).join(' ')}
-            aria-pressed={vote.mine} aria-disabled={mine || undefined} onClick={toggleVote} disabled={vote.busy}
+            aria-pressed={vote.mine} aria-disabled={mine || undefined} onClick={toggleVote} disabled={vote.busy} data-write={!mine || undefined}
           >
             <ThumbIcon /> 추천 {vote.up}
           </button>
@@ -164,9 +164,9 @@ function PostActions({ post, mine, auth, onDone }) {
         <MoreMenu
           label="글 더보기"
           items={[
-            mine && visible && canEditNow('post', post, post.rules, now) && { label: '고치기', to: `/board/${post.id}/edit` },
+            mine && visible && canEditNow('post', post, post.rules, now) && { label: '고치기', to: `/board/${post.id}/edit`, write: true },
             mine && { label: '지우기', danger: true, onSelect: () => setMode('delete') },
-            signedIn && !mine && visible && !canHide && { label: '신고', onSelect: () => setMode('report') },
+            signedIn && !mine && visible && !canHide && { label: '신고', write: true, onSelect: () => setMode('report') },
             canHide && visible && { label: '숨기기', op: true, onSelect: () => setMode('hide') },
             canHide && !mine && { label: '운영진 삭제', op: true, danger: true, onSelect: () => setMode('staffDelete') },
             // 061: [이 사용자 차단] — 차단하면 이 글이 바로 "차단한 사용자의 글입니다."로 바뀐다

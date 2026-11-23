@@ -224,6 +224,7 @@ function BuildActions({ build, onVoted }) {
           aria-disabled={unavailable || undefined}
           onClick={() => vote(1)}
           disabled={busy}
+          data-write
         >
           <ThumbIcon /> {votes.up}
         </button>
@@ -235,6 +236,7 @@ function BuildActions({ build, onVoted }) {
           aria-disabled={unavailable || undefined}
           onClick={() => vote(-1)}
           disabled={busy}
+          data-write
         >
           <ThumbIcon down /> {votes.down}
         </button>
@@ -245,6 +247,7 @@ function BuildActions({ build, onVoted }) {
           aria-label="빌드 저장"
           onClick={toggleSave}
           disabled={saving}
+          data-write={!saved || undefined} /* 068: 저장은 막고 해제는 그대로 */
         >
           <BookmarkIcon filled={saved} /> <span className="bookmark-text" aria-hidden="true">{saved ? '저장됨' : '저장'}</span>
         </button>

@@ -6,6 +6,7 @@ import {
 } from '../../api/inquiries';
 import { useAlreadyHandled } from '../../components/AlreadyHandled';
 import { useAuth } from '../../lib/auth';
+import { useRestriction } from '../../lib/restriction';
 import { fmtDateTime } from '../../lib/format';
 import { useAsync } from '../../lib/useAsync';
 import { ErrorBox, Loading } from '../../components/Status';
@@ -41,7 +42,7 @@ function InquiryAdmin() {
       <nav className="crumbs"><Link to="/admin" className="op-link">← 운영자 페이지</Link></nav>
       <h1 className="doc-title page-title"><MessageIcon size={26} className="title-icon op" /> 문의</h1>
       {done && <p className="notice" role="status">{done}</p>}
-      {!isOperator && <p className="hint">&ldquo;계정·탈퇴&rdquo; 문의는 운영자만 볼 수 있어 이 목록에 나오지 않습니다.</p>}
+      {!isOperator && <p className="hint">&ldquo;계정·탈퇴&rdquo;·&ldquo;이의 제기&rdquo; 문의는 운영자만 볼 수 있어 이 목록에 나오지 않습니다.</p>}
       {loading && <Loading />}
       {error && <ErrorBox error={error} onRetry={retry} />}
       {data && (
@@ -151,6 +152,8 @@ function AnswerForm({ id, onSubmit, onCancel }) {
 
 /** 분류 옮기기 (운영자만): 예) 계정 문제가 "기타"로 와서 감독관에게 보일 때 "계정·탈퇴"로 */
 function MoveForm({ id, current, onSubmit, onCancel }) {
+  const { user } = useAuth();
+  const appealReady = useRestriction(user?.id).ready; // 068 전 DB면 「이의 제기」로는 못 옮긴다
   const [category, setCategory] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -171,9 +174,9 @@ function MoveForm({ id, current, onSubmit, onCancel }) {
       <label htmlFor={id}>옮길 분류</label>
       <select id={id} value={category} onChange={(e) => setCategory(e.target.value)}>
         <option value="">분류를 골라 주세요</option>
-        {Object.entries(INQUIRY_CATEGORIES).filter(([key]) => key !== current).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+        {Object.entries(INQUIRY_CATEGORIES).filter(([key]) => key !== current && (appealReady || key !== 'appeal')).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
       </select>
-      <small className="hint">&ldquo;계정·탈퇴&rdquo;로 옮기면 감독관은 이 문의를 볼 수 없게 됩니다.</small>
+      <small className="hint">&ldquo;계정·탈퇴&rdquo;·&ldquo;이의 제기&rdquo;로 옮기면 감독관은 이 문의를 볼 수 없게 됩니다.</small>
       <div className="note-form-actions">
         <button type="submit" className="btn btn-small btn-op" disabled={!category || busy}>{busy ? '옮기는 중…' : '옮기기 확정'}</button>
         <button type="button" className="btn btn-small" onClick={onCancel} disabled={busy}>취소</button>

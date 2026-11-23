@@ -101,7 +101,7 @@ export function AvatarControl({
           {busy && <p className="notice" role="status">{busyLabels[busy]}</p>}
           {panel === 'menu' && !busy && (
             <div className="avatar-menu" role="group" aria-label="프로필 사진 메뉴">
-              <button type="button" className="btn btn-small" onClick={pick} autoFocus>사진 바꾸기</button>
+              <button type="button" className="btn btn-small" onClick={pick} autoFocus data-write>사진 바꾸기</button>
               <button type="button" className="btn btn-small" onClick={() => setPanel('confirm')}>사진 삭제</button>
               <button type="button" className="btn btn-small" onClick={close}>취소</button>
               {hint && <small className="hint">{hint}</small>}

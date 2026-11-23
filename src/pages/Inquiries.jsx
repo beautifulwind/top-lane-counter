@@ -1,9 +1,10 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import {
   INQUIRY_CATEGORIES, INQUIRY_DAILY_MAX, INQUIRY_MAX, INQUIRY_MIN, createInquiry, deleteMyInquiry, getMyInquiries,
 } from '../api/inquiries';
 import { useAuth } from '../lib/auth';
+import { useRestriction } from '../lib/restriction';
 import { fmtDateTime } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
@@ -32,7 +33,7 @@ function InquiriesBody() {
     <article>
       <h1 className="doc-title page-title"><MessageIcon size={26} className="title-icon" /> 문의하기</h1>
       <p className="lead">
-        오류 신고, 건의, 계정·탈퇴, 그 밖의 문의를 운영진에게 보낼 수 있습니다. 답변은 이메일이 아니라 이 화면과 <Link to="/notifications">알림</Link>으로 알려 드립니다.
+        오류 신고, 건의, 계정·탈퇴, 활동 제한에 대한 이의 제기, 그 밖의 문의를 운영진에게 보낼 수 있습니다. 답변은 이메일이 아니라 이 화면과 <Link to="/notifications">알림</Link>으로 알려 드립니다.
         하루에 {INQUIRY_DAILY_MAX}건까지 보낼 수 있습니다.
       </p>
       {done && <p className="notice" role="status">{done}</p>}
@@ -56,7 +57,12 @@ function InquiriesBody() {
 }
 
 function InquiryForm({ onSent }) {
-  const [category, setCategory] = useState('');
+  const { user } = useAuth();
+  const appealReady = useRestriction(user?.id).ready; // 068 전 DB면 「이의 제기」는 아직 보낼 수 없어 숨긴다
+  const categories = Object.entries(INQUIRY_CATEGORIES).filter(([key]) => appealReady || key !== 'appeal');
+  const [params] = useSearchParams();
+  const asked = params.get('category'); // 띠의 [문의하기] → ?category=appeal
+  const [category, setCategory] = useState(() => (categories.some(([key]) => key === asked) ? asked : ''));
   const [body, setBody] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
@@ -84,14 +90,14 @@ function InquiryForm({ onSent }) {
       <label htmlFor="inquiry-category">분류</label>
       <select id="inquiry-category" value={category} onChange={(e) => setCategory(e.target.value)}>
         <option value="">분류를 골라 주세요</option>
-        {Object.entries(INQUIRY_CATEGORIES).map(([key, label]) => <option key={key} value={key}>{label}</option>)}
+        {categories.map(([key, label]) => <option key={key} value={key}>{label}</option>)}
       </select>
       <label htmlFor="inquiry-body">내용</label>
       <textarea id="inquiry-body" rows={6} value={body} onChange={(e) => setBody(e.target.value)} />
       <CharCount value={body} max={INQUIRY_MAX} />
       <small className="hint">
         {INQUIRY_MIN}자 이상 적어 주세요. 비밀번호, 주민등록번호, 전화번호 같은 개인정보는 적지 말아 주세요.
-        &ldquo;계정·탈퇴&rdquo; 문의는 운영자만 볼 수 있습니다.
+        &ldquo;계정·탈퇴&rdquo;·&ldquo;이의 제기&rdquo; 문의는 운영자만 볼 수 있습니다.
       </small>
       {error && <p className="form-error" role="alert">{error}</p>}
       <div className="actions">

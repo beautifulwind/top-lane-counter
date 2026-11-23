@@ -80,7 +80,7 @@ export default function BuildLinkBox({ build, onSaved }) {
               aria-invalid={error ? 'true' : undefined}
               aria-describedby={error ? `${inputId}-problem` : undefined}
             />
-            <button type="submit" className="btn btn-small btn-primary" disabled={busy}>{busy ? '저장하는 중…' : '저장'}</button>
+            <button type="submit" className="btn btn-small btn-primary" data-write disabled={busy}>{busy ? '저장하는 중…' : '저장'}</button>
             <button type="button" className="btn btn-small" onClick={() => setEditing(false)} disabled={busy}>취소</button>
           </div>
           {error && <p id={`${inputId}-problem`} className="link-problem" role="alert">{error}</p>}

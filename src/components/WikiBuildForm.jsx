@@ -66,7 +66,7 @@ export default function WikiBuildForm({
         </div>
       )}
       <div className="actions">
-        <button type="submit" className="btn btn-primary" disabled={busy}>{busy ? busyLabel : submitLabel}</button>
+        <button type="submit" className="btn btn-primary" data-write disabled={busy}>{busy ? busyLabel : submitLabel}</button>
         {cancelTo && <Link to={cancelTo} className="btn">취소</Link>}
       </div>
       <p className="hint">등록·수정하면 바로 모두에게 보입니다.</p>

@@ -244,6 +244,9 @@ export function resetFake() {
   fakeState.before064 = false;
   fakeState.mediaProblem = null;
   fakeState.mediaUsage = EMPTY_USAGE();
+  fakeState.restriction = null; // 068 내 활동 제한 (my_restriction)
+  fakeState.restrictionsMissing = false; // true = 068 실행 전 DB
+  TABLES.user_restrictions = [];
 }
 
 /** 비회원(익명 로그인)으로 들어온 상태. DB 트리거처럼 is_guest 프로필을 만든다 */
@@ -592,7 +595,44 @@ const auth = {
 
 // 운영자 전용 DB 함수 호출 기록. 오류는 fakeState.rpcError로 흉내 낸다 (예: '운영자만 할 수 있습니다.')
 async function rpc(name, args) {
+  if (name === 'my_restriction') {
+    // 068: 띠가 로그인 확인 뒤 알아서 부르는 것이라 queryLog·rpcCalls에는 넣지 않는다 (요청 수 검사에 영향 없게).
+    // fakeState.restriction = { id, reason, ends_at } 또는 null, fakeState.restrictionsMissing = 068 전 DB
+    if (fakeState.restrictionsMissing) return { data: null, error: { code: 'PGRST202', message: 'Could not find the function public.my_restriction without parameters in the schema cache' } };
+    const r = fakeState.restriction;
+    return { data: r ? { ...r, message: `활동이 제한된 상태입니다. ${r.ends_at}에 풀립니다. 사유: ${r.reason}` } : null, error: null };
+  }
   fakeState.queryLog.push({ table: name, kind: 'rpc' });
+  if (['restrict_user', 'lift_restriction', 'admin_member_restrictions'].includes(name)) {
+    if (fakeState.restrictionsMissing) return { data: null, error: { code: 'PGRST202', message: `Could not find the function public.${name} in the schema cache` } };
+    if (!isAdminNow()) return { data: null, error: { message: '운영자만 할 수 있습니다.', code: '42501' } };
+    if (name !== 'admin_member_restrictions') fakeState.rpcCalls.push({ name, args });
+    if (fakeState.rpcError && name !== 'admin_member_restrictions') return { data: null, error: { message: fakeState.rpcError, code: fakeState.rpcErrorCode } };
+    const rows = TABLES.user_restrictions;
+    if (name === 'admin_member_restrictions') {
+      const now = Date.now();
+      return {
+        data: rows.filter((r) => r.user_id === args.p_user).sort((a, b) => b.id - a.id).map((r) => ({
+          ...r, state: r.lifted_at ? 'lifted' : Date.parse(r.ends_at) <= now ? 'ended' : 'active',
+        })),
+        error: null,
+      };
+    }
+    if (name === 'restrict_user') {
+      const target = TABLES.profiles.find((x) => x.id === args.p_user);
+      if (target?.role === 'moderator') return { data: null, error: { message: '감독관에게는 활동 제한을 걸 수 없습니다. 먼저 감독관에서 해제해 주세요.', code: '42501' } };
+      if (rows.some((r) => r.user_id === args.p_user && !r.lifted_at && Date.parse(r.ends_at) > Date.now())) {
+        return { data: null, error: { message: '이미 활동 제한 중입니다. 기간을 바꾸려면 먼저 해제한 뒤 다시 걸어 주세요.', code: 'TL409' } };
+      }
+      const id = rows.length + 1;
+      const ends = new Date(Date.now() + args.p_days * 86400000).toISOString();
+      rows.push({ id, user_id: args.p_user, reason: args.p_reason, days: args.p_days, starts_at: new Date().toISOString(), ends_at: ends, created_by: '운영자', lifted_at: null, lifted_by: null, lift_note: null });
+      return { data: { id, ends_at: ends }, error: null };
+    }
+    const row = rows.find((r) => r.id === args.p_id);
+    Object.assign(row, { lifted_at: new Date().toISOString(), lifted_by: '운영자', lift_note: args.p_note });
+    return { data: null, error: null };
+  }
   if (name === 'hide_counts') {
     // 운영자 신고 목록이 알아서 부르는 것이라 rpcCalls에는 넣지 않는다. fakeState.hideCounts = { 작성자id: 횟수 }
     if (!isStaffNow()) return { data: null, error: { message: '운영진만 할 수 있습니다.', code: '42501' } };

@@ -468,6 +468,7 @@ export async function saveNickname(userId, raw) {
     if (error.code === '23505') throw new Error('이미 사용 중인 닉네임입니다. 비슷한 닉네임도 쓸 수 없습니다.');
     if (error.code === '42501' && /장인/.test(error.message ?? '')) throw new Error(error.message); // 046: 장인·인증 대기는 직접 못 바꿈
     if (error.code === 'P0001') throw new Error(error.message); // 30일에 한 번 (DB 문구에 다음 날짜가 들어 있다)
+    if (error.code === 'TL423') throw new Error(error.message); // 068 활동 제한 (사유·풀리는 시각이 문장에 들어 있다)
     if (error.code === '23514' && /\(운\)/.test(error.message ?? '')) throw new Error(RESERVED_NICKNAME_MESSAGE);
     if (error.code === '23514' && /장인/.test(error.message ?? '')) throw new Error(INFLUENCER_MARK_MESSAGE);
     if (error.code === '23514') throw new Error(`닉네임은 앞뒤 공백 없이 1~${NICKNAME_MAX}자로 정해 주세요.`);

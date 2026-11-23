@@ -117,7 +117,7 @@ export default function Matchup() {
         <h1 className="doc-title">{title}</h1>
         <p className="empty">아직 등록되지 않은 상대법입니다. 지금 등록하면 바로 공개됩니다.</p>
         <div className="actions">
-          <Link to={`/matchup/new?target=${targetId}&mine=${counterId}`} className="btn">+ 상대법 등록</Link>
+          <Link to={`/matchup/new?target=${targetId}&mine=${counterId}`} className="btn" data-write>+ 상대법 등록</Link>
         </div>
       </article>
     );
@@ -142,6 +142,7 @@ export default function Matchup() {
   // ⋮ "오류 신고" (043): 누구에게나 보인다. 로그인 전이면 로그인으로, 비회원은 연결 안내, 정식 회원은 신고 칸
   const reportItem = (target) => ({
     label: '오류 신고',
+    write: !!user,
     onSelect: () => {
       if (!user) {
         navigate('/login', { state: { from: `${location.pathname}${location.search}` } });
@@ -215,7 +216,7 @@ export default function Matchup() {
           <>
             <p className="empty">공개된 빌드가 없습니다.</p>
             <div className="actions">
-              <Link to={`${path}/build/new`} className="btn btn-primary">+ 새 빌드</Link>
+              <Link to={`${path}/build/new`} className="btn btn-primary" data-write>+ 새 빌드</Link>
             </div>
           </>
         ) : (
@@ -403,7 +404,7 @@ function BuildTabs({ builds, selected, onSelect, newTo }) {
           더보기<span className="sr-only"> (빌드 {builds.length}개 전체에서 고르기)</span>
         </button>
       )}
-      <Link to={newTo} className="btn btn-small new-build">+ 새 빌드</Link>
+      <Link to={newTo} className="btn btn-small new-build" data-write>+ 새 빌드</Link>
       {picking && <BuildPicker builds={builds} selectedId={selected.id} onPick={pick} onClose={close} />}
     </div>
   );
@@ -497,7 +498,7 @@ function BuildPanel({ build, onVoted, index, doc, auth, data, path, isOperator, 
           <p className="empty">아직 작성된 내용이 없습니다.</p>
         )}
         <div className="actions">
-          <Link to={`${path}/build/${build.id}/edit`} className="btn">빌드 수정</Link>
+          <Link to={`${path}/build/${build.id}/edit`} className="btn" data-write>빌드 수정</Link>
           <button
             ref={peopleBtn}
             type="button"

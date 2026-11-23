@@ -321,7 +321,7 @@ function ApplyForm({ current, onDone, photoReady = false, userId }) {
         <p className="hint">이미 다른 분이 신청한 닉네임·채널·라이엇 닉네임이면 신청할 수 없습니다. 본인의 것이라면 <Link to="/inquiries">문의하기</Link>로 알려 주세요.</p>
         {problem && <p className="form-error" role="alert">{problem}</p>}
         <div className="actions">
-          <button type="submit" className="btn btn-primary" disabled={busy || !v.kind}>{busy ? '보내는 중…' : '신청 보내기'}</button>
+          <button type="submit" className="btn btn-primary" data-write disabled={busy || !v.kind}>{busy ? '보내는 중…' : '신청 보내기'}</button>
         </div>
       </form>
     </section>

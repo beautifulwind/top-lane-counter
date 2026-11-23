@@ -59,7 +59,7 @@ export default function Champion() {
             </p>
             {signedIn ? (
               <div className="actions">
-                <Link to={`/matchup/new?target=${id}`} className="btn btn-primary">+ 상대법 등록</Link>
+                <Link to={`/matchup/new?target=${id}`} className="btn btn-primary" data-write>+ 상대법 등록</Link>
               </div>
             ) : (
               <>
@@ -125,7 +125,7 @@ export default function Champion() {
         )}
 
         <div className="actions">
-          {shown.length > 0 && <Link to={`/matchup/new?target=${id}`} className="btn">+ 상대법 등록</Link>}
+          {shown.length > 0 && <Link to={`/matchup/new?target=${id}`} className="btn" data-write>+ 상대법 등록</Link>}
           {isOperator && <Link to={`/admin/order/${id}`} className="btn btn-op">순서 변경</Link>}
         </div>
       </section>

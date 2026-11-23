@@ -159,7 +159,7 @@ export default function MoreMenu({ items, label = '더보기' }) {
             shown.map((item, i) => (
               <div key={item.label} className="more-row" role="none">
                 {item.to && !item.disabled ? (
-                  <Link to={item.to} role="menuitem" className={cls(item)} tabIndex={-1} onClick={() => close(false)}>
+                  <Link to={item.to} role="menuitem" className={cls(item)} tabIndex={-1} data-write={item.write || undefined} onClick={() => close(false)}>
                     {item.label}
                   </Link>
                 ) : (
@@ -170,6 +170,7 @@ export default function MoreMenu({ items, label = '더보기' }) {
                     tabIndex={-1}
                     aria-disabled={item.disabled || undefined}
                     aria-describedby={item.hint ? `${id}-hint-${i}` : undefined}
+                    data-write={(item.write && !item.disabled) || undefined}
                     onClick={() => choose(item)}
                   >
                     {item.label}
