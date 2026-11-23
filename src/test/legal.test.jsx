@@ -9,10 +9,12 @@ import { fakeLogin } from './fakeSupabase';
 
 const SAVED = { ...LEGAL };
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(new Date('2026-11-23T03:00:00Z')); // 6-88: 판 전환이 오늘 날짜를 보므로 고정 (2026-12-14판이 현행인 때)
   vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch());
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
 });
-afterEach(() => { cleanup(); vi.restoreAllMocks(); Object.assign(LEGAL, SAVED); });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers(); Object.assign(LEGAL, SAVED); });
 
 function Where() { const l = useLocation(); return <output data-testid="where">{l.pathname}</output>; }
 const start = (path) => render(<MemoryRouter initialEntries={[path]}><AppRoutes /><Where /></MemoryRouter>);

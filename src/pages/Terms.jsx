@@ -1,21 +1,28 @@
 import { Link } from 'react-router-dom';
 import { LEGAL, SITE_NAME } from '../lib/legal';
 import LegalFill from '../components/LegalFill';
+import { LegalVersionNote, LegalVersionProvider, Since, useLegalVersion } from '../components/LegalVersion';
 import { RIOT_NOTICE } from '../components/Layout';
 import { FileIcon } from '../components/Icons';
 
-/** 이용약관 (/terms) — 로그인·닉네임 설정 없이도 열린다. */
+/**
+ * 이용약관 (/terms) — 로그인·닉네임 설정 없이도 열린다.
+ * 판(시행일) 전환 (6-88): 2026-12-14판 위에 2026-12-23판에서 더한 제7조의2를 <Since v="2026-12-23">로 감쌌다 (방침과 같은 방식, components/LegalVersion.jsx).
+ */
 export default function Terms() {
   const email = <LegalFill value={LEGAL.contactEmail} label="운영자 이메일" email />;
+  const version = useLegalVersion();
   return (
+    <LegalVersionProvider value={version}>
     <article className="legal">
       <header className="legal-head">
         <span className="legal-icon" aria-hidden="true"><FileIcon size={24} /></span>
         <div>
           <h1 className="doc-title">이용약관</h1>
-          <p className="doc-sub">시행일: <LegalFill value={LEGAL.effectiveDate} label="시행일" /></p>
+          <p className="doc-sub">시행일: <LegalFill value={version.shown} label="시행일" /></p>
         </div>
       </header>
+      <LegalVersionNote kind="terms" />
 
       <section>
         <h2>제1조 (목적)</h2>
@@ -167,9 +174,32 @@ export default function Terms() {
           </li>
           <li>운영자는 장인 인증을 승인·반려·해제하고, 장인의 요청이나 제4조를 어긴 닉네임을 바꿀 수 있습니다. 처리할 때는 메모를 남기고, 결과를 그 회원의 [알림]으로 알립니다.</li>
           <li>운영자는 제4조의4에 따라 한정판 칭호를 지급하거나 회수할 수 있습니다. 처리할 때는 메모를 남기고, 결과를 그 회원의 [알림]으로 알립니다.</li>
-          <li>제6조를 어기면 운영자는 해당 내용을 숨기거나 삭제하고, 이용을 제한할 수 있습니다. 같은 위반을 되풀이하는지 판단하려고 숨긴 기록을 남깁니다.</li>
+          <li>제6조를 어기면 운영자는 해당 내용을 숨기거나 삭제하고, 이용을 제한할 수 있습니다. 같은 위반을 되풀이하는지 판단하려고 숨긴 기록을 남깁니다.<Since v="2026-12-23"> 경고와 활동 제한은 제7조의2에 따릅니다.</Since></li>
         </ul>
       </section>
+
+      <Since v="2026-12-23">
+        <section>
+          <h2>제7조의2 (경고와 이용 제한)</h2>
+          <ol>
+            <li>
+              운영자는 이용자가 이 약관이나 운영 정책을 어기면 경고를 하거나, 1일 이상 365일 이하의 기간을 정해 활동을 제한할 수 있습니다.
+              경고와 활동 제한은 따로 할 수도 있고 함께 할 수도 있습니다.
+            </li>
+            <li>
+              활동이 제한된 동안에는 빌드·상대법의 등록·수정·되돌리기·제안, 추천, 글·댓글 쓰기와 고치기, 신고, 팔로우, 빌드 저장, 장인 신청, 사진·링크 올리기, 닉네임·대표 칭호 바꾸기를 할 수 없습니다.
+              읽기, 로그인, 내 글 지우기, 팔로우 취소, 차단, 알림 설정, 문의, 탈퇴는 그대로 할 수 있습니다.
+            </li>
+            <li>
+              운영자는 경고의 내용과 제한 사유, 풀리는 시각을 이용자의 화면에 알립니다. 정한 기간이 지나면 제한은 따로 신청하지 않아도 저절로 풀립니다.
+            </li>
+            <li>
+              이용자는 경고나 활동 제한에 동의하지 않으면 [문의하기](<Link to="/inquiries">/inquiries</Link>)에서 &ldquo;이의 제기&rdquo;를 골라 이의를 제기할 수 있습니다.
+              운영자는 이를 확인해 답변하고, 이유가 있다고 보면 제한을 먼저 풀 수 있습니다.
+            </li>
+          </ol>
+        </section>
+      </Since>
 
       <section>
         <h2>제8조 (서비스 변경과 중단)</h2>
@@ -224,8 +254,9 @@ export default function Terms() {
         <h2>문의</h2>
         <p>문의: 로그인 후 ☰ 메뉴의 <Link to="/inquiries">[문의하기]</Link> (오류 신고·건의·계정·탈퇴·기타)</p>
         <p>로그인이 안 되는 등 문의를 보낼 수 없을 때: 운영자 이메일 {email}</p>
-        <p>시행일: <LegalFill value={LEGAL.effectiveDate} label="시행일" /></p>
+        <p>시행일: <LegalFill value={version.shown} label="시행일" /></p>
       </section>
     </article>
+    </LegalVersionProvider>
   );
 }

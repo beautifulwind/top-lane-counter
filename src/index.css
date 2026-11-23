@@ -538,6 +538,10 @@ a.op-link, .op-link { color: var(--op-dark); }
 .legal h3 { font-size: var(--fs-md); margin: 12px 0 4px; }
 .legal-head { display: flex; align-items: center; gap: var(--gap-md); margin-bottom: var(--gap-lg); }
 .legal-head .doc-title { margin: 0; }
+/* 방침·약관 판 안내 상자 (SPEC 6-88): 시행 예정 판이 있을 때·미리 보기·지난 판 */
+.legal-version { margin: 0 0 var(--gap-lg); padding: var(--pad-box) var(--pad-card); border: 1px solid var(--soft-line); border-radius: var(--radius); background: var(--soft); font-size: var(--fs-sm); }
+.legal-version p { margin: 0; }
+.legal-version p + p { margin-top: var(--gap-xs); }
 .legal-head .doc-sub { margin: 2px 0 0; }
 .legal-icon, .me-avatar, .login-logo {
   flex: none; display: grid; place-items: center; width: 52px; height: 52px; border-radius: var(--radius-sm);
