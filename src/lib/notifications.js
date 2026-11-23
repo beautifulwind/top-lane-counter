@@ -223,6 +223,10 @@ export function describeNotification(n, name = (id) => id, titleBook = []) {
       to: staff ? (n.build_id ? `/admin/builds/${n.build_id}/history` : null) : n.counter?.status === 'approved' || n.build ? wikiPath(n) : null,
     };
   }
+  if (n.kind === 'warning_received') {
+    // 069: 운영자 경고. 알림에는 내용이 없다 — 내용은 화면 위 안내 상자에서 본인만 본다. 누를 곳 없음
+    return { icon: 'alert', title: '운영자 경고를 받았습니다', subject: null, detail: '내용은 화면 위 안내 상자에서 확인해 주세요.', to: null };
+  }
   const inf = INFLUENCER_NOTICE[n.kind];
   if (inf) {
     const [title, reason] = fillOperatorId(n.message).split(' 사유: ');

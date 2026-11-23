@@ -17,6 +17,7 @@ import NoteForm from '../../components/NoteForm';
 import ProfilePhoto from '../../components/ProfilePhoto';
 import { getMemberPhotoPath, removeProfilePhoto } from '../../api/profilePhoto';
 import RestrictionAdmin from '../../components/RestrictionAdmin';
+import WarningAdmin from '../../components/WarningAdmin';
 
 const PROVIDER_LABEL = { google: '구글', kakao: '카카오' };
 const WITHDRAWN = WITHDRAWN_USER;
@@ -59,6 +60,7 @@ function MemberPage() {
           {done && <p className="notice" role="status">{done}</p>}
           <Info info={data.info} onDone={(text) => { setDone(text); retry(); }} />
           <RestrictionAdmin member={data.info} onDone={(text) => setDone(text)} />
+          <WarningAdmin member={data.info} onDone={(text) => setDone(text)} />
           <Writings data={data} />
           <EditedBuilds data={data} />
           <ModerationHistory rows={data.moderation} />

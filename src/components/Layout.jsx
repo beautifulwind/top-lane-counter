@@ -8,6 +8,7 @@ import TopSearch from './TopSearch';
 import StoreLinks from './StoreLinks';
 import UpdateBanner from './UpdateBanner';
 import RestrictionBanner from './RestrictionBanner';
+import WarningBanner from './WarningBanner';
 import { useRestriction } from '../lib/restriction';
 import { needsNickname, needsNicknameFor, useAuth } from '../lib/auth';
 import { noticeText, startFresh } from '../api/auth';
@@ -101,6 +102,7 @@ export default function Layout() {
           <p>{siteNotice}</p>
         </div>
       )}
+      <WarningBanner userId={auth.user?.id} />
       <RestrictionBanner userId={auth.user?.id} />
       {noNickname && pathname !== '/welcome' && (
         <div className="login-notice nickname-band" role="status">

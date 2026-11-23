@@ -391,6 +391,17 @@ kbd {
 .restriction-log .hint { margin: 2px 0 0; }
 .restrict-form .btn.on { background: var(--op-soft); border-color: var(--op); color: var(--op-dark); }
 
+/* 069 운영자 경고: 모든 화면 위 안내 상자(내용 + [확인했습니다]), 운영자 기록 상태 */
+.warning-band { color: var(--text); }
+.warning-band strong { color: var(--warn); }
+.warning-band p { overflow-wrap: anywhere; margin: 0; }
+.warning-band-time, .warning-band-count { color: var(--muted); font-weight: 400; }
+.warning-band .warning-band-memo { margin-top: var(--gap-sm); white-space: pre-line; }
+.warning-log .hint { margin: 2px 0 0; }
+.warning-log-memo { margin: 4px 0 0; white-space: pre-line; overflow-wrap: anywhere; font-size: var(--fs-sm); }
+.warning-state-acked { color: var(--text); }
+.warning-state-unread { color: var(--warn); }
+
 /* 마이페이지: 로그인 연결 */
 .me-section { margin-top: var(--gap-xl); }
 .identity-list { list-style: none; padding: 0; margin: var(--gap-md) 0 0; display: flex; flex-direction: column; gap: var(--gap-md); max-width: 360px; }

@@ -54,6 +54,8 @@ export const fakeLimitedTitle = (key, extra = {}) => ({
 
 export const TABLES = {
   builds: INITIAL_BUILDS(),
+  user_restrictions: [], // 068 (resetFake 전 첫 테스트에서도 쓸 수 있게)
+  user_warnings: [], // 069
   counters: [
     {
       id: 1, target_champion: 'Darius', counter_champion: 'Quinn', sort_order: 1, status: 'approved',
@@ -247,6 +249,8 @@ export function resetFake() {
   fakeState.restriction = null; // 068 내 활동 제한 (my_restriction)
   fakeState.restrictionsMissing = false; // true = 068 실행 전 DB
   TABLES.user_restrictions = [];
+  fakeState.warningsMissing = false; // true = 069 실행 전 DB
+  TABLES.user_warnings = []; // 069 { id, user_id, memo, created_at, created_by, restriction_id, notice_read_at, acked_at }
 }
 
 /** 비회원(익명 로그인)으로 들어온 상태. DB 트리거처럼 is_guest 프로필을 만든다 */
@@ -602,7 +606,46 @@ async function rpc(name, args) {
     const r = fakeState.restriction;
     return { data: r ? { ...r, message: `활동이 제한된 상태입니다. ${r.ends_at}에 풀립니다. 사유: ${r.reason}` } : null, error: null };
   }
+  if (name === 'my_warnings') {
+    // 069: 안내 상자가 알아서 부르는 것이라 queryLog·rpcCalls에는 넣지 않는다
+    if (fakeState.warningsMissing) return { data: null, error: { code: 'PGRST202', message: 'Could not find the function public.my_warnings without parameters in the schema cache' } };
+    const me = fakeState.session?.user?.id;
+    return {
+      data: TABLES.user_warnings.filter((w) => w.user_id === me && !w.acked_at).sort((a, b) => a.id - b.id)
+        .map(({ id, memo, created_at }) => ({ id, memo, created_at })),
+      error: null,
+    };
+  }
   fakeState.queryLog.push({ table: name, kind: 'rpc' });
+  if (['warn_user', 'ack_warning', 'admin_member_warnings'].includes(name)) {
+    if (fakeState.warningsMissing) return { data: null, error: { code: 'PGRST202', message: `Could not find the function public.${name} in the schema cache` } };
+    const rows = TABLES.user_warnings;
+    if (name === 'ack_warning') {
+      fakeState.rpcCalls.push({ name, args });
+      if (fakeState.rpcError) return { data: null, error: { message: fakeState.rpcError, code: fakeState.rpcErrorCode } };
+      const w = rows.find((x) => x.id === args.p_id && x.user_id === fakeState.session?.user?.id);
+      if (!w) return { data: null, error: { message: '경고를 찾지 못했습니다.', code: 'P0002' } };
+      if (!w.acked_at) Object.assign(w, { acked_at: new Date().toISOString(), notice_read_at: w.notice_read_at ?? new Date().toISOString() });
+      return { data: { id: w.id, acked_at: w.acked_at }, error: null };
+    }
+    if (!isAdminNow()) return { data: null, error: { message: '운영자만 할 수 있습니다.', code: '42501' } };
+    if (name === 'admin_member_warnings') {
+      return {
+        data: rows.filter((w) => w.user_id === args.p_user).sort((a, b) => b.id - a.id).map((w) => ({
+          ...w, state: w.acked_at ? 'acked' : w.notice_read_at ? 'read' : 'unread',
+        })),
+        error: null,
+      };
+    }
+    fakeState.rpcCalls.push({ name, args });
+    if (fakeState.rpcError) return { data: null, error: { message: fakeState.rpcError, code: fakeState.rpcErrorCode } };
+    const target = TABLES.profiles.find((x) => x.id === args.p_user);
+    if (target?.role === 'admin') return { data: null, error: { message: '운영자에게는 경고를 보낼 수 없습니다.', code: '42501' } };
+    const active = TABLES.user_restrictions.find((r) => r.user_id === args.p_user && !r.lifted_at && Date.parse(r.ends_at) > Date.now());
+    const id = rows.length + 1;
+    rows.push({ id, user_id: args.p_user, memo: args.p_memo, created_at: new Date().toISOString(), created_by: '운영자', restriction_id: active?.id ?? null, notice_read_at: null, acked_at: null });
+    return { data: { id, restriction_id: active?.id ?? null }, error: null };
+  }
   if (['restrict_user', 'lift_restriction', 'admin_member_restrictions'].includes(name)) {
     if (fakeState.restrictionsMissing) return { data: null, error: { code: 'PGRST202', message: `Could not find the function public.${name} in the schema cache` } };
     if (!isAdminNow()) return { data: null, error: { message: '운영자만 할 수 있습니다.', code: '42501' } };

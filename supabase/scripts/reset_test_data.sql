@@ -22,6 +22,7 @@
 -- (066: 빌드 저장(북마크, build_bookmarks)을 전부 지운다 - 테스트 계정이 저장한 빌드가 공개 뒤까지 남지 않게. 빌드를 지우면 함께 지워지지만 남는 빌드의 저장도 지운다.)
 -- (067: 빌드 수정 알림의 짝 표(build_edit_notices)는 알림과 함께 전부 지운다. 남는 말파 빌드의 '이전(migrate)' 기록 1줄은 수정 알림을 만들지 않는다.)
 -- (068: 활동 제한 기록(user_restrictions)을 전부 지운다 - 테스트로 건 제한이 공개 뒤에 띠로 남지 않게. 이의 제기 문의는 문의와 함께 지워진다.)
+-- (069: 경고 기록(user_warnings)을 전부 지운다 - 테스트로 보낸 경고가 공개 뒤에 안내 상자로 남지 않게. 경고 알림은 알림과 함께 지워진다.)
 -- (062: 장인 프로필 사진은 장인 표시와 함께 비워지고 파일은 다음 사진 정리 때 지워진다. 사진 신고·바꾼 기록도 지운다.)
 -- 지움: 그 밖의 카운터·문서·제안·빌드 전부, 빌드 추천·비추천과 그 기록, 자유게시판 글·댓글·추천, 문서 댓글, 신고, 오류 신고(043), 알림, 문의하기 문의·답변(032),
 --       빌드 수정 기록·기여자·등록 간격(038 — 남는 말파 공개 빌드마다 지금 내용으로 "이전" 기록 1줄을 새로 남김),
@@ -209,6 +210,7 @@ do $$ begin if to_regclass('public.build_edit_notices') is not null then execute
 delete from public.notifications;
 delete from public.hide_log;
 do $$ begin if to_regclass('public.proposal_reviewing') is not null then execute 'delete from public.proposal_reviewing'; end if; end $$; -- 031 "검토 중" 표시
+do $$ begin if to_regclass('public.user_warnings') is not null then execute 'delete from public.user_warnings'; end if; end $$; -- 069 경고 기록 (제한 기록보다 먼저 - 제한을 가리킨다)
 do $$ begin if to_regclass('public.user_restrictions') is not null then execute 'delete from public.user_restrictions'; end if; end $$; -- 068 활동 제한 기록
 delete from public.moderation_log; -- 운영진 처리 기록 전부 (감독관 지정·해제 기록 포함 — 1년 보관 삭제(035)와 같은 성격의 기록)
 do $$ begin if to_regclass('public.inquiries') is not null then execute 'delete from public.inquiries'; execute 'delete from public.inquiry_quota'; end if; end $$; -- 032 문의하기
@@ -278,6 +280,7 @@ union all select '문의 (032 실행 전이면 0)', case when to_regclass('publi
 union all select '경험치 기록 (다시 계산)', count(*) from public.xp_events
 union all select '칭호 (다시 계산)', count(*) from public.user_titles
 union all select '경험치가 있는 사람', count(*) from public.profiles where xp > 0
+union all select '경고 기록 (069 실행 전이면 0)', case when to_regclass('public.user_warnings') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.user_warnings', false, true, '')))[1]::text::integer end
 union all select '활동 제한 기록 (068 실행 전이면 0)', case when to_regclass('public.user_restrictions') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.user_restrictions', false, true, '')))[1]::text::integer end
 union all select '처리 기록 (moderation_log)', count(*) from public.moderation_log
 union all select '휴대폰 알림을 켠 기기 (그대로, 037 실행 전이면 0)', case when to_regclass('public.push_subscriptions') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.push_subscriptions', false, true, '')))[1]::text::integer end

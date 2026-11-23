@@ -99,6 +99,9 @@ rows (ord, what, to_delete, to_keep, note) as (
   union all select 16.05, 'user_restrictions (활동 제한 기록, 068)',
          case when to_regclass('public.user_restrictions') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.user_restrictions', false, true, '')))[1]::text::bigint end,
          0, '전부 지움 (068 실행 전이면 0)'
+  union all select 16.06, 'user_warnings (경고 기록, 069)',
+         case when to_regclass('public.user_warnings') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.user_warnings', false, true, '')))[1]::text::bigint end,
+         0, '전부 지움 (069 실행 전이면 0)'
   union all select 16, 'hide_log (숨김 기록)', (select count(*) from public.hide_log), 0, null
   union all select 16.1, 'moderation_log (운영진 처리 기록)', (select count(*) from public.moderation_log), 0, '감독관 지정·해제 기록 포함 전부 지움 (역할 자체는 profiles에 그대로)'
   union all select 16.2, 'proposal_reviewing (검토 중 표시)', (select count(*) from public.proposal_reviewing), 0, '임시 표시라 모두 비움'

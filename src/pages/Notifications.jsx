@@ -10,13 +10,14 @@ import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
 import TitleMedal, { titleColorClass, titleColorStyle } from '../components/TitleMedal';
 import {
-  BanIcon, BellIcon, CheckCircleIcon, EyeIcon, EyeOffIcon, FlagIcon, LayersIcon, MessageIcon, TrendingUpIcon, UsersIcon,
+  AlertIcon, BanIcon, BellIcon, CheckCircleIcon, EyeIcon, EyeOffIcon, FlagIcon, LayersIcon, MessageIcon, TrendingUpIcon, UsersIcon,
 } from '../components/Icons';
 
 const ICONS = {
   check: CheckCircleIcon, ban: BanIcon, hidden: EyeOffIcon, shown: EyeIcon, flag: FlagIcon,
   comment: MessageIcon, level: TrendingUpIcon, bell: BellIcon, build: LayersIcon, // build: 050 팔로우한 장인의 새 빌드
   users: UsersIcon, // users: 052 장인 새 팔로워
+  alert: AlertIcon, // alert: 069 운영자 경고
 };
 
 /**
