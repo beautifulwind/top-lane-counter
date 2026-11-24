@@ -238,4 +238,4 @@ select t.ok('create_doc_comment: 로그인한 사람만, 옛 모양(인자 2개)
 select t.ok('비회원 답글 막기 함수는 아무도 못 부름',
   not has_function_privilege('authenticated', 'public.block_guest_reply()', 'execute')
   and not has_function_privilege('anon', 'public.block_guest_reply()', 'execute'));
-select t.ok('답글 알림은 휴대폰 알림 없음', push_group('comment_reply') is null and push_group('doc_comment') is null);
+select t.ok('답글·문서 댓글 알림의 휴대폰 알림 묶음은 comments (074부터, 그 전에는 없음)', push_group('comment_reply') = 'comments' and push_group('doc_comment') = 'comments');

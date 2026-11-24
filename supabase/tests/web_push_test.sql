@@ -142,7 +142,7 @@ insert into notifications (user_id, kind, message)
 select :'U', k, '결과' from unnest(array['proposal_approved', 'proposal_rejected', 'build_approved', 'build_rejected',
   'revision_request', 'counter_restored', 'build_restored']) k;
 insert into notifications (user_id, kind, message)
-select :'U', k, '안 보냄' from unnest(array['revision_cancelled', 'build_hidden', 'level_up', 'post_comment', 'inquiry_answered']) k;
+select :'U', k, '안 보냄' from unnest(array['revision_cancelled', 'build_hidden', 'level_up', 'comment_hidden', 'inquiry_answered']) k;  -- post_comment는 074부터 푸시 대상(comments)이라 댓글 숨김으로 바꿈
 select t.ok('승인·거절·재검토 요청·다시 공개 7종만 부름', (select count(*) = 7 from net.calls));
 
 -- Edge Function 부르기가 실패해도 알림 저장은 그대로

@@ -104,7 +104,8 @@ export async function dropBrowserPush() {
 
 // follow_builds: 050 팔로우한 장인의 새 빌드 / notice: 051 공지(기본 켜짐) / new_followers: 052 장인 새 팔로워(기본 꺼짐)
 // build_edits: 067 빌드 수정 알림(기본 켜짐) — 끄면 앱 안 알림도 만들지 않는다
-export const PUSH_DEFAULTS = { staff_new: true, my_results: true, follow_builds: true, notice: true, new_followers: false, build_edits: true };
+// comments: 074 댓글·답글(기본 켜짐) — 휴대폰 알림만 켜고 끈다(앱 안 알림 목록에는 그대로 쌓인다)
+export const PUSH_DEFAULTS = { staff_new: true, my_results: true, follow_builds: true, notice: true, new_followers: false, build_edits: true, comments: true };
 const PUSH_KEYS = Object.keys(PUSH_DEFAULTS);
 const pick = (row) => Object.fromEntries(PUSH_KEYS.filter((k) => row?.[k] != null).map((k) => [k, row[k]]));
 
@@ -118,21 +119,26 @@ export async function getPushSettings(userId) {
   return { ...PUSH_DEFAULTS, ...pick(data) };
 }
 
-// 067 실행 전 DB: build_edits 칸이 없다 (PostgREST PGRST204 "Could not find the 'build_edits' column…" / Postgres 42703)
-const missingBuildEdits = (error) => (error?.code === 'PGRST204' || error?.code === '42703') && /build_edits/.test(error?.message ?? '');
+// 나중에 생긴 칸이 아직 없는 DB: 067 전 build_edits, 074 전 comments
+// (PostgREST PGRST204 "Could not find the 'comments' column…" / Postgres 42703) → 그 칸만 빼고 다시 저장
+const LATE_COLUMNS = ['comments', 'build_edits'];
+const missingColumn = (error) => (error?.code === 'PGRST204' || error?.code === '42703')
+  ? LATE_COLUMNS.find((c) => new RegExp(`'${c}'|\\b${c}\\b`).test(error?.message ?? '')) ?? null : null;
 
-/** settings = { staff_new, my_results, follow_builds, notice, new_followers, build_edits } 전체. 저장된 값을 돌려준다 */
+/** settings = { staff_new, my_results, follow_builds, notice, new_followers, build_edits, comments } 전체. 저장된 값을 돌려준다 */
 export async function savePushSettings(userId, settings) {
   let row = {
     user_id: userId, staff_new: settings.staff_new, my_results: settings.my_results,
     follow_builds: settings.follow_builds ?? true, notice: settings.notice ?? true, new_followers: settings.new_followers ?? false,
-    build_edits: settings.build_edits ?? true,
+    build_edits: settings.build_edits ?? true, comments: settings.comments ?? true,
     updated_at: new Date().toISOString(),
   };
   let { error } = await db().from('push_settings').upsert(row, { onConflict: 'user_id' });
-  if (error && missingBuildEdits(error)) {
-    // 067 전: 새 칸 없이 다시 저장 (빌드 수정 알림 설정만 저장되지 않음)
-    const { build_edits: _skip, ...rest } = row;
+  for (let i = 0; i < LATE_COLUMNS.length && error; i += 1) {
+    // 067·074 전: 없는 칸을 빼고 다시 저장 (그 알림 설정만 저장되지 않음)
+    const missing = missingColumn(error);
+    if (!missing || !(missing in row)) break;
+    const { [missing]: _skip, ...rest } = row;
     row = rest;
     ({ error } = await db().from('push_settings').upsert(row, { onConflict: 'user_id' }));
   }

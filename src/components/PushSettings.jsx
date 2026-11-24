@@ -23,7 +23,7 @@ export default function PushSettings({ auth }) {
       <p className="lead">
         {APPROVAL_ENABLED
           ? `켜 두면 ${staffAccount ? '새 제안·문의·오류 신고·새 신고나 ' : ''}내 제안의 처리 결과를 휴대폰 잠금 화면 알림으로 받습니다.`
-          : `켜 두면 ${staffAccount ? (auth.isOperatorAccount ? '새 상대법·새 빌드·새 글·새 문의·새 오류 신고·새 신고·새 장인 신청이나 ' : '새 문의·새 오류 신고·새 신고나 ') : ''}숨겨졌던 내 상대법·빌드가 다시 공개된 소식, 내가 만들거나 고친 빌드의 수정 소식, 장인 인증 결과, 팔로우한 장인의 새 빌드, 새 공지를 휴대폰 잠금 화면 알림으로 받습니다.`}
+          : `켜 두면 ${staffAccount ? (auth.isOperatorAccount ? '새 상대법·새 빌드·새 글·새 문의·새 오류 신고·새 신고·새 장인 신청이나 ' : '새 문의·새 오류 신고·새 신고나 ') : ''}숨겨졌던 내 상대법·빌드가 다시 공개된 소식, 내가 만들거나 고친 빌드의 수정 소식, 장인 인증 결과, 팔로우한 장인의 새 빌드, 내 글·댓글에 달린 새 댓글·답글, 새 공지를 휴대폰 잠금 화면 알림으로 받습니다.`}
         알림을 누르면 그 내용을 볼 수 있는 화면으로 갑니다.
       </p>
       {support === 'ok' ? <DeviceSwitch userId={auth.user.id} />
@@ -172,6 +172,14 @@ function PushKinds({ userId, influencer, staffAccount, operatorAccount, operator
         <span>
           {operatorAccount ? '빌드 수정: 누가 빌드를 고치거나 되돌렸을 때 (운영자는 모든 빌드)' : '빌드 수정: 내가 만들거나 고친 빌드를 다른 사람이 고쳤을 때'}
           <small className="hint">같은 사람이 10분 안에 또 고치면 한 알림으로 묶습니다. 끄면 알림 목록에도 쌓이지 않습니다.</small>
+        </span>
+      </label>
+      <label className="check-row">
+        <input type="checkbox" checked={settings.comments !== false} onChange={(e) => change('comments', e.target.checked)} />
+        {/* 074: 푸시 묶음 comments (기본 켜짐). 끄면 휴대폰 알림만 안 오고 알림 목록에는 그대로 쌓인다. 안 읽은 알림에 더 달린 댓글은 「N개」로 합쳐져 다시 울리지 않는다 */}
+        <span>
+          댓글: 내 글·내가 제안한 상대법에 댓글이, 내 댓글에 답글이 달렸을 때
+          <small className="hint">확인하지 않은 댓글 알림이 있는 동안에는 다시 울리지 않습니다. 꺼 두어도 알림 목록에는 쌓입니다.</small>
         </span>
       </label>
       <label className="check-row">

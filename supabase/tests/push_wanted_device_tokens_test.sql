@@ -4,6 +4,7 @@
 --   운영진 알림(감독관·운영자 모드)과 묶음별 기본값이 전과 같음, 알림 종류 전체 × 사람 전체에서 「067 판단 그대로 + 기기 조건만 바뀜」,
 --   트리거가 앱 전용 사람에게도 Edge Function을 부름, push_targets는 앱 전용 사람에게 웹 구독 [](빈 목록)을 줌,
 --   함수 모양·권한·소유자 그대로, 소유자 권한으로 device_push_tokens를 읽을 수 있음(RLS 정책 없음이어도), 068 쓰기 함수 수 그대로.
+--   (074가 push_wanted에 댓글 묶음 줄을 더한 뒤에도 돌도록: 본문 지문은 074 줄을 뺀 값으로 비교, 비교 기준 core에도 074 줄 - 댓글 묶음 자체는 comment_push_test)
 \set ON_ERROR_STOP 1
 \set QUIET 1
 \set OP  '00000000-0000-0000-0000-00000000000a'
@@ -43,6 +44,8 @@ create function pg_temp.core(p_user uuid, p_kind text) returns boolean language 
       coalesce((select s.new_followers from public.push_settings s where s.user_id = p_user), false)
     when 'build_edits' then
       coalesce((select s.build_edits from public.push_settings s where s.user_id = p_user), true)
+    when 'comments' then
+      coalesce((select s.comments from public.push_settings s where s.user_id = p_user), true)  -- 074 (073 판단과 무관한 묶음 추가)
     else false
   end $$;
 create function pg_temp.web(p uuid) returns boolean language sql stable as $$ select exists (select 1 from public.push_subscriptions where user_id = p) $$;
@@ -62,14 +65,14 @@ insert into public.push_subscriptions (user_id, endpoint, p256dh, auth) values
 insert into public.device_push_tokens (user_id, platform, token) values
   (:'A', 'ios', pg_temp.tk(1)), (:'WA', 'android', pg_temp.tk(2)), (:'OFF', 'ios', pg_temp.tk(3)),
   (:'MOD', 'android', pg_temp.tk(4)), (:'OP', 'android', pg_temp.tk(5)), (:'INF', 'ios', pg_temp.tk(6));
-insert into public.push_settings (user_id, staff_new, my_results, follow_builds, notice, new_followers, build_edits)
-  values (:'OFF', false, false, false, false, false, false);
+insert into public.push_settings (user_id, staff_new, my_results, follow_builds, notice, new_followers, build_edits, comments)
+  values (:'OFF', false, false, false, false, false, false, false);  -- comments: 074
 
 -- ===== 1. 함수 모양·권한·소유자 그대로, 본문은 마지막 조건만 =====
-select t.ok('push_wanted 본문 지문 e6f1723a… (073 파일 그대로)',
-  (select md5(replace(prosrc, E'\r', '')) from pg_proc where oid = 'public.push_wanted(uuid, text)'::regprocedure) = 'e6f1723ae3a6b0126ece4b51488a067c');
-select t.ok('새 조건을 옛 조건으로 되바꾸면 067 본문 지문 bfb8e950… (나머지 판단은 한 글자도 안 바뀜)',
-  (select md5(replace(replace(prosrc, E'\r', ''),
+select t.ok('push_wanted 본문 지문: 074가 더한 댓글 줄을 빼면 e6f1723a… (073 파일 그대로)',
+  (select md5(replace(replace(prosrc, E'\r', ''), E'\n    when ''comments'' then\n      coalesce((select s.comments from public.push_settings s where s.user_id = p_user), true)  -- 074 댓글·답글', '')) from pg_proc where oid = 'public.push_wanted(uuid, text)'::regprocedure) = 'e6f1723ae3a6b0126ece4b51488a067c');
+select t.ok('새 조건을 옛 조건으로 되바꾸면(074 댓글 줄도 빼고) 067 본문 지문 bfb8e950… (나머지 판단은 한 글자도 안 바뀜)',
+  (select md5(replace(replace(replace(prosrc, E'\r', ''), E'\n    when ''comments'' then\n      coalesce((select s.comments from public.push_settings s where s.user_id = p_user), true)  -- 074 댓글·답글', ''),
      E'  and (exists (select 1 from public.push_subscriptions where user_id = p_user)\n       or exists (select 1 from public.device_push_tokens where user_id = p_user));  -- 073: 웹 구독 또는 앱 기기 토큰',
      '  and exists (select 1 from public.push_subscriptions where user_id = p_user);'))
      from pg_proc where oid = 'public.push_wanted(uuid, text)'::regprocedure) = 'bfb8e95016ca726a7dade1b76bb56fce');

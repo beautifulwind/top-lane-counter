@@ -331,3 +331,103 @@ describe('handlePush', () => {
     expect(d.send).not.toHaveBeenCalled();
   });
 });
+
+// ---------------- 1.3 패치 2-F (074, SPEC 6-107): 댓글·답글 휴대폰 알림 ----------------
+describe('댓글 알림 설정 (push_settings.comments)', () => {
+  const COMMENTS = /댓글: 내 글·내가 제안한 상대법에 댓글이, 내 댓글에 답글이 달렸을 때/;
+  test('누구나 보이고 기본 켜짐, 끄면 comments=false로 저장 (다른 설정은 그대로)', async () => {
+    fakeLogin('u-1', { nickname: '탑고수' });
+    start('/me/settings');
+    const box = await screen.findByRole('checkbox', { name: COMMENTS });
+    expect(box).toBeChecked();
+    expect(screen.getByText('확인하지 않은 댓글 알림이 있는 동안에는 다시 울리지 않습니다. 꺼 두어도 알림 목록에는 쌓입니다.')).toBeDefined();
+    fireEvent.click(box);
+    await waitFor(() => expect(TABLES.push_settings).toEqual([expect.objectContaining({
+      user_id: 'u-1', comments: false, staff_new: true, my_results: true, follow_builds: true, notice: true, new_followers: false, build_edits: true,
+    })]));
+    expect(box).not.toBeChecked();
+    fireEvent.click(box);
+    await waitFor(() => expect(TABLES.push_settings[0].comments).toBe(true));
+  });
+  test('다른 칸을 바꿔도 댓글 설정은 그대로 저장된다 (끈 상태 유지)', async () => {
+    TABLES.push_settings.push({ user_id: 'u-1', staff_new: true, my_results: true, comments: false });
+    fakeLogin('u-1', { nickname: '탑고수' });
+    start('/me/settings');
+    expect(await screen.findByRole('checkbox', { name: COMMENTS })).not.toBeChecked();
+    fireEvent.click(screen.getByRole('checkbox', { name: /공지: 운영자가 새 공지를 올렸을 때/ }));
+    await waitFor(() => expect(TABLES.push_settings[0]).toEqual(expect.objectContaining({ notice: false, comments: false })));
+  });
+  test('설정 줄이 없거나 옛 줄(comments 칸 없음)이면 켜짐으로 보인다', async () => {
+    TABLES.push_settings.push({ user_id: 'u-1', staff_new: true, my_results: false });
+    fakeLogin('u-1', { nickname: '탑고수' });
+    start('/me/settings');
+    expect(await screen.findByRole('checkbox', { name: COMMENTS })).toBeChecked();
+  });
+  test('074 실행 전 DB: comments 칸 없이 다시 저장해 성공한다 (오류 안내 없음)', async () => {
+    fakeState.commentsPushMissing = true;
+    fakeLogin('u-1', { nickname: '탑고수' });
+    start('/me/settings');
+    fireEvent.click(await screen.findByRole('checkbox', { name: /팔로우한 장인의 새 빌드/ }));
+    await waitFor(() => expect(TABLES.push_settings).toEqual([expect.objectContaining({ user_id: 'u-1', follow_builds: false, build_edits: true })]));
+    expect('comments' in TABLES.push_settings[0]).toBe(false);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+  test('067·074 둘 다 실행 전 DB: 두 칸 모두 빼고 저장된다', async () => {
+    fakeState.commentsPushMissing = true;
+    fakeState.buildEditsMissing = true;
+    fakeLogin('u-1', { nickname: '탑고수' });
+    start('/me/settings');
+    fireEvent.click(await screen.findByRole('checkbox', { name: /팔로우한 장인의 새 빌드/ }));
+    await waitFor(() => expect(TABLES.push_settings).toEqual([expect.objectContaining({ user_id: 'u-1', follow_builds: false })]));
+    expect('comments' in TABLES.push_settings[0] || 'build_edits' in TABLES.push_settings[0]).toBe(false);
+    expect(screen.queryByRole('alert')).toBeNull();
+  });
+  test('문구는 합니다체, 안내 문장은 380px 화면에서도 줄바꿈되는 짧은 문장 두 개', async () => {
+    fakeLogin('u-1', { nickname: '탑고수' });
+    start('/me/settings');
+    const box = await screen.findByRole('checkbox', { name: COMMENTS });
+    const row = box.closest('label');
+    expect(row.className).toBe('check-row'); // 다른 칸과 같은 줄 모양(체크 상자 + 줄바꿈되는 글)
+    const hint = row.querySelector('small.hint');
+    expect(hint.textContent.split('. ').every((s) => /니다\.?$/.test(s))).toBe(true); // 문장마다 「…니다.」
+    expect(row.textContent).not.toMatch(/[a-zA-Z]{12,}/); // 끊기지 않는 긴 낱말 없음
+  });
+});
+
+describe('describePush: 댓글·답글 (074) — 알림 목록과 같은 문장·같은 곳', () => {
+  const NAME = (id) => ({ Darius: '다리우스', Garen: '가렌' })[id] ?? id;
+  const counter = { target_champion: 'Darius', counter_champion: 'Garen', status: 'approved' };
+  const CASES = [
+    ['post_comment 처음', { kind: 'post_comment', message: '내 글 「탑 라인 질문」에 새 댓글이 달렸습니다.', post_id: 31 }, '새 댓글', '/board/31'],
+    ['post_comment 합쳐짐', { kind: 'post_comment', message: '내 글 「탑 라인 질문」에 새 댓글 3개가 달렸습니다.', post_id: 31 }, '새 댓글', '/board/31'],
+    ['doc_comment', { kind: 'doc_comment', message: '내가 제안한 상대법 문서에 새 댓글 2개가 달렸습니다.', counter_id: 4 }, '새 댓글', '/champion/Darius/counter/Garen#comments'],
+    ['comment_reply 글', { kind: 'comment_reply', message: '「탑 라인 질문」에 쓴 내 댓글에 새 답글이 달렸습니다.', post_id: 31, counter_id: null }, '새 답글', '/board/31'],
+    ['comment_reply 문서', { kind: 'comment_reply', message: '상대법 문서에 쓴 내 댓글에 새 답글 4개가 달렸습니다.', post_id: null, counter_id: 4 }, '새 답글', '/champion/Darius/counter/Garen#comments'],
+  ];
+  test.each(CASES)('%s', (_label, refs, title, url) => {
+    const n = { id: 9, proposal_id: null, build_id: null, post_id: null, ...refs,
+      ...(refs.counter_id ? { target_champion: 'Darius', counter_champion: 'Garen' } : {}) };
+    const push = describePush(n);
+    expect(push).toEqual({ title, body: refs.message, url, tag: 'n-9' });
+    // 알림 목록: 제목 = 같은 DB 문장(「새 댓글 N개」 포함), 누르면 같은 곳
+    const row = describeNotification({ ...n, counter: refs.counter_id ? counter : null }, NAME);
+    expect(row.title).toBe(push.body);
+    expect(row.to).toBe(push.url);
+  });
+  test('갈 곳을 모르면 알림 목록 (글 번호 없음 · 상대법 정보 없음), 문장이 없으면 안내 문구', () => {
+    expect(describePush({ id: 1, kind: 'post_comment', message: '내 글에 새 댓글이 달렸습니다.', proposal_id: null, build_id: null, post_id: null }).url).toBe('/notifications');
+    expect(describePush({ id: 1, kind: 'doc_comment', message: 'x', proposal_id: null, build_id: null, counter_id: 4 }).url).toBe('/notifications');
+    expect(describePush({ id: 1, kind: 'comment_reply', message: null, proposal_id: null, build_id: null, post_id: 31 }))
+      .toMatchObject({ title: '새 답글', body: '눌러서 확인해 주세요.', url: '/board/31' });
+  });
+  test('긴 글 제목이 든 문장은 120자로 자른다, " 메모: " 뒤는 보내지 않는다 (알림 목록 제목과 같은 규칙)', () => {
+    const long = `내 글 「${'가'.repeat(200)}」에 새 댓글이 달렸습니다.`;
+    expect([...describePush({ id: 1, kind: 'post_comment', message: long, proposal_id: null, build_id: null, post_id: 1 }).body].length).toBe(120);
+    expect(describePush({ id: 1, kind: 'post_comment', message: '내 글에 새 댓글이 달렸습니다. 메모: 숨김', proposal_id: null, build_id: null, post_id: 1 }).body)
+      .toBe('내 글에 새 댓글이 달렸습니다.');
+  });
+  test('댓글 숨김·삭제·다시 공개 알림은 여전히 푸시 대상이 아니다 (DB 묶음 없음) — 혹시 오면 예전처럼 「탑신병자」', () => {
+    expect(describePush({ id: 1, kind: 'comment_hidden', message: '내 댓글이 숨겨졌습니다.', proposal_id: null, build_id: null }))
+      .toMatchObject({ title: '탑신병자', url: '/notifications' });
+  });
+});

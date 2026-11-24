@@ -2179,3 +2179,38 @@ RLS 원칙:
 - **되돌리는 법**: 073 맨 위 주석의 되돌리기 블록(`begin; create or replace function public.push_wanted … 067 본문 그대로 … commit;`)을 맨 앞 `-- `를 빼고 SQL Editor에서 실행. 데이터는 지우지 않는다. 되돌리면 앱 토큰만 있는 사람은 다시 앱 푸시를 못 받는다. 되돌린 뒤 `check_push_wanted_before.sql` 2번이 「067 본문」이면 정상. Edge Function은 바꾸지 않았으므로 되돌릴 것 없음.
 - **운영 반영 순서** (사장님): ① `check_push_wanted_before.sql` 실행 → 1~3번 정상 값 확인, 4~13번 적어 두기 ② `073_push_wanted_device_tokens.sql` 통째로 실행 ③ `check_push_wanted_after.sql` 실행 → 1~9번 정상 값, 10~19번이 ①과 같은지. Edge Function은 **이 일 때문에 다시 배포할 필요 없다**(코드 변경 없음). 다만 P-2(6-102) 버전 `web-push`가 아직 배포 전이면 앱 푸시는 6-102 순서(비밀 값 4개 → Deploy)를 마쳐야 나간다 — 073은 그 앞뒤 어느 쪽에 실행해도 된다(P-2 전 코드는 웹 구독 0개면 아무것도 안 하고 `{ ok, sent: 0 }`).
 - **다음 단계**: 커밋만 했고 운영 DB 실행·Edge Function 배포·push는 하지 않았다.
+
+### 6-107. 1.3 패치 2-F — 댓글·답글 알림에 휴대폰 알림 (074, 푸시 묶음 comments) (2026-11-24 — DB 파일·확인 스크립트·Edge Function 파일·웹 설정 화면, 운영 DB 미실행·배포 안 함)
+- **전**: 댓글 알림 3종은 앱 안 알림 목록에만 쌓이고 푸시 묶음이 없어(`push_group` = null → `push_wanted` = false) 트리거가 Edge Function을 부르지 않았다.
+  - `post_comment` 내 글에 새 댓글(받는 사람 = 글 작성자) / `doc_comment` 내가 제안한 상대법 문서에 새 댓글(= 상대법을 처음 제안한 사람) / `comment_reply` 내 댓글에 새 답글, 글·문서 모두(= 부모 댓글 작성자).
+  - 세 종류 모두 `notify_new_comment(text, bigint, uuid, uuid, boolean)`(최신 본문 061, 차단 반영)이 만든다. 이 함수·받는 사람·문장은 **바꾸지 않았다**(새 수신 대상 없음).
+- **묶음이 정해지는 곳(중복 정리)**:
+  1. DB `push_group(text)`(알림 종류 → 묶음 이름)과 `push_wanted(uuid, text)`(묶음 → `push_settings` 칸·기본값, + 웹 구독 또는 앱 토큰). 별도 매핑 표는 없다. `push_targets`·트리거는 `push_wanted`만 부른다.
+  2. DB `push_settings` 표: 묶음마다 boolean 칸 하나(`staff_new`·`my_results`·`follow_builds`·`notice`·`new_followers`·`build_edits`, 이번에 `comments`). 줄이 없으면 각 함수의 기본값(새 팔로워만 꺼짐). 칸마다 로그인 사용자 update 칸 권한, 본인 줄만(RLS).
+  3. 웹 `src/api/push.js` `PUSH_DEFAULTS`(칸·기본값 목록 — 저장·읽기에 씀)와 `src/components/PushSettings.jsx`(체크 상자를 칸마다 직접 그림). 설정 화면은 묶음 목록을 DB에서 읽지 않는다.
+  4. Edge Function `web-push`는 묶음을 모른다 — 알림 **종류**별로 제목·본문·주소를 만든다(`describePush`). 알림 종류 목록은 `notifications_kind_check`(댓글 3종은 이미 있음 — 이번에 안 바꿈).
+- **합치기와 푸시 횟수**: `notify_new_comment`는 같은 대상(같은 글 / 같은 상대법 문서 / 같은 글·문서의 내 댓글 답글)의 **안 읽은** 알림이 있으면 새 줄을 만들지 않고 그 줄의 문장을 「새 댓글 N개」로 **고친다(update)**. 트리거 `notifications_push`는 **after insert**라 → 처음 한 번만 울리고, 안 읽은 동안 더 달린 댓글은 다시 울리지 않는다. 사용자가 그 알림을 읽은 뒤 달린 댓글은 새 줄 → 그때 한 번 더 울린다(SQL 테스트로 확인). Edge Function은 보낼 때 DB 문장을 읽으므로, 그 사이(몇 초) 이미 합쳐졌으면 「새 댓글 N개」로 나간다.
+- **074 (`migrations/074_comment_push_group.sql`)** — 칸 1개 + 두 함수 본문에 줄 하나씩:
+  - `push_settings.comments boolean not null default true` + `grant update (comments) … to authenticated`(050·051·052·067과 같은 방식). 기존 줄은 모두 켜짐으로 시작.
+  - `push_group` 본문(069 → 074): 마지막 `when` 뒤에 `when p_kind in ('post_comment', 'doc_comment', 'comment_reply') then 'comments'` 한 줄. 지문 `ba44f97f…` → `2be75ed999aa158e20557beda4db0814`.
+  - `push_wanted` 본문(073 → 074): `else false` 앞에 `when 'comments' then coalesce((select s.comments from public.push_settings s where s.user_id = p_user), true)` 한 줄. 지문 `e6f1723a…` → `fa8eb83cd5786a7155e5f2439917b04e`.
+  - 고친 이유: 종류 → 묶음 연결과 묶음 → 설정 연결이 이 두 함수에만 있어서, 본문을 고치지 않고는 묶음을 더할 수 없다. 이름·인자·반환·volatile·보안·search_path·소유자·권한은 그대로. 더한 줄을 빼면 069·073 지문과 같다(확인 스크립트·SQL 테스트).
+  - 실행 조건: `push_group`이 069 본문, `push_wanted`가 073 본문, 칸이 없을 때만(다시 실행·순서 틀림 방지).
+- **영향**: 댓글 3종만 false → 「댓글 설정 켬(기본) and (웹 구독 또는 앱 토큰)」. 다른 종류는 모든 사람 × 모든 종류에서 전과 같다(SQL 테스트, 운영 확인 스크립트 14·21번). 068 쓰기 함수 103 / 30 / 73 그대로. 074 전에 이미 있던 댓글 알림에는 푸시를 보내지 않는다(새로 생기는 줄부터).
+- **Edge Function(`web-push`) — 다시 배포 필요**: `describePush`에 댓글 3종(`COMMENT_TITLE`·`commentPath`). 알림 목록(`describeNotification`)과 같은 규칙:
+  - 제목 「새 댓글」(`post_comment`·`doc_comment`) / 「새 답글」(`comment_reply`), 본문 = DB 문장(` 메모: ` 앞까지, 120자) = 알림 목록의 제목 줄 그대로(합쳐졌으면 「새 댓글 N개」).
+  - 누르면: 문서 댓글·문서의 답글(`post_id` 없음) → `/champion/{상대}/counter/{내 챔피언}#comments`(`push_targets`가 주는 챔피언 id), 글 댓글·글의 답글 → `/board/{글 번호}`. 모르면 `/notifications`. 웹·앱(iOS·Android) 같은 값.
+  - 배포 전에도 074를 실행하면 댓글 푸시는 나가지만 옛 코드라 제목 「탑신병자」 + 문장, 누르면 알림 목록이다.
+- **웹 설정 화면**: [계정 설정 → 휴대폰 알림 → 받을 알림]에 「댓글: 내 글·내가 제안한 상대법에 댓글이, 내 댓글에 답글이 달렸을 때」(기본 켜짐) + 안내 「확인하지 않은 댓글 알림이 있는 동안에는 다시 울리지 않습니다. 꺼 두어도 알림 목록에는 쌓입니다.」 다른 칸과 같은 `check-row`(글이 줄바꿈되는 모양). 머리 문장에 「내 글·댓글에 달린 새 댓글·답글」. 저장은 기존 upsert에 `comments`를 더함. 074 전 DB(PGRST204/42703)면 `comments`(그리고 067 전이면 `build_edits`)를 빼고 다시 저장한다.
+- **옛 앱 1.1·1.2**: 설정 화면에 「댓글」 칸이 없다. 그래도 저장은 아는 칸만 upsert하므로 `comments`는 건드리지 않고(새 줄이면 기본 켜짐), **푸시는 받는다**(웹 구독 또는 1.3의 앱 토큰이 있으면). 끄려면 웹이나 1.3 앱의 설정에서. 옛 앱의 알림 목록은 원래 댓글 알림을 보여 주므로 달라지는 것 없음.
+- **한계**: 
+  - 074 전부터 안 읽은 댓글 알림이 있던 대상은, 그 알림을 읽기 전까지 새 댓글이 와도 고쳐지기만 해서 울리지 않는다(합치기 규칙 그대로).
+  - 앱 쪽은 보내기 직전에 설정을 다시 보지 않는다(6-102 한계 그대로).
+  - 문서 댓글 알림을 받은 뒤 그 상대법이 숨겨지면 누른 곳에서 「찾을 수 없음」(알림 목록은 승인된 상대법만 링크) — 알림은 1시간 안에만 보내므로 드묾.
+  - 댓글 숨김·삭제·다시 공개 알림은 이번에도 푸시 없음(묶음 없음).
+  - 380px 확인은 이 환경에 브라우저가 없어 구조(다른 칸과 같은 `check-row`, 끊기지 않는 긴 낱말 없음)로만 테스트했다.
+- **확인 스크립트**: `scripts/check_comment_push_before.sql`(1~3 실행 가능: 073 본문·069 본문·칸 없음 / 4~14 적어 둘 값: 쓰기 함수 수·지문, 두 함수를 뺀 public 함수 지문, 발송·댓글 알림 함수(`push_on_notification`·`push_targets`·`push_forget`·`notify_new_comment`) 지문, 두 함수의 본문 밖 속성, 표 4개 칸(comments 뺌)·제약·트리거·정책·표 권한·RLS·push_settings 칸 권한(comments 뺌), 허용 목록, 기기·토큰·설정(기존 칸만) 수·지문, 알림·댓글 알림 수, push_group을 뺀 읽기 함수 지문, **모든 사람 × 모든 종류(댓글 3종 뺌)의 push_wanted 결과·종류별 push_group 지문** / 15 참고), `scripts/check_comment_push_after.sql`(1~10: 새 지문, 더한 줄을 빼면 069·073 지문, 댓글 3종 → comments이고 그 묶음은 3종뿐, 새 칸 모양·설명·권한, 두 함수 모양, 트리거·실행 권한, 쓰기 함수 103/30/73, 빠뜨림 방지 / 11~21 실행 전 4~14와 같음 / 22 참고). 토큰·endpoint 값은 출력 없음.
+- **테스트**: `tests/comment_push_test.sql` 37개(지문·더한 줄 빼면 이전 지문·모양·권한·쓰기 함수 수, 댓글 3종만 comments, 모든 종류의 묶음이 069와 같음, 칸 기본값·옛 줄·권한·새 화면 저장·옛 앱 저장(칸 그대로)·옛 앱 새 줄(켜짐)·남의 줄 못 고침, 웹·앱·기기 없음·끔·다른 묶음과 독립, **모든 사람 × 댓글 3종을 뺀 모든 종류에서 073과 같음**(운영자 모드 켬·끔), 실제 글 댓글·답글·문서 댓글·문서 답글 → 부름, 안 읽은 동안 「N개」로 고쳐지고 안 부름, 읽은 뒤 다시 부름, 끈 사람·기기 없는 사람은 알림 줄만, 새 수신 대상 없음, `push_targets` 내용, 다른 종류의 부르기 그대로). 기존 `comments_test.sql`·`doc_replies_test.sql`의 「답글 알림은 휴대폰 알림 없음」 1줄씩을 「묶음 comments」로 바꿈(이번 목표로 바뀌는 기대값). 073의 `push_wanted_device_tokens_test.sql`은 본문 지문을 「074 댓글 줄을 뺀 값」으로 비교하고, 비교 기준 판단에 comments 줄을, 「모두 끈 사람」 설정에 `comments = false`를 더함(073 조건 검사는 그대로 — 테스트는 마지막 마이그레이션까지 실행한 DB에서 돈다). 037의 `web_push_test.sql` 「안 보내는 종류」 예에서 `post_comment`를 `comment_hidden`으로 바꿈. 웹 `push.test.jsx` 14개(설정 칸 기본 켜짐·끄기 저장·다른 칸 저장 때 유지·옛 줄 켜짐·074 전 DB·067+074 전 DB·문구, describePush 5가지가 알림 목록과 같은 문장·같은 곳·주소 모를 때·자르기·숨김 알림은 대상 아님), `appPush.test.js` 1개(앱에도 같은 제목·본문·주소).
+- **되돌리는 법**: 074 맨 위 되돌리기 블록(두 함수를 069·073 본문으로 + `push_settings.comments` 칸 삭제 — 끈 기록도 사라짐)을 SQL Editor에서 실행. 되돌린 뒤 `check_comment_push_before.sql` 1·2번이 「073 본문」「069 본문」이면 정상. Edge Function은 되돌리지 않아도 된다(댓글 알림이 다시 푸시 대상이 아니게 되므로 새 코드가 쓰이지 않음). 웹은 `git revert` 후 배포(되돌린 DB에서도 저장은 `comments` 없이 다시 시도해 성공).
+- **운영 반영 순서** (사장님): ① Edge Function `web-push`에 이번 커밋의 `supabase/functions/web-push/index.ts` 전체를 붙여 넣고 Deploy(Verify JWT 끔 그대로 — 6-102와 같은 방법, 비밀 값 그대로) ② `check_comment_push_before.sql` → `074_comment_push_group.sql` → `check_comment_push_after.sql` ③ `git push`(웹 배포 — 설정 화면 「댓글」 칸) ④ 앱 1.3 빌드(Codemagic)에서 앱 설정 화면에도 칸이 생긴다. ①을 먼저 해도 댓글 알림은 아직 푸시 대상이 아니라 아무 일도 없다. ③을 ②보다 먼저 해도 화면은 죽지 않는다(칸 없이 다시 저장 — 그 사이 「댓글」을 끈 것만 저장되지 않음).
+- **다음 단계**: 커밋만 했고 운영 DB 실행·Edge Function 배포·push는 하지 않았다.

@@ -202,6 +202,7 @@ export function resetFake() {
   TABLES.build_bookmarks = [];
   fakeState.bookmarksMissing = false; // true = 066 실행 전 DB (저장 표·함수 없음)
   fakeState.buildEditsMissing = false; // true = 067 실행 전 DB (push_settings.build_edits 칸 없음)
+  fakeState.commentsPushMissing = false; // true = 074 실행 전 DB (push_settings.comments 칸 없음)
   TABLES.nickname_changes = [];
   TABLES.inquiries = [];
   TABLES.push_subscriptions = [];
@@ -412,6 +413,9 @@ function query(table) {
       const { values, key } = upserted;
       if (table === 'push_settings' && fakeState.buildEditsMissing && 'build_edits' in values) {
         return { data: null, error: { code: 'PGRST204', message: "Could not find the 'build_edits' column of 'push_settings' in the schema cache" } };
+      }
+      if (table === 'push_settings' && fakeState.commentsPushMissing && 'comments' in values) {
+        return { data: null, error: { code: 'PGRST204', message: "Could not find the 'comments' column of 'push_settings' in the schema cache" } };
       }
       if (values.user_id !== me) return { data: null, error: { code: '42501', message: 'new row violates row-level security policy' } };
       const old = TABLES[table].find((r) => r[key] === values[key]);

@@ -168,4 +168,4 @@ select t.ok('화면 함수는 로그인한 사람만',
   and not has_function_privilege('anon', 'public.create_comment(bigint, text, text[], bigint)', 'execute')
   and has_function_privilege('authenticated', 'public.dismiss_reports(bigint, bigint, text, bigint)', 'execute')
   and not has_function_privilege('anon', 'public.dismiss_reports(bigint, bigint, text, bigint)', 'execute'));
-select t.ok('답글 알림은 휴대폰 알림 없음 (기존 댓글 알림과 같음)', push_group('comment_reply') is null and push_group('post_comment') is null);
+select t.ok('답글·댓글 알림의 휴대폰 알림 묶음은 comments (074부터, 그 전에는 없음)', push_group('comment_reply') = 'comments' and push_group('post_comment') = 'comments');

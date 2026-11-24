@@ -505,3 +505,20 @@ describe('P-2b: 웹 구독 없이 앱 토큰만 있는 사람 (073)', () => {
     expect(after.replace(NEW, OLD)).toBe(before); // 나머지(묶음·운영자 모드·설정)는 한 글자도 안 바뀜
   });
 });
+
+// ---------------- 1.3 패치 2-F (074, SPEC 6-107): 댓글 알림의 앱 푸시 ----------------
+describe('댓글·답글 앱 푸시 (074)', () => {
+  test('앱에도 웹과 같은 제목·본문·주소 (글 댓글 → 그 글, 문서 답글 → 상대법 댓글 칸)', async () => {
+    const post = { id: 21, kind: 'post_comment', message: '내 글 「탑 라인 질문」에 새 댓글 2개가 달렸습니다.', proposal_id: null, build_id: null, post_id: 31 };
+    const app = appDeps();
+    await sendAppPush(21, async () => post, app);
+    expect(app.iosSend).toHaveBeenCalledWith(IOS_TOKEN, { title: '새 댓글', body: post.message, url: '/board/31', notificationId: 21 });
+    const reply = { id: 22, kind: 'comment_reply', message: '상대법 문서에 쓴 내 댓글에 새 답글이 달렸습니다.', proposal_id: null, build_id: null,
+      post_id: null, counter_id: 4, target_champion: 'Darius', counter_champion: 'Garen' };
+    const app2 = appDeps();
+    await sendAppPush(22, async () => reply, app2);
+    expect(app2.andSend).toHaveBeenCalledWith(AND_TOKEN, { title: '새 답글', body: reply.message, url: '/champion/Darius/counter/Garen#comments', notificationId: 22 });
+    expect(apnsPayload({ title: '새 답글', body: reply.message, url: '/champion/Darius/counter/Garen#comments', notificationId: 22 }).url)
+      .toBe('/champion/Darius/counter/Garen#comments');
+  });
+});

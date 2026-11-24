@@ -121,6 +121,19 @@ function matchupUrl(n: PushNotice): string {
   const path = `/champion/${encodeURIComponent(n.target_champion)}/counter/${encodeURIComponent(n.counter_champion)}`;
   return n.build_id ? `${path}?build=${n.build_id}` : path;
 }
+// 074 댓글·답글 (푸시 묶음 comments, SPEC 6-107): 화면 알림 목록(src/lib/notifications.js describeNotification의 게시판·문서 댓글)과 같은 규칙.
+//   본문 = DB 문장(" 메모: " 앞까지) 그대로 - 안 읽은 알림에 댓글이 더 달리면 DB가 문장을 「새 댓글 N개」로 고치므로 보낼 때의 문장이 곧 개수다.
+//   누르면: 문서 댓글(doc_comment)과 문서의 답글(comment_reply인데 글 번호 없음) → 그 상대법 화면의 댓글 칸(#comments),
+//   그 밖(글 댓글·글의 답글) → 그 글. 갈 곳을 모르면 알림 목록.
+export const COMMENT_TITLE: Record<string, string> = { post_comment: '새 댓글', doc_comment: '새 댓글', comment_reply: '새 답글' };
+export function commentPath(n: PushNotice): string {
+  const onDoc = n.kind === 'doc_comment' || (n.kind === 'comment_reply' && n.post_id == null);
+  if (onDoc) {
+    if (!n.target_champion || !n.counter_champion) return '/notifications';
+    return `/champion/${encodeURIComponent(n.target_champion)}/counter/${encodeURIComponent(n.counter_champion)}#comments`;
+  }
+  return n.post_id ? `/board/${n.post_id}` : '/notifications';
+}
 const BODY_MAX = 120;
 const cut = (s: string) => ([...s].length > BODY_MAX ? `${[...s].slice(0, BODY_MAX - 1).join('')}…` : s);
 
@@ -142,6 +155,11 @@ export function describePush(n: PushNotice): { title: string; body: string; url:
   }
   if (n.kind === 'new_followers') {
     return { title: '새 팔로워', body: cut(n.message ?? '오늘 새 팔로워가 생겼습니다.'), url: NEW_FOLLOWERS_PATH, tag };
+  }
+  const ct = COMMENT_TITLE[n.kind];
+  if (ct) {
+    const line = String(n.message ?? '').split(' 메모: ')[0].trim();
+    return { title: ct, body: cut(line || '눌러서 확인해 주세요.'), url: commentPath(n), tag };
   }
   const inf = INFLUENCER[n.kind];
   if (inf) return { title: inf.title, body: cut(withoutOperatorId(n.message ?? '눌러서 확인해 주세요.')), url: inf.url, tag };
