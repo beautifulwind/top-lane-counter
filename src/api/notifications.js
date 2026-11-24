@@ -36,7 +36,8 @@ const FIELDS = [
   'counter:counters!notifications_counter_id_fkey(target_champion, counter_champion, status)',
   'proposal:edit_proposals!notifications_proposal_id_fkey(type, target_champion, counter_champion)',
   // author_id: 050 팔로우한 장인의 새 빌드 알림 → 그 장인 페이지 (숨겨진 빌드는 RLS가 빼서 null)
-  'build:builds!notifications_build_id_fkey(author_id, counter:counters!builds_counter_id_fkey(target_champion, counter_champion))',
+  // 1-E: 운영자가 받는 새 상대법·새 빌드 알림에 「장인 빌드」 표시를 붙이려고 작성자의 닉네임·장인 유형을 같은 조회에 조인 (프로필의 닉네임·장인 칸은 누구나 읽음)
+  'build:builds!notifications_build_id_fkey(author_id, author:profiles!builds_author_id_fkey(nickname, influencer), counter:counters!builds_counter_id_fkey(target_champion, counter_champion))',
   'post:posts!notifications_post_id_fkey(title)',
 ].join(', ');
 

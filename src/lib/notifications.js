@@ -146,9 +146,13 @@ export function describeNotification(n, name = (id) => id, titleBook = []) {
   if (s) {
     const own = n.proposal_id ? n.proposal : (n.build?.counter ?? n.counter);
     const label = (typeof s.label === 'function' ? s.label(n) : s.label) ?? (n.proposal_id ? (TYPE_LABEL[n.proposal?.type] ?? '제안') : '빌드');
+    // 1-E: 운영자가 받는 새 상대법·새 빌드 알림은 올린 사람이 장인이면 「장인」 배지 + 「장인 빌드 · 닉네임」 (닉네임을 모르면 예전 문구 그대로)
+    const author = n.kind === 'matchup_created' || n.kind === 'build_created' ? n.build?.author : null;
+    const influencer = author?.influencer && author?.nickname ? author.nickname : null;
     return {
       icon: s.icon,
-      title: n.message,
+      title: influencer ? `장인 빌드 · ${influencer}` : n.message,
+      badge: influencer ? '장인' : null,
       subject: own ? `[${label}] ${matchup(own)}` : null,
       detail: null,
       to: s.to(n),

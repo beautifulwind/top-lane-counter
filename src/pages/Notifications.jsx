@@ -130,6 +130,7 @@ function NotificationRow({ n, fresh, name, book, onRead }) {
       <span className="noti-body">
         <span className="noti-title">
           {fresh && <span className="new-badge">새</span>}
+          {d.badge && <span className="inf-build-tag">{d.badge}</span>}
           {d.title}
         </span>
         {d.subject && <span className="noti-subject">{d.subject}</span>}

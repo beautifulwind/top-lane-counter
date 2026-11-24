@@ -189,6 +189,67 @@ test('[모두 읽음]은 빨간 점과 같은 기준: 불러온 20개가 모두 
   await vi.waitFor(() => expect(screen.queryByRole('button', { name: '모두 읽음' })).toBeNull());
 });
 
+// ---------------- 1-E: 운영자 알림의 「장인 빌드」 표시 ----------------
+
+const asOperator = () => fakeLogin(ME, { nickname: '영자', role: 'admin', level: 0, main_title: null });
+
+test('운영자 새 상대법·새 빌드 알림: 올린 사람이 장인이면 「장인」 배지 + 「장인 빌드 · 닉네임」, 둘째 줄은 그대로', async () => {
+  TABLES.builds.push(
+    fakeBuild(111, { nickname: '장인A', level: 5, main_title: null, influencer: 'creator' }),
+    fakeBuild(112, { nickname: '장인B', level: 5, main_title: null, influencer: 'pro' }),
+  );
+  TABLES.notifications.push(
+    noti('matchup_created', { message: '새 상대법이 등록됐습니다.', build_id: 111, counter_id: 1, read_at: null }),
+    noti('build_created', { message: '새 빌드가 등록됐습니다.', build_id: 112, counter_id: 1, read_at: null }),
+  );
+  asOperator();
+  start('/notifications');
+  const m = await rowOf('장인 빌드 · 장인A');
+  expect(within(m).getByText('장인', { selector: '.inf-build-tag' })).toBeDefined();
+  expect(m.textContent).toContain('[상대법] 퀸으로 다리우스 이기는 법');
+  expect(m.textContent).not.toContain('새 상대법이 등록됐습니다.');
+  expect(href(m)).toBe('/champion/Darius/counter/Quinn?build=111');
+  const b = await rowOf('장인 빌드 · 장인B');
+  expect(within(b).getByText('장인', { selector: '.inf-build-tag' })).toBeDefined();
+  expect(b.textContent).toContain('[빌드] 퀸으로 다리우스 이기는 법');
+});
+
+test('운영자 새 글 알림: 일반 사용자가 올렸으면 예전 문구·표시 그대로 (배지 없음)', async () => {
+  TABLES.builds.push(fakeBuild(113, { nickname: '일반인', level: 3, main_title: null }));
+  TABLES.notifications.push(
+    noti('matchup_created', { message: '새 상대법이 등록됐습니다.', build_id: 113, counter_id: 1, read_at: null }),
+    noti('build_created', { message: '새 빌드가 등록됐습니다.', build_id: 113, counter_id: 1, read_at: null }),
+  );
+  asOperator();
+  start('/notifications');
+  const m = await rowOf('새 상대법이 등록됐습니다.');
+  const b = await rowOf('새 빌드가 등록됐습니다.');
+  expect(m.querySelector('.inf-build-tag')).toBeNull();
+  expect(b.querySelector('.inf-build-tag')).toBeNull();
+  expect(m.textContent).toContain('[상대법] 퀸으로 다리우스 이기는 법');
+  expect(b.textContent).toContain('[빌드] 퀸으로 다리우스 이기는 법');
+  expect(screen.queryByText(/장인 빌드 ·/)).toBeNull();
+});
+
+test('빌드가 삭제됐거나 작성자가 탈퇴·닉네임을 모르면 예전 문구로 되돌려 보여 주고 오류가 나지 않는다', async () => {
+  TABLES.builds.push(
+    fakeBuild(114, null), // 작성자가 탈퇴해 비어 있음
+    fakeBuild(115, { nickname: null, level: 1, main_title: null, influencer: 'pro' }), // 장인 값은 있으나 닉네임을 모름
+  );
+  TABLES.notifications.push(
+    noti('build_created', { message: '새 빌드가 등록됐습니다. (탈퇴)', build_id: 114, counter_id: 1, read_at: null }),
+    noti('build_created', { message: '새 빌드가 등록됐습니다. (닉네임 없음)', build_id: 115, counter_id: 1, read_at: null }),
+    noti('build_created', { message: '새 빌드가 등록됐습니다. (삭제)', build_id: 999, counter_id: 1, read_at: null }), // 지워진 빌드
+  );
+  asOperator();
+  start('/notifications');
+  for (const t of ['(탈퇴)', '(닉네임 없음)', '(삭제)']) {
+    const row = await rowOf(`새 빌드가 등록됐습니다. ${t}`);
+    expect(row.querySelector('.inf-build-tag')).toBeNull();
+  }
+  expect(screen.queryByText(/장인 빌드 ·/)).toBeNull();
+});
+
 test('20개씩 [더 보기] — 더 오래된 알림을 이어 붙이고, 끝나면 버튼이 없다', async () => {
   for (let i = 1; i <= 25; i++) TABLES.notifications.push(noti('level_up', { message: `알림 ${i}` }));
   TABLES.notifications.push({ ...noti('level_up', { message: '남의 알림' }), user_id: 'u-x' });

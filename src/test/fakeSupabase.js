@@ -311,7 +311,7 @@ function visibleRows(table) {
         counter: n.counter !== undefined ? n.counter : counterOf(n.counter_id),
         proposal: n.proposal !== undefined ? n.proposal : p ? { type: p.type, target_champion: p.target_champion, counter_champion: p.counter_champion } : null,
         // 050: 공개 빌드(또는 내 빌드)만 작성자를 읽을 수 있다 — 숨겨진 남의 빌드는 RLS처럼 null
-        build: n.build !== undefined ? n.build : b && (b.status === 'approved' || b.author_id === fakeState.session?.user.id) ? { author_id: b.author_id, counter: counterOf(b.counter_id) } : null,
+        build: n.build !== undefined ? n.build : b && (b.status === 'approved' || b.author_id === fakeState.session?.user.id) ? { author_id: b.author_id, author: b.author ? { nickname: b.author.nickname ?? null, influencer: b.author.influencer ?? null } : null, counter: counterOf(b.counter_id) } : null,
         post: n.post !== undefined ? n.post : post ? { title: post.title } : null,
       };
     });
