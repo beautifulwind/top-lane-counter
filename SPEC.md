@@ -1928,3 +1928,20 @@ RLS 원칙:
 - **바꾸지 않은 것**: 팔로워 알림 `followed_build_created`, 빌드 수정 알림 `build_edited`, 푸시 알림 문구(web-push), 읽음 처리 동작(6-90).
 - **확인한 점**: ① 운영자만이 아니라 누구나 다른 사람의 `profiles.nickname`·`influencer`를 읽는다(`schema.sql:289` 정책 「profiles: 누구나 읽기」, 046 주석 「누구나 읽음」, 빌드 목록도 같은 관계를 이미 씀) → 조인이 권한으로 막히지 않는다. 알림의 `build` 관계는 숨겨진 남의 빌드가 RLS로 비어 올 수 있으나 운영자는 숨긴 빌드도 읽는다(그래도 비면 예전 문구). ② 장인인데 닉네임이 없는 경우: 닉네임은 한 번 정하면 비울 수 없고(002 트리거) 장인 지정·신청은 닉네임이 있어야 하므로 실제로는 없다고 본다. 있더라도 예전 문구로 표시.
 - **검사**: `notifications.test.jsx`(장인 빌드면 배지·제목·둘째 줄·이동, 일반 사용자는 예전 문구·배지 없음, 작성자 탈퇴·닉네임 없음·삭제된 빌드는 예전 문구). 테스트용 가짜 백엔드(`fakeSupabase.js`)는 알림의 `build.author` 관계를 흉내 내도록 한 줄 더함.
+
+### 6-92. 공개 장인 목록 조회 함수 influencer_directory (2026-11-24, 1.3 패치 2단계 선행, DB 070만 — 웹 화면·Edge Function·iOS·Android 설정 변경 없음)
+- **왜**: 1-B1 전체 장인 목록(/influencers)을 기존 API로 만들 수 없었다 — `search_influencers`는 검색어가 비면 거부, 20개 고정, 정렬 고정(정확히 일치 → 팔로워 → 닉네임), 최근 활동·사진 칸 없음. 장인마다 `influencer_follower_count`를 따로 부르는 우회는 장인 수만큼 요청이 늘어 쓰지 않았다.
+- **새 함수** (`migrations/070_influencer_directory.sql`, 읽기 함수 하나만 — 표·칸·기존 함수·데이터 변경 없음): `influencer_directory(p_query text, p_sort text, p_page integer, p_size integer) returns jsonb`
+  - 권한: 비로그인(anon)·로그인(authenticated)만 실행. public 기본 권한은 회수. `stable` · `security definer` · `search_path ''`(다른 공개 함수와 같음).
+  - 입력 보정: 검색어 앞뒤 빈칸을 빼고 비면 전체, 20자를 넘으면 거부(`search_influencers`와 같은 문장). 닉네임 부분 일치는 `search_influencers`와 같은 규칙(소문자 비교 + 비슷한 글자 열쇠 `nickname_key`, `%`·`_`는 글자 그대로). 정렬은 `'recent'`만 최신순, 그 밖(null·빈 값·대소문자 다른 값 포함)은 `'followers'`. 쪽은 1 미만·null이면 1. 크기는 기본 10, 1~50으로 맞춤(999 → 50, 0·음수 → 1).
+  - 돌려주는 값: `{ total, page, size, sort, items: [{ id, nickname, influencer, photo_path, follower_count, build_count, last_activity_at }] }` — 이 7칸뿐(이메일·로그인 방식·역할·경험치 없음). 팔로워 목록은 주지 않고 개수만.
+  - 대상: `profiles.influencer`가 있고 닉네임이 있는 사람(`search_influencers`와 같음). 탈퇴하면 프로필이 지워져 저절로 빠진다. 인증 해제도 바로 빠진다.
+  - 개수: `follower_count`·`build_count`는 `search_influencers`와 같은 기준(팔로워 = `influencer_follows` 줄 수, 빌드 = 처음 만든 빌드 중 `status = 'approved'`이고 그 상대법도 `approved`). `last_activity_at` = 그 공개 빌드 중 가장 최근 `updated_at`. 숨김·대기·거절 빌드와 숨긴 상대법의 빌드는 개수·시각 모두에서 빠진다(숨긴 빌드를 방금 고쳐도 최근 활동이 바뀌지 않아 존재가 드러나지 않음). 공개 빌드가 없으면 null.
+  - 정렬(마지막에 id까지 넣어 쪽 사이 겹침·빠짐 없음): `followers` = 팔로워 내림 → 최근 활동 내림(null 맨 뒤) → 닉네임 → id / `recent` = 최근 활동 내림(null 맨 뒤) → 팔로워 내림 → 닉네임 → id.
+- **068 활동 제한 빠뜨림 방지 검사와의 관계**: 검사는 일반 사용자가 부를 수 있는 `volatile` 함수(쓰기 함수)만 본다. 이 함수는 `stable`이라 대상이 아니며 허용 목록(`restriction_exemptions`)에도 넣지 않았다 → 068·069 확인 스크립트의 「쓰기 함수 수」(지금 100)는 그대로.
+- **바꾸지 않은 것**: `search_influencers`·`influencer_builds`·`influencer_follower_count`·`nickname_key`의 이름·인자·반환형·본문·권한(옛 앱 1.1·1.2가 씀 — 실행 전후 지문으로 확인).
+- **운영 DB 실행 순서** (SQL Editor, 069까지 실행한 DB): `scripts/check_influencer_directory_before.sql` → `070_influencer_directory.sql` 통째로 한 번 → `scripts/check_influencer_directory_after.sql`.
+  - 실행 전 1~2번 정상이면 실행, 3~7번과 100번부터(장인별 `search_influencers` 팔로워·빌드 수)는 적어 둔다.
+  - 실행 후 1~15번이 정상 값과 같아야 한다(함수·보안·권한·본문 지문(CR 뺀 값 `7955c630…`)·검사 대상 아님·장인 수·칸·`search_influencers`와 개수 일치·공개 빌드 기준·숨긴 빌드가 드러난 사람 없음·두 정렬 순서 어긋남 0·쪽 겹침 0·크기/정렬/검색 보정). 16~19번 = 실행 전 3~7번, 100번부터의 팔로워·빌드 = 실행 전 100번부터.
+  - 되돌리기: 마이그레이션 맨 위 주석(함수 하나만 지움, 데이터 영향 없음).
+- **웹**: 아직 이 함수를 부르지 않는다. 운영 DB에서 확인한 뒤 1-B1(/influencers, ☰ 「장인 보기」)에서 쓴다.
