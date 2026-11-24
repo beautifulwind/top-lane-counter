@@ -1603,3 +1603,26 @@ ul.build-cards > li.build-card.is-influencer { border-left-color: var(--brand); 
 .warning-first { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
 .warning-log-memo { overflow-wrap: anywhere; white-space: pre-wrap; margin: 2px 0 6px; }
 .warning-log li, .restriction-log li { overflow-wrap: anywhere; }
+
+/* ===== 1.3 패치 1-B1: 전체 장인 목록 /influencers (SPEC 6-93) — 새 색 없음, 기존 토큰만 ===== */
+.influencers-page .section-head { margin-bottom: var(--gap-md); }
+.inf-list-search { margin: 0 0 var(--gap-sm); }
+.inf-list-search .inf-search-input { width: 100%; min-width: 0; }
+.inf-sort { margin-bottom: var(--gap-md); }
+.inf-rows { list-style: none; margin: 0 0 var(--gap-md); padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.inf-row { display: flex; align-items: center; gap: var(--gap-sm); min-width: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
+.inf-row:hover { border-color: var(--line-hover); }
+.inf-row-main { flex: 1 1 0; display: flex; align-items: center; gap: 10px; min-width: 0; min-height: 44px; color: var(--text); }
+.inf-row-main:hover { text-decoration: none; }
+.inf-row-main:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: var(--radius-sm); }
+.inf-row-avatar { flex: none; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; overflow: hidden; border: 2px solid var(--influencer-line); background: var(--soft); }
+.inf-row-photo { width: 100%; height: 100%; object-fit: cover; display: block; }
+.inf-row-initial { font-family: var(--font-display); font-size: var(--fs-lg); color: var(--brand-dark); line-height: 1; }
+.inf-row-text { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.inf-row-name { display: flex; align-items: center; flex-wrap: wrap; gap: 4px; min-width: 0; font-weight: 800; overflow-wrap: anywhere; }
+.inf-row-name .inf-tag { margin-right: 0; }
+.inf-row-text .muted { overflow-wrap: anywhere; }
+.inf-row-follow { flex: none; display: flex; justify-content: flex-end; max-width: 45%; }
+.inf-row-follow .follow { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 0; }
+.inf-row-follow .follow-msg { text-align: right; overflow-wrap: anywhere; margin: 0; }
+.inf-row-follow .follow-btn { min-height: 44px; }

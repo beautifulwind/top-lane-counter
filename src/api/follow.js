@@ -57,6 +57,13 @@ export const getFollowers = (id, page = 1) =>
 export const searchInfluencers = (query, page = 1) =>
   rpc('search_influencers', { p_query: String(query ?? '').trim(), p_page: page }, '장인을 찾지 못했습니다.');
 
+/**
+ * 전체 장인 목록 (070 influencer_directory, 비로그인도, 1.3 패치 1-B1): 검색어(비면 전체, 20자까지)·정렬 'followers'|'recent'·쪽·크기.
+ * { total, page, size, sort, items: [{ id, nickname, influencer, photo_path, follower_count, build_count, last_activity_at }] }
+ */
+export const getInfluencerDirectory = ({ query = '', sort = 'followers', page = 1, size = 10 } = {}) =>
+  rpc('influencer_directory', { p_query: String(query ?? '').trim(), p_sort: sort, p_page: page, p_size: size }, '장인 목록을 불러오지 못했습니다.');
+
 /** 팔로우 모아보기 (로그인한 사람만): 내가 팔로우한 장인들의 공개 빌드, 최근 수정순 20개씩. { total, page, size, items: [빌드 카드] } */
 export const getFollowedBuilds = (page = 1) => rpc('followed_builds', { p_page: page }, '팔로우한 장인의 빌드를 불러오지 못했습니다.');
 

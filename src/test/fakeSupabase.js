@@ -182,6 +182,7 @@ export function resetFake() {
   TABLES.influencer_follows = [];
   fakeState.followStatusCalls = [];
   fakeState.searchCalls = [];
+  fakeState.directoryCalls = [];
   fakeState.noticeQueue = []; // 051 create_notice가 [알림 보내기]를 켜고 올린 공지 id
   fakeState.influencerNextAt = null;
   TABLES.xp_events = [];
@@ -1744,7 +1745,7 @@ function titleRpc(name, args) {
 
 // ---- 050 장인 팔로우 (SPEC 6-36): DB 함수와 같은 규칙만 흉내 낸다 ----
 const FOLLOW_RPCS = ['follow_influencer', 'unfollow_influencer', 'follow_status', 'influencer_builds', 'influencer_followers', 'influencer_follower_count',
-  'search_influencers', 'followed_builds', 'my_following', 'admin_influencer_list'];
+  'search_influencers', 'influencer_directory', 'followed_builds', 'my_following', 'admin_influencer_list'];
 function followRpc(name, args) {
   const writing = ['follow_influencer', 'unfollow_influencer'].includes(name);
   if (writing) fakeState.rpcCalls.push({ name, args });
@@ -1792,6 +1793,25 @@ function followRpc(name, args) {
       .map((p) => ({ id: p.id, nickname: p.nickname, influencer: p.influencer, follower_count: count(p.id), build_count: 0, exact: p.nickname.toLowerCase() === q.toLowerCase() }))
       .sort((a, b) => b.exact - a.exact || b.follower_count - a.follower_count || a.nickname.localeCompare(b.nickname));
     return ok({ total: all.length, page: args.p_page ?? 1, size: 20, items: pageOf(all, args.p_page).map(({ exact, ...x }) => x) });
+  }
+  if (name === 'influencer_directory') {
+    // 070: 공개 장인 목록 — 검색(선택)·정렬 followers|recent·쪽·크기(1~50). 개수는 search_influencers와 같은 기준(공개 빌드·공개 상대법), 최근 활동 = 공개 빌드의 최근 updated_at
+    fakeState.directoryCalls = [...(fakeState.directoryCalls ?? []), args];
+    const q = String(args.p_query ?? '').trim();
+    if (q.length > 20) return { data: null, error: { message: '검색어는 20자 이하로 적어 주세요.', code: '22023' } };
+    const srt = args.p_sort === 'recent' ? 'recent' : 'followers';
+    const pg = Math.max(1, args.p_page ?? 1);
+    const sz = Math.min(Math.max(args.p_size ?? 10, 1), 50);
+    const all = TABLES.profiles.filter((p) => p.influencer && p.nickname && (!q || p.nickname.toLowerCase().includes(q.toLowerCase()))).map((p) => {
+      const pub = TABLES.builds.filter((b) => b.author_id === p.id && b.status === 'approved' && b.counter?.status !== 'hidden');
+      const at = pub.map((b) => String(b.updated_at ?? b.created_at)).sort().at(-1) ?? null;
+      return { id: p.id, nickname: p.nickname, influencer: p.influencer, photo_path: p.photo_path ?? null, follower_count: count(p.id), build_count: pub.length, last_activity_at: at };
+    });
+    const byRecent = (a, b) => (a.last_activity_at && b.last_activity_at ? b.last_activity_at.localeCompare(a.last_activity_at) : (a.last_activity_at ? -1 : b.last_activity_at ? 1 : 0));
+    const byFollowers = (a, b) => b.follower_count - a.follower_count;
+    all.sort((a, b) => (srt === 'followers' ? byFollowers(a, b) || byRecent(a, b) : byRecent(a, b) || byFollowers(a, b))
+      || a.nickname.localeCompare(b.nickname) || String(a.id).localeCompare(String(b.id)));
+    return ok({ total: all.length, page: pg, size: sz, sort: srt, items: all.slice((pg - 1) * sz, pg * sz) });
   }
   if (name === 'influencer_builds' || name === 'influencer_follower_count') {
     const p = prof(args.p_user);

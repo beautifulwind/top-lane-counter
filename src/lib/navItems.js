@@ -12,6 +12,8 @@ export const NAV_ITEMS = [
   { key: 'notifications', to: '/notifications', label: '알림', icon: 'bell', needs: 'signedIn', menu: true, tab: true, bar: false, dot: 'unread' },
   // 6-82: ☰ [장인찾기] 자리에 [내 목록 보기] → /lists (저장한 빌드·팔로우한 장인). 로그인 전에도 보이고, 누르면 로그인 안내
   { key: 'lists', to: '/lists', label: '내 목록 보기', icon: 'bookmark', needs: 'any', menu: true, tab: false, bar: false },
+  // 1-B1: ☰ [장인 보기] → /influencers (전체 장인 목록). 로그인 전에도 보인다
+  { key: 'influencerList', to: '/influencers', label: '장인 보기', icon: 'users', needs: 'any', menu: true, tab: false, bar: false },
   // 장인 찾기 (050 → 6-82): ☰ 메뉴에서 상단 바 돋보기로 옮김. 누르면 상단 바 아래에 검색 칸(InfluencerSearch). 누구나 (로그인 전 포함)
   { key: 'influencers', to: null, panel: 'influencerSearch', label: '장인 찾기', icon: 'search', needs: 'any', menu: false, tab: false, bar: true },
   { key: 'board', to: '/board', label: BOARD_NAME, icon: 'message', needs: 'any', menu: true, tab: true, bar: false },

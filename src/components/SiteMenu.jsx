@@ -7,7 +7,7 @@ import { useUnreadCount, useUnreadRefresher } from '../lib/unread';
 import { isGuest, useAuth } from '../lib/auth';
 import { isCurrentNav, navItemsFor } from '../lib/navItems';
 import { promptInstall, useInstallKind } from '../lib/install';
-import { BellIcon, BookmarkIcon, DownloadIcon, HelpIcon, MenuIcon, MessageIcon, SearchIcon, ShieldIcon, UserIcon, XIcon } from './Icons';
+import { BellIcon, BookmarkIcon, DownloadIcon, HelpIcon, MenuIcon, MessageIcon, SearchIcon, ShieldIcon, UserIcon, UsersIcon, XIcon } from './Icons';
 import UserName from './UserName';
 
 /**
@@ -30,7 +30,7 @@ const pendingTitle = (c) =>
 
 export const logout = () => signOut().catch((e) => alert(e.message));
 
-const ICONS = { user: UserIcon, message: MessageIcon, shield: ShieldIcon, bell: BellIcon, help: HelpIcon, search: SearchIcon, bookmark: BookmarkIcon };
+const ICONS = { user: UserIcon, message: MessageIcon, shield: ShieldIcon, bell: BellIcon, help: HelpIcon, search: SearchIcon, bookmark: BookmarkIcon, users: UsersIcon };
 
 /**
  * 관리 메뉴의 처리 대기 건수 (운영진만, 033). 메뉴를 열 때마다 새로 센다 — 처리하고 돌아오면 줄어 있도록.
