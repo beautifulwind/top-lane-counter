@@ -56,8 +56,8 @@ select t.ok('대상은 탈퇴하면 cascade, 보낸 사람·제한·알림은 se
 select t.ok('휴대폰 알림 묶음: warning_received = my_results, 다른 종류는 그대로',
   public.push_group('warning_received') = 'my_results' and public.push_group('build_edited') = 'build_edits'
   and public.push_group('profile_photo_removed') = 'my_results' and public.push_group('level_up') is null);
-select t.ok('068 허용 목록에 이유와 함께 2개 추가 (71 / 8)',
-  (select count(*) filter (where kind = 'function') || '/' || count(*) filter (where kind = 'policy') from public.restriction_exemptions) = '71/8'
+select t.ok('068 허용 목록에 이유와 함께 2개 추가 (73 / 8 = 069 뒤 71 + 072 기기 토큰 함수 2개)',
+  (select count(*) filter (where kind = 'function') || '/' || count(*) filter (where kind = 'policy') from public.restriction_exemptions) = '73/8'
   and exists (select 1 from public.restriction_exemptions where name = 'ack_warning(bigint)' and reason like '%활동 제한 중에도%'));
 select pg_temp.fp() as fp0 \gset
 

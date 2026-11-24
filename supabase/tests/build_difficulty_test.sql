@@ -220,8 +220,8 @@ select t.ok('읽기 함수: stable, security invoker(부른 사람 권한 = buil
 select t.ok('권한: 비로그인·로그인 모두, public 없음', has_function_privilege('anon', 'public.build_difficulties(bigint[])', 'execute')
   and has_function_privilege('authenticated', 'public.build_difficulties(bigint[])', 'execute')
   and not exists (select 1 from pg_proc, unnest(proacl) a where oid = 'public.build_difficulties(bigint[])'::regprocedure and a::text like '=%'));
-select t.ok('읽기 함수라 068 쓰기 함수 검사 대상이 아님 (쓰기 함수 101개·검사 30개 그대로)', (
-  select count(*) filter (where p.proname = 'build_difficulties') = 0 and count(*) = 101
+select t.ok('읽기 함수라 068 쓰기 함수 검사 대상이 아님 (쓰기 함수 103개 = 071의 101 + 072 기기 토큰 2개·검사 30개 그대로)', (
+  select count(*) filter (where p.proname = 'build_difficulties') = 0 and count(*) = 103
      and count(*) filter (where p.prosrc ~ '^\s*declare\s*\n\s*_can_write constant boolean := public\.assert_can_write\(\);'
                              or p.prosrc ~ '^\s*begin\s*\n\s*perform public\.assert_can_write\(\);') = 30
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
