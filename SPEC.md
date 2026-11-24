@@ -948,6 +948,7 @@ RLS 원칙:
 7. 확인: `supabase/scripts/check_web_push.sql` → 14·15번 true. 브라우저에서 `https://<프로젝트ID>.supabase.co/functions/v1/web-push`를 열면 `{"publicKey":"…"}` (공개 키라 보여도 괜찮다). 사이트에서 알림을 켜고 알림이 생기게 한 뒤 Edge Functions → web-push → Logs에 `{"event":"web_push",…,"sent":1}`.
    - 안 오면: `select id, status_code, left(content::text, 120) from net._http_response order by id desc limit 5;` — 401이면 `PUSH_WEBHOOK_SECRET`과 Vault 값이 다름, 404면 함수 이름·주소, 응답의 `failed`가 늘면 VAPID 세 값 확인.
 8. 끄기(잠깐 멈추기): Vault의 `push_function_url`을 지우면 알림 저장은 그대로이고 푸시만 안 간다.
+9. **앱(iOS·Android) 푸시** (1.3 패치 P-2): 같은 함수 `web-push`가 보낸다. 비밀 값 4개(`APNS_KEY_P8`·`APNS_KEY_ID`·`APNS_TEAM_ID`·`FCM_SERVICE_ACCOUNT_JSON`)와 배포 순서는 **6-102**.
 
 ### 6-28. 용어 정리 "카운터" → "상대법" (2026-11-11, 041)
 - **새 용어**: 카운터 → "상대법", 카운터 챔피언 → "플레이할 챔피언". 화면에 보이는 글자만 바꾼다. 표·칸·함수 이름, 주소(URL), 코드 변수명, 알림 종류(kind)는 그대로.
@@ -2069,3 +2070,41 @@ RLS 원칙:
 - **파일**: `migrations/072_device_push_tokens.sql`(맨 위 되돌리기: ① 함수 2개 + 허용 목록 2줄만 지우기 — 토큰 남음 ② 표 지우기 — **저장된 토큰 삭제**, 다시 실행 방지·071 선행 확인), `scripts/check_device_push_tokens_before.sql`(1~2 실행 가능 확인, 3~11 적어 둘 값: 쓰기 함수 수 101/30/71·지문, public 함수 전체 지문, 웹 푸시 발송 함수 5개 지문, 푸시 관련 표 3개의 칸·제약·트리거·정책·권한·RLS, 허용 목록·profiles 외래 키 지문, 웹 푸시 기기·알림 수, 읽기 함수 지문 — 토큰·endpoint 값은 출력 안 함), `scripts/check_device_push_tokens_after.sql`(1~18 표 칸·제약·RLS·색인·권한·토큰 수(개수만)·함수 2개 모양·보안·권한·본문 지문 register `8a26ed307b78a7e240edc69480ad85e6`·unregister `a35d9ece436c79b59c76a704164580ce`(CR 뺌)·068 판정 exempt·빠뜨림 방지·cascade·웹 푸시 트리거 그대로, 19~27 실행 전 값 비교 → 103/30/73), `tests/device_push_tokens_test.sql`(79개).
 - **확인(로컬 Docker Postgres)**: 071까지 만든 DB(검사용 데이터 포함)에서 실행 전 스크립트(11줄) → 072 → 실행 뒤 스크립트(27줄)가 모두 정상 값·실행 전과 같은 지문(쓰기 함수 103/30/73, public 함수 373개 지문 같음). 072를 다시 실행하면 「이미 실행했습니다」로 멈춤. 되돌리기 SQL 뒤 `pg_dump -s`가 071 DB와 같고 허용 목록 데이터도 같음, 실행 전 스크립트 출력이 처음과 같음 → 072를 다시 실행하고 실행 뒤 스크립트 출력도 처음과 같음. 전체 DB 검사 `tests/run.sh` 통과.
 - **다음 단계(이번에 하지 않음)**: P-2 Edge Function 발송(APNs 직접 또는 FCM 경유 결정, 비밀 값 추가), 앱: `@capacitor/push-notifications` + iOS `aps-environment`·AppDelegate 연결 + Android `POST_NOTIFICATIONS`·`google-services.json`, 웹: 앱에서 로그인 뒤·알림 설정에서 `register_device_push_token`, 로그아웃 때 `unregister_device_push_token`. 테스트 데이터 정리 스크립트(`reset_test_data*.sql`)는 계정과 함께 남기는 표라 이번에 고치지 않았다(push_subscriptions와 같음).
+
+### 6-102. 1.3 패치 P-2 — 앱(iOS·Android) 푸시 보내기: Edge Function `web-push`에 앱 발송 추가 (2026-11-24 — Edge Function 파일만, 배포·비밀 값 입력 안 함, DB·웹 화면·앱 네이티브 파일 변경 없음)
+- **배포 방식 확인**: Edge Function은 CLI가 아니라 **대시보드 편집기에 파일 내용을 붙여 넣어 Deploy**한다(11-11 4번, 11-10). 그래서 `supabase/functions/web-push/index.ts` **한 파일**, import는 `npm:` 지정 그대로(새 import 없음 — 서명은 WebCrypto, 호출은 fetch).
+- **전체 흐름** (DB 트리거·함수는 그대로):
+  1. 알림 줄이 생김 → 트리거 `notifications_push` → `push_on_notification()`이 `push_wanted`(설정·운영자 모드)로 거른 뒤 pg_net으로 `web-push`를 알림 번호로 부른다(웹 구독이 없어도 부른다).
+  2. **웹 발송**: `push_targets(번호)` → 웹 구독에 VAPID로 보냄 → 404·410 구독 지움. 응답·로그·규칙은 P-2 전과 같다(코드는 `webPush()`로 옮기기만).
+  3. **앱 발송**(웹이 끝난 뒤, `finally`라 웹 쪽에 예외가 나도 실행): `push_targets`가 알림 내용을 줬을 때만(=알림이 있고 1시간 안) → service_role로 `notifications`에서 `user_id`·`created_at`을 읽어 **1시간 규칙을 한 번 더** → `device_push_tokens`에서 그 사람의 토큰(최대 20줄 읽음, 한 사람 10대 제한) → iOS·Android를 `Promise.allSettled`로 따로 → 확실한 무효 토큰만 지움 → 요약 로그 한 줄.
+  4. 앱 발송은 Supabase가 `EdgeRuntime.waitUntil`을 주면 **응답을 먼저 돌려주고 뒤에서** 한다(웹 응답 시각이 P-2 전과 같음). 없으면 끝날 때까지 기다린 뒤 응답한다. 앱 쪽 실패·예외는 웹 응답에 닿지 않는다.
+  - 제목·본문·이동 주소는 웹 푸시의 `describePush` 값 그대로(새 문구 없음). 팔로우 새 빌드는 웹 구독이 없어도 작성자를 읽어 장인 페이지 주소로. 작성자 조회는 웹·앱 합쳐 한 번.
+- **iOS (APNs)**: 토큰 방식. `.p8` 키로 ES256 JWT(`{alg ES256, kid}` / `{iss 팀 ID, iat}`)를 만들어 `https://api.push.apple.com/3/device/{토큰}`에 POST. 헤더 `apns-topic: com.topsinbyeongja.app`(capacitor.config.json appId, 코드 상수 `APP_BUNDLE_ID`)·`apns-push-type: alert`·`apns-priority: 10`, 본문 `{ aps: { alert: { title, body }, sound: "default" }, url, notification_id }` — 앱은 `url`·`notification_id`를 알림 data로 받는다.
+  - **HTTP/2**: APNs는 HTTP/2만 받는다. Supabase 공식 Edge 런타임 이미지(`supabase/edge-runtime:v1.79.5`, Deno 2.1.4)의 `fetch`로 APNs에 보내 `apns-id` 헤더와 `{"reason":"InvalidProviderToken"}` 응답을 받음 → 런타임 fetch가 HTTP/2로 붙는 것을 확인(로컬, 가짜 JWT·가짜 기기 토큰).
+  - **JWT 재사용**: 50분 칸(시각 ÷ 50분)에 맞춘 iat로 만들어 그 칸 안에서는 다시 쓴다 → 인스턴스가 여러 개 떠도 같은 iat(Apple은 20분보다 자주 바꾸면 `TooManyProviderTokenUpdates`), 1시간 한도 안(최대 50분 묵음). 403 `ExpiredProviderToken`·`InvalidProviderToken`이면 버리고 다음에 새로.
+  - 주소는 운영(production) APNs 하나. TestFlight·App Store 앱은 운영 토큰이다. Xcode로 직접 설치한 개발 빌드의 토큰은 운영 APNs가 `400 BadDeviceToken`으로 거절해 지워진다.
+- **Android (FCM HTTP v1)**: 서비스 계정 JSON의 `client_email`·`private_key`로 RS256 JWT(`scope https://www.googleapis.com/auth/firebase.messaging`, `aud https://oauth2.googleapis.com/token`, 1시간)를 만들어 OAuth 액세스 토큰을 받는다(토큰 주소는 코드에 고정 — JSON의 `token_uri`는 쓰지 않음). 55분 재사용, 동시에 여러 번 받지 않음, 401이면 버림. `https://fcm.googleapis.com/v1/projects/{project_id}/messages:send`에 `{ message: { token, notification: { title, body }, data: { url, notification_id }, android: { priority: "HIGH" } } }`.
+- **무효 토큰 지우기**(확실한 경우만, `device_push_tokens`에서 그 줄): APNs `410`(Unregistered 등)·`400 BadDeviceToken`·`400 DeviceTokenNotForTopic` / FCM `404 UNREGISTERED`·`400 INVALID_ARGUMENT` 중 토큰 칸(`message.token`, 또는 "registration token" 문장) 오류. **지우지 않음**: 그 밖의 400, 403(키·SENDER_ID_MISMATCH 등), 429, 5xx, 시간 초과, 네트워크 오류, 키 형식 오류(`apns_key`), FCM 인증 실패(`fcm_auth`).
+- **시간 제한·동시 호출**: 외부 호출마다 8초(`AbortSignal.timeout`), 플랫폼마다 동시에 4개까지.
+- **로그**: 토큰·비밀 값·서비스 계정 이메일·액세스 토큰은 남기지 않는다. 실행당 한 줄 `{"event":"app_push","kind":…,"ios":{"tokens","sent","failed","removed","codes":{"410 Unregistered":1}},"android":{…}}`(상태 코드·이유 이름만). 토큰이 없으면 이 줄도 없다(외부 호출도 없음). 비밀 값이 없으면 그 플랫폼 토큰이 있을 때 경고 한 줄만.
+- **비밀 값** (Edge Functions → Secrets. 값은 코드·로그·SPEC·대화에 쓰지 않는다):
+  - `APNS_KEY_P8` — Apple Developer에서 만든 APNs 인증 키 파일(`AuthKey_XXXXXXXXXX.p8`) **내용 전체**(`-----BEGIN PRIVATE KEY-----`부터 끝까지, 줄바꿈 그대로 붙여 넣어도 되고 한 줄이어도 됨)
+  - `APNS_KEY_ID` — 그 키의 Key ID(10자리, 파일 이름의 XXXXXXXXXX)
+  - `APNS_TEAM_ID` — Apple 팀 ID(10자리, Apple Developer → Membership details)
+  - `FCM_SERVICE_ACCOUNT_JSON` — Firebase 서비스 계정 비공개 키 JSON 파일 **내용 전체**(`project_id`·`client_email`·`private_key`를 읽는다)
+  - 셋 중 하나라도 없으면 iOS만, FCM이 없거나 형식이 틀리면 Android만 건너뛴다(웹 푸시는 그대로). 번들 ID는 비밀 값이 아니라 코드 상수.
+- **한계**:
+  - **보내기 직전 설정 재확인이 웹보다 약하다**: 웹은 `push_targets`가 보내기 직전 `push_wanted`를 한 번 더 보지만, `push_wanted`는 service_role에 실행 권한이 없어 앱 쪽은 **트리거가 알림을 만들 때 거른 결과**만 따른다(그 사이 몇 ms~몇 초 안에 알림 설정을 끄거나 운영자 모드를 끈 경우만 차이). 맞추려면 service_role 전용 새 읽기 함수를 다음 마이그레이션에 **더하면** 된다(기존 함수 변경 없음).
+  - 앱 쪽 알림 묶기(같은 알림 덮어쓰기)·배지 숫자·조용한 알림은 없다. 앱이 열려 있을 때 알림을 보여 줄지는 앱(P-3) 쪽 설정.
+  - 이 단계만으로는 아무도 앱 알림을 받지 않는다: 앱이 토큰을 등록해야(P-3: `@capacitor/push-notifications`, iOS `aps-environment`·AppDelegate, Android `POST_NOTIFICATIONS`·`google-services.json`, 웹에서 `register_device_push_token` 호출) `device_push_tokens`에 줄이 생긴다.
+- **배포·비밀 값 입력 순서** (사장님, Supabase 화면 기준):
+  1. **072를 먼저 실행**(6-101: `check_device_push_tokens_before.sql` → 072 → `_after.sql`). 표가 없을 때 새 함수를 배포하면 알림마다 「기기 토큰 조회 실패」 로그가 남는다(웹 푸시는 그대로).
+  2. **APNs 키 만들기**: developer.apple.com → Certificates, IDs & Profiles → **Keys** → ＋ → 이름(예: 탑신병자 푸시) → **Apple Push Notifications service (APNs)** 체크(환경을 고르는 칸이 있으면 Production, 또는 Sandbox & Production) → Continue → Register → **Download**(한 번만 받을 수 있음 — 안전한 곳에 보관, 저장소·Codespace에 넣지 않음). 같은 화면의 **Key ID**를 적어 둔다. 팀 ID는 Membership details.
+  3. **Firebase 서비스 계정 키 만들기**: console.firebase.google.com → 프로젝트(없으면 새로 만들고 Android 앱 `com.topsinbyeongja.app` 추가 — `google-services.json`은 P-3 앱 작업에서 씀) → ⚙ 프로젝트 설정 → **서비스 계정** → **새 비공개 키 생성** → JSON 파일 받기. 같은 설정의 **클라우드 메시징** 탭에서 "Firebase Cloud Messaging API (V1)"이 사용 설정인지 확인.
+  4. Supabase 대시보드 → **Edge Functions → Secrets** → Add new secret을 4번: `APNS_KEY_P8`(2번 .p8 파일을 메모장으로 열어 내용 전체), `APNS_KEY_ID`, `APNS_TEAM_ID`, `FCM_SERVICE_ACCOUNT_JSON`(3번 JSON 파일 내용 전체). 기존 `VAPID_*`·`PUSH_WEBHOOK_SECRET`은 건드리지 않는다.
+  5. **Edge Functions → web-push → Code**: 내용을 지우고 `supabase/functions/web-push/index.ts`(이번 커밋) 내용 전체를 붙여 넣고 **Deploy**. Verify JWT는 지금처럼 **끔** 그대로.
+  6. 확인: 브라우저에서 `https://<프로젝트ID>.supabase.co/functions/v1/web-push`가 예전처럼 `{"publicKey":"…"}`. 웹 알림을 켠 기기로 알림을 하나 만들고 **Edge Functions → web-push → Logs**에 `web_push` 줄이 예전처럼 나오는지. 앱 토큰이 아직 없으면 `app_push` 줄은 나오지 않는 것이 정상. P-3 앱이 토큰을 등록한 뒤에는 `app_push` 줄의 `sent`가 늘고, `codes`에 `403 InvalidProviderToken`이면 APNs 세 값(키·Key ID·팀 ID), `fcm_auth 400/401`이면 FCM JSON, `400 BadDeviceToken`이면 개발 빌드 토큰(운영 APNs와 맞지 않음)을 확인.
+- **되돌리기**:
+  - **앱 발송만 끄기**(가장 빠름): Secrets에서 `APNS_*` 세 개 또는 `FCM_SERVICE_ACCOUNT_JSON`을 지운다 → 그 플랫폼은 건너뜀(웹 푸시 그대로). 확실히 적용하려면 같은 코드로 Deploy를 한 번 더.
+  - **이전 버전으로 되돌리기**: GitHub에서 P-2 직전 파일(`git show 6b846ee:supabase/functions/web-push/index.ts`, 또는 저장소 웹 화면에서 커밋 6b846ee의 `supabase/functions/web-push/index.ts` → Raw)을 복사해 Edge Functions → web-push → Code에 붙여 넣고 Deploy. DB는 바꾼 것이 없어 되돌릴 SQL이 없다. 앱 비밀 값은 남아 있어도 옛 코드가 읽지 않는다.
+- **테스트**: `src/test/appPush.test.js` 48개(테스트에서 만든 P-256·RSA 키로 JWT 서명 확인, APNs·FCM 요청 헤더·본문, JWT·액세스 토큰 재사용·만료·401, 응답 코드별 지우기 여부 18가지, 1시간 넘은 알림·알림 없음·토큰 없음(외부 호출 없음)·비밀 값 없음(경고 한 줄, 다른 플랫폼은 보냄), 한쪽 실패가 다른 쪽·웹 응답에 영향 없음, 웹 실패·예외에도 앱 발송, 웹 구독 없을 때 앱만, 동시 호출 4개, 미루기(defer), 로그에 토큰·키·이메일 없음). 기존 웹 푸시 검사(`push.test.jsx`·`followNotify.test.jsx` 등)는 고치지 않고 그대로 통과. **실제 런타임 확인**: 공식 Edge 런타임 컨테이너에서 이 파일을 그대로 띄우고 가짜 Supabase(로컬)·테스트 키로 POST → 웹 응답 모양 그대로, APNs가 실제로 403 InvalidProviderToken(서명·HTTP/2 경로 동작, 지우지 않음), FCM은 테스트 키라 토큰 발급 400(보내지 않음·지우지 않음), 로그에 토큰·키 없음.
