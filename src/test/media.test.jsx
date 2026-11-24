@@ -199,7 +199,7 @@ test('운영자 /admin: 사진 저장 공간 — 사용량 막대, 800MB 넘으�
     trash: 3, orphans: 2, top: [{ nickname: '사진왕', files: 300, bytes: 150 * MB }], total_mb: 1024, warn_mb: 800, block_mb: 900,
   };
   fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
-  start('/admin');
+  start('/admin?tab=settings');
   const sec = (await screen.findByRole('heading', { name: '사진 저장 공간' })).closest('section');
   expect(await within(sec).findByText(/820MB/)).toBeDefined();
   expect(within(sec).getByRole('meter', { name: '사진 저장 공간' }).className).toContain('warned');
@@ -209,7 +209,7 @@ test('운영자 /admin: 사진 저장 공간 — 사용량 막대, 800MB 넘으�
 
   cleanup();
   fakeState.mediaUsage = { ...fakeState.mediaUsage, bytes: 950 * MB };
-  start('/admin');
+  start('/admin?tab=settings');
   const sec2 = (await screen.findByRole('heading', { name: '사진 저장 공간' })).closest('section');
   expect(await within(sec2).findByRole('alert')).toHaveTextContent('새 사진 첨부가 막혔습니다');
 });

@@ -5,6 +5,7 @@ import { fmtDateTime } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from './Status';
 import NoteForm from './NoteForm';
+import { DisabledAction } from './AdminTabs';
 
 // 감독관 지정·해제와 처리 기록의 부품. 화면은 회원 관리(MemberAdmin, /admin/members) 한 곳이다 (042).
 // 실제 권한 검사는 DB 함수·RLS가 한다 (감독관 지정·해제·처리 기록은 운영자만).
@@ -66,7 +67,7 @@ export function ModerationLog({ refreshKey = 0 }) {
 export function ModeratorToggle({ member: m, onDone }) {
   const [open, setOpen] = useState(false);
   if (m.role === 'admin') return null;
-  if (m.is_guest) return <p className="hint">비회원은 감독관으로 지정할 수 없습니다.</p>;
+  if (m.is_guest) return <DisabledAction label="감독관 지정" why="비회원은 감독관으로 지정할 수 없습니다." />;
   const on = m.role !== 'moderator';
   const label = on ? '지정' : '해제';
   return (

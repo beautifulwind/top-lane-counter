@@ -96,7 +96,7 @@ test('버튼이 없는 회원: 이미 장인([인증 해제]만)·운영자·비
   Object.assign(profile('u-old'), { influencer: null, influencer_at: null, nickname_state: 'pending' });
   start('/admin/members/u-old');
   box = await info();
-  expect(within(box).queryByRole('button', { name: '장인으로 직접 지정' })).toBeNull();
+  expect(within(box).getByRole('button', { name: '장인으로 직접 지정' })).toBeDisabled(); // 1.3 1-A: 안내 문장 대신 비활성 버튼 + 작은 설명
   expect(within(box).getByText(/심사 중인 회원이라 직접 지정할 수 없습니다/)).toBeDefined();
   expect(within(box).getByRole('link', { name: '장인 인증 심사 화면' })).toHaveAttribute('href', '/admin/influencers');
   cleanup();
@@ -104,7 +104,7 @@ test('버튼이 없는 회원: 이미 장인([인증 해제]만)·운영자·비
   Object.assign(profile('u-old'), { nickname_state: null, is_guest: true });
   start('/admin/members/u-old');
   box = await info();
-  expect(within(box).queryByRole('button', { name: '장인으로 직접 지정' })).toBeNull();
+  expect(within(box).getByRole('button', { name: '장인으로 직접 지정' })).toBeDisabled();
   expect(within(box).getByText(/비회원\(구글·카카오 연결 전\)은 장인으로 지정할 수 없습니다/)).toBeDefined();
   cleanup();
 

@@ -1,5 +1,5 @@
 import { WITHDRAWN_USER, displayNickname } from '../../lib/nickname';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { getChampionMap } from '../../api/ddragon';
 import {
@@ -12,6 +12,11 @@ import {
   requestProposalRevision, requestRevision, restoreCounter,
 } from '../../api/proposals';
 import { useAsync } from '../../lib/useAsync';
+import { getOpenReports } from '../../api/board';
+import { getPendingCounts } from '../../api/moderation';
+import { ADMIN_TABS, ADMIN_TARGETS } from '../../lib/adminView';
+import AdminTabs, { TabPanel, useTabParam } from '../../components/AdminTabs';
+import LimitedList from '../../components/LimitedList';
 import { BUILD_STATUS_LABEL, TYPE_LABEL, fmtDateTime } from '../../lib/format';
 import { ErrorBox, Loading } from '../../components/Status';
 import { RequireStaff } from '../../components/RequireOperator';
@@ -136,6 +141,13 @@ function ModeratorHiddenBuilds({ onDone }) {
 function PendingList() {
   const location = useLocation();
   const [done, setDone] = useState(location.state?.done ?? null);
+  const [tab, setTab] = useTabParam(ADMIN_TABS);
+  const [target, setTarget] = useState(null);
+  /** 요약 카드: 탭을 바꾼 뒤(구역이 그려진 다음) 그 구역으로 스크롤 */
+  const go = ({ tab: to, id }) => { setTab(to); setTarget({ id, at: Date.now() }); };
+  useEffect(() => {
+    if (target) document.getElementById(target.id)?.scrollIntoView?.({ behavior: 'smooth', block: 'start' });
+  }, [target]);
   const { data, error, loading, retry } = useAsync(async () => {
     const game = await getBuildGame();
     // 승인 제도를 끄면(lib/features.js) 승인 대기·재검토 목록은 불러오지도 않는다
@@ -165,146 +177,88 @@ function PendingList() {
     <article>
       <h1 className="doc-title page-title"><ShieldIcon size={26} className="title-icon op" /> 운영자 페이지</h1>
       {done && <p className="notice" role="status">{done}</p>}
-      {APPROVAL_ENABLED ? (
-        <p className="hint">상대법 순서 변경은 각 챔피언 문서의 [순서 변경], 문서 되돌리기는 매치업 문서의 [수정 기록]에서 합니다.</p>
-      ) : (
-        <p className="hint">
-          승인 제도는 꺼져 있습니다. 새 상대법·새 빌드는 바로 공개되고 [알림]으로 옵니다. 상대법·빌드 숨기기는 상대법 화면의 ⋮ 메뉴,
-          상대법 순서 변경은 각 챔피언 문서의 [순서 변경]에서 합니다.
-        </p>
-      )}
-
-      {APPROVAL_ENABLED && <section className="section">
-        <SectionHead icon={SendIcon} count={data?.pending.length}>승인 대기</SectionHead>
-        {loading && <Loading />}
-        {error && <ErrorBox error={error} onRetry={retry} />}
-        {data && data.pending.length === 0 && <p className="empty">대기 중인 제안이 없습니다.</p>}
-        {data && data.pending.length > 0 && (
-          <ul className="proposal-list">
-            {data.pending.map((p) => (
-              <PendingRow key={p.id} proposal={p} name={name} game={data.game} onDone={finished} onReload={retry} />
-            ))}
-          </ul>
+      <details className="admin-info">
+        <summary>안내 ⓘ</summary>
+        {APPROVAL_ENABLED ? (
+          <p className="hint">상대법 순서 변경은 각 챔피언 문서의 [순서 변경], 문서 되돌리기는 매치업 문서의 [수정 기록]에서 합니다.</p>
+        ) : (
+          <p className="hint">
+            승인 제도는 꺼져 있습니다. 새 상대법·새 빌드는 바로 공개되고 [알림]으로 옵니다. 상대법·빌드 숨기기는 상대법 화면의 ⋮ 메뉴,
+            상대법 순서 변경은 각 챔피언 문서의 [순서 변경]에서 합니다.
+          </p>
         )}
-      </section>}
+      </details>
+
+      <TodoCards onGo={go} />
+      <AdminTabs tabs={ADMIN_TABS} active={tab} onChange={setTab} label="운영자 페이지 탭" />
+
       {!APPROVAL_ENABLED && loading && <Loading />}
-      {!APPROVAL_ENABLED && error && <ErrorBox error={error} onRetry={retry} />}
+      {error && <ErrorBox error={error} onRetry={retry} />}
 
-      {data && APPROVAL_ENABLED && (
-        <section className="section">
-          <SectionHead icon={ClockIcon} count={data.waiting.length}>재검토 기다리는 중</SectionHead>
-          {data.waiting.length === 0 ? (
-            <p className="empty">재검토를 기다리는 제안·빌드가 없습니다.</p>
-          ) : (
-            <>
-              <p className="hint">제안자가 고쳐서 다시 내면 승인 대기로 돌아옵니다. [요청 취소]는 원래 내용 그대로 승인 대기로 되돌립니다.</p>
-              <ul className="proposal-list">
-                {data.waiting.map((w) => (
-                  <WaitingRow key={`${w.kind}-${w.item.id}`} kind={w.kind} item={w.item} name={name} game={data.game} onDone={finished} />
-                ))}
-              </ul>
-            </>
+      <TabPanel tabKey="content" active={tab}>
+        {APPROVAL_ENABLED && <section className="section">
+          <SectionHead icon={SendIcon} count={data?.pending.length}>승인 대기</SectionHead>
+          {loading && <Loading />}
+          {data && (
+            <LimitedList
+              items={data.pending} empty="없음"
+              renderItem={(p) => <PendingRow key={p.id} proposal={p} name={name} game={data.game} onDone={finished} onReload={retry} />}
+            />
           )}
+        </section>}
+
+        {data && APPROVAL_ENABLED && (
+          <section className="section">
+            <SectionHead icon={ClockIcon} count={data.waiting.length}>재검토 기다리는 중</SectionHead>
+            {data.waiting.length > 0 && <p className="hint">제안자가 고쳐서 다시 내면 승인 대기로 돌아옵니다. [요청 취소]는 원래 내용 그대로 승인 대기로 되돌립니다.</p>}
+            <LimitedList
+              items={data.waiting}
+              renderItem={(w) => <WaitingRow key={`${w.kind}-${w.item.id}`} kind={w.kind} item={w.item} name={name} game={data.game} onDone={finished} />}
+            />
+          </section>
+        )}
+
+        {data && (
+          <section className="section" id="admin-hidden-counters">
+            <SectionHead icon={EyeOffIcon} count={data.hidden.length}>숨긴 상대법</SectionHead>
+            <LimitedList
+              items={data.hidden}
+              renderItem={(c) => <HiddenRow key={c.id} counter={c} name={name} onDone={finished} />}
+            />
+          </section>
+        )}
+
+        {data && APPROVAL_ENABLED && (
+          <section className="section">
+            <SectionHead icon={LayersIcon} count={data.pendingBuilds.length}>빌드 승인 대기</SectionHead>
+            <LimitedList
+              items={data.pendingBuilds}
+              renderItem={(b) => <PendingBuildRow key={b.id} build={b} game={data.game} name={name} onDone={finished} onReload={retry} />}
+            />
+          </section>
+        )}
+
+        {data && (
+          <section className="section" id="admin-hidden-builds">
+            <SectionHead icon={EyeOffIcon} count={data.hiddenBuilds.length}>숨긴 빌드</SectionHead>
+            <LimitedList
+              items={data.hiddenBuilds}
+              renderItem={(b) => <HiddenBuildRow key={b.id} build={b} game={data.game} name={name} onDone={finished} />}
+            />
+          </section>
+        )}
+
+        <section className="section" id="admin-reports">
+          <SectionHead icon={MessageIcon}>탑신병자 커뮤니티·댓글</SectionHead>
+          <BoardAdmin />
         </section>
-      )}
 
-      {data && (
-        <section className="section">
-          <SectionHead icon={EyeOffIcon} count={data.hidden.length}>숨긴 상대법</SectionHead>
-          {data.hidden.length === 0 ? (
-            <p className="empty">숨긴 상대법이 없습니다.</p>
-          ) : (
-            <ul className="proposal-list">
-              {data.hidden.map((c) => (
-                <HiddenRow key={c.id} counter={c} name={name} onDone={finished} />
-              ))}
-            </ul>
-          )}
-        </section>
-      )}
-
-      {data && APPROVAL_ENABLED && (
-        <section className="section">
-          <SectionHead icon={LayersIcon} count={data.pendingBuilds.length}>빌드 승인 대기</SectionHead>
-          {data.pendingBuilds.length === 0 ? (
-            <p className="empty">대기 중인 빌드가 없습니다.</p>
-          ) : (
-            <ul className="proposal-list">
-              {data.pendingBuilds.map((b) => (
-                <PendingBuildRow key={b.id} build={b} game={data.game} name={name} onDone={finished} onReload={retry} />
-              ))}
-            </ul>
-          )}
-        </section>
-      )}
-
-      {data && (
-        <section className="section">
-          <SectionHead icon={EyeOffIcon} count={data.hiddenBuilds.length}>숨긴 빌드</SectionHead>
-          {data.hiddenBuilds.length === 0 ? (
-            <p className="empty">숨긴 빌드가 없습니다.</p>
-          ) : (
-            <ul className="proposal-list">
-              {data.hiddenBuilds.map((b) => (
-                <HiddenBuildRow key={b.id} build={b} game={data.game} name={name} onDone={finished} />
-              ))}
-            </ul>
-          )}
-        </section>
-      )}
-
-      {data && (
-        <section className="section">
-          <SectionHead icon={CoinsIcon}>아이템 가격표</SectionHead>
-          <ItemPrices game={data.game} />
-        </section>
-      )}
-
-      <section className="section">
-        <SectionHead icon={MessageIcon}>탑신병자 커뮤니티·댓글</SectionHead>
-        <BoardAdmin />
-      </section>
-      <section className="section">
-        <SectionHead icon={HelpIcon}>문의</SectionHead>
-        <InquiryAdmin />
-      </section>
-
-      <section className="section">
-        <SectionHead icon={SparklesIcon}>장인 인증</SectionHead>
-        <InfluencerLink />
-      </section>
-
-      <section className="section">
-        <SectionHead icon={LinkIcon}>장인 링크 허용 사이트</SectionHead>
-        <LinkDomainAdmin />
-      </section>
-
-      <section className="section">
-        <SectionHead icon={UsersIcon}>회원 관리</SectionHead>
-        <p className="hint">가입자 수, 신규 가입자(24시간), 닉네임 검색, 감독관 목록, 처리 기록. 회원을 누르면 감독관 지정·해제, 장인 직접 지정·인증 해제, 닉네임 바꾸기를 합니다.</p>
-        <div className="row-actions">
-          <Link to="/admin/members" className="btn btn-small btn-op">회원 관리 열기</Link>
-        </div>
-      </section>
-
-      <section className="section">
-        <SectionHead icon={ImageIcon}>사진 저장 공간</SectionHead>
-        <MediaUsage />
-      </section>
-
-      <section className="section">
-        <SectionHead icon={DiceIcon}>비주류 픽</SectionHead>
-        <OffmetaPicks />
-      </section>
-
-      {data && (
-        <section className="section">
-          <SectionHead icon={TrashIcon} count={data.deletions.length}>삭제 기록</SectionHead>
-          {data.deletions.length === 0 ? (
-            <p className="empty">삭제한 상대법이 없습니다.</p>
-          ) : (
-            <ul className="proposal-list">
-              {data.deletions.map((d) => (
+        {data && (
+          <section className="section">
+            <SectionHead icon={TrashIcon} count={data.deletions.length}>삭제 기록</SectionHead>
+            <LimitedList
+              items={data.deletions}
+              renderItem={(d) => (
                 <li key={d.id} className="proposal-row">
                   <div className="proposal-main">{matchupTitle(name(d.counter_champion), name(d.target_champion))}</div>
                   <div className="proposal-meta">
@@ -317,12 +271,86 @@ function PendingList() {
                     지운 것: 제안 {d.proposals_count} · 수정 기록 {d.revisions_count} · 빌드 {d.builds_count} · 빌드 추천 {d.votes_count} · 댓글 {d.comments_count ?? 0}
                   </small>
                 </li>
-              ))}
-            </ul>
-          )}
+              )}
+            />
+          </section>
+        )}
+      </TabPanel>
+
+      <TabPanel tabKey="members" active={tab}>
+        <section className="section" id="admin-members">
+          <SectionHead icon={UsersIcon}>회원 관리</SectionHead>
+          <p className="hint">가입자 수, 신규 가입자(24시간), 닉네임 검색, 감독관 목록, 처리 기록. 회원을 누르면 감독관 지정·해제, 장인 직접 지정·인증 해제, 닉네임 바꾸기를 합니다.</p>
+          <div className="row-actions">
+            <Link to="/admin/members" className="btn btn-small btn-op">회원 관리 열기</Link>
+          </div>
         </section>
-      )}
+
+        <section className="section" id="admin-influencer">
+          <SectionHead icon={SparklesIcon}>장인 인증</SectionHead>
+          <InfluencerLink />
+        </section>
+
+        <section className="section">
+          <SectionHead icon={LinkIcon}>장인 링크 허용 사이트</SectionHead>
+          <LinkDomainAdmin />
+        </section>
+
+        <section className="section" id="admin-inquiries">
+          <SectionHead icon={HelpIcon}>문의</SectionHead>
+          <InquiryAdmin />
+        </section>
+      </TabPanel>
+
+      <TabPanel tabKey="settings" active={tab}>
+        {data && (
+          <section className="section">
+            <SectionHead icon={CoinsIcon}>아이템 가격표</SectionHead>
+            <ItemPrices game={data.game} />
+          </section>
+        )}
+
+        <section className="section">
+          <SectionHead icon={DiceIcon}>비주류 픽</SectionHead>
+          <OffmetaPicks />
+        </section>
+
+        <section className="section">
+          <SectionHead icon={ImageIcon}>사진 저장 공간</SectionHead>
+          <MediaUsage />
+        </section>
+      </TabPanel>
     </article>
+  );
+}
+
+/**
+ * 맨 위 「처리할 일」 요약 카드 3개: 처리할 신고(게시판+오류+링크+사진), 답변 대기 문의, 처리할 장인 신청. 0건이어도 보인다.
+ * 누르면 그 탭으로 바꾸고 해당 구역으로 스크롤한다. 건수를 못 불러오면 「—」(카드는 그대로 눌린다).
+ */
+function TodoCards({ onGo }) {
+  const auth = useAuth();
+  const { data } = useAsync(async () => {
+    const [counts, reports] = await Promise.all([getPendingCounts(true), getOpenReports(auth.isModerator).catch(() => null)]);
+    const parts = [reports?.length, counts?.wiki_reports, counts?.link_reports, counts?.photo_reports];
+    const reportTotal = reports == null && counts == null ? null : parts.reduce((s, n) => s + (Number(n) || 0), 0);
+    return { reports: reportTotal, inquiries: counts?.inquiries ?? null, influencers: counts?.influencers ?? null };
+  }, []);
+  const cards = [
+    { key: 'reports', label: '처리할 신고', hint: '게시판·오류·링크·사진', n: data?.reports },
+    { key: 'inquiries', label: '답변 대기 문의', hint: '답변을 기다리는 문의', n: data?.inquiries },
+    { key: 'influencers', label: '처리할 장인 신청', hint: '장인 인증 신청', n: data?.influencers },
+  ];
+  return (
+    <section className="todo-cards" aria-label="처리할 일">
+      {cards.map((c) => (
+        <button key={c.key} type="button" className={c.n > 0 ? 'todo-card has' : 'todo-card'} onClick={() => onGo(ADMIN_TARGETS[c.key])} aria-label={`${c.label} ${c.n ?? '—'}건`}>
+          <span className="todo-n">{c.n ?? '—'}<small>건</small></span>
+          <span className="todo-label">{c.label}</span>
+          <small className="todo-hint">{c.hint}</small>
+        </button>
+      ))}
+    </section>
   );
 }
 

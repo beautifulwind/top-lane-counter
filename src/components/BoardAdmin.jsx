@@ -10,6 +10,7 @@ import { fmtDateTime } from '../lib/format';
 import { ErrorBox, Loading } from './Status';
 import UserName from './UserName';
 import NoteForm from './NoteForm';
+import LimitedList from './LimitedList';
 import { matchupTitle } from '../lib/josa';
 
 /** 운영자 페이지의 "자유게시판·댓글" 칸: 처리할 신고 수 → /admin/reports, 처리할 오류 신고 수(043) → /admin/reports?tab=wiki, 처리할 링크 신고 수(047, 운영자만) → ?tab=links, 숨긴 글·댓글·문서 댓글 + [다시 공개] */
@@ -59,15 +60,10 @@ export default function BoardAdmin() {
         <h3>숨긴 글·댓글</h3>
         <span className="count-badge">{rows.length}개</span>
       </div>
-      {rows.length === 0 ? (
-        <p className="empty">숨긴 글·댓글이 없습니다.</p>
-      ) : (
-        <ul className="proposal-list" aria-label="숨긴 글·댓글">
-          {rows.map(({ kind, row }) => (
-            <HiddenBoardRow key={`${kind}-${row.id}`} kind={kind} row={row} champs={data.champs} onDone={finished} />
-          ))}
-        </ul>
-      )}
+      <LimitedList
+        items={rows} label="숨긴 글·댓글"
+        renderItem={({ kind, row }) => <HiddenBoardRow key={`${kind}-${row.id}`} kind={kind} row={row} champs={data.champs} onDone={finished} />}
+      />
     </>
   );
 }

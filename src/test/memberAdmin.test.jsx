@@ -55,7 +55,7 @@ const rpc = (name) => fakeState.memberCalls.filter((c) => c.name === name);
 
 test('운영자 /admin: 회원·감독관 관리 칸은 "회원 관리" 링크 하나로 합쳐졌다', async () => {
   asOp();
-  start('/admin');
+  start('/admin?tab=members');
   const link = await screen.findByRole('link', { name: '회원 관리 열기' });
   expect(link.getAttribute('href')).toBe('/admin/members');
   expect(screen.queryByRole('heading', { name: /감독관 관리/ })).toBeNull();
@@ -159,6 +159,8 @@ test('운영자: 회원을 누르면 회원 정보 — 기본 정보·활동 수
   expect(info.textContent).not.toMatch(/@|이메일 주소|로그인 ID:/);
   expect(rpc('admin_member_detail')[0].args.p_user).toBe('u-1');
 
+  // 1.3 패치 1-A: 활동·기록은 탭으로 나뉜다
+  fireEvent.click(screen.getByRole('tab', { name: '활동' }));
   const posts = screen.getByRole('list', { name: '쓴 글' });
   expect(posts.textContent).toContain('탑 라인 질문');
   expect(posts.textContent).toContain('(숨김)');
@@ -170,6 +172,7 @@ test('운영자: 회원을 누르면 회원 정보 — 기본 정보·활동 수
   expect(builds.textContent).toContain('빌드 2 (라인전 빌드)');
   expect(builds.textContent).toContain('3번 고침');
   expect(within(builds).getByRole('link').getAttribute('href')).toBe('/champion/Darius/counter/Quinn?build=77');
+  fireEvent.click(screen.getByRole('tab', { name: '기록' }));
   const log = screen.getByRole('list', { name: '처리 이력 목록' });
   expect(log.textContent).toContain('숨김 · 글 #31');
   expect(log.textContent).toContain('감독관 지정 · 회원');
@@ -180,6 +183,7 @@ test('운영자: 지운 글·댓글은 열었을 때만 불러오고 내용·사
   asOp();
   start('/admin/members/u-1');
   await screen.findByRole('list', { name: '탑고수 회원 정보' });
+  fireEvent.click(screen.getByRole('tab', { name: '기록' }));
   expect(fakeState.memberCalls.some((c) => c.name === 'admin_deleted_writings')).toBe(false);
   fireEvent.click(screen.getByText(/지운 글·댓글 \(운영자만 볼 수 있음\)/));
   const del = await screen.findByRole('list', { name: '지운 글·댓글' });

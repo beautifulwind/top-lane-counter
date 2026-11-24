@@ -144,19 +144,19 @@ test('운영자: [경고 보내기] — 내용 필수(앞뒤 공백 지움), 확
   member();
   start('/admin/members/u-bad');
   const sec = await section();
-  expect(await within(sec).findByText('받은 경고가 없습니다.')).toBeDefined();
-  fireEvent.click(within(sec).getByRole('button', { name: '경고 보내기' }));
-  const confirm = () => within(sec).getByRole('button', { name: '경고 보내기 확정' });
+  expect(await screen.findByText('받은 경고가 없습니다.')).toBeDefined();
+  fireEvent.click(screen.getByRole('button', { name: '경고 보내기' }));
+  const confirm = () => screen.getByRole('button', { name: '경고 보내기 확정' });
   expect(confirm()).toBeDisabled();
-  fireEvent.change(within(sec).getByLabelText(/경고 내용/), { target: { value: '   ' } });
+  fireEvent.change(screen.getByLabelText(/경고 내용/), { target: { value: '   ' } });
   expect(confirm()).toBeDisabled();
-  fireEvent.change(within(sec).getByLabelText(/경고 내용/), { target: { value: '  욕설 반복  ' } });
+  fireEvent.change(screen.getByLabelText(/경고 내용/), { target: { value: '  욕설 반복  ' } });
   fireEvent.click(confirm());
   await waitFor(() => expect(rpcCalls('warn_user')).toEqual([{ name: 'warn_user', args: { p_user: 'u-bad', p_memo: '욕설 반복' } }]));
   expect(await screen.findByText('말썽님에게 경고를 보냈습니다.')).toBeDefined();
-  await waitFor(() => expect(within(sec).getByRole('list', { name: '경고 기록' })).toHaveTextContent('아직'));
-  expect(within(sec).getByRole('list', { name: '경고 기록' })).toHaveTextContent('욕설 반복');
-  expect(within(sec).getByRole('button', { name: '경고 보내기' })).toBeDefined(); // 또 보낼 수 있다
+  await waitFor(() => expect(screen.getByRole('list', { name: '경고 기록' })).toHaveTextContent('아직'));
+  expect(screen.getByRole('list', { name: '경고 기록' })).toHaveTextContent('욕설 반복');
+  expect(screen.getByRole('button', { name: '경고 보내기' })).toBeDefined(); // 또 보낼 수 있다
 });
 
 test('운영자: 기록 상태 확인함 / 알림만 읽음 / 아직, 함께 건 활동 제한 번호, 탈퇴한 보낸 사람', async () => {
@@ -169,13 +169,15 @@ test('운영자: 기록 상태 확인함 / 알림만 읽음 / 아직, 함께 건
   );
   start('/admin/members/u-bad');
   const sec = await section();
-  const log = await within(sec).findByRole('list', { name: '경고 기록' });
+  const log = await screen.findByRole('list', { name: '경고 기록' });
   const items = within(log).getAllByRole('listitem');
   expect(items.map((li) => li.querySelector('strong').textContent)).toEqual(['아직', '알림만 읽음', '확인함']); // 최근 것부터
+  expect(items[1]).toHaveTextContent('탈퇴한'); // 날짜·보낸 사람·확인 여부·첫 줄만 보인다
+  expect(items[2]).not.toHaveTextContent('확인: ');
+  items.forEach((li) => fireEvent.click(within(li).getByRole('button', { name: '펼치기' }))); // [펼치기]로 전문·확인 시각
   expect(items[2]).toHaveTextContent(`확인: ${fmtDateTime('2026-11-20T02:00:00Z')}`);
   expect(items[1]).toHaveTextContent(`알림 읽음: ${fmtDateTime('2026-11-21T01:00:00Z')}`);
   expect(items[1]).toHaveTextContent('활동 제한과 함께 (제한 #7)');
-  expect(items[1]).toHaveTextContent('보낸 사람: 탈퇴한');
 });
 
 test('운영자: 활동 제한 중인 회원에게 보내면 「함께 기록」 안내', async () => {
@@ -184,11 +186,12 @@ test('운영자: 활동 제한 중인 회원에게 보내면 「함께 기록」
   TABLES.user_restrictions.push({ id: 4, user_id: 'u-bad', reason: '도배', days: 3, starts_at: '2026-11-22T00:00:00Z', ends_at: new Date(Date.now() + 86400000).toISOString(), created_by: '영자', lifted_at: null, lifted_by: null, lift_note: null });
   start('/admin/members/u-bad');
   const sec = await section();
-  fireEvent.click(await within(sec).findByRole('button', { name: '경고 보내기' }));
-  fireEvent.change(within(sec).getByLabelText(/경고 내용/), { target: { value: '도배로 3일 제한합니다.' } });
-  fireEvent.click(within(sec).getByRole('button', { name: '경고 보내기 확정' }));
+  fireEvent.click(await screen.findByRole('button', { name: '경고 보내기' }));
+  fireEvent.change(screen.getByLabelText(/경고 내용/), { target: { value: '도배로 3일 제한합니다.' } });
+  fireEvent.click(screen.getByRole('button', { name: '경고 보내기 확정' }));
   expect(await screen.findByText(/지금 걸려 있는 활동 제한과 함께 기록/)).toBeDefined();
-  await waitFor(() => expect(within(sec).getByRole('list', { name: '경고 기록' })).toHaveTextContent('제한 #4'));
+  fireEvent.click(await screen.findByRole('button', { name: '펼치기' }));
+  await waitFor(() => expect(screen.getByRole('list', { name: '경고 기록' })).toHaveTextContent('제한 #4'));
 });
 
 test('운영자: 서버가 거절하면 그 문장을 그대로, 운영자에게는 버튼이 없다', async () => {
@@ -197,17 +200,17 @@ test('운영자: 서버가 거절하면 그 문장을 그대로, 운영자에게
   fakeState.rpcError = '경고 내용은 500자까지 적을 수 있습니다.';
   start('/admin/members/u-bad');
   const sec = await section();
-  fireEvent.click(await within(sec).findByRole('button', { name: '경고 보내기' }));
-  fireEvent.change(within(sec).getByLabelText(/경고 내용/), { target: { value: '도배' } });
-  fireEvent.click(within(sec).getByRole('button', { name: '경고 보내기 확정' }));
-  expect(await within(sec).findByRole('alert')).toHaveTextContent('경고 내용은 500자까지 적을 수 있습니다.');
+  fireEvent.click(await screen.findByRole('button', { name: '경고 보내기' }));
+  fireEvent.change(screen.getByLabelText(/경고 내용/), { target: { value: '도배' } });
+  fireEvent.click(screen.getByRole('button', { name: '경고 보내기 확정' }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('경고 내용은 500자까지 적을 수 있습니다.');
   cleanup();
   fakeState.rpcError = null;
   TABLES.profiles.find((p) => p.id === 'u-bad').role = 'admin';
   start('/admin/members/u-bad');
   const sec2 = await section();
-  expect(await within(sec2).findByText('운영자에게는 경고를 보낼 수 없습니다.')).toBeDefined();
-  expect(within(sec2).queryByRole('button', { name: '경고 보내기' })).toBeNull();
+  expect(await screen.findByText('운영자에게는 경고를 보낼 수 없습니다.')).toBeDefined();
+  expect(screen.getByRole('button', { name: '경고 보내기' })).toBeDisabled(); // 1.3 1-A: 비활성 버튼 + 작은 설명
 });
 
 test('운영자: 069 전 DB면 준비 중 안내만 (회원 정보·활동 제한 칸은 그대로)', async () => {
@@ -216,8 +219,8 @@ test('운영자: 069 전 DB면 준비 중 안내만 (회원 정보·활동 제�
   fakeState.warningsMissing = true;
   start('/admin/members/u-bad');
   const sec = await section();
-  expect(await within(sec).findByText(WARNINGS_NOT_READY)).toBeDefined();
-  expect(within(sec).queryByRole('button', { name: '경고 보내기' })).toBeNull();
+  expect(await screen.findByText(WARNINGS_NOT_READY)).toBeDefined();
+  expect(screen.queryByRole('button', { name: '경고 보내기' })).toBeNull();
   expect(screen.getByRole('list', { name: '말썽 회원 정보' })).toBeDefined();
-  expect(await within(await screen.findByRole('region', { name: '활동 제한' })).findByRole('button', { name: '활동 제한 걸기' })).toBeDefined();
+  expect(await screen.findByRole('button', { name: '활동 제한 걸기' })).toBeDefined();
 });

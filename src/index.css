@@ -1569,3 +1569,36 @@ ul.build-cards > li.build-card.is-influencer { border-left-color: var(--brand); 
 @media (max-width: 360px) {
   .vote.bookmark .bookmark-text { display: none; } /* 아주 좁은 폰은 아이콘만 (이름은 aria-label "빌드 저장"·눌림 상태로) */
 }
+
+/* ===== 1.3 패치 1-A: 운영자 페이지·회원 상세 정리 (SPEC 6-89) — 새 색 없음, 기존 토큰만 ===== */
+.none-line { margin: 4px 0 var(--gap-md); font-size: var(--fs-sm); color: var(--muted); }
+.admin-info { margin: 0 0 var(--gap-md); font-size: var(--fs-sm); color: var(--muted); }
+.admin-info > summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; font-weight: 700; }
+.admin-info .hint { margin-top: 0; }
+/* 처리할 일 카드 3개: 폭이 좁아도(320px) 세 칸이 한 줄에 */
+.todo-cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--gap-sm); margin: 0 0 var(--gap-lg); }
+.todo-card { display: flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; min-height: 44px; padding: var(--gap-sm) var(--gap-md); text-align: left; font: inherit; color: var(--text); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; }
+.todo-card:hover { border-color: var(--line-hover); }
+.todo-card.has { border-color: var(--brand); }
+.todo-n { font-family: var(--font-display); font-size: var(--fs-xl); line-height: 1.2; font-variant-numeric: tabular-nums; }
+.todo-n small { font-family: var(--font-body); font-size: var(--fs-sm); margin-left: 2px; }
+.todo-card.has .todo-n { color: var(--brand-dark); }
+.todo-label { font-size: var(--fs-sm); font-weight: 800; overflow-wrap: anywhere; }
+.todo-hint { font-size: var(--fs-xs); color: var(--muted); overflow-wrap: anywhere; }
+/* 탭 */
+.admin-tabs { display: flex; gap: 4px; margin: 0 0 var(--gap-md); border-bottom: 1px solid var(--line); }
+.admin-tab { flex: 1 1 0; min-width: 0; min-height: 44px; padding: 0 6px; font: inherit; font-size: var(--fs-sm); font-weight: 700; color: var(--muted); background: none; border: 0; border-bottom: 3px solid transparent; cursor: pointer; overflow-wrap: anywhere; }
+.admin-tab.on { color: var(--brand-dark); border-bottom-color: var(--brand); }
+/* 회원 상세 */
+.chip-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 var(--gap-md); padding: 0; list-style: none; }
+.chip { padding: 0 10px; border: 1px solid var(--line); border-radius: 999px; background: var(--raised); color: var(--text-soft); font-size: var(--fs-sm); font-weight: 700; line-height: 24px; overflow-wrap: anywhere; }
+.chip-bad { border-color: var(--warn-line); background: var(--warn-soft); color: var(--warn-light); }
+.info-grid { list-style: none; padding-left: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px var(--gap-md); }
+.info-grid li { min-width: 0; overflow-wrap: anywhere; }
+.info-grid li.wide { grid-column: 1 / -1; }
+.disabled-action { display: inline-flex; flex-direction: column; align-items: flex-start; gap: 2px; min-width: 0; max-width: 100%; }
+.disabled-action .hint { margin: 0; font-size: var(--fs-xs); }
+.member-actions .btn { flex: 1 1 0; min-width: 0; }
+.warning-first { display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+.warning-log-memo { overflow-wrap: anywhere; white-space: pre-wrap; margin: 2px 0 6px; }
+.warning-log li, .restriction-log li { overflow-wrap: anywhere; }

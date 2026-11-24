@@ -7,6 +7,7 @@ import { NICKNAME_MAX, nicknameProblem } from '../api/auth';
 import { josaOf } from '../lib/josa';
 import { CharCount } from './BoardParts';
 import NoteForm from './NoteForm';
+import { DisabledAction } from './AdminTabs';
 
 /**
  * 운영자: 장인 인증 해제 (046 revoke_influencer). "장인" 표시만 없애고 닉네임은 그대로 — 그 뒤로는 본인이 바꿀 수 있다.
@@ -50,15 +51,16 @@ export function GrantInfluencer({ member, onDone }) {
   const [error, setError] = useState(null);
   const id = `grant-influencer-${member?.id}`;
   if (!member || member.role === 'admin' || member.influencer) return null;
-  if (member.is_guest) return <p className="hint">비회원(구글·카카오 연결 전)은 장인으로 지정할 수 없습니다.</p>;
+  if (member.is_guest) return <DisabledAction label="장인으로 직접 지정" why="비회원(구글·카카오 연결 전)은 장인으로 지정할 수 없습니다." />;
   if (member.nickname_state === 'pending') {
     return (
-      <p className="hint">
-        장인 인증 신청을 심사 중인 회원이라 직접 지정할 수 없습니다. <Link to="/admin/influencers" className="op-link">장인 인증 심사 화면</Link>에서 그 신청을 승인해 주세요.
-      </p>
+      <DisabledAction
+        label="장인으로 직접 지정"
+        why={<>장인 인증 신청을 심사 중인 회원이라 직접 지정할 수 없습니다. <Link to="/admin/influencers" className="op-link">장인 인증 심사 화면</Link>에서 그 신청을 승인해 주세요.</>}
+      />
     );
   }
-  if (member.nickname_state === 'yielding') return <p className="hint">닉네임이 바뀔 예정인 회원이라 장인으로 지정할 수 없습니다. 새 닉네임을 정한 뒤 지정해 주세요.</p>;
+  if (member.nickname_state === 'yielding') return <DisabledAction label="장인으로 직접 지정" why="닉네임이 바뀔 예정인 회원이라 장인으로 지정할 수 없습니다. 새 닉네임을 정한 뒤 지정해 주세요." />;
   const close = () => { setOpen(false); setAsking(false); setKind(''); setNote(''); setError(null); };
   if (!open) return <button type="button" className="btn btn-small btn-op" onClick={() => setOpen(true)}>장인으로 직접 지정</button>;
   const ready = kind !== '' && note.trim() !== '';

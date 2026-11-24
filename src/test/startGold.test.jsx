@@ -137,7 +137,7 @@ test('운영자 빌드 자세히: 시작템 합계를 넘는 대기 빌드는 �
 test('운영자: 아이템 가격표 — 기준 패치와 상한을 보여 주고, [아이템 가격 갱신]은 상점 아이템 가격 전체를 보낸다', async () => {
   asOperator();
   TABLES.item_prices = TABLES.item_prices.map((p) => ({ ...p, patch: '98.1.1' }));
-  start('/admin');
+  start('/admin?tab=settings');
   const sec = (await screen.findByRole('heading', { name: '아이템 가격표' })).closest('section');
   expect(await within(sec).findByText(/DB 가격표: 패치 98.1.1 기준 · 지금 패치: 99.1.1 · 시작 아이템 합계 상한: 500골드/)).toBeDefined();
   expect(within(sec).getByRole('alert')).toHaveTextContent('가격표가 지금 패치와 다릅니다');

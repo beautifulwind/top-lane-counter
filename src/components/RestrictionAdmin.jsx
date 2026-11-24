@@ -1,10 +1,11 @@
 import { useState } from 'react';
 import {
   RESTRICT_DAY_PRESETS, RESTRICT_DAYS_MAX, RESTRICT_DAYS_MIN, RESTRICT_REASON_MAX,
-  getMemberRestrictions, liftRestriction, restrictUser,
+  liftRestriction, restrictUser,
 } from '../api/restrictions';
 import { fmtDateTime } from '../lib/format';
-import { useAsync } from '../lib/useAsync';
+import LimitedList from './LimitedList';
+import { PREVIEW_COUNT } from '../lib/adminView';
 import { CharCount } from './BoardParts';
 import { ErrorBox, Loading } from './Status';
 import { WITHDRAWN_USER } from './ModeratorAdmin';
@@ -12,18 +13,25 @@ import { WITHDRAWN_USER } from './ModeratorAdmin';
 const STATE_LABEL = { active: '제한 중', lifted: '해제됨', ended: '기간 끝남' };
 
 /**
- * 운영자: 회원 정보(/admin/members/:id)의 "활동 제한" 칸 (068, SPEC 6-85).
- * [활동 제한 걸기] → 기간(1·3·7·30일 또는 직접 1~365일) + 사유(본인에게 그대로 보임, 500자) → [제한 걸기 확정]
- * 제한 중이면 [해제](메모 선택). 아래에 기록 목록(누가·언제·사유·기간·상태). 막는 규칙(자기 자신·운영자·감독관·이미 제한 중)은 DB가 정한다.
+ * 운영자: 회원 정보(/admin/members/:id)의 "활동 제한" (068, SPEC 6-85, 1.3 패치 1-A 배치).
+ * 회원 상세 페이지가 기록(state = useAsync 결과)을 한 번만 불러와 칩·이 칸·버튼 줄이 같이 쓴다.
+ * 걸기·경고 버튼은 페이지의 나란한 버튼 줄에 있고, 이 파일은 ① 지금 상태+기록(RestrictionAdmin) ② 열린 칸(RestrictionPanel)을 그린다.
+ * 기간(1·3·7·30일 또는 직접 1~365일) + 사유(본인에게 그대로 보임, 500자) → [제한 걸기 확정]. 제한 중이면 [해제](메모 선택).
+ * 막는 규칙(자기 자신·운영자·감독관·이미 제한 중)은 DB가 정한다. 화면은 같은 이유를 버튼 아래 작은 설명으로만 알려 준다.
  */
-export default function RestrictionAdmin({ member, onDone }) {
-  const [refresh, setRefresh] = useState(0);
-  const { data, error, loading, retry } = useAsync(() => getMemberRestrictions(member.id), [member.id, refresh]);
-  const [mode, setMode] = useState(null); // 'restrict' | 'lift'
-  const done = (text) => { setMode(null); setRefresh((n) => n + 1); onDone(text); };
-  const active = data?.find((r) => r.state === 'active') ?? null;
-  const blockedBy = member.role === 'admin' ? '운영자에게는 활동 제한을 걸 수 없습니다.'
-    : member.role === 'moderator' ? '감독관에게는 활동 제한을 걸 수 없습니다. 먼저 감독관에서 해제해 주세요.' : null;
+export const activeRestriction = (rows) => rows?.find((r) => r.state === 'active') ?? null;
+
+/** 버튼을 못 누르는 이유 (없으면 null) */
+export function restrictBlockedBy(member, active) {
+  if (member.role === 'admin') return '운영자에게는 활동 제한을 걸 수 없습니다.';
+  if (member.role === 'moderator') return '감독관에게는 활동 제한을 걸 수 없습니다. 먼저 감독관에서 해제해 주세요.';
+  if (active) return '이미 제한 중입니다. 아래 [해제]로 먼저 풀 수 있습니다.';
+  return null;
+}
+
+export default function RestrictionAdmin({ state, onLift }) {
+  const { data, error, loading, retry } = state;
+  const active = activeRestriction(data);
   return (
     <section className="section" aria-label="활동 제한">
       <h2 className="section-title">활동 제한</h2>
@@ -38,40 +46,47 @@ export default function RestrictionAdmin({ member, onDone }) {
           ) : (
             <p className="hint">지금은 제한되어 있지 않습니다.</p>
           )}
-          {blockedBy && !active && <p className="hint">{blockedBy}</p>}
-          {mode === null && (
+          {active && (
             <div className="row-actions">
-              {!active && !blockedBy && (
-                <button type="button" className="btn btn-small btn-op" onClick={() => setMode('restrict')}>활동 제한 걸기</button>
-              )}
-              {active && <button type="button" className="btn btn-small btn-op" onClick={() => setMode('lift')}>해제</button>}
+              <button type="button" className="btn btn-small btn-op" onClick={onLift}>해제</button>
             </div>
-          )}
-          {mode === 'restrict' && (
-            <RestrictForm
-              member={member}
-              onCancel={() => setMode(null)}
-              onSubmit={async (days, reason) => {
-                const r = await restrictUser(member.id, days, reason);
-                done(`${member.nickname ?? '회원'}님에게 ${days}일 활동 제한을 걸었습니다. ${fmtDateTime(r?.ends_at)}에 풀립니다.`);
-              }}
-            />
-          )}
-          {mode === 'lift' && active && (
-            <LiftForm
-              id={`lift-restriction-${active.id}`}
-              onCancel={() => setMode(null)}
-              onSubmit={async (note) => {
-                await liftRestriction(active.id, note);
-                done('활동 제한을 해제했습니다.');
-              }}
-            />
           )}
           <RestrictionLog rows={data} />
         </>
       )}
     </section>
   );
+}
+
+/** 열린 칸: panel === 'restrict'(걸기) | 'lift'(해제). 끝나면 기록을 다시 읽고(onChanged) 안내를 띄운다(onDone) */
+export function RestrictionPanel({ member, state, panel, setPanel, onChanged, onDone }) {
+  const active = activeRestriction(state.data);
+  const done = (text) => { setPanel(null); onChanged(); onDone(text); };
+  if (panel === 'restrict' && !active) {
+    return (
+      <RestrictForm
+        member={member}
+        onCancel={() => setPanel(null)}
+        onSubmit={async (days, reason) => {
+          const r = await restrictUser(member.id, days, reason);
+          done(`${member.nickname ?? '회원'}님에게 ${days}일 활동 제한을 걸었습니다. ${fmtDateTime(r?.ends_at)}에 풀립니다.`);
+        }}
+      />
+    );
+  }
+  if (panel === 'lift' && active) {
+    return (
+      <LiftForm
+        id={`lift-restriction-${active.id}`}
+        onCancel={() => setPanel(null)}
+        onSubmit={async (note) => {
+          await liftRestriction(active.id, note);
+          done('활동 제한을 해제했습니다.');
+        }}
+      />
+    );
+  }
+  return null;
 }
 
 function RestrictForm({ member, onSubmit, onCancel }) {
@@ -167,10 +182,11 @@ function LiftForm({ id, onSubmit, onCancel }) {
 }
 
 function RestrictionLog({ rows }) {
-  if (rows.length === 0) return <p className="empty">활동 제한 기록이 없습니다.</p>;
+  if (rows.length === 0) return <p className="none-line">활동 제한 기록이 없습니다.</p>;
   return (
-    <ul className="log-list restriction-log" aria-label="활동 제한 기록">
-      {rows.map((r) => (
+    <LimitedList
+      items={rows} limit={PREVIEW_COUNT.logs} className="log-list restriction-log" label="활동 제한 기록"
+      renderItem={(r) => (
         <li key={r.id}>
           <strong>{STATE_LABEL[r.state] ?? r.state}</strong>
           {' · '}{r.days}일 · {fmtDateTime(r.starts_at)} ~ {fmtDateTime(r.ends_at)}
@@ -181,8 +197,7 @@ function RestrictionLog({ rows }) {
             </small>
           )}
         </li>
-      ))}
-    </ul>
+      )}
+    />
   );
 }
-

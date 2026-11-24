@@ -280,7 +280,7 @@ test('운영자 모드를 끄면 심사 화면을 쓸 수 없고, 감독관·일
 test('처리 대기 건수: ☰ [관리] 숫자·풍선에 장인 신청, 운영자 페이지 [처리할 장인 신청 N건]', async () => {
   asOperator();
   fakeState.pendingCounts = { inquiries: 1, influencers: 2 };
-  start('/admin');
+  start('/admin?tab=members');
   const menu = await openMenu();
   const link = await menu.findByRole('link', { name: '관리, 처리 대기 3건' });
   expect(link.querySelector('.menu-count').getAttribute('title')).toBe('문의 1 · 장인 신청 2');

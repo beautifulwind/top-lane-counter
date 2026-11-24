@@ -268,7 +268,7 @@ test('허용 사이트: 운영자 페이지에서 목록·더하기(도메인+�
   influencer();
   addLink('u-102', 'https://www.twitch.tv/toptop');
   asOperator();
-  start('/admin');
+  start('/admin?tab=members');
   const section = (await screen.findByRole('heading', { name: '장인 링크 허용 사이트' })).closest('section');
   // 평소엔 접혀 있다: "허용 사이트 9개" + [모두 보기]만
   expect(await within(section).findByText('허용 사이트 9개')).toBeTruthy();
@@ -311,7 +311,7 @@ test('허용 사이트: 감독관 화면에는 칸이 없다, 잘못된 도메�
   cleanup();
 
   asOperator();
-  start('/admin');
+  start('/admin?tab=members');
   const section = (await screen.findByRole('heading', { name: '장인 링크 허용 사이트' })).closest('section');
   fireEvent.click(await within(section).findByRole('button', { name: '모두 보기' }));
   fireEvent.click(await within(section).findByRole('button', { name: '사이트 더하기' }));

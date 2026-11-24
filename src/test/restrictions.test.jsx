@@ -152,29 +152,29 @@ test('운영자: [활동 제한 걸기] — 1·3·7·30일 또는 직접 입력,
   member();
   start('/admin/members/u-bad');
   const sec = await section();
-  expect(await within(sec).findByText('활동 제한 기록이 없습니다.')).toBeDefined();
-  fireEvent.click(within(sec).getByRole('button', { name: '활동 제한 걸기' }));
-  expect(within(sec).getAllByRole('button', { pressed: false }).map((b) => b.textContent)).toEqual(['1일', '3일', '30일']);
-  expect(within(sec).getByRole('button', { name: '7일', pressed: true })).toBeDefined();
-  const confirm = () => within(sec).getByRole('button', { name: /제한 걸기 확정/ });
+  expect(await screen.findByText('활동 제한 기록이 없습니다.')).toBeDefined();
+  fireEvent.click(screen.getByRole('button', { name: '활동 제한 걸기' }));
+  expect(screen.getAllByRole('button', { pressed: false }).map((b) => b.textContent)).toEqual(['1일', '3일', '30일']);
+  expect(screen.getByRole('button', { name: '7일', pressed: true })).toBeDefined();
+  const confirm = () => screen.getByRole('button', { name: /제한 걸기 확정/ });
   expect(confirm()).toBeDisabled(); // 사유 없음
-  fireEvent.change(within(sec).getByLabelText(/사유/), { target: { value: '  욕설 반복  ' } });
+  fireEvent.change(screen.getByLabelText(/사유/), { target: { value: '  욕설 반복  ' } });
   expect(confirm()).toHaveTextContent('7일 제한 걸기 확정');
-  fireEvent.change(within(sec).getByLabelText('직접 입력 (1~365일)'), { target: { value: '400' } });
-  expect(within(sec).getByText('기간은 1일부터 365일까지 정할 수 있습니다.')).toBeDefined();
+  fireEvent.change(screen.getByLabelText('직접 입력 (1~365일)'), { target: { value: '400' } });
+  expect(screen.getByText('기간은 1일부터 365일까지 정할 수 있습니다.')).toBeDefined();
   expect(confirm()).toBeDisabled();
-  fireEvent.change(within(sec).getByLabelText('직접 입력 (1~365일)'), { target: { value: '14' } });
+  fireEvent.change(screen.getByLabelText('직접 입력 (1~365일)'), { target: { value: '14' } });
   expect(confirm()).toHaveTextContent('14일 제한 걸기 확정');
-  fireEvent.click(within(sec).getByRole('button', { name: '3일' }));
-  expect(within(sec).getByLabelText('직접 입력 (1~365일)').value).toBe('');
+  fireEvent.click(screen.getByRole('button', { name: '3일' }));
+  expect(screen.getByLabelText('직접 입력 (1~365일)').value).toBe('');
   fireEvent.click(confirm());
   await waitFor(() => expect(rpcCalls('restrict_user')).toEqual([{ name: 'restrict_user', args: { p_user: 'u-bad', p_days: 3, p_reason: '욕설 반복' } }]));
   expect(await screen.findByText(/말썽님에게 3일 활동 제한을 걸었습니다/)).toBeDefined();
-  await waitFor(() => expect(within(sec).getByRole('list', { name: '활동 제한 기록' })).toHaveTextContent('제한 중'));
-  const log = within(sec).getByRole('list', { name: '활동 제한 기록' });
+  await waitFor(() => expect(screen.getByRole('list', { name: '활동 제한 기록' })).toHaveTextContent('제한 중'));
+  const log = screen.getByRole('list', { name: '활동 제한 기록' });
   expect(log).toHaveTextContent('3일');
   expect(log).toHaveTextContent('사유: 욕설 반복');
-  expect(within(sec).queryByRole('button', { name: '활동 제한 걸기' })).toBeNull(); // 제한 중엔 다시 못 건다
+  expect(screen.getByRole('button', { name: '활동 제한 걸기' })).toBeDisabled(); // 제한 중엔 다시 못 건다
 });
 
 test('운영자: [해제] — 메모는 선택, 해제하면 기록에 「해제됨」과 해제 메모', async () => {
@@ -183,14 +183,14 @@ test('운영자: [해제] — 메모는 선택, 해제하면 기록에 「해제
   TABLES.user_restrictions.push({ id: 5, user_id: 'u-bad', reason: '도배', days: 7, starts_at: '2026-11-20T00:00:00Z', ends_at: ENDS, created_by: '영자', lifted_at: null, lifted_by: null, lift_note: null });
   start('/admin/members/u-bad');
   const sec = await section();
-  expect(await within(sec).findByText(/제한 중: .*에 풀립니다\. 사유: 도배/)).toBeDefined();
-  fireEvent.click(within(sec).getByRole('button', { name: '해제' }));
-  fireEvent.change(within(sec).getByLabelText(/해제 메모/), { target: { value: '이의 제기 받아들임' } });
-  fireEvent.click(within(sec).getByRole('button', { name: '해제 확정' }));
+  expect(await screen.findByText(/제한 중: .*에 풀립니다\. 사유: 도배/)).toBeDefined();
+  fireEvent.click(screen.getByRole('button', { name: '해제' }));
+  fireEvent.change(screen.getByLabelText(/해제 메모/), { target: { value: '이의 제기 받아들임' } });
+  fireEvent.click(screen.getByRole('button', { name: '해제 확정' }));
   await waitFor(() => expect(rpcCalls('lift_restriction')).toEqual([{ name: 'lift_restriction', args: { p_id: 5, p_note: '이의 제기 받아들임' } }]));
-  await waitFor(() => expect(within(sec).getByRole('list', { name: '활동 제한 기록' })).toHaveTextContent('해제됨'));
-  expect(within(sec).getByRole('list', { name: '활동 제한 기록' })).toHaveTextContent('이의 제기 받아들임');
-  expect(within(sec).getByRole('button', { name: '활동 제한 걸기' })).toBeDefined();
+  await waitFor(() => expect(screen.getByRole('list', { name: '활동 제한 기록' })).toHaveTextContent('해제됨'));
+  expect(screen.getByRole('list', { name: '활동 제한 기록' })).toHaveTextContent('이의 제기 받아들임');
+  expect(screen.getByRole('button', { name: '활동 제한 걸기' })).toBeDefined();
 });
 
 test('운영자: 서버가 거절하면 그 문장을 그대로 보여 준다', async () => {
@@ -199,10 +199,10 @@ test('운영자: 서버가 거절하면 그 문장을 그대로 보여 준다', 
   fakeState.rpcError = '이미 활동 제한 중입니다. 기간을 바꾸려면 먼저 해제한 뒤 다시 걸어 주세요.';
   start('/admin/members/u-bad');
   const sec = await section();
-  fireEvent.click(await within(sec).findByRole('button', { name: '활동 제한 걸기' }));
-  fireEvent.change(within(sec).getByLabelText(/사유/), { target: { value: '도배' } });
-  fireEvent.click(within(sec).getByRole('button', { name: /제한 걸기 확정/ }));
-  expect(await within(sec).findByRole('alert')).toHaveTextContent('이미 활동 제한 중입니다.');
+  fireEvent.click(await screen.findByRole('button', { name: '활동 제한 걸기' }));
+  fireEvent.change(screen.getByLabelText(/사유/), { target: { value: '도배' } });
+  fireEvent.click(screen.getByRole('button', { name: /제한 걸기 확정/ }));
+  expect(await screen.findByRole('alert')).toHaveTextContent('이미 활동 제한 중입니다.');
 });
 
 test('운영자: 감독관·운영자에게는 [활동 제한 걸기]가 없고 이유를 보여 준다', async () => {
@@ -210,8 +210,8 @@ test('운영자: 감독관·운영자에게는 [활동 제한 걸기]가 없고 
   member({ role: 'moderator' });
   start('/admin/members/u-bad');
   const sec = await section();
-  expect(await within(sec).findByText(/감독관에게는 활동 제한을 걸 수 없습니다/)).toBeDefined();
-  expect(within(sec).queryByRole('button', { name: '활동 제한 걸기' })).toBeNull();
+  expect(await screen.findByText(/감독관에게는 활동 제한을 걸 수 없습니다/)).toBeDefined();
+  expect(screen.getByRole('button', { name: '활동 제한 걸기' })).toBeDisabled(); // 1.3 1-A: 비활성 버튼 + 작은 설명
 });
 
 test('운영자: 068 전 DB면 준비 중 안내만 (회원 정보는 그대로 열림)', async () => {
@@ -220,7 +220,7 @@ test('운영자: 068 전 DB면 준비 중 안내만 (회원 정보는 그대로 
   fakeState.restrictionsMissing = true;
   start('/admin/members/u-bad');
   const sec = await section();
-  expect(await within(sec).findByText(RESTRICTIONS_NOT_READY)).toBeDefined();
-  expect(within(sec).queryByRole('button', { name: '활동 제한 걸기' })).toBeNull();
+  expect(await screen.findByText(RESTRICTIONS_NOT_READY)).toBeDefined();
+  expect(screen.queryByRole('button', { name: '활동 제한 걸기' })).toBeNull();
   expect(screen.getByRole('list', { name: '말썽 회원 정보' })).toBeDefined();
 });

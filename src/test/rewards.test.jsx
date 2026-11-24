@@ -175,7 +175,7 @@ test('운영자 /me: 경험치·레벨·칭호 없음 안내', async () => {
 
 test('운영자: 비주류 픽 추가·빼기 (보라 버튼, 이미 승인된 기여는 그대로라는 안내)', async () => {
   fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
-  start('/admin');
+  start('/admin?tab=settings');
   expect(await screen.findByText('비주류 픽이 아직 없습니다.')).toBeDefined();
   expect(screen.getByText(/목록을 바꿔도 이미 승인된 기여는 그대로입니다/)).toBeDefined();
   fireEvent.change(screen.getByLabelText('비주류 픽에 추가할 챔피언 검색'), { target: { value: '퀸' } });
