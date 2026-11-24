@@ -72,3 +72,24 @@ export const LINK_REPORT_REASONS = {
   not_own: '본인 채널이 아님(사칭)',
   other: '기타',
 };
+
+/** 유튜브 주소인가 (youtube.com·하위 주소·youtu.be) */
+export const isYoutubeHost = (host) => {
+  const h = String(host ?? '').toLowerCase();
+  return h === 'youtu.be' || h === 'youtube.com' || h.endsWith('.youtube.com');
+};
+
+/**
+ * 유튜브 채널 주소의 채널명: "https://www.youtube.com/@%ED%8E%98%EC%9D%B4%EC%BB%A4" → "@페이커" (퍼센트 인코딩을 한글로 되돌린다).
+ * 채널명(@이름)이 없는 주소(영상·/channel/…)나 디코딩이 안 되는 주소는 null → 화면은 「유튜브」만 쓴다.
+ */
+export function youtubeHandle(url) {
+  try {
+    const seg = new URL(url).pathname.split('/').filter(Boolean)[0] ?? '';
+    if (!seg.startsWith('@') || seg.length < 2) return null;
+    const name = decodeURIComponent(seg);
+    return name.length > 1 ? name : null;
+  } catch {
+    return null;
+  }
+}

@@ -2,15 +2,16 @@ import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getPublicProfile } from '../api/links';
 import { getFollowStatus, getFollowers, getInfluencerBuilds } from '../api/follow';
+import { isYoutubeHost, youtubeHandle } from '../lib/links';
+import ProfileBuilds from '../components/ProfileBuilds';
+import ShareButton from '../components/ShareButton';
 import { getChampionMap } from '../api/ddragon';
 import { ErrorBox, Loading } from '../components/Status';
-import SectionHead from '../components/SectionHead';
 import ExternalLink from '../components/ExternalLink';
 import LinkActions from '../components/LinkActions';
 import FollowButton from '../components/FollowButton';
 import { InfluencerName } from '../components/UserName';
-import InfluencerBuildCard from '../components/InfluencerBuildCard';
-import { LayersIcon, UserIcon } from '../components/Icons';
+import { UserIcon } from '../components/Icons';
 import { INFLUENCER_KINDS, displayNickname } from '../lib/nickname';
 import { canVote, isBlocked, isGuest, useAuth } from '../lib/auth';
 import { BLOCKED_PROFILE, SETTINGS_PATH, blockMenuItem } from '../lib/blocks';
@@ -24,8 +25,9 @@ import NotFound from './NotFound';
 
 /**
  * 장인 페이지 (/u/:id — 047 공개 프로필을 050에서 빌드 중심으로, SPEC 6-34 · 6-36).
- * 위: 닉네임 + 장인 표시 + 유형 · 팔로워 수 · [팔로우] · 링크(작게). 본문: 그 장인이 처음 만든 공개 빌드(influencer_builds, 최근 수정순, 20개씩 [더보기]).
- * 팔로워 수는 누구나. [팔로워 목록] 버튼(20개씩)은 063부터 "내 페이지"일 때만(정식 회원) + 운영자(운영자 모드 켜짐)에게만 — DB도 같은 규칙.
+ * 1.3 패치 1-C(6-98): 위 카드 = 사진 · 닉네임 + 장인 표시 + 유형 · 「빌드 N · 팔로워 N」(받은 추천 수는 넣지 않음), 버튼 줄 = [팔로우] [유튜브 @채널명] [공유] (+ 외부 이동 안내 한 줄),
+ * 나머지 링크는 작게. 본문: 그 장인이 처음 만든 공개 빌드(ProfileBuilds — 「최신순」(기본, 최근 수정순)·「인기순」 칩, 쪽 번호 20개씩).
+ * 팔로워 수는 누구나. [팔로워 목록] 버튼(20개씩 [더보기])은 063부터 "내 페이지"일 때만(정식 회원) + 운영자(운영자 모드 켜짐)에게만 — DB도 같은 규칙.
  * 052: ?followers=1(새 팔로워 알림 → /me/followers)로 열면 볼 수 있는 사람에게는 팔로워 목록이 처음부터 펼쳐져 있다.
  * DB가 장인이 아니거나 없는 id·모양이 틀린 id에 모두 null을 주므로 화면도 모두 같은 "없는 페이지".
  * 이메일·라이엇 닉네임·역할·레벨은 DB가 주지 않는다.
@@ -77,32 +79,19 @@ function Profile({ data, me, signedIn, notice, onDone }) {
   const location = useLocation();
   const [photoMode, setPhotoMode] = useState(null); // 'report' | 'remove'
   const [follow, setFollow] = useState({ following: data.following, count: Number(data.first.follower_count) || 0 });
-  const [builds, setBuilds] = useState({ items: data.first.items, total: Number(data.first.total) || 0, page: 1 });
-  const [more, setMore] = useState({ busy: false, error: null });
   const [params] = useSearchParams();
   // 063: 팔로워 목록은 장인 본인(비회원 아님)과 운영자만 (DB influencer_followers도 같은 규칙)
   const canSeeFollowers = signedIn && !isGuest(auth) && (me === profile.id || auth.isOperator);
   const [showFollowers, setShowFollowers] = useState(() => canSeeFollowers && params.get('followers') === '1');
   const kind = INFLUENCER_KINDS[profile.influencer];
+  const buildTotal = Number(data.first.total) || 0; // 공개된 빌드만 (influencer_builds의 total)
+  const youtube = profile.links.find((l) => isYoutubeHost(l.host)) ?? null; // 버튼 줄로 올린 링크 — 나머지는 아래 목록
+  const otherLinks = profile.links.filter((l) => l !== youtube);
+  const shareUrl = `${window.location.origin}/u/${profile.id}`; // 쪽·정렬 같은 주소 꼬리 없이 프로필 주소만
   // 075: 내 공개 프로필에서는 동그라미가 곧 사진 올리기·바꾸기·삭제 버튼 (인증된 장인 본인만, 062 전 DB면 예전 모양)
   const ownEditable = auth.status === 'signedIn' && auth.user?.id === profile.id && !!auth.profile?.influencer && !auth.profile.is_guest && 'photo_path' in auth.profile;
   // 3b: 링크 옆 ⋮ — 신고(정식 회원) / 삭제(운영진). 장인 페이지는 역할을 주지 않으므로 운영진의 링크인지는 DB가 가른다
   const actions = (l) => <LinkActions link={l} ownerId={profile.id} label="링크 더보기" onDone={onDone} />;
-
-  const loadMore = async () => {
-    setMore({ busy: true, error: null });
-    try {
-      const next = await getInfluencerBuilds(profile.id, builds.page + 1);
-      if (!next) throw new Error('장인 인증이 해제돼 빌드를 더 불러올 수 없습니다.');
-      setBuilds((b) => {
-        const seen = new Set(b.items.map((x) => x.id));
-        return { items: [...b.items, ...next.items.filter((x) => !seen.has(x.id))], total: Number(next.total) || 0, page: b.page + 1 };
-      });
-      setMore({ busy: false, error: null });
-    } catch (e) {
-      setMore({ busy: false, error: e.message });
-    }
-  };
 
   return (
     <article className="me-page public-profile">
@@ -113,19 +102,16 @@ function Profile({ data, me, signedIn, notice, onDone }) {
             {ownEditable ? (
               <ProfileAvatarEditor auth={auth} shell="inf-hero-avatar" fallback={<UserIcon size={28} />} />
             ) : (
-              <ProfilePhoto path={profile.photo_path} alt={`${profile.nickname} 프로필 사진`} className="inf-hero-photo" />
+              <ProfilePhoto
+                path={profile.photo_path} alt={`${profile.nickname} 프로필 사진`} className="inf-hero-photo"
+                fallback={<span className="inf-hero-avatar inf-hero-initial" aria-hidden="true">{Array.from(profile.nickname ?? '?')[0]}</span>}
+              />
             )}
             <h1 className="doc-title" data-page-title={`${profile.nickname} 프로필`}>
               <InfluencerName profile={profile} />
             </h1>
           </div>
           <div className="inf-hero-actions">
-            {me !== profile.id && (
-              <FollowButton
-                id={profile.id} nickname={profile.nickname} following={follow.following}
-                onChange={(r) => setFollow({ following: !!r?.following, count: Number(r?.follower_count) || 0 })}
-              />
-            )}
             <ProfileMenu
               auth={auth} profile={profile} onMode={setPhotoMode}
               onLogin={() => navigate('/login', { state: { from: location.pathname } })} onDone={onDone}
@@ -167,22 +153,39 @@ function Profile({ data, me, signedIn, notice, onDone }) {
         )}
         <p className="doc-sub inf-meta">
           {kind && <><span className="inf-kind">{`인증된 ${kind}`}</span>{' · '}</>}
-          <span>팔로워 <strong className="follower-count">{follow.count.toLocaleString()}</strong>명</span>
-          {canSeeFollowers ? (
-            <>
-              {' '}
-              <button
-                type="button" className="link-btn" aria-expanded={showFollowers} aria-controls="pp-followers"
-                onClick={() => setShowFollowers((v) => !v)}
-              >
-                {showFollowers ? '팔로워 목록 닫기' : '팔로워 목록'}
-              </button>
-            </>
-          ) : null}
+          <span>빌드 <strong className="build-total">{buildTotal.toLocaleString()}</strong></span>
+          {' · '}
+          <span>팔로워 <strong className="follower-count">{follow.count.toLocaleString()}</strong></span>
         </p>
-        {profile.links.length > 0 && (
+        <div className="inf-btn-row">
+          {me !== profile.id && (
+            <FollowButton
+              id={profile.id} nickname={profile.nickname} following={follow.following}
+              onChange={(r) => setFollow({ following: !!r?.following, count: Number(r?.follower_count) || 0 })}
+            />
+          )}
+          {youtube && (
+            <span className="link-item inf-yt">
+              <ExternalLink link={youtube} className="btn yt-btn">{youtubeHandle(youtube.url) ?? '채널 보기'}</ExternalLink>
+              {actions(youtube)}
+            </span>
+          )}
+          <ShareButton url={shareUrl} title={`${profile.nickname} 프로필`} />
+        </div>
+        {youtube && <p className="hint inf-leave-note">유튜브 버튼은 외부 사이트로 이동합니다. 장인이 올린 링크이며 탑신병자가 내용을 보증하지 않습니다.</p>}
+        {canSeeFollowers && (
+          <p className="inf-followers-toggle">
+            <button
+              type="button" className="link-btn" aria-expanded={showFollowers} aria-controls="pp-followers"
+              onClick={() => setShowFollowers((v) => !v)}
+            >
+              {showFollowers ? '팔로워 목록 닫기' : '팔로워 목록'}
+            </button>
+          </p>
+        )}
+        {otherLinks.length > 0 && (
           <ul className="link-list inf-links" aria-label="링크">
-            {profile.links.map((l) => <li key={l.id} className="link-item"><ExternalLink link={l} />{actions(l)}</li>)}
+            {otherLinks.map((l) => <li key={l.id} className="link-item"><ExternalLink link={l} />{actions(l)}</li>)}
           </ul>
         )}
         {profile.links.length === 0 && me === profile.id && (
@@ -191,29 +194,12 @@ function Profile({ data, me, signedIn, notice, onDone }) {
             <Link to="/me/links" className="btn btn-small">링크 관리로 가기</Link>
           </div>
         )}
-        {profile.links.length > 0 && <p className="hint">장인이 올린 외부 사이트입니다. 탑신병자가 내용을 보증하지 않습니다.</p>}
+        {otherLinks.length > 0 && <p className="hint">장인이 올린 외부 사이트입니다. 탑신병자가 내용을 보증하지 않습니다.</p>}
       </header>
       {canSeeFollowers && showFollowers && <Followers id={profile.id} count={follow.count} />}
       {notice && <p className="notice" role="status">{notice}</p>}
 
-      <section className="me-section" aria-labelledby="pp-builds">
-        <SectionHead icon={LayersIcon} id="pp-builds" count={builds.total}>처음 만든 빌드</SectionHead>
-        {builds.items.length === 0 ? (
-          <p className="empty">공개된 빌드가 없습니다.</p>
-        ) : (
-          <ul className="build-cards">
-            {builds.items.map((b) => <InfluencerBuildCard key={b.id} b={b} champs={champs} linkActions={actions} />)}
-          </ul>
-        )}
-        {builds.items.length < builds.total && (
-          <div className="actions">
-            <button type="button" className="btn" onClick={loadMore} disabled={more.busy}>
-              {more.busy ? '불러오는 중…' : `더보기 (${builds.total - builds.items.length}개 남음)`}
-            </button>
-          </div>
-        )}
-        {more.error && <p className="form-error" role="alert">{more.error}</p>}
-      </section>
+      <ProfileBuilds id={profile.id} champs={champs} first={data.first} actions={actions} />
     </article>
   );
 }

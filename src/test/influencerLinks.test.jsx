@@ -137,9 +137,11 @@ test('공개 프로필: 닉네임·장인 표시·링크·최근 빌드(빌드 �
   expect(h1.textContent).toContain('탑고수');
   expect(screen.getByText('인증된 프로게이머')).toBeTruthy();
   // 050: 링크는 위쪽(닉네임 아래)에 작게
+  // 1-C(6-98): 유튜브는 버튼 줄(채널명 @이름)로 올라가고, 나머지 링크만 작은 목록에 남는다
   const linkList = screen.getByRole('list', { name: '링크' });
   expect(within(linkList).getAllByRole('link').map((a) => a.textContent.replace(/\s*\(외부 사이트, 새 창\)$/, '')))
-    .toEqual(['유튜브 youtube.com/@toptop', '치지직 chzzk.naver.com/live/toptop']);
+    .toEqual(['치지직 chzzk.naver.com/live/toptop']);
+  expect(document.querySelector('.inf-yt a').textContent.replace(/\s*\(외부 사이트, 새 창\)$/, '')).toBe('유튜브 @toptop');
   expect(linkList.closest('header').textContent).toMatch(/탑신병자가 내용을 보증하지 않습니다/);
   const builds = screen.getByRole('heading', { name: '처음 만든 빌드' }).closest('section');
   const go = within(builds).getByRole('link', { name: /퀸으로 다리우스\s*빌드 2/ });

@@ -49,7 +49,7 @@ test('장인 페이지: 위쪽에 닉네임·장인 표시·팔로워 수, 본�
   expect(await screen.findByText(/퀸으로 다리우스 이기는 법/)).toBeTruthy();
 });
 
-test('장인 페이지: 빌드는 최근 수정순, 20개씩 [더보기]', async () => {
+test('장인 페이지: 빌드는 최근 수정순, 20개씩 쪽 번호 (6-98)', async () => {
   influencer();
   for (let i = 0; i < 24; i += 1) {
     TABLES.builds.push(fakeBuild(200 + i, { nickname: '탑고수', influencer: 'creator' }, {
@@ -62,9 +62,9 @@ test('장인 페이지: 빌드는 최근 수정순, 20개씩 [더보기]', async
   expect(names()).toHaveLength(20);
   expect(names()[0]).toBe('빌드 2'); // 102는 11월에 수정 → 맨 위
   expect(names()[1]).toBe('빌드이름23');
-  fireEvent.click(within(builds).getByRole('button', { name: '더보기 (5개 남음)' }));
-  await waitFor(() => expect(names()).toHaveLength(25));
-  expect(names()[24]).toBe('빌드이름0');
+  fireEvent.click(within(builds).getByRole('button', { name: '2쪽' }));
+  await waitFor(() => expect(names()).toHaveLength(5));
+  expect(names()[4]).toBe('빌드이름0');
   expect(within(builds).queryByRole('button', { name: /더보기/ })).toBeNull();
 });
 

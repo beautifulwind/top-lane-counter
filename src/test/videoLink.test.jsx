@@ -106,5 +106,5 @@ test('장인 페이지: 링크가 없으면 본인에게만 안내와 [링크 �
   start('/u/u-102');
   await screen.findByRole('heading', { level: 1 });
   expect(screen.queryByText('채널 링크를 등록해 보세요.')).toBeNull(); // 링크가 있으면 본인에게도 안 보임
-  expect(within(screen.getByRole('list', { name: '링크' })).getByRole('link').querySelector('.ext-site').textContent).toBe('유튜브');
+  expect(document.querySelector('.inf-yt a .ext-site').textContent).toBe('유튜브'); // 6-98: 유튜브 링크는 버튼 줄에
 });

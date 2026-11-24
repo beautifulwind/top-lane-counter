@@ -1335,6 +1335,18 @@ a.inf-link:hover .user-nick, a.inf-link:focus-visible .user-nick { text-decorati
 .avatar-pop .notice, .avatar-pop .form-error { margin: 0; }
 .inf-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin: 0; }
 .inf-links { font-size: var(--fs-sm); }
+/* 장인 페이지 버튼 줄 (6-98): 팔로우·유튜브·공유가 한 줄, 좁으면 줄바꿈. 채널명이 길어도 넘치지 않게 */
+.inf-btn-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--gap-sm); min-width: 0; }
+.inf-btn-row .btn { min-height: 44px; }
+.inf-yt { min-width: 0; max-width: 100%; flex-wrap: nowrap; }
+.inf-yt .yt-btn { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.inf-yt .yt-btn .ext-text { min-width: 0; overflow-wrap: anywhere; }
+.share { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; max-width: 100%; }
+.share-msg { flex-basis: 100%; margin: 0; }
+.share-msg .copy-manual { display: block; width: 100%; margin-top: 4px; }
+.inf-leave-note { margin: 0; }
+.inf-hero-initial { font-family: var(--font-display); font-size: var(--fs-xl); line-height: 1; }
+.inf-followers-toggle { margin: 0; }
 .inf-links li { padding: 4px 0; border-bottom: 0; }
 .inf-hero .hint { margin: 0; }
 .inf-links-empty { display: flex; flex-wrap: wrap; align-items: center; gap: var(--gap-sm) var(--gap-md); }
