@@ -8,13 +8,15 @@ import { invalidateBuildCount } from './buildCount';
 import { getItems, getLatestVersion, getRunes, getSummonerSpells } from './ddragon';
 import { START_GOLD_MAX, compareBuilds, toProposalBuild, toRow } from '../lib/buildContent';
 import { toWikiPayload } from '../lib/wikiBuild';
+import { DIFFICULTY_BATCH, cleanDifficulty } from '../lib/difficulty';
 
 const PERSON = 'nickname, role, level, main_title, is_guest, influencer, nickname_state'; // 046: 장인 표시·인증 대기·닉네임 변경 예정
 const BUILD_FIELDS =
   'id, counter_id, author_id, proposal_id, runes, summoner_spells, starting_items, core_items, max_skill, patch, ' +
   'up_count, down_count, status, created_at, version, edited_at, ' +
   'name, seq, summary, level_notes, lane_cautions, updated_at, ' + // 038: 빌드 = 공략 한 벌
-  'skill_sequence'; // 065: 스킬 순서 상세 — DB 065를 먼저 실행해야 한다 (칸이 없으면 빌드 읽기가 통째로 실패)
+  'skill_sequence, ' + // 065: 스킬 순서 상세 — DB 065를 먼저 실행해야 한다 (칸이 없으면 빌드 읽기가 통째로 실패)
+  'difficulty'; // 071: 난이도 별점(0.5~5.0, 비어 있으면 null) — DB 071을 먼저 실행해야 한다 (6-104)
 const AUTHOR = `author:profiles!builds_author_id_fkey(${PERSON})`;
 const COUNTER = 'counter:counters!builds_counter_id_fkey(id, target_champion, counter_champion, status)';
 const REVIEW_FIELDS =
@@ -38,7 +40,7 @@ async function run(query, fallback) {
   return data;
 }
 
-const READ_ONLY_RPC = new Set(['vote_build', 'build_contributors', 'admin_build_revisions', 'build_editor_counts']);
+const READ_ONLY_RPC = new Set(['vote_build', 'build_contributors', 'admin_build_revisions', 'build_editor_counts', 'build_difficulties']);
 
 async function rpc(name, args, fallback) {
   const { data, error } = await db().rpc(name, args);
@@ -116,6 +118,57 @@ export const createBuild = (counterRowId, v, patch) =>
 /** 빌드 수정 (위키). version = 고치기 시작할 때의 버전 → 다른 사람이 먼저 고쳤으면 BUILD_CONFLICT. 돌려주는 값: 새 버전 */
 export const editBuild = (b, v, patch) =>
   rpc('edit_build', { p_id: b.id, p_version: b.version, p_build: toWikiPayload(v, patch) }, '빌드를 수정하지 못했습니다.');
+
+/**
+ * 난이도 별점 저장 (071 set_build_difficulty): 내 빌드만(숨긴 빌드도 됨), value = 0.5 단위 0.5~5.0 | null(비우기).
+ * difficulty 칸만 바꾼다 — 수정 기록·빌드 수정 알림·푸시는 생기지 않는다 (빌드 내용을 고치는 editBuild와 따로 부른다).
+ * 돌려주는 값: { build_id, difficulty }
+ */
+export async function setBuildDifficulty(buildId, value) {
+  const v = cleanDifficulty(value);
+  if (value != null && v == null) throw new Error('난이도는 0.5부터 5.0까지 0.5 단위로 골라 주세요.');
+  return rpc('set_build_difficulty', { p_build: buildId, p_difficulty: v }, '난이도를 저장하지 못했습니다.');
+}
+
+/**
+ * 새 빌드를 등록한 직후 난이도 별점 저장 (create_build·create_matchup은 그대로 두고 id를 받은 뒤 따로 부른다 — 한 트랜잭션은 아님).
+ * 별점이 없으면 부르지 않는다. 저장에 실패해도 던지지 않고 false (등록은 이미 성공했으므로 화면이 안내만 한다). 저장했거나 필요 없으면 true
+ */
+export async function saveDifficultyAfterCreate(buildId, value) {
+  if (value == null) return true;
+  try {
+    await setBuildDifficulty(buildId, value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * 빌드 id 목록의 난이도 별점 (071 build_difficulties): { 빌드 id: 별점 } — 비어 있거나 볼 수 없는 빌드는 키 없음.
+ * 한 번에 200개까지라 나눠 부른다. 호출이 실패해도 던지지 않는다 (별점만 비고 화면은 그대로) — 실패한 id는 failed로 알려 준다.
+ * 돌려주는 값: { values, failed: [id…] }
+ */
+export async function getBuildDifficulties(ids) {
+  const list = [...new Set((ids ?? []).filter((id) => Number.isInteger(id)))];
+  const values = {};
+  const failed = [];
+  const chunks = [];
+  for (let i = 0; i < list.length; i += DIFFICULTY_BATCH) chunks.push(list.slice(i, i + DIFFICULTY_BATCH));
+  await Promise.all(chunks.map(async (chunk) => {
+    try {
+      const { data, error } = await db().rpc('build_difficulties', { p_ids: chunk });
+      if (error) throw error;
+      for (const [id, v] of Object.entries(data ?? {})) {
+        const n = cleanDifficulty(v);
+        if (n != null) values[Number(id)] = n;
+      }
+    } catch {
+      failed.push(...chunk);
+    }
+  }));
+  return { values, failed };
+}
 
 /** 기여자 (시초 먼저, 그다음 최근 수정 순): [{ user_id, nickname, role, is_guest, level, main_title, is_origin }] */
 export async function getBuildContributors(buildId) {

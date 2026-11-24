@@ -1,13 +1,14 @@
 import { useMemo, useState } from 'react';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { getChampions } from '../api/ddragon';
-import { createMatchup, getBuildGame } from '../api/builds';
+import { createMatchup, getBuildGame, saveDifficultyAfterCreate } from '../api/builds';
 import { getCountersFor } from '../api/content';
 import { getMyProposal } from '../api/proposals';
 import { useAuth } from '../lib/auth';
 import { matchesQuery } from '../lib/chosung';
 import { emptyWikiBuild, wikiBuildToForm } from '../lib/wikiBuild';
 import { matchupTitle } from '../lib/josa';
+import { DIFFICULTY_SAVE_FAILED } from '../lib/difficulty';
 import { useAsync } from '../lib/useAsync';
 import { ErrorBox, Loading } from '../components/Status';
 import { RequireLogin } from '../components/RequireOperator';
@@ -127,12 +128,15 @@ function MatchupNewForm() {
             champion={mine.id}
             initial={from ? { ...wikiBuildToForm({ ...(from.build ?? {}), ...from.content }), name: '' } : emptyWikiBuild()}
             author={auth.profile}
+            withDifficulty
             submitLabel="상대법 등록"
             cancelTo={`/champion/${target.id}`}
-            onSubmit={async (v) => {
+            onSubmit={async (v, difficulty) => {
               const made = await createMatchup(target.id, mine.id, v, data.game.latest);
+              // 등록은 끝났다. 별점 저장만 실패하면 등록을 실패로 보이게 하지 않고 안내만 한다 (6-104)
+              const saved = await saveDifficultyAfterCreate(made.build_id, difficulty);
               navigate(`/champion/${target.id}/counter/${mine.id}?build=${made.build_id}`, {
-                state: { done: '새 상대법을 등록했습니다.' },
+                state: { done: saved ? '새 상대법을 등록했습니다.' : DIFFICULTY_SAVE_FAILED },
               });
             }}
           />

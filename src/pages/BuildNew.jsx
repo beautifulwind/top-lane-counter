@@ -1,10 +1,11 @@
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { getChampionMap } from '../api/ddragon';
 import { getMatchup } from '../api/content';
-import { createBuild, getBuildGame, getBuilds, getMyBuild } from '../api/builds';
+import { createBuild, getBuildGame, getBuilds, getMyBuild, saveDifficultyAfterCreate } from '../api/builds';
 import { useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
 import { patchMinor } from '../lib/buildContent';
+import { DIFFICULTY_SAVE_FAILED } from '../lib/difficulty';
 import { buildLabel, emptyWikiBuild } from '../lib/wikiBuild';
 import { matchupTitle } from '../lib/josa';
 import { ErrorBox, Loading } from '../components/Status';
@@ -70,11 +71,14 @@ function BuildNewForm() {
         initial={emptyWikiBuild()}
         author={auth.profile}
         copyFrom={data.from}
+        withDifficulty
         submitLabel="빌드 등록"
         cancelTo={data.from?.build.status === 'approved' ? `${path}?build=${data.from.build.id}` : path}
-        onSubmit={async (v) => {
+        onSubmit={async (v, difficulty) => {
           const id = await createBuild(data.matchup.counter.id, v, data.game.latest);
-          navigate(`${path}?build=${id}`, { state: { done: '새 빌드를 등록했습니다.' } });
+          // 등록은 끝났다. 별점 저장만 실패하면 등록을 실패로 보이게 하지 않고 안내만 한다 (6-104)
+          const saved = await saveDifficultyAfterCreate(id, difficulty);
+          navigate(`${path}?build=${id}`, { state: { done: saved ? '새 빌드를 등록했습니다.' : DIFFICULTY_SAVE_FAILED } });
         }}
       />
     </article>

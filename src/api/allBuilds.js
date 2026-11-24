@@ -4,13 +4,14 @@
 // 추천 수가 자주 바뀌므로 캐시하지 않는다: 화면을 열 때마다 새로 받고, 받은 개수로 배지 숫자를 맞춘다.
 import { publicBuilds, setPublicBuildCount } from './buildCount';
 import { compareAllBuilds } from '../lib/wikiBuild';
+import { cleanDifficulty } from '../lib/difficulty';
 
 export const PAGE_SIZE = 1000;
-const COLS_BASE = 'id, name, seq, max_skill, up_count, created_at, author_id';
+const COLS_BASE = 'id, name, seq, max_skill, up_count, created_at, author_id, difficulty'; // difficulty: 071 난이도 별점 (6-104)
 const COLS = `${COLS_BASE}, author:profiles!builds_author_id_fkey(influencer, nickname, photo_path)`;
 const COLS_NO_PHOTO = `${COLS_BASE}, author:profiles!builds_author_id_fkey(influencer, nickname)`; // 062(프로필 사진) 실행 전 DB
 
-/** [{ id, name, seq, max_skill, up, created_at, author_id, author: { influencer, nickname, photo_path } | null, target, mine }] — 정렬까지 끝난 것 */
+/** [{ id, name, seq, max_skill, up, difficulty, created_at, author_id, author: { influencer, nickname, photo_path } | null, target, mine }] — 정렬까지 끝난 것 */
 export async function getAllPublicBuilds() {
   const rows = [];
   let cols = COLS;
@@ -31,7 +32,7 @@ export async function getAllPublicBuilds() {
     .map((b) => {
       const a = Array.isArray(b.author) ? b.author[0] : b.author;
       return {
-        id: b.id, name: b.name ?? null, seq: b.seq ?? null, max_skill: b.max_skill ?? null, up: b.up_count ?? 0,
+        id: b.id, name: b.name ?? null, seq: b.seq ?? null, max_skill: b.max_skill ?? null, up: b.up_count ?? 0, difficulty: cleanDifficulty(b.difficulty),
         created_at: b.created_at, author_id: b.author_id ?? null, author: a ? { influencer: a.influencer ?? null, nickname: a.nickname ?? null, photo_path: a.photo_path ?? null } : null,
         target: b.counter.target_champion, mine: b.counter.counter_champion,
       };

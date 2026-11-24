@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react';
 import BuildTitle from './BuildTitle';
+import { DifficultyBadge } from './Difficulty';
 import { ThumbIcon } from './Icons';
 import { isInfluencerBuild } from '../lib/wikiBuild';
 
@@ -71,7 +72,7 @@ export default function BuildPicker({ builds, selectedId, onPick, onClose }) {
                   onClick={() => onPick(b.id)}
                 >
                   <span className="build-pick-check" aria-hidden="true">{on ? '✓' : ''}</span>
-                  <span className="build-pick-name"><BuildTitle build={b} index={i} /></span>
+                  <span className="build-pick-name"><BuildTitle build={b} index={i} /><DifficultyBadge value={b.difficulty} /></span>
                   <span className="build-tab-ups">
                     <ThumbIcon size={14} /><span className="sr-only">추천 </span>{b.up}
                   </span>

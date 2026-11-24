@@ -65,15 +65,15 @@ test('커뮤니티 검색 중에는 고정 공지가 없으므로 공지도 목�
 });
 
 // ---------------- 3. 공용 작성자 닉네임 ----------------
-test('작성자 닉네임 공용 칸: 없으면 탈퇴한 이용자, 별점 자리는 지금 아무것도 그리지 않는다', () => {
+test('작성자 닉네임 공용 칸: 없으면 탈퇴한 이용자, 별점(난이도, 6-104)이 비어 있으면 아무것도 그리지 않는다', () => {
   const { container, rerender } = render(<BuildAuthorName author={null} />);
   expect(container.textContent).toBe('탈퇴한 이용자');
   rerender(<BuildAuthorName author={{ nickname: '일반인', influencer: null }} />);
   expect(container.textContent).toBe('일반인');
   expect(container.querySelector('.author-rating')).toBeNull();
   expect(container.querySelector('.author-avatar')).toBeNull(); // 사진 칸 없음
-  rerender(<BuildAuthorName author={{ nickname: '일반인', influencer: null }} rating="★ 4.5" />);
-  expect(container.querySelector('.author-rating').textContent).toBe('★ 4.5'); // 나중에 값을 넘기면 자리에 그려진다
+  rerender(<BuildAuthorName author={{ nickname: '일반인', influencer: null }} rating={4.5} />);
+  expect(container.querySelector('.author-rating').textContent).toContain('★ 4.5'); // 값을 넘기면 자리에 그려진다 (6-104: 숫자만 받는다)
 });
 
 test('작성자 닉네임 공용 칸: photo는 장인에게만 — 사진이 없으면 첫 글자 원', () => {

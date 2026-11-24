@@ -216,6 +216,10 @@ export function resetFake() {
   fakeState.insertError = null;
   fakeState.rpcCalls = [];
   fakeState.deviceTokens = [];
+  fakeState.rpcLog = []; // 불린 DB 함수 이름 전부 (create_build·edit_build 등 rpcCalls에 안 남는 것까지)
+  fakeState.difficultyError = null; // set_build_difficulty가 낼 오류 문장 (071 쓰기 실패 흉내)
+  fakeState.difficultiesError = null; // build_difficulties가 낼 오류 문장 (071 읽기 실패 흉내)
+  fakeState.difficultyReads = []; // build_difficulties로 물은 id 목록들
   fakeState.queryLog = [];
   fakeState.contributors = {};
   fakeState.editorCounts = {};
@@ -601,6 +605,35 @@ const auth = {
 
 // 운영자 전용 DB 함수 호출 기록. 오류는 fakeState.rpcError로 흉내 낸다 (예: '운영자만 할 수 있습니다.')
 async function rpc(name, args) {
+  (fakeState.rpcLog ??= []).push(name);
+  if (name === 'set_build_difficulty') {
+    // 071: 로그인 + 닉네임 → 작성자 본인만(숨긴 빌드도) → null 또는 0.5~5.0의 0.5 단위. difficulty 칸만 바꾼다 (version·updated_at·수정 기록·알림 그대로)
+    fakeState.rpcCalls.push({ name, args });
+    const uid = fakeState.session?.user?.id;
+    if (!uid) return { data: null, error: { code: '42501', message: '로그인이 필요합니다.' } };
+    if (fakeState.difficultyError) return { data: null, error: { code: 'P0001', message: fakeState.difficultyError } };
+    const b = TABLES.builds.find((x) => x.id === args.p_build);
+    if (!b || b.author_id !== uid) return { data: null, error: { code: '42501', message: '내가 만든 빌드에만 난이도를 정할 수 있습니다.' } };
+    const d = args.p_difficulty;
+    if (d != null && !(Number(d) >= 0.5 && Number(d) <= 5 && Math.round(Number(d) * 2) === Number(d) * 2)) {
+      return { data: null, error: { code: '22023', message: '난이도는 0.5부터 5.0까지 0.5 단위로 골라 주세요.' } };
+    }
+    b.difficulty = d ?? null;
+    return { data: { build_id: b.id, difficulty: b.difficulty }, error: null };
+  }
+  if (name === 'build_difficulties') {
+    // 071: 읽을 수 있는 빌드의 별점만 { id: 별점 } (비어 있는 것은 키 없음, 한 번에 200개까지). 공개 빌드 + 내 빌드
+    (fakeState.difficultyReads ??= []).push([...args.p_ids]);
+    if (fakeState.difficultiesError) return { data: null, error: { code: 'P0001', message: fakeState.difficultiesError } };
+    if (args.p_ids.length > 200) return { data: null, error: { code: '22023', message: '별점은 한 번에 200개까지 불러올 수 있습니다.' } };
+    const uid = fakeState.session?.user?.id;
+    const out = {};
+    for (const id of args.p_ids) {
+      const b = TABLES.builds.find((x) => x.id === id);
+      if (b && b.difficulty != null && (b.status === 'approved' || b.author_id === uid)) out[id] = b.difficulty;
+    }
+    return { data: out, error: null };
+  }
   if (name === 'my_restriction') {
     // 068: 띠가 로그인 확인 뒤 알아서 부르는 것이라 queryLog·rpcCalls에는 넣지 않는다 (요청 수 검사에 영향 없게).
     // fakeState.restriction = { id, reason, ends_at } 또는 null, fakeState.restrictionsMissing = 068 전 DB

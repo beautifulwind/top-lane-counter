@@ -1591,7 +1591,19 @@ ul.build-cards > li.build-card.is-influencer { border-left-color: var(--brand); 
 .author-avatar { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; overflow: hidden; border: 1.5px solid var(--influencer-line); background: var(--soft); }
 .author-photo { width: 100%; height: 100%; object-fit: cover; display: block; }
 .author-initial { font-family: var(--font-display); font-size: var(--fs-sm); color: var(--brand-dark); line-height: 1; }
-.author-rating { flex: none; white-space: nowrap; font-size: var(--fs-xs); color: var(--muted); }
+.author-rating { flex: none; white-space: nowrap; font-size: var(--fs-xs); color: var(--brand-dark); font-variant-numeric: tabular-nums; }
+/* 빌드 난이도 별점 (6-104): 입력 = 별 5개 버튼(44px 눌리는 칸), 표시 = ★ 3.5 */
+.difficulty-field { display: flex; flex-direction: column; gap: 4px; margin: var(--gap-md) 0 0; }
+.difficulty-stars { display: flex; flex-wrap: wrap; align-items: center; gap: 2px 6px; }
+.difficulty-stars .diff-btn { display: inline-grid; place-items: center; width: 44px; height: 44px; padding: 0; border: 0; border-radius: var(--radius-sm); background: transparent; cursor: pointer; }
+.difficulty-stars .diff-btn:disabled { cursor: default; opacity: .6; }
+.diff-star { position: relative; display: inline-block; line-height: 0; }
+.diff-star svg { position: absolute; inset: 0; }
+.diff-star-back { fill: none; stroke: var(--muted); stroke-width: 1.5; stroke-linejoin: round; }
+.diff-star-front { fill: var(--brand-dark); stroke: var(--brand-dark); stroke-width: 1.5; stroke-linejoin: round; }
+.diff-value { min-width: 4.5em; font-size: var(--fs-sm); color: var(--muted); font-variant-numeric: tabular-nums; }
+.difficulty-stars .btn { min-height: 44px; }
+.build-pick .author-rating, .bs-text .author-rating { margin-left: 6px; }
 .all-build-meta { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
 .all-build-meta .skill-key { padding: 0 5px; font-size: var(--fs-xs); }
 

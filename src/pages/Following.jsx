@@ -4,6 +4,7 @@ import { getFollowedBuilds, getMyFollowing } from '../api/follow';
 import { getChampionMap } from '../api/ddragon';
 import { isGuest, useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
+import { useBuildDifficulties } from '../lib/useBuildDifficulties';
 import { INFLUENCER_KINDS } from '../lib/nickname';
 import { ErrorBox, Loading } from '../components/Status';
 import InfluencerBuildCard from '../components/InfluencerBuildCard';
@@ -98,6 +99,7 @@ function FollowedBuilds({ userId }) {
     const [p, champs] = await Promise.all([getFollowedBuilds(page), getChampionMap().catch(() => ({}))]);
     return { page: p, champs };
   }, [userId]);
+  const ratings = useBuildDifficulties(list.items.map((b) => b.id)); // 6-104: 난이도 별점은 followed_builds에 없어 보이는 id로 한 번 더 (새로 늘어난 id만)
   if (list.loading && !list.data) return <Loading />;
   if (list.error) return <ErrorBox error={list.error} onRetry={list.retry} />;
   if (list.total === 0) return <p className="empty">{NO_FOLLOW_TEXT}</p>;
@@ -105,7 +107,7 @@ function FollowedBuilds({ userId }) {
     <section aria-label="팔로우한 장인의 빌드">
       <p className="hint">팔로우한 장인이 처음 만든 공개 빌드를 최근 수정한 순서로 보여 줍니다.</p>
       <ul className="build-cards">
-        {list.items.map((b) => <InfluencerBuildCard key={b.id} b={b} champs={list.data.champs} showAuthor />)}
+        {list.items.map((b) => <InfluencerBuildCard key={b.id} b={{ ...b, difficulty: ratings[b.id] ?? null }} champs={list.data.champs} showAuthor />)}
       </ul>
       <MoreButton list={list} unit="개" />
     </section>

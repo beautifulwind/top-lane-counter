@@ -6,6 +6,7 @@ import { searchAll, tokenize } from '../lib/championSearch';
 import { matchupShort } from '../lib/josa';
 import SearchField from './SearchField';
 import BuildTitle from './BuildTitle';
+import { DifficultyBadge } from './Difficulty';
 
 export const NO_RESULT = '맞는 결과가 없습니다. 챔피언 이름(별명·초성도 됩니다)이나 빌드 제목의 일부를 띄어쓰기로 나눠 넣어 보세요.';
 export const INDEX_ERROR = '조합·빌드 목록을 불러오지 못했습니다. 챔피언 검색은 그대로 쓸 수 있습니다.';
@@ -133,6 +134,7 @@ export default function BuildSearch({ champions, value, onChange }) {
                     <strong>
                       {/* 6-77: 장인 빌드 표시는 상대법 탭과 같은 BuildTitle 한 곳에서 그린다 */}
                       <BuildTitle build={{ name: o.found.build.title || null, seq: o.found.build.seq, author: { influencer: o.found.build.influencer } }} />
+                      <DifficultyBadge value={o.found.build.difficulty} />
                     </strong>
                     {o.found.build.summary && <small className="bs-summary">{o.found.build.summary}</small>}
                     <small>{matchupShort(o.found.mine.name, o.found.target.name)}</small>

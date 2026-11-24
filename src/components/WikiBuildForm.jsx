@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { sameWikiBuild, wikiBuildProblem, wikiBuildToForm } from '../lib/wikiBuild';
 import WikiBuildFields from './WikiBuildFields';
+import DifficultyField from './Difficulty';
+import { cleanDifficulty, sameDifficulty } from '../lib/difficulty';
 
 /**
  * 빌드 한 벌 입력 폼 (새 상대법·새 빌드·빌드 수정 공용). 보내면 바로 공개된다 (승인 없음, 038).
@@ -10,12 +12,17 @@ import WikiBuildFields from './WikiBuildFields';
  * onSubmit(value): 실패하면 Error를 던진다 → 폼 아래에 보여 준다. errorExtra(error): 오류 아래에 덧붙일 것 (예: [최신 내용 불러오기])
  * before: 빌드 이름 칸 위에 넣을 것 (챔피언 고르기 등)
  * champion: 플레이할 챔피언 id (스킬 순서 예외 표 — 065)
+ * 난이도 별점 (6-104): withDifficulty면 「난이도」 선택 항목을 보인다(새 빌드·새 상대법·내 빌드 수정). 빌드 내용(value)과 따로 다룬다 —
+ *   빌드 등록·수정 함수의 인자에는 넣지 않고, 화면이 저장 뒤 set_build_difficulty를 따로 부른다. initialDifficulty = 지금 저장된 값(수정).
+ *   onSubmit(value, difficulty, { contentChanged, difficultyChanged })
+ *   수정 화면(unchangedFrom)에서 내용은 같고 별점만 바뀐 경우도 보낼 수 있다 (contentChanged = false → 화면이 수정 함수를 부르지 않는다)
  */
 export default function WikiBuildForm({
   game, initial, author, onSubmit, submitLabel, busyLabel = '등록하는 중…', cancelTo, unchangedFrom = null,
-  copyFrom = null, errorExtra = null, before = null, champion = null,
+  copyFrom = null, errorExtra = null, before = null, champion = null, withDifficulty = false, initialDifficulty = null,
 }) {
   const [value, setValue] = useState(initial);
+  const [difficulty, setDifficulty] = useState(cleanDifficulty(initialDifficulty));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(null);
   const [copied, setCopied] = useState(false);
@@ -23,8 +30,11 @@ export default function WikiBuildForm({
   const submit = async (e) => {
     e.preventDefault();
     if (busy) return;
-    const problem = wikiBuildProblem(value, game, champion)
-      ?? (unchangedFrom && sameWikiBuild(unchangedFrom, value) ? '바뀐 내용이 없습니다.' : null);
+    const contentChanged = !(unchangedFrom && sameWikiBuild(unchangedFrom, value));
+    const difficultyChanged = withDifficulty && !sameDifficulty(initialDifficulty, difficulty);
+    // 별점만 바뀐 수정은 빌드 내용을 다시 검사하지 않는다 (내용은 그대로라 수정 함수도 부르지 않는다)
+    const problem = (contentChanged ? wikiBuildProblem(value, game, champion) : null)
+      ?? (!contentChanged && !difficultyChanged ? '바뀐 내용이 없습니다.' : null);
     if (problem) {
       setError({ message: problem });
       return;
@@ -32,7 +42,7 @@ export default function WikiBuildForm({
     setBusy(true);
     setError(null);
     try {
-      await onSubmit(value);
+      await onSubmit(value, withDifficulty ? difficulty : null, { contentChanged, difficultyChanged });
     } catch (err) {
       setError(err);
       setBusy(false);
@@ -58,6 +68,7 @@ export default function WikiBuildForm({
         </div>
       )}
       <WikiBuildFields game={game} value={value} onChange={setValue} author={author} champion={champion} />
+      {withDifficulty && <DifficultyField value={difficulty} onChange={setDifficulty} disabled={busy} />}
 
       {error && (
         <div className="form-error" role="alert">

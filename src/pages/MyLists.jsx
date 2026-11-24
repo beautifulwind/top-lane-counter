@@ -3,6 +3,7 @@ import { getMySavedBuilds } from '../api/bookmarks';
 import { getChampionMap } from '../api/ddragon';
 import { canWrite, isBlocked, isGuest, useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
+import { useBuildDifficulties } from '../lib/useBuildDifficulties';
 import { ErrorBox, Loading } from '../components/Status';
 import BuildRow from '../components/BuildRow';
 import Pagination, { usePaging } from '../components/Pagination';
@@ -66,13 +67,15 @@ function SavedBuilds({ userId }) {
   }, [userId]);
   const visible = (data?.saved.items ?? []).filter((b) => !isBlocked(auth, b.author_id));
   const pg = usePaging(visible.length);
+  const shownNow = visible.slice(pg.start, pg.end);
+  const ratings = useBuildDifficulties(shownNow.map((b) => b.id)); // 6-104: 보이는 쪽의 id만 (저장 한도 500개 중 20개씩)
 
   if (loading && !data) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
 
   const { items, total, hidden, limit } = data.saved;
   const blocked = items.length - visible.length;
-  const shown = visible.slice(pg.start, pg.end);
+  const shown = shownNow;
 
   return (
     <section aria-label="저장한 빌드">
@@ -86,7 +89,7 @@ function SavedBuilds({ userId }) {
         <p className="empty">{total === 0 ? NO_SAVED_TEXT : '보여 줄 빌드가 없습니다.'}</p>
       ) : (
         <ul className="build-cards all-builds saved-builds" ref={pg.listRef}>
-          {shown.map((b) => <BuildRow key={b.id} b={b} champs={data.champs} />)}
+          {shown.map((b) => <BuildRow key={b.id} b={{ ...b, difficulty: ratings[b.id] ?? null }} champs={data.champs} />)}
         </ul>
       )}
       <Pagination {...pg} />

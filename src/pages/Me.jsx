@@ -19,6 +19,7 @@ import DiffView from '../components/DiffView';
 import MyTitles, { LevelBar } from '../components/MyRewards';
 import { matchupTitle } from '../lib/josa';
 import VoteTally from '../components/VoteTally';
+import { DifficultyBadge } from '../components/Difficulty';
 import SectionHead from '../components/SectionHead';
 import ProfilePhoto, { ProfileAvatarEditor } from '../components/ProfilePhoto';
 import { BellIcon, GearIcon, HelpIcon, LayersIcon, LinkIcon, SendIcon, SparklesIcon, UserIcon } from '../components/Icons';
@@ -291,6 +292,7 @@ function MyBuilds({ data }) {
                   {b.edited_at && b.status === 'pending' && <span>고친 때 {fmtDateTime(b.edited_at)}</span>}
                   {b.reviewed_at && <span>처리 {fmtDateTime(b.reviewed_at)}</span>}
                   {['approved', 'hidden'].includes(b.status) && <VoteTally up={b.up} down={b.down} />}
+                  <DifficultyBadge value={b.difficulty} />
                 </div>
                 {b.status === 'approved' && b.approve_note && <p className="approve-note">승인 메모: {b.approve_note}</p>}
                 {b.original_build && ['approved', 'hidden'].includes(b.status) && (

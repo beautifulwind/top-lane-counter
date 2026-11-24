@@ -1,6 +1,7 @@
 import { useSearchParams } from 'react-router-dom';
 import { getInfluencerBuilds } from '../api/follow';
 import { useAsync } from '../lib/useAsync';
+import { useBuildDifficulties } from '../lib/useBuildDifficulties';
 import InfluencerBuildCard from './InfluencerBuildCard';
 import Pagination, { BUILD_PAGE_SIZE, usePaging } from './Pagination';
 import SectionHead from './SectionHead';
@@ -51,6 +52,8 @@ export default function ProfileBuilds({ id, champs, first, actions }) {
   const data = direct ? first.items : fetched;
   const loading = direct ? false : waiting;
   const shown = data ? (sort === 'popular' ? data.slice(pg.start, pg.end) : data) : [];
+  // 6-104: influencer_builds는 별점을 주지 않아 보이는 쪽의 id로 build_difficulties를 한 번 더 부른다 (이미 받은 id는 다시 묻지 않음, 실패하면 별점만 빔)
+  const ratings = useBuildDifficulties(!loading && (direct || !error) ? shown.map((b) => b.id) : []);
 
   return (
     <section className="me-section" aria-labelledby="pp-builds">
@@ -70,7 +73,7 @@ export default function ProfileBuilds({ id, champs, first, actions }) {
       {!direct && error && <ErrorBox error={error} onRetry={retry} />}
       {total > 0 && !loading && (direct || !error) && (
         <ul className="build-cards" ref={pg.listRef} aria-label="빌드 목록">
-          {shown.map((b) => <InfluencerBuildCard key={b.id} b={b} champs={champs} linkActions={actions} />)}
+          {shown.map((b) => <InfluencerBuildCard key={b.id} b={{ ...b, difficulty: ratings[b.id] ?? null }} champs={champs} linkActions={actions} />)}
         </ul>
       )}
       <Pagination {...pg} />

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import { getChampionMap, getItems, getLatestVersion, getRunes, getSummonerSpells } from '../api/ddragon';
-import { getMyBuild } from '../api/builds';
+import { getMyBuild, setBuildDifficulty } from '../api/builds';
 import { BUILD_STATUS_LABEL, fmtDateTime } from '../lib/format';
 import { useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
@@ -11,10 +11,12 @@ import DocView from '../components/DocView';
 import { APPROVAL_ENABLED } from '../lib/features';
 import { matchupTitle } from '../lib/josa';
 import VoteTally from '../components/VoteTally';
+import { DifficultyEditor } from '../components/Difficulty';
 
 /**
  * 내 빌드 자세히: /me/builds/:id — 보낸 빌드를 매치업 문서의 빌드 모양으로.
  * 상태별: 승인 대기 [수정] / 재검토 요청 [고쳐서 다시 제출] / 공개 [문서 보기] / 거절 [다시 쓰기] / 숨김 없음
+ * 난이도 별점(6-104): 공개·숨긴 내 빌드는 여기서 별점만 따로 고칠 수 있다 (숨긴 빌드는 빌드 수정 화면이 없다. 수정 기록·알림은 생기지 않음).
  */
 export default function MyBuild() {
   return (
@@ -60,9 +62,10 @@ function BuildView({ b, data, crumbs, sent }) {
   const open = c?.status === 'approved';
   const edited = !!b.original_build && ['approved', 'hidden'].includes(b.status);
   const [shown, setShown] = useState('sent');
+  const [difficulty, setDifficulty] = useState(b.difficulty ?? null); // 이 화면에서 저장한 별점 (다시 불러오지 않고 바로 보인다)
   const published = shown === 'published';
   const author = b.author ?? auth.profile;
-  const view = edited && !published ? { ...b.original_build, author } : { ...b, author };
+  const view = { ...(edited && !published ? b.original_build : b), author, difficulty };
 
   return (
     <article>
@@ -129,6 +132,10 @@ function BuildView({ b, data, crumbs, sent }) {
           숨긴 사유: {b.hide_reason}
           {b.hidden_at && <> ({fmtDateTime(b.hidden_at)})</>}
         </p>
+      )}
+
+      {['approved', 'hidden'].includes(b.status) && (
+        <DifficultyEditor saved={difficulty} onSave={(v) => setBuildDifficulty(b.id, v)} onSaved={setDifficulty} />
       )}
 
       {edited && (

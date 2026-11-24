@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { getChampionMap } from '../api/ddragon';
 import { getMatchup } from '../api/content';
-import { BUILD_CONFLICT, editBuild, getBuildCautionUps, getBuildGame, getBuilds } from '../api/builds';
+import { BUILD_CONFLICT, editBuild, getBuildCautionUps, getBuildGame, getBuilds, setBuildDifficulty } from '../api/builds';
 import { isGuest, useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
 import { patchMinor } from '../lib/buildContent';
+import { DIFFICULTY_EDIT_SAVE_FAILED } from '../lib/difficulty';
 import { buildLabel, wikiBuildToForm } from '../lib/wikiBuild';
 import { matchupTitle } from '../lib/josa';
 import { ErrorBox, Loading } from '../components/Status';
@@ -16,6 +17,7 @@ import NotFound from './NotFound';
 /**
  * 빌드 수정 (위키 방식): /champion/:targetId/counter/:counterId/build/:buildId/edit
  * 누구나 고칠 수 있다. 단, 남의 빌드는 구글·카카오 회원만 (DB edit_build가 막고, 화면도 미리 알려 준다).
+ * 난이도 별점(6-104)은 처음 만든 분(작성자) 본인에게만 보인다. 별점만 바뀌면 빌드 수정 함수를 부르지 않는다(수정 기록·수정 알림이 생기지 않음).
  * 추천이 많은 빌드는 "신중히 수정해 주세요" 안내. 다른 분이 먼저 고쳤으면(TL412) [최신 내용 불러오기].
  */
 export default function BuildEdit() {
@@ -103,12 +105,30 @@ function BuildEditForm() {
             initial={wikiBuildToForm(build)}
             unchangedFrom={wikiBuildToForm(build)}
             author={build.author}
+            withDifficulty={own}
+            initialDifficulty={build.difficulty ?? null}
             submitLabel="수정 저장"
             busyLabel="저장하는 중…"
             cancelTo={backTo}
-            onSubmit={async (v) => {
-              await editBuild(build, v, data.game.latest);
-              navigate(backTo, { state: { done: '빌드를 수정했습니다.' } });
+            onSubmit={async (v, difficulty, { contentChanged, difficultyChanged }) => {
+              // 내용이 바뀌었을 때만 수정 함수 → 별점이 바뀌었으면 그다음 별점 저장 (별점만 바뀌면 수정 함수는 부르지 않는다)
+              if (contentChanged) await editBuild(build, v, data.game.latest);
+              if (!difficultyChanged) {
+                navigate(backTo, { state: { done: '빌드를 수정했습니다.' } });
+                return;
+              }
+              if (!contentChanged) {
+                await setBuildDifficulty(build.id, difficulty); // 실패하면 아무것도 바뀌지 않았으므로 오류를 그대로 보여 준다
+                navigate(backTo, { state: { done: '난이도를 저장했습니다.' } });
+                return;
+              }
+              let saved = true;
+              try {
+                await setBuildDifficulty(build.id, difficulty);
+              } catch {
+                saved = false; // 내용 수정은 이미 끝났다 — 수정을 실패로 보이게 하지 않고 안내만 한다
+              }
+              navigate(backTo, { state: { done: saved ? '빌드를 수정했습니다.' : DIFFICULTY_EDIT_SAVE_FAILED } });
             }}
             errorExtra={(err) => err.code === BUILD_CONFLICT && (
               <div className="row-actions">
