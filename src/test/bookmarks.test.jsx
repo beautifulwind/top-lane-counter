@@ -9,7 +9,6 @@ import { GO_DELAY_MS, SAVE_MSG } from '../lib/voteMessages';
 import { BOOKMARKS_NOT_READY } from '../api/bookmarks';
 import { NO_SAVED_TEXT } from '../pages/MyLists';
 import { GUEST_FOLLOWING_TEXT } from '../pages/Following';
-import { closeTopOverlay } from '../lib/backButton';
 import { fakeFetch } from './fakeDdragon';
 import { TABLES, fakeBuild, fakeGuestLogin, fakeLogin, fakeState } from './fakeSupabase';
 import { openMenu } from './menu';
@@ -231,13 +230,3 @@ test('066 실행 전 DB: 내 목록은 "준비 중" 오류 상자 (화면은 죽
   expect(await screen.findByText(BOOKMARKS_NOT_READY, { exact: false })).toBeDefined();
 });
 
-// ---------------- 상단 바 돋보기: 앱 뒤로가기 ----------------
-
-test('앱 뒤로가기: 열린 [장인 찾기] 검색 칸을 먼저 닫는다 (이전 화면으로 가지 않음)', async () => {
-  start('/board');
-  fireEvent.click(await screen.findByRole('button', { name: '장인 찾기' }));
-  await screen.findByRole('dialog', { name: '장인 찾기' });
-  expect(closeTopOverlay(document)).toBe(true);
-  await waitFor(() => expect(screen.queryByRole('dialog', { name: '장인 찾기' })).toBeNull());
-  expect(where()).toBe('/board');
-});

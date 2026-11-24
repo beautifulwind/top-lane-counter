@@ -21,12 +21,12 @@ const topbar = () => within(document.querySelector('.topbar'));
 // 패널 안 링크·버튼 글자를 화면 순서대로 ('' = [X] 닫기)
 const menuNames = () => [...document.querySelectorAll('.menu-panel a, .menu-panel button')].map((el) => el.textContent.trim());
 
-test('홈의 상단 바에는 로고(사이트 이름 → 홈)와 돋보기(장인 찾기, 6-82)·☰만 (하위 화면에는 왼쪽에 ← 뒤로 가기가 더 있다, 6-78)', async () => {
+test('홈의 상단 바에는 로고(사이트 이름 → 홈)와 ☰만 (1-B2: 돋보기 [장인 찾기]는 없앰) (하위 화면에는 왼쪽에 ← 뒤로 가기가 더 있다, 6-78)', async () => {
   fakeLogin('u-op', { nickname: '영자', role: 'admin', level: 0, main_title: null });
   start('/');
   await menuButton();
   expect(topbar().getAllByRole('link').map((a) => a.getAttribute('href'))).toEqual(['/']);
-  expect(topbar().getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['장인 찾기', '메뉴 열기']);
+  expect(topbar().getAllByRole('button').map((b) => b.getAttribute('aria-label'))).toEqual(['메뉴 열기']);
   expect(topbar().getByRole('link', { name: '탑신병자' })).toBeDefined();
   expect(topbar().getByText('탑은 라인전이 전부')).toBeDefined();
 });
@@ -162,11 +162,11 @@ test('마이페이지 맨 위 [관리]·[로그아웃] 줄은 없다 (메뉴로 
 });
 
 test('메뉴 항목은 한 곳(navItems): 메뉴와 나중의 아래 탭 바가 같은 목록을 읽는다', () => {
-  expect(NAV_ITEMS.map((it) => it.to)).toEqual(['/', '/me', '/notifications', '/lists', '/influencers', null, '/board', '/inquiries', '/admin']); // null = 돋보기 [장인 찾기] 펼침 (050 → 6-82)
+  expect(NAV_ITEMS.map((it) => it.to)).toEqual(['/', '/me', '/notifications', '/lists', '/influencers', '/board', '/inquiries', '/admin']);
   expect(navItemsFor('menu', 'signedOut').map((it) => it.key)).toEqual(['lists', 'influencerList', 'board']);
   expect(navItemsFor('menu', 'operator').map((it) => it.key)).toEqual(['me', 'notifications', 'lists', 'influencerList', 'board', 'inquiries', 'admin']);
   expect(navItemsFor('menu', 'guest').map((it) => it.key)).toEqual(['me', 'notifications', 'lists', 'influencerList', 'board', 'inquiries']);
   expect(navItemsFor('tab', 'member').map((it) => it.key)).toEqual(['home', 'me', 'notifications', 'board']);
-  expect(navItemsFor('bar', 'signedOut').map((it) => it.key)).toEqual(['influencers']); // 6-82: 상단 바 돋보기 [장인 찾기] (누구나)
-  expect(navItemsFor('bar', 'operator').map((it) => it.key)).toEqual(['influencers']);
+  expect(navItemsFor('bar', 'signedOut')).toEqual([]); // 1-B2: 상단 바 돋보기 [장인 찾기]를 없앴다
+  expect(navItemsFor('bar', 'operator')).toEqual([]);
 });

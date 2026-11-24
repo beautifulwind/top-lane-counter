@@ -4,7 +4,6 @@ import BackButton from './BackButton';
 import ErrorBoundary from './ErrorBoundary';
 import { ShieldIcon } from './Icons';
 import SiteMenu from './SiteMenu';
-import TopSearch from './TopSearch';
 import StoreLinks from './StoreLinks';
 import UpdateBanner from './UpdateBanner';
 import RestrictionBanner from './RestrictionBanner';
@@ -59,7 +58,6 @@ export default function Layout() {
           </span>
         </nav>
         <div className="top-actions">
-          <TopSearch />
           <SiteMenu />
         </div>
       </header>

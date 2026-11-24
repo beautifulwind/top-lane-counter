@@ -227,6 +227,6 @@ test('아래 격자: 한 단어면 걸러서 보여 주고, 두 단어 이상이
   expect(await screen.findByRole('link', { name: '다리우스' })).toBeDefined();
   expect(screen.queryByRole('link', { name: '가렌' })).toBeNull();
   fireEvent.change(await box(), { target: { value: '퀸 다리우스' } });
-  expect(screen.queryByText('상대 챔피언')).toBeNull();
+  expect(document.querySelector('.champ-grid')).toBeNull(); // 1-B2: 제목은 검색창과 함께 남고, 격자만 후보 목록에 자리를 내준다
   expect(screen.queryByText(/에 맞는 챔피언이 없습니다/)).toBeNull();
 });

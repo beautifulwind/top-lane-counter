@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
-import { cleanup, fireEvent, render, screen } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { StrictMode } from 'react';
 import { AppRoutes } from '../App';
@@ -18,8 +18,10 @@ const start = (path = '/') =>
   render(<StrictMode><MemoryRouter initialEntries={[path]}><AppRoutes /></MemoryRouter></StrictMode>);
 
 test('홈 → 챔피언 문서 → 매치업 문서를 클릭으로 이동해도 화면이 비지 않는다', async () => {
-  start('/');
-  fireEvent.click(await screen.findByText('다리우스'));
+  await act(async () => { start('/'); }); // 1-B2: 홈의 장인 줄도 처음에 요청을 보내므로, 그 응답까지 act 안에서 받는다
+  const darius = await screen.findByText('다리우스');
+  await waitFor(() => expect(document.querySelector('.home-inf')).toBeNull()); // 1-B2: 홈의 장인 줄 불러오기가 끝난 뒤에 이동 (장인이 없으면 줄이 사라짐)
+  fireEvent.click(darius);
   expect(await screen.findByText(/다리우스 상대법/)).toBeDefined();
   expect(screen.getByText(RIOT_NOTICE)).toBeDefined();
 
@@ -30,8 +32,9 @@ test('홈 → 챔피언 문서 → 매치업 문서를 클릭으로 이동해도
 
   fireEvent.click(screen.getByRole('link', { name: '다리우스' }));
   expect(await screen.findByText(/다리우스 상대법/)).toBeDefined();
-  fireEvent.click(screen.getByRole('link', { name: '홈' }));
+  await act(async () => { fireEvent.click(screen.getByRole('link', { name: '홈' })); }); // 1-B2: 돌아온 홈의 장인 줄 응답도 act 안에서
   expect(await screen.findByRole('combobox')).toBeDefined();
+  await waitFor(() => expect(document.querySelector('.home-inf')).toBeNull()); // 1-B2: 홈의 장인 줄 불러오기가 끝난 뒤에 확인 (장인이 없으면 줄이 사라짐)
   expect(console.error).not.toHaveBeenCalled();
 });
 

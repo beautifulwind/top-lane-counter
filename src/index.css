@@ -1626,3 +1626,28 @@ ul.build-cards > li.build-card.is-influencer { border-left-color: var(--brand); 
 .inf-row-follow .follow { display: flex; flex-direction: column; align-items: flex-end; gap: 4px; min-width: 0; }
 .inf-row-follow .follow-msg { text-align: right; overflow-wrap: anywhere; margin: 0; }
 .inf-row-follow .follow-btn { min-height: 44px; }
+
+/* ===== 1.3 패치 1-B2: 메인 화면 장인 줄 · 챔피언 모두 보기 (SPEC 6-94) — 새 색 없음, 기존 토큰만 ===== */
+.home-inf { margin-top: var(--gap-lg); }
+.home-inf-row { display: flex; align-items: flex-start; min-width: 0; }
+.home-inf-scroll {
+  list-style: none; margin: 0; padding: 4px 12px 4px 2px; flex: 1 1 0; min-width: 0;
+  display: flex; gap: 12px; overflow-x: auto; scroll-snap-type: x proximity; scroll-padding-left: 2px;
+  scrollbar-width: none; -ms-overflow-style: none; -webkit-overflow-scrolling: touch;
+}
+.home-inf-scroll::-webkit-scrollbar { display: none; }
+.home-inf-scroll li { flex: none; scroll-snap-align: start; }
+.home-inf-item { display: flex; flex-direction: column; align-items: center; gap: 6px; width: 64px; min-height: 44px; padding: 4px 0; color: var(--text); }
+.home-inf-item:hover { text-decoration: none; }
+.home-inf-item:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; border-radius: var(--radius-sm); }
+.home-inf-avatar { display: grid; place-items: center; width: 56px; height: 56px; border-radius: 50%; overflow: hidden; border: 2px solid var(--brand); background: var(--soft); }
+.home-inf-photo { width: 100%; height: 100%; object-fit: cover; display: block; }
+.home-inf-initial { font-family: var(--font-display); font-size: var(--fs-xl); color: var(--brand-dark); line-height: 1; }
+.home-inf-name { max-width: 100%; font-size: var(--fs-xs); font-weight: 600; text-align: center; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.home-inf-all { flex: none; margin-left: 4px; padding-left: 2px; }
+.home-inf-all-circle { border: 2px dashed var(--brand); background: transparent; color: var(--brand-dark); }
+.home-inf-item:hover .home-inf-avatar { border-color: var(--brand-dark); }
+/* 불러오는 동안 자리만 (장인 줄과 같은 높이) */
+.home-inf-hold { display: block; height: 28px; }
+.home-inf-hold-row { height: 88px; width: 100%; }
+.champ-more { display: flex; justify-content: center; margin-top: var(--gap-md); }

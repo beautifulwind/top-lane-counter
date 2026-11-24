@@ -175,7 +175,7 @@ test('장인이 0명이면 점선 상자 대신 한 줄 안내, 인원수 칩은
   expect(screen.queryByRole('navigation', { name: '쪽 이동' })).toBeNull();
 });
 
-test('☰ 메뉴에 「장인 보기」(내 목록 보기 근처) → /influencers, 로그인 전에도 보인다. 돋보기 [장인 찾기]도 그대로', async () => {
+test('☰ 메뉴에 「장인 보기」(내 목록 보기 근처) → /influencers, 로그인 전에도 보인다. 헤더 돋보기는 1-B2에서 없앴다', async () => {
   start('/');
   fireEvent.click(await screen.findByRole('button', { name: '메뉴 열기' }));
   await screen.findByRole('link', { name: '장인 보기' });
@@ -184,5 +184,5 @@ test('☰ 메뉴에 「장인 보기」(내 목록 보기 근처) → /influence
   expect(Math.abs(items.indexOf('장인 보기') - items.indexOf('내 목록 보기'))).toBeLessThanOrEqual(1);
   fireEvent.click(within(document.querySelector('.menu-list')).getByRole('link', { name: '장인 보기' }));
   await waitFor(() => expect(where()).toBe('/influencers'));
-  expect(await screen.findByRole('button', { name: '장인 찾기' })).toBeDefined(); // 헤더 돋보기는 이번에 안 지움
+  expect(screen.queryByRole('button', { name: '장인 찾기' })).toBeNull(); // 1-B2: 헤더 돋보기 없음
 });

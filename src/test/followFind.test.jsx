@@ -3,6 +3,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { AppRoutes } from '../App';
+import TopSearch from '../components/TopSearch';
 import { fakeFetch } from './fakeDdragon';
 import { TABLES, fakeBuild, fakeLogin, fakeState } from './fakeSupabase';
 import { NO_RESULT_TEXT } from '../components/InfluencerSearch';
@@ -16,6 +17,8 @@ afterEach(() => { cleanup(); vi.restoreAllMocks(); });
 
 function Where() { const l = useLocation(); return <output data-testid="where">{l.pathname}{l.search}</output>; }
 const start = (path) => render(<MemoryRouter initialEntries={[path]}><AppRoutes /><Where /></MemoryRouter>);
+// 1-B2: 헤더 돋보기는 없앴다(Layout에서 TopSearch 제거). InfluencerSearch 검색 동작은 그대로 시험하려고 TopSearch를 따로 붙여 연다.
+const startWithSearch = (path) => render(<MemoryRouter initialEntries={[path]}><TopSearch /><AppRoutes /><Where /></MemoryRouter>);
 const where = () => screen.getByTestId('where').textContent;
 
 const inf = (id, nickname, influencer = 'creator') => TABLES.profiles.push({ id, nickname, role: 'user', level: 3, main_title: null, influencer, email: `${id}@x.com` });
@@ -31,12 +34,10 @@ async function openSearch() {
 
 // ---------------- 상단 바 돋보기 [장인 찾기] (050 → 6-82) ----------------
 
-test('[장인 찾기]: 상단 바 돋보기(☰ 왼쪽), 누르면 아래에 검색 칸 / 다시 누르기·Esc·[X]·바깥을 누르면 닫히고 초점은 돋보기로', async () => {
+test('[장인 찾기] 컴포넌트(TopSearch): 누르면 아래에 검색 칸 / 다시 누르기·Esc·[X]·바깥을 누르면 닫히고 초점은 돋보기로 — 사이트 헤더에는 돋보기가 없고 ☰ 메뉴에도 [장인 찾기]가 없다 (1-B2)', async () => {
   fakeLogin('u-1', { nickname: '팬' });
-  start('/');
+  startWithSearch('/');
   const { menu, btn, box } = await openSearch();
-  const bar = document.querySelector('.topbar');
-  expect([...bar.querySelectorAll('button')].map((b) => b.getAttribute('aria-label'))).toEqual(['장인 찾기', '메뉴 열기']);
   expect(btn.getAttribute('aria-expanded')).toBe('true');
   expect(document.activeElement).toBe(box); // 열면 바로 입력
   expect(menu.getByText('장인 닉네임을 한 글자 이상 넣어 주세요.')).toBeTruthy();
@@ -50,10 +51,12 @@ test('[장인 찾기]: 상단 바 돋보기(☰ 왼쪽), 누르면 아래에 검
   await openSearch();
   fireEvent.click(document.querySelector('.top-search-backdrop'));
   expect(screen.queryByRole('dialog', { name: '장인 찾기' })).toBeNull();
-  // ☰ 메뉴에는 [장인찾기]가 없고 [내 목록 보기]가 있다
+  // 사이트 헤더(상단 바)에는 돋보기가 없다 — 위 TopSearch는 시험용으로 따로 붙인 것. ☰ 메뉴에는 [장인 보기]·[내 목록 보기]만
+  expect([...document.querySelector('.topbar').querySelectorAll('button')].map((b) => b.getAttribute('aria-label'))).toEqual(['메뉴 열기']);
   fireEvent.click(screen.getByRole('button', { name: '메뉴 열기' }));
   const names = [...document.querySelectorAll('.menu-list > li > .menu-item')].map((el) => el.textContent.trim());
   expect(names).toContain('내 목록 보기');
+  expect(names).toContain('장인 보기');
   expect(names.some((n) => n.includes('장인찾기') || n.includes('장인 찾기'))).toBe(false);
 });
 
@@ -63,7 +66,7 @@ test('로그인 전에도 검색: 닉네임·유형·팔로워 수, 장인이 �
   TABLES.profiles.push({ id: 'u-plain', nickname: 'Fakeplain', role: 'user', level: 1, main_title: null });
   follow('u-a', 'u-fk');
   follow('u-b', 'u-fk');
-  start('/');
+  startWithSearch('/');
   const { box } = await openSearch();
   fireEvent.change(box, { target: { value: 'fak' } });
   const list = await waitFor(() => {
@@ -85,7 +88,7 @@ test('로그인 전에도 검색: 닉네임·유형·팔로워 수, 장인이 �
 
 test('검색: 입력을 멈춘 뒤 한 번만 요청, 빈칸만이면 요청하지 않음, 결과가 없으면 쉬운 말', async () => {
   inf('u-fk', 'Faker', 'pro');
-  start('/');
+  startWithSearch('/');
   const { menu, box } = await openSearch();
   fireEvent.change(box, { target: { value: '   ' } });
   fireEvent.change(box, { target: { value: 'f' } });
@@ -103,7 +106,7 @@ test('검색: 입력을 멈춘 뒤 한 번만 요청, 빈칸만이면 요청하�
 
 test('검색: 20개씩 [더보기]', async () => {
   for (let i = 1; i <= 25; i += 1) inf(`u-s${i}`, `검색장${String(i).padStart(2, '0')}`);
-  start('/');
+  startWithSearch('/');
   const { menu, box } = await openSearch();
   fireEvent.change(box, { target: { value: '검색장' } });
   await waitFor(() => expect(document.querySelectorAll('.inf-search-row')).toHaveLength(20));
@@ -113,7 +116,7 @@ test('검색: 20개씩 [더보기]', async () => {
 });
 
 test('검색 칸의 [내가 팔로우한 장인의 빌드 보기] → /following (검색 칸 닫힘)', async () => {
-  start('/');
+  startWithSearch('/');
   const { menu } = await openSearch();
   fireEvent.click(menu.getByRole('link', { name: '내가 팔로우한 장인의 빌드 보기' }));
   await waitFor(() => expect(where()).toBe('/following'));
