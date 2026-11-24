@@ -1080,6 +1080,14 @@ a.menu-item:hover, .menu-item:hover { text-decoration: none; background: var(--r
   box-shadow: var(--shadow-card); font-weight: 600;
 }
 .update-banner span { min-width: 0; overflow-wrap: anywhere; }
+/* 앱 업데이트 안내 띠 (6-99): 화면을 막지 않는 위쪽 띠. 380px에서는 문구 아래로 버튼이 내려간다 */
+.app-update-band {
+  display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--gap-sm) var(--gap-md);
+  margin: var(--gap-sm) 0; padding: 8px var(--pad-box); background: var(--soft); border: 1px solid var(--brand); border-radius: var(--radius-sm); font-weight: 600;
+}
+.app-update-band > span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.app-update-actions { display: flex; flex: none; gap: var(--gap-sm); }
+.app-update-actions .btn { min-height: 44px; }
 .update-banner .btn { flex: none; }
 
 /* /admin 폰 폭(360~400px) 점검: 긴 닉네임·메모·주소가 칸을 밀어내지 않고 줄바꿈, 순서 변경 줄은 버튼이 아래 줄로 */

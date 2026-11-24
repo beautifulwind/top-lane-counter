@@ -6,6 +6,7 @@ import { ShieldIcon } from './Icons';
 import SiteMenu from './SiteMenu';
 import StoreLinks from './StoreLinks';
 import UpdateBanner from './UpdateBanner';
+import AppUpdateBanner from './AppUpdateBanner';
 import RestrictionBanner from './RestrictionBanner';
 import WarningBanner from './WarningBanner';
 import { useRestriction } from '../lib/restriction';
@@ -61,6 +62,7 @@ export default function Layout() {
           <SiteMenu />
         </div>
       </header>
+      <AppUpdateBanner />
       {auth.loginError && (
         <div className="login-error" role="alert">
           <p><strong>{auth.loginError.title ?? '로그인하지 못했습니다.'}</strong> {auth.loginError.message}</p>
