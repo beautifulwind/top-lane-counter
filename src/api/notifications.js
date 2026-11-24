@@ -59,3 +59,11 @@ export async function markAllNotificationsRead(upto) {
   announceNotificationsChanged();
   return data;
 }
+
+/** 알림 하나만 읽음 처리 (기존 DB 함수 mark_notifications_read에 id 하나만 넘긴다, 1.3 패치 1-D). 처리한 개수(0이면 이미 읽음)를 돌려준다 */
+export async function markNotificationRead(id) {
+  const { data, error } = await db().rpc('mark_notifications_read', { p_ids: [id] });
+  if (error) throw friendly(error, '알림을 확인 처리하지 못했습니다.');
+  announceNotificationsChanged();
+  return data;
+}

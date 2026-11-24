@@ -1,7 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Link, Navigate } from 'react-router-dom';
 import { getChampionMap } from '../api/ddragon';
-import { getNotifications, markAllNotificationsRead } from '../api/notifications';
+import { getNotifications, markAllNotificationsRead, markNotificationRead } from '../api/notifications';
 import { getMyTitleBookOnce, hasTitleBookOnce } from '../api/rewards';
 import { useAuth } from '../lib/auth';
 import { describeNotification, noticeTime } from '../lib/notifications';
@@ -21,9 +21,9 @@ const ICONS = {
 };
 
 /**
- * 알림 (/notifications, SPEC 6-17): 내 알림 전부 최신순 한 줄씩, 20개씩 [더 보기].
- * 열면 이 화면 맨 위 알림까지 안 읽은 알림을 한 번에 읽음 처리 → ☰·[알림]의 빨간 점이 꺼진다.
- * "새" 표시는 이번 방문 동안 남는다 (안 읽었던 것 + 이번에 읽음 처리한 것). 로그인한 사람만 (비회원 포함, 닉네임 전도 볼 수 있음)
+ * 알림 (/notifications, SPEC 6-17, 6-90): 내 알림 전부 최신순 한 줄씩, 20개씩 [더 보기].
+ * 열어도 읽음 처리하지 않는다. 알림 한 줄을 누르면 그 줄만 읽음 처리(이동은 막지 않음), 맨 위 [모두 읽음]은 안 읽은 알림이 있을 때만.
+ * 읽으면 「새」 표시·색이 바로 꺼지고 ☰·[알림]의 빨간 점이 다시 센다. 로그인한 사람만 (비회원 포함, 닉네임 전도 볼 수 있음)
  */
 export default function Notifications() {
   const auth = useAuth();
@@ -51,13 +51,10 @@ function NotificationList({ userId }) {
   const [extra, setExtra] = useState({ base: null, rows: [], more: false });
   const [busy, setBusy] = useState(false);
   const [moreError, setMoreError] = useState(null);
-  const [markedAt, setMarkedAt] = useState(null);
-
-  useEffect(() => {
-    if (!data) return;
-    // 화면에 보였다 = 확인했다 → 맨 위 알림까지 모두 읽음 (실패하면 다음에 다시)
-    if (data.rows.some((n) => !n.read_at)) markAllNotificationsRead(data.rows[0].id).then(setMarkedAt, () => {});
-  }, [data]);
+  // 이 화면에서 읽음 처리한 알림 번호들 (불러온 목록의 read_at은 그대로 두고 겹쳐 본다)
+  const [readIds, setReadIds] = useState(() => new Set());
+  const [allUpto, setAllUpto] = useState(null); // [모두 읽음]으로 처리한 맨 위 번호
+  const [markError, setMarkError] = useState(null);
 
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
@@ -66,7 +63,23 @@ function NotificationList({ userId }) {
   if (rows.length === 0) return <p className="empty">아직 받은 알림이 없습니다.</p>;
 
   const name = (id) => data.champs[id]?.name ?? id;
-  const isNew = (n) => !n.read_at || (markedAt && new Date(n.read_at).getTime() >= new Date(markedAt).getTime());
+  const isNew = (n) => !n.read_at && !readIds.has(n.id) && !(allUpto != null && n.id <= allUpto);
+  const anyNew = rows.some(isNew);
+  /** 한 줄 읽음 처리: 색을 바로 끄고, 실패하면 되돌린다. 이동은 기다리지 않는다 (합쳐진 알림도 한 줄 = id 하나) */
+  const readOne = (n) => {
+    if (!isNew(n)) return;
+    setReadIds((s) => new Set(s).add(n.id));
+    markNotificationRead(n.id).catch(() => setReadIds((s) => { const x = new Set(s); x.delete(n.id); return x; }));
+  };
+  const readAll = async () => {
+    setMarkError(null);
+    try {
+      await markAllNotificationsRead(data.rows[0].id);
+      setAllUpto(data.rows[0].id);
+    } catch (e) {
+      setMarkError(e.message);
+    }
+  };
   const loadMore = async () => {
     setBusy(true);
     setMoreError(null);
@@ -81,8 +94,14 @@ function NotificationList({ userId }) {
 
   return (
     <>
+      {anyNew && (
+        <div className="actions end">
+          <button type="button" className="btn btn-small" onClick={readAll}>모두 읽음</button>
+        </div>
+      )}
+      {markError && <p className="form-error" role="alert">{markError}</p>}
       <ul className="noti-list" aria-label="알림 목록">
-        {rows.map((n) => <NotificationRow key={n.id} n={n} fresh={isNew(n)} name={name} book={data.book} />)}
+        {rows.map((n) => <NotificationRow key={n.id} n={n} fresh={isNew(n)} name={name} book={data.book} onRead={() => readOne(n)} />)}
       </ul>
       {ext.more && (
         <div className="actions center">
@@ -95,7 +114,7 @@ function NotificationList({ userId }) {
   );
 }
 
-function NotificationRow({ n, fresh, name, book }) {
+function NotificationRow({ n, fresh, name, book, onRead }) {
   const d = describeNotification(n, name, book);
   const Icon = ICONS[d.icon];
   const body = (
@@ -119,7 +138,19 @@ function NotificationRow({ n, fresh, name, book }) {
   );
   return (
     <li className={`noti-row${fresh ? ' new' : ''}`}>
-      {d.to ? <Link to={d.to} className="noti-main">{body}</Link> : <div className="noti-main">{body}</div>}
+      {d.to
+        ? <Link to={d.to} className="noti-main" onClick={onRead}>{body}</Link>
+        : fresh
+          ? (
+            // 가는 곳이 없는 알림도 안 읽은 것은 눌러서 읽음 처리 (키보드 Enter·Space)
+            <div
+              className="noti-main" role="button" tabIndex={0} onClick={onRead}
+              onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onRead(); } }}
+            >
+              {body}
+            </div>
+          )
+          : <div className="noti-main">{body}</div>}
     </li>
   );
 }

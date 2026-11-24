@@ -291,6 +291,7 @@ kbd {
   .enemy-portrait, .vs-side img { width: 72px; height: 72px; }
 }
 .actions.center { justify-content: center; }
+.actions.end { justify-content: flex-end; margin-top: 0; margin-bottom: var(--gap-sm); }
 
 
 /* 로그인 · 닉네임 설정 */

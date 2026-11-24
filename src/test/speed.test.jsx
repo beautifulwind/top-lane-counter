@@ -108,10 +108,11 @@ test('빨간 점: 앱을 열 때 한 번 세고, 화면을 옮겨도 다시 세�
   expect(asked('notifications')).toHaveLength(2);
 });
 
-test('알림 화면: 열면 읽음 처리 → 점이 꺼진다 (세기는 앱 열 때 1 + 읽음 처리 직후 1)', async () => {
+test('알림 화면: [모두 읽음]을 누르면 읽음 처리 → 점이 꺼진다 (세기는 앱 열 때 1 + 읽음 처리 직후 1)', async () => {
   fakeLogin(ME, { nickname: '기존유저' });
   TABLES.notifications.push(noti('level_up'));
   start('/notifications');
+  fireEvent.click(await screen.findByRole('button', { name: '모두 읽음' }));
   await waitFor(() => expect(TABLES.notifications.every((n) => n.read_at)).toBe(true));
   await waitFor(() => expect(fakeState.rpcCalls.some((c) => c.name === 'mark_all_notifications_read')).toBe(true));
   // 개수 세기 2번(처음 + 읽음 처리 뒤) + 목록 1번

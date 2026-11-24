@@ -1,4 +1,4 @@
-// 027: 알림 화면 /notifications — 종류별 아이콘·제목·둘째 줄·이동, 열면 모두 읽음("새"는 이번 방문 동안 남음), 20개씩 [더 보기],
+// 027: 알림 화면 /notifications — 종류별 아이콘·제목·둘째 줄·이동, 열어도 읽음 처리 안 함·한 줄 누르면 그 id만·[모두 읽음], 20개씩 [더 보기],
 // 로그인한 사람만(비회원 포함), 마이페이지에는 [알림 보기]만
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
@@ -100,21 +100,77 @@ test('레벨·칭호 알림: 마이페이지로, 칭호는 그 칭호 색 훈장
   expect(title.querySelector('.noti-icon.title-color.general .medal-icon')).not.toBeNull();
 });
 
-test('열면 맨 위 알림까지 모두 읽음 처리, "새" 표시는 이번 방문 동안 남는다', async () => {
+test('열기만 해서는 읽음 처리하지 않고, 안 읽은 색은 닫았다 다시 열어도 그대로다 (1.3 1-D)', async () => {
   TABLES.notifications.push(
     noti('level_up', { message: '레벨이 올랐습니다: Lv.2' }), // 이미 읽음
+    noti('level_up', { message: '레벨이 올랐습니다: Lv.3', read_at: null }),
+  );
+  fakeLogin(ME);
+  const first = start('/notifications');
+  expect((await rowOf('레벨이 올랐습니다: Lv.3')).className).toBe('noti-row new');
+  expect((await rowOf('레벨이 올랐습니다: Lv.2')).className).toBe('noti-row');
+  expect(fakeState.rpcCalls).toEqual([]);
+  first.unmount();
+  start('/notifications'); // 열었다 닫고 다시 열기
+  expect((await rowOf('레벨이 올랐습니다: Lv.3')).className).toBe('noti-row new');
+  expect(fakeState.rpcCalls).toEqual([]);
+  expect(TABLES.notifications.filter((n) => !n.read_at)).toHaveLength(1);
+});
+
+test('알림 한 줄을 누르면 그 id만 읽음 처리하고 색이 바로 꺼진다 (이동 링크 포함, 다른 알림은 그대로)', async () => {
+  TABLES.edit_proposals.push(fakeProposal({ id: 501, status: 'approved' }));
+  TABLES.notifications.push(
+    noti('proposal_approved', { proposal_id: 501, message: '반영했습니다', read_at: null }),
+    noti('moderator_revoked', { message: '감독관에서 해제되었습니다.', read_at: null }),
+    noti('moderator_revoked', { message: '감독관에서 해제되었습니다 (둘째).', read_at: null }),
+  );
+  const [linked, plain, other] = TABLES.notifications.slice(-3);
+  fakeLogin(ME);
+  start('/notifications');
+  // 가는 곳이 없는 알림은 눌러서 읽음 처리 (화면에 남으므로 색이 꺼지는 것을 바로 볼 수 있다)
+  const p = await rowOf('감독관에서 해제되었습니다.');
+  fireEvent.click(within(p).getByRole('button'));
+  expect(p.className).toBe('noti-row');
+  await vi.waitFor(() => expect(plain.read_at).not.toBeNull());
+  expect(fakeState.rpcCalls.map((c) => c.args.p_ids)).toEqual([[plain.id]]);
+  expect(other.read_at).toBeNull();
+  expect((await rowOf('감독관에서 해제되었습니다 (둘째).')).className).toBe('noti-row new');
+  // 이동 링크가 있는 알림은 누르면 그 id만 읽음 처리하고 이동
+  fireEvent.click(within(await rowOf('제안이 승인됐습니다')).getByRole('link'));
+  await vi.waitFor(() => expect(linked.read_at).not.toBeNull());
+  expect(fakeState.rpcCalls.map((c) => c.args.p_ids)).toEqual([[plain.id], [linked.id]]);
+  expect(other.read_at).toBeNull();
+});
+
+test('호출이 실패해도 이동은 막히지 않는다 (색은 다시 안 읽음으로)', async () => {
+  TABLES.edit_proposals.push(fakeProposal({ id: 501, status: 'approved' }));
+  TABLES.notifications.push(noti('proposal_approved', { proposal_id: 501, message: '반영했습니다', read_at: null }));
+  fakeLogin(ME);
+  fakeState.rpcError = '네트워크 오류';
+  start('/notifications');
+  const row = await rowOf('제안이 승인됐습니다');
+  fireEvent.click(within(row).getByRole('link'));
+  await vi.waitFor(() => expect(screen.queryByRole('list', { name: '알림 목록' })).toBeNull()); // 알림 화면을 떠났다
+  expect(TABLES.notifications[TABLES.notifications.length - 1].read_at).toBeNull();
+});
+
+test('[모두 읽음]: 안 읽은 알림이 있을 때만 보이고, 누르면 기존 mark_all_notifications_read를 맨 위 번호까지 부른다', async () => {
+  TABLES.notifications.push(
     noti('level_up', { message: '레벨이 올랐습니다: Lv.3', read_at: null }),
     noti('level_up', { message: '레벨이 올랐습니다: Lv.4', read_at: null }),
   );
   fakeLogin(ME);
   start('/notifications');
   const top = await rowOf('레벨이 올랐습니다: Lv.4');
-  await vi.waitFor(() => expect(fakeState.rpcCalls).toEqual([{ name: 'mark_all_notifications_read', args: { p_upto: TABLES.notifications[2].id } }]));
-  await vi.waitFor(() => expect(TABLES.notifications.every((n) => n.read_at)).toBe(true));
-  expect(top.className).toBe('noti-row new');
-  expect(within(top).getByText('새')).toBeDefined();
-  expect((await rowOf('레벨이 올랐습니다: Lv.3')).className).toBe('noti-row new');
-  expect((await rowOf('레벨이 올랐습니다: Lv.2')).className).toBe('noti-row');
+  fireEvent.click(screen.getByRole('button', { name: '모두 읽음' }));
+  await vi.waitFor(() => expect(fakeState.rpcCalls).toEqual([{ name: 'mark_all_notifications_read', args: { p_upto: TABLES.notifications[1].id } }]));
+  await vi.waitFor(() => expect(top.className).toBe('noti-row'));
+  expect(TABLES.notifications.every((n) => n.read_at)).toBe(true);
+  expect(screen.queryByRole('button', { name: '모두 읽음' })).toBeNull();
+  cleanup();
+  start('/notifications'); // 다 읽은 뒤 다시 열면 버튼 없음
+  await rowOf('레벨이 올랐습니다: Lv.4');
+  expect(screen.queryByRole('button', { name: '모두 읽음' })).toBeNull();
 });
 
 test('20개씩 [더 보기] — 더 오래된 알림을 이어 붙이고, 끝나면 버튼이 없다', async () => {

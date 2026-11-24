@@ -133,7 +133,7 @@ function revisionRequested() {
   fakeLogin('u-old', { nickname: '기존유저' });
 }
 
-test('빨간 점: [알림] 화면을 열면 꺼지고, 마이페이지의 재검토 요청 내용과 [고쳐서 다시 보내기]는 남는다', async () => {
+test('빨간 점: [알림] 화면을 열어도 안 꺼지고 그 알림을 누르면 꺼진다, 마이페이지의 재검토 요청 내용과 [고쳐서 다시 보내기]는 남는다', async () => {
   revisionRequested();
   start('/');
   // 빨간 점은 ☰와 메뉴의 [알림]에 (읽은 것·남의 것은 세지 않음)
@@ -147,8 +147,11 @@ test('빨간 점: [알림] 화면을 열면 꺼지고, 마이페이지의 재검
   const r = (await screen.findByText('운영자 메모: 9레벨을 고쳐 주세요')).closest('li');
   expect(within(r).getByText('새')).toBeDefined();
   expect(within(r).getByRole('link').getAttribute('href')).toBe('/me/proposals/7');
-  await vi.waitFor(() => expect(screen.getByRole('button', { name: '메뉴 열기' }).querySelector('.alert-dot')).toBeNull()); // 확인 → 꺼짐
-  expect(fakeState.rpcCalls).toEqual([{ name: 'mark_all_notifications_read', args: { p_upto: 41 } }]);
+  expect(fakeState.rpcCalls).toEqual([]); // 1.3 1-D: 열기만 해서는 읽음 처리하지 않는다
+  expect(screen.getByRole('button', { name: '메뉴 열기, 새 알림 1개' })).toBeDefined();
+  fireEvent.click(within(r).getByRole('link')); // 누르면 그 알림만 읽음 → 점이 꺼진다
+  await vi.waitFor(() => expect(screen.getByRole('button', { name: '메뉴 열기' }).querySelector('.alert-dot')).toBeNull());
+  expect(fakeState.rpcCalls).toEqual([{ name: 'mark_notifications_read', args: { p_ids: [41] } }]);
   expect(TABLES.notifications.find((n) => n.id === 42).read_at).toBeNull(); // 남의 것은 그대로
 
   // 마이페이지: 요청 내용과 버튼은 그대로, "새 알림" 태그는 없다
