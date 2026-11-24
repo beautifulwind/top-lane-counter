@@ -1,7 +1,10 @@
 // 메인 화면(챔피언 선택) 배치 설정 (1.3 패치 1-B2, SPEC 6-94). 한 곳에서만 정한다.
 
-/** 메인 장인 줄에 보이는 장인 수 (influencer_directory의 p_size, 팔로워 많은 순 앞에서부터) */
+/** 메인 장인 줄에 보이는 장인 수 (최근 활동순, 사진 없는 장인은 맨 뒤) */
 export const HOME_INFLUENCER_COUNT = 8;
+
+/** 사진 없는 장인을 뒤로 보내기 위해 먼저 받아 오는 장인 수 (이 중 사진 있는 순서로 앞 HOME_INFLUENCER_COUNT명만 보인다) */
+export const HOME_INFLUENCER_FETCH = 20;
 
 /** 챔피언 격자가 접힌 상태에서 보이는 줄 수 */
 export const CHAMP_VISIBLE_ROWS = 4;

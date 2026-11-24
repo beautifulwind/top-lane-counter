@@ -36,50 +36,55 @@ function seven() {
   // F·E·G: 빌드 없음 → 최근 활동 null
 }
 
-test('기본: 인원수 칩 7명, 줄(닉네임·인증·빌드 N · 팔로워 N), 팔로워 많은 순 — 같으면 최근 활동이 새로운 순, 빌드·팔로워 0도 표시, 쪽 번호 줄 없음', async () => {
+test('기본: 인원수 칩 7명, 줄(닉네임·인증·빌드 N · 팔로워 N), 최근 활동순 — 사진 없는 장인은 맨 뒤(각 묶음은 서버 순서 그대로), 빌드·팔로워 0도 표시, 쪽 번호 줄 없음', async () => {
   seven();
   start();
   expect(await screen.findByRole('heading', { level: 1, name: '장인' })).toBeDefined();
   expect(await screen.findByText('7명', { selector: '.count-badge' })).toBeDefined();
-  // 팔로워 3: B(최근 11-20) > A(11-01) > G(활동 없음), 2: C, 1: D, 0: 이이·Foxy (닉네임 순)
-  await waitFor(() => expect(names()).toEqual(['비이', '에이', '지이', '씨이', '디이', 'Foxy', '이이']));
+  // 서버(최근 활동순): 씨이(11-22) 비이(11-20) 디이(11-10) 에이(11-01) 지이(활동 없음, 팔로워 3) Foxy·이이(활동 없음, 팔로워 0)
+  // → 사진 있는 이이가 맨 앞으로, 사진 없는 나머지는 서버 순서 그대로
+  await waitFor(() => expect(names()).toEqual(['이이', '씨이', '비이', '디이', '에이', '지이', 'Foxy']));
   const rows = within(screen.getByRole('list', { name: '장인 목록' })).getAllByRole('listitem');
-  expect(rows[0].textContent).toContain('인증');
-  expect(rows[0].textContent).toContain('빌드 2 · 팔로워 3');
-  expect(rows[2].textContent).toContain('빌드 0 · 팔로워 3'); // G: 빌드 없어도 표시
-  expect(rows[5].textContent).toContain('빌드 0 · 팔로워 0'); // 팔로워 0도 표시
-  expect(within(rows[0]).getByRole('link', { name: /비이/ }).getAttribute('href')).toBe('/u/i-b');
-  expect(rows[0].querySelector('.inf-row-initial').textContent).toBe('비'); // 사진 없으면 닉네임 첫 글자 원
+  expect(rows[0].textContent).toContain('빌드 0 · 팔로워 0'); // 빌드·팔로워 0도 표시
+  expect(rows[2].textContent).toContain('인증');
+  expect(rows[2].textContent).toContain('빌드 2 · 팔로워 3');
+  expect(within(rows[2]).getByRole('link', { name: /비이/ }).getAttribute('href')).toBe('/u/i-b');
+  expect(rows[2].querySelector('.inf-row-initial').textContent).toBe('비'); // 사진 없으면 닉네임 첫 글자 원
   expect(screen.queryByRole('navigation', { name: '쪽 이동' })).toBeNull(); // 한 쪽(10명 이하)이면 쪽 번호 줄 숨김
-  expect(fakeState.directoryCalls.at(-1)).toEqual({ p_query: '', p_sort: 'followers', p_page: 1, p_size: INFLUENCER_PAGE_SIZE });
+  // 한 번에 50명까지 최신순으로 받아 웹에서 나눈다 (쪽마다 요청하지 않음)
+  expect(fakeState.directoryCalls).toEqual([{ p_query: '', p_sort: 'recent', p_page: 1, p_size: 50 }]);
 });
 
-test('정렬 칩: 최신순은 최근 활동이 새로운 순(없으면 맨 뒤, 같으면 팔로워 많은 순), 주소 ?sort=recent, 팔로워 칩으로 돌아가면 주소에서 사라짐', async () => {
+test('정렬 표시: 「최신순」 하나뿐(시계 아이콘, 누르는 칩이 아님) — 팔로워 많은 순 칩 없음, 눌러도 아무 일 없음', async () => {
   seven();
   start();
   await screen.findByText('7명');
-  expect(screen.getByRole('button', { name: '팔로워 많은 순' })).toHaveAttribute('aria-pressed', 'true');
-  fireEvent.click(screen.getByRole('button', { name: '최신순' }));
-  await waitFor(() => expect(names()).toEqual(['씨이', '비이', '디이', '에이', '지이', 'Foxy', '이이'])); // 활동 없는 G·E·F는 팔로워 3 → 0, 0은 닉네임 순
-  expect(where()).toBe('/influencers?sort=recent');
-  expect(screen.getByRole('button', { name: '최신순' })).toHaveAttribute('aria-pressed', 'true');
-  expect(fakeState.directoryCalls.at(-1).p_sort).toBe('recent');
-  fireEvent.click(screen.getByRole('button', { name: '팔로워 많은 순' }));
-  await waitFor(() => expect(names()[0]).toBe('비이'));
+  const chip = document.querySelector('.sort-chip');
+  expect(chip.textContent).toContain('최신순');
+  expect(chip.querySelector('svg')).not.toBeNull();
+  expect(screen.queryByRole('button', { name: /최신순|팔로워 많은 순/ })).toBeNull();
+  expect(screen.queryByText('팔로워 많은 순')).toBeNull();
+  const before = names();
+  const calls = fakeState.directoryCalls.length;
+  fireEvent.click(chip);
   expect(where()).toBe('/influencers');
+  expect(names()).toEqual(before);
+  expect(fakeState.directoryCalls).toHaveLength(calls);
 });
 
-test('주소에서 시작: ?sort=recent·?q= 가 그대로 적용된다 (새로고침해도 유지), 모르는 정렬은 기본', async () => {
+test('주소의 ?sort= 는 무시한다 (옛 링크도 오류 없이 최신순) — ?q= 는 그대로 적용, 다음 주소 갱신 때 ?sort=는 사라진다', async () => {
   seven();
-  start('/influencers?sort=recent&q=이이');
+  start('/influencers?sort=followers&q=이이');
   await waitFor(() => expect(names()).toEqual(['이이']));
   expect(screen.getByRole('searchbox', { name: '장인 닉네임' })).toHaveValue('이이');
-  expect(screen.getByRole('button', { name: '최신순' })).toHaveAttribute('aria-pressed', 'true');
-  expect(fakeState.directoryCalls.at(-1)).toMatchObject({ p_query: '이이', p_sort: 'recent' });
+  expect(screen.queryByRole('alert')).toBeNull();
+  expect(fakeState.directoryCalls.at(-1)).toEqual({ p_query: '이이', p_sort: 'recent', p_page: 1, p_size: 50 });
   cleanup();
   start('/influencers?sort=nope');
   await screen.findByText('7명');
-  expect(screen.getByRole('button', { name: '팔로워 많은 순' })).toHaveAttribute('aria-pressed', 'true');
+  expect(names()[0]).toBe('이이');
+  fireEvent.change(screen.getByRole('searchbox', { name: '장인 닉네임' }), { target: { value: 'fox' } });
+  await waitFor(() => expect(where()).toBe('/influencers?q=fox')); // sort는 빠지고 q만
 });
 
 test('검색: 입력을 멈추면 주소 ?q=에 올라가 걸러진다, 20자 제한, 공백뿐이면 빈 검색, 결과가 없으면 한 줄 안내', async () => {
@@ -103,7 +108,7 @@ test('검색: 입력을 멈추면 주소 ?q=에 올라가 걸러진다, 20자 �
   expect(fakeState.directoryCalls.every((c) => c.p_query === c.p_query.trim())).toBe(true);
 });
 
-test('쪽 번호: 11명이면 2쪽(10명 + 1명), 번호를 누르면 ?page=2·그 쪽만 요청, 1쪽이면 주소에서 사라짐, 끝을 넘긴 주소는 끝 쪽으로', async () => {
+test('쪽 번호: 11명이면 2쪽(10명 + 1명) — 웹에서 나누므로 쪽을 넘겨도 새 요청 없음, 1쪽이면 주소에서 사라짐, 끝을 넘긴 주소는 끝 쪽으로', async () => {
   for (let i = 1; i <= 11; i++) { const id = `p-${String(i).padStart(2, '0')}`; inf(id, `장인${String(i).padStart(2, '0')}`); follow(20 - i, id); }
   start();
   await screen.findByText('11명');
@@ -113,7 +118,7 @@ test('쪽 번호: 11명이면 2쪽(10명 + 1명), 번호를 누르면 ?page=2·�
   fireEvent.click(within(nav).getByRole('button', { name: '2쪽' }));
   await waitFor(() => expect(names()).toEqual(['장인11']));
   expect(where()).toBe('/influencers?page=2');
-  expect(fakeState.directoryCalls.at(-1).p_page).toBe(2);
+  expect(fakeState.directoryCalls).toHaveLength(1); // 처음 한 번(50명까지)만 받았다
   fireEvent.click(within(screen.getByRole('navigation', { name: '쪽 이동' })).getByRole('button', { name: '1쪽' }));
   await waitFor(() => expect(names()).toHaveLength(10));
   expect(where()).toBe('/influencers');
@@ -121,6 +126,68 @@ test('쪽 번호: 11명이면 2쪽(10명 + 1명), 번호를 누르면 ?page=2·�
   start('/influencers?page=9');
   await waitFor(() => expect(where()).toBe('/influencers?page=2'));
   await waitFor(() => expect(names()).toEqual(['장인11']));
+});
+
+test('사진 없는 장인은 쪽을 가로질러 항상 맨 뒤: 사진 있는 장인이 2쪽에 있어도 1쪽 앞으로 오고, 각 묶음은 서버 순서 그대로', async () => {
+  // 서버(최근 활동순 = 팔로워 순, 활동 없음): 장인01(19) … 장인12(8). 사진은 장인11·장인12만
+  for (let i = 1; i <= 12; i++) {
+    const id = `p-${String(i).padStart(2, '0')}`;
+    inf(id, `장인${String(i).padStart(2, '0')}`, i >= 11 ? { photo_path: `u/${id}.jpg` } : {});
+    follow(20 - i, id);
+  }
+  start();
+  await screen.findByText('12명');
+  await waitFor(() => expect(names()).toEqual(['장인11', '장인12', '장인01', '장인02', '장인03', '장인04', '장인05', '장인06', '장인07', '장인08']));
+  fireEvent.click(within(await screen.findByRole('navigation', { name: '쪽 이동' })).getByRole('button', { name: '2쪽' }));
+  await waitFor(() => expect(names()).toEqual(['장인09', '장인10']));
+});
+
+test('검색어가 있어도 같은 방식(50명까지 받아 웹에서 사진 순서·쪽 나누기), 차단한 장인은 빼고 쪽을 나눈다', async () => {
+  inf('s-1', '검색가', { photo_path: null }); inf('s-2', '검색나', { photo_path: 'u/s2.jpg' }); inf('s-3', '검색다'); inf('s-x', '딴사람');
+  follow(3, 's-1'); follow(2, 's-2'); follow(1, 's-3');
+  start('/influencers?q=검색');
+  await waitFor(() => expect(names()).toEqual(['검색나', '검색가', '검색다']));
+  expect(fakeState.directoryCalls).toEqual([{ p_query: '검색', p_sort: 'recent', p_page: 1, p_size: 50 }]);
+  cleanup();
+  fakeLogin('u-me', { nickname: '나' });
+  TABLES.user_blocks.push({ blocker_id: 'u-me', blocked_id: 's-2', blocked: { nickname: '검색나' } });
+  start('/influencers?q=검색');
+  await waitFor(() => expect(names()).toEqual(['검색가', '검색다']));
+  expect(screen.getByText('2명', { selector: '.count-badge' })).toBeDefined();
+});
+
+test('장인이 50명을 넘으면 사진 순서를 못 맞추므로 서버 쪽 나누기로 되돌린다 (쪽마다 10명 요청, 화면 깨짐 없음)', async () => {
+  for (let i = 1; i <= 51; i++) { const id = `p-${String(i).padStart(2, '0')}`; inf(id, `장인${String(i).padStart(2, '0')}`, i === 51 ? { photo_path: 'u/p51.jpg' } : {}); follow(100 - i, id); }
+  start();
+  await screen.findByText('51명');
+  await waitFor(() => expect(names()).toHaveLength(10));
+  expect(names()[0]).toBe('장인01'); // 사진 있는 장인51이 앞으로 오지 않는다 (서버 순서 그대로)
+  expect(fakeState.directoryCalls).toEqual([
+    { p_query: '', p_sort: 'recent', p_page: 1, p_size: 50 },
+    { p_query: '', p_sort: 'recent', p_page: 1, p_size: INFLUENCER_PAGE_SIZE },
+  ]);
+  fireEvent.click(within(await screen.findByRole('navigation', { name: '쪽 이동' })).getByRole('button', { name: '6쪽' }));
+  await waitFor(() => expect(names()).toEqual(['장인51']));
+  expect(fakeState.directoryCalls.at(-1)).toEqual({ p_query: '', p_sort: 'recent', p_page: 6, p_size: INFLUENCER_PAGE_SIZE });
+  expect(where()).toBe('/influencers?page=6');
+});
+
+test('알약 검색창: 글자가 있을 때만 [지우기], 누르면 입력·주소의 q·page를 비우고 입력창으로 초점이 돌아온다 (16px·type=search·enterkeyhint=search)', async () => {
+  for (let i = 1; i <= 11; i++) inf(`p-${i}`, `장인${String(i).padStart(2, '0')}`);
+  start('/influencers?q=장인&page=2');
+  const box = await screen.findByRole('searchbox', { name: '장인 닉네임' });
+  expect(box).toHaveValue('장인');
+  expect(box.getAttribute('type')).toBe('search');
+  expect(box.getAttribute('enterkeyhint')).toBe('search');
+  expect(box.getAttribute('maxlength')).toBe('20');
+  expect(box.closest('.pill-search')).not.toBeNull();
+  const clear = await screen.findByRole('button', { name: '지우기' });
+  fireEvent.click(clear);
+  expect(box).toHaveValue('');
+  expect(document.activeElement).toBe(box);
+  await waitFor(() => expect(where()).toBe('/influencers')); // q·page 모두 초기화
+  expect(screen.queryByRole('button', { name: '지우기' })).toBeNull(); // 비면 사라짐
+  await waitFor(() => expect(fakeState.directoryCalls.at(-1).p_query).toBe(''));
 });
 
 test('팔로우 버튼: 눌러도 줄 이동이 없고(팔로우중으로 바뀜), 팔로우 상태는 한 번에 받고, 본인 줄에는 버튼이 없다. 줄을 누르면 장인 페이지로', async () => {

@@ -4,7 +4,7 @@ import { getSearchIndex } from '../api/searchIndex';
 import { useAuth } from '../lib/auth';
 import { searchAll, tokenize } from '../lib/championSearch';
 import { matchupShort } from '../lib/josa';
-import { SearchIcon } from './Icons';
+import SearchField from './SearchField';
 import BuildTitle from './BuildTitle';
 
 export const NO_RESULT = '맞는 결과가 없습니다. 챔피언 이름(별명·초성도 됩니다)이나 빌드 제목의 일부를 띄어쓰기로 나눠 넣어 보세요.';
@@ -77,14 +77,13 @@ export default function BuildSearch({ champions, value, onChange }) {
 
   return (
     <div className="bs">
-      <div className="search">
-      <SearchIcon size={18} className="search-icon" />
-      <input
-        type="search" value={value} onChange={(e) => { onChange(e.target.value); }} onFocus={load} onKeyDown={onKeyDown}
-        placeholder="챔피언·빌드 검색 (예: 퀸 다리우스, ㄷㄹㅇㅅ)" aria-label="챔피언·빌드 검색" autoComplete="off" enterKeyHint="go"
-        role="combobox" aria-expanded={open && !empty} aria-controls={`${id}-list`} aria-autocomplete="list"
-        aria-activedescendant={open && active >= 0 ? options[active]?.id : undefined}
-      />
+      <div className="bs-search">
+        <SearchField
+          value={value} onChange={onChange} onFocus={load} onKeyDown={onKeyDown}
+          placeholder="챔피언·빌드 검색 (예: 퀸 다리우스, ㄷㄹㅇㅅ)" label="챔피언·빌드 검색"
+          role="combobox" aria-expanded={open && !empty} aria-controls={`${id}-list`} aria-autocomplete="list"
+          aria-activedescendant={open && active >= 0 ? options[active]?.id : undefined}
+        />
       </div>
       {open && (
         <div className="bs-panel" id={`${id}-list`} role="listbox" aria-label="검색 후보">

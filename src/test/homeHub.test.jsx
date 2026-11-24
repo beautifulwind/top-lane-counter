@@ -3,7 +3,7 @@ import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { AppRoutes } from '../App';
-import { CHAMP_VISIBLE_ROWS, HOME_INFLUENCER_COUNT } from '../lib/homeLayout';
+import { CHAMP_VISIBLE_ROWS, HOME_INFLUENCER_COUNT, HOME_INFLUENCER_FETCH } from '../lib/homeLayout';
 import { fakeFetch } from './fakeDdragon';
 import { TABLES, fakeLogin, fakeState } from './fakeSupabase';
 
@@ -42,16 +42,17 @@ const follow = (n, whom) => { for (let i = 0; i < n; i++) TABLES.influencer_foll
 const cells = () => document.querySelectorAll('.champ-grid li');
 const LIMIT = COLS * CHAMP_VISIBLE_ROWS;
 
-test('장인 줄: 팔로워 많은 순 앞 8명만(사진 없으면 첫 글자), 인원수 칩은 전체 수, 「전체」는 목록 밖에 따로, 「상대 챔피언」보다 위', async () => {
-  for (let i = 1; i <= 10; i++) { inf(`i-${i}`, `장인${String(i).padStart(2, '0')}`); follow(20 - i, `i-${i}`); }
+test('장인 줄: 최근 활동순 20명을 받아 사진 없는 장인은 뒤로 보낸 뒤 앞 8명만, 인원수 칩은 전체 수, 「전체」는 목록 밖에 따로, 「상대 챔피언」보다 위', async () => {
+  // 서버 순서(활동 없음 → 팔로워 순): 장인01 … 장인10. 사진은 장인09·장인10만 → 앞으로
+  for (let i = 1; i <= 10; i++) { inf(`i-${i}`, `장인${String(i).padStart(2, '0')}`, i >= 9 ? { photo_path: `u/i${i}.jpg` } : {}); follow(20 - i, `i-${i}`); }
   start();
   const list = await screen.findByRole('list', { name: '장인 목록' });
   const links = within(list).getAllByRole('link');
   expect(links).toHaveLength(HOME_INFLUENCER_COUNT);
-  expect(links.map((a) => a.getAttribute('aria-label'))).toEqual(Array.from({ length: 8 }, (_, i) => `장인${String(i + 1).padStart(2, '0')} 장인 페이지`));
-  expect(links[0].getAttribute('href')).toBe('/u/i-1');
-  expect(links[0].querySelector('.home-inf-initial').textContent).toBe('장');
-  expect(fakeState.directoryCalls.at(-1)).toEqual({ p_query: '', p_sort: 'followers', p_page: 1, p_size: HOME_INFLUENCER_COUNT });
+  expect(links.map((a) => a.getAttribute('aria-label'))).toEqual(['09', '10', '01', '02', '03', '04', '05', '06'].map((n) => `장인${n} 장인 페이지`));
+  expect(links[0].getAttribute('href')).toBe('/u/i-9');
+  expect(links[2].querySelector('.home-inf-initial').textContent).toBe('장'); // 사진 없으면 첫 글자
+  expect(fakeState.directoryCalls.at(-1)).toEqual({ p_query: '', p_sort: 'recent', p_page: 1, p_size: HOME_INFLUENCER_FETCH });
   const section = list.closest('section');
   expect(within(section).getByRole('heading', { name: /장인/ })).toBeDefined();
   expect(section.querySelector('.count-badge').textContent).toBe('10명');
@@ -160,4 +161,20 @@ test('챔피언을 누르면 상대법 문서로 가는 흐름은 그대로', as
   expect(first.getAttribute('href')).toBe('/champion/C00');
   fireEvent.click(first);
   await waitFor(() => expect(where()).toBe('/champion/C00'));
+});
+
+test('메인 검색창도 알약형: [지우기]는 글자가 있을 때만, 누르면 비우고 초점이 돌아오며 격자는 다시 4줄 (type=search, enterkeyhint=search)', async () => {
+  start();
+  const box = await screen.findByRole('combobox', { name: '챔피언·빌드 검색' });
+  expect(box.closest('.pill-search')).not.toBeNull();
+  expect(box.getAttribute('type')).toBe('search');
+  expect(box.getAttribute('enterkeyhint')).toBe('search');
+  expect(screen.queryByRole('button', { name: '지우기' })).toBeNull();
+  fireEvent.change(box, { target: { value: '챔프' } });
+  await waitFor(() => expect(cells()).toHaveLength(30));
+  fireEvent.click(await screen.findByRole('button', { name: '지우기' }));
+  expect(box).toHaveValue('');
+  expect(document.activeElement).toBe(box);
+  await waitFor(() => expect(cells()).toHaveLength(LIMIT));
+  expect(screen.queryByRole('button', { name: '지우기' })).toBeNull();
 });

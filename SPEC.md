@@ -1975,3 +1975,18 @@ RLS 원칙:
   - **사용처 없음(지우지 않고 남김)**: `components/TopSearch.jsx`(어디서도 안 씀), `components/InfluencerSearch.jsx`(TopSearch 안에서만 씀 — 단, `/influencers`가 검색 대기 시간 상수 `SEARCH_WAIT_MS`만 여기서 가져다 씀), 검색 칸 CSS(`.top-search-*`·`.inf-search-*`), `SiteMenu`의 `search` 아이콘 매핑. 정리하려면 따로 지시해 주세요.
 - **380px**: 장인 줄은 `min-width: 0`인 flex 한 줄(스크롤 목록 `flex: 1 1 0` + 「전체」 `flex: none`), 닉네임 말줄임이라 가로 넘침·겹침 없음. 격자·검색창은 기존 CSS 그대로.
 - **검사**: `src/test/homeHub.test.jsx`(9개: 장인 줄 8명·순서·사진 없음 첫 글자·인원수 칩·「전체」가 목록 밖·제목 순서·요청 인자 / 장인 클릭·「전체」 이동 / 실패 시 줄 사라짐(오류 상자 없음, 챔피언·검색 정상) / 0명·차단 제외 / 검색창 위치·헤더 돋보기 없음 / 4줄 제한·모두 보기·접기·`aria-expanded` / 4줄 이하면 버튼 없음 / 검색 중 제한 해제 / 챔피언 클릭 흐름). 기존 시험 수정: `followFind`(돋보기 시험은 `TopSearch`를 따로 붙여 `InfluencerSearch` 검색 동작을 계속 확인, 헤더에는 돋보기가 없음을 확인), `topbar`(상단 바 버튼·`bar` 항목), `bookmarks`(돋보기 앱 뒤로가기 시험 삭제), `homeSearch`·`influencers`·`navigation`(제목 유지·돋보기 없음·장인 줄 응답을 act 안에서 받음).
+
+### 6-95. 1-B2 보완 — 장인 정렬 통일(최신순)·사진 없는 장인 맨 뒤·알약형 검색창 (2026-11-24, 1.3 패치 1-B2 보완, 웹 화면만 — DB·마이그레이션·서버 함수·Edge Function·iOS·Android 설정 변경 없음)
+- **정렬**: 메인 장인 줄과 `/influencers` 모두 늘 **최근 활동순**(`influencer_directory`의 `p_sort = 'recent'`, 상수 `INFLUENCER_SORT`). `/influencers`의 정렬 칩 2개를 없애고 「최신순」(시계 아이콘, 선택된 모양) **표시 하나**만 둔다 — 누르는 칩이 아니라 `<span>`이라 눌러도 아무 일도 없다(스크린리더에는 「정렬: 최신순」). 주소의 `?sort=`는 읽지 않고(옛 링크도 오류 없이 최신순), 주소를 갱신할 때마다 지워진다. `INFLUENCER_SORTS`·기본 정렬 상수·정렬 칩 코드는 정리.
+- **사진 없는 장인은 맨 뒤**: `lib/influencerOrder.js`(`hasPhoto`, `photoFirst`) 한 곳 — 사진 있는 장인 → 없는 장인 순으로 나누고 각 묶음 안은 받은 순서(서버의 최근 활동순) 그대로(안정적). 나중에 DB 정렬에 사진 유무가 들어가면 이 파일과 호출부 두 곳만 바꾸면 된다. `photo_path`가 null·빈 문자열·공백뿐이면 사진 없음.
+  - **메인 줄**: `p_size = HOME_INFLUENCER_FETCH`(20, `lib/homeLayout.js`)로 받아 → 차단한 장인 제외 → `photoFirst` → 앞 `HOME_INFLUENCER_COUNT`(8)명. (차단을 먼저 빼서 8명이 채워진다.)
+  - **/influencers**: 한 번에 `p_size = INFLUENCER_FETCH_MAX`(50), `p_page = 1`로 받아(검색어가 있어도 같음, 검색어가 바뀔 때만 다시 받음) → 차단 제외 → `photoFirst` → 웹에서 `INFLUENCER_PAGE_SIZE`(10)명씩 나눠 쪽 번호로 보여 준다. 쪽을 넘겨도 새 요청이 없다. 인원수 칩 = 차단을 뺀 사람 수.
+  - **장인 50명 초과**: `total`이 50보다 크면 전체를 한 번에 못 받아 사진 순서를 맞출 수 없으므로 **서버 쪽 나누기로 되돌린다**(쪽마다 `p_page`·`p_size = 10` 요청, 서버 순서 그대로 — 사진 규칙 없음, 화면은 정상). **→ 장인 50명 초과 시 DB 정렬(`influencer_directory`)에 사진 유무 반영 필요** (그때 새 마이그레이션으로 정렬 열쇠에 사진 유무를 넣고, 웹의 `photoFirst`와 50명 한 번에 받기를 걷어낸다).
+  - **팔로우 상태**: 화면에 보이는 장인(그 쪽의 10명)만 대상으로 `getFollowStatus` 한 번(쪽을 넘기면 그 쪽만큼 한 번).
+- **알약형 검색창** (`components/SearchField.jsx`, 공통 CSS `.pill-search`): `/influencers` 닉네임 검색과 메인 「챔피언·빌드 검색」이 같이 쓴다. 높이 46px · 완전히 둥근 모서리 · 왼쪽 안쪽 여백 16px · 어두운 카드 배경 · 평소 얇은 중립 테두리, 입력칸에 초점이 있으면 주황 1px 테두리 · 왼쪽 주황 돋보기(19px, `Icons.jsx`의 `SearchIcon`) · 오른쪽 둥근 [지우기](26px, 어두운 회색, `aria-label="지우기"`, 누르는 칸 44px, 새 아이콘 `XCircleIcon`).
+  - [지우기]는 글자가 있을 때만 그려지고 입력창 위에 겹쳐(absolute) 있어 보였다 사라져도 레이아웃이 안 흔들린다(입력칸 오른쪽 여백은 늘 확보). 누르면 입력을 비우고 입력창으로 초점을 돌려준다. `/influencers`에서는 주소의 `q`·`page`도 바로 초기화.
+  - 입력 글자 16px(모바일 확대 방지), `type="search"`, `enterkeyhint="search"`(메인도 예전 `go`에서 변경). 브라우저가 붙이는 기본 지우기 ×는 숨긴다.
+  - **그대로**: placeholder 문구, `maxLength` 20(장인 검색), 검색 로직·후보 목록·대기 시간(`SEARCH_WAIT_MS`)·조합 입력 처리·`?q=` 동작, 검색 결과 표시. 메인 검색창은 예전처럼 위에 붙어 따라온다(`.bs-search`). 다른 화면의 `.search`(상대법 만들기·게시판 등)는 건드리지 않았다.
+- **바꾸지 않은 것**: 챔피언 선택 흐름, 4줄 + 모두 보기, 「전체」 고정, 팔로우 동작, 차단한 장인 제외 규칙.
+- **380px**: 검색창은 `width: 100%`·`min-width: 0`·`flex` 한 줄이라 줄바꿈·가로 넘침 없음(placeholder는 한 줄로 잘림). 「최신순」 표시는 인라인 알약.
+- **검사**: `influencers.test.jsx`(14개 — 표시 1개·`?sort=` 무시·사진 없는 장인 맨 뒤(쪽을 가로지름)·검색어 있을 때·차단 후 쪽 나누기·50명 초과 되돌림·지우기 버튼), `homeHub.test.jsx`(10개 — 20명 받아 사진 순 앞 8명, 메인 검색창 지우기), 기존 시험은 정렬·요청 인자 기대값만 수정. 전체 98개 파일 1075개 통과, 사이트 빌드 통과.
