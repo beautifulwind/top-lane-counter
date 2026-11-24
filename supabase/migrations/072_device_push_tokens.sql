@@ -27,7 +27,8 @@
 -- 6. 그대로인 것: 기존 함수(이름·인자·반환·본문) 전부 - notifications_push 트리거·push_on_notification·push_targets·push_wanted·push_forget 포함,
 --    push_subscriptions·push_settings·notifications 표·트리거·정책·권한·데이터. 옛 앱 1.1·1.2는 새 함수를 부르지 않으므로 그대로.
 -- 7. 발송(다음 단계, 이 파일에는 없음): 지금도 알림 줄이 생기면 트리거가 push_wanted로 거른 뒤 Edge Function web-push를 알림 번호로 부른다
---    (웹 구독이 없는 사람에게도 부른다). Edge Function은 service_role로 notifications에서 그 번호의 user_id·created_at을 읽고
+--    (바로잡음 - 073, SPEC 6-106: 072 시점의 push_wanted(067 본문)는 마지막에 웹 구독이 있어야 true라, 웹 구독이 없는 사람에게는
+--    부르지 않았다. 073이 그 조건을 「웹 구독 또는 앱 기기 토큰」으로 바꿨다). Edge Function은 service_role로 notifications에서 그 번호의 user_id·created_at을 읽고
 --    (push_targets와 같은 1시간 규칙), device_push_tokens에서 그 사람의 토큰을 읽어 보낸다. 무효 토큰은 이 표에서 지운다.
 --
 -- 실행 전 supabase/scripts/check_device_push_tokens_before.sql, 실행 뒤 check_device_push_tokens_after.sql

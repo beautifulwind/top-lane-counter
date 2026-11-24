@@ -417,3 +417,91 @@ describe('handlePush + 앱 발송', () => {
     expect(logs.some((l) => l.includes('app_push') || l.includes('app-push'))).toBe(false);
   });
 });
+
+// ---------------- 1.3 패치 P-2b (073, SPEC 6-106): 앱 토큰만 있고 웹 구독이 없는 사람 ----------------
+// 073 뒤 DB: push_wanted가 「웹 구독 또는 앱 토큰」이면 트리거가 부르고, push_targets는 그 사람에게 웹 구독 [](빈 목록)을 준다.
+// Edge Function은 바꾸지 않았다 - 웹은 0건으로 조용히 끝나고 앱 발송은 이어지는지 DB가 주는 모양 그대로 확인한다.
+describe('P-2b: 웹 구독 없이 앱 토큰만 있는 사람 (073)', () => {
+  const ENV = env({ VAPID_PUBLIC_KEY: 'pub', PUSH_WEBHOOK_SECRET: 's' });
+  const post = () => new Request('https://fn.test', {
+    method: 'POST', headers: { 'content-type': 'application/json', 'x-push-secret': 's' }, body: JSON.stringify({ notification_id: 5 }),
+  });
+  // 073 뒤 push_targets(앱만 사람의 알림)가 실제로 돌려주는 모양 (037·038·042 칸 전부, subscriptions는 [])
+  const TARGETS_APP_ONLY = {
+    notification: { id: 5, kind: 'link_removed', message: '링크가 삭제됐습니다.', proposal_id: null, build_id: null,
+      counter_id: null, target_champion: null, counter_champion: null, post_id: null },
+    subscriptions: [],
+  };
+  const webOnly = (data) => ({
+    targets: vi.fn(async () => ({ data, error: null })),
+    forget: vi.fn(async () => ({ data: 0, error: null })),
+    send: vi.fn(async () => {}),
+  });
+
+  test('웹은 보내기·만료 지우기를 하나도 부르지 않고 { ok, sent: 0 }으로 끝나며 오류 로그가 없다', async () => {
+    const web = webOnly(TARGETS_APP_ONLY);
+    const app = appDeps();
+    const r = await handlePush(post(), ENV, { ...web, app });
+    expect(r.status).toBe(200);
+    expect(await r.json()).toEqual({ ok: true, sent: 0 });
+    expect(web.send).not.toHaveBeenCalled();
+    expect(web.forget).not.toHaveBeenCalled();
+    expect(logs.some((l) => l.includes('web-push:'))).toBe(false); // 웹 쪽 오류·경고 없음
+    expect(logs.some((l) => l.includes('"event":"web_push"'))).toBe(false); // 보낸 게 없으면 웹 요약도 없음 (예전과 같음)
+  });
+  test('앱은 iOS·Android 모두 보내고, 내용은 describePush 그대로 (링크 관리로 이동)', async () => {
+    const app = appDeps();
+    await handlePush(post(), ENV, { ...webOnly(TARGETS_APP_ONLY), app });
+    const d = describePush(TARGETS_APP_ONLY.notification);
+    expect(d.url).toBe('/me/links');
+    expect(app.recipient).toHaveBeenCalledWith(5);
+    expect(app.iosSend).toHaveBeenCalledWith(IOS_TOKEN, { title: d.title, body: d.body, url: d.url, notificationId: 5 });
+    expect(app.andSend).toHaveBeenCalledWith(AND_TOKEN, { title: d.title, body: d.body, url: d.url, notificationId: 5 });
+    const summary = logs.filter((l) => l.includes('"event":"app_push"'));
+    expect(summary).toHaveLength(1);
+    expect(JSON.parse(summary[0])).toEqual({ event: 'app_push', kind: 'link_removed',
+      ios: { tokens: 1, sent: 1, failed: 0, removed: 0 }, android: { tokens: 1, sent: 1, failed: 0, removed: 0 } });
+  });
+  test('응답 뒤 발송(defer)이어도 앱만 사람에게 보낸다 (배포 환경과 같은 길)', async () => {
+    const app = appDeps();
+    const deferred = [];
+    const r = await handlePush(post(), ENV, { ...webOnly(TARGETS_APP_ONLY), app, defer: (w) => { deferred.push(w); return true; } });
+    expect(await r.json()).toEqual({ ok: true, sent: 0 });
+    expect(deferred).toHaveLength(1);
+    await deferred[0];
+    expect(app.iosSend).toHaveBeenCalledTimes(1);
+    expect(app.andSend).toHaveBeenCalledTimes(1);
+  });
+  test('subscriptions 칸이 null이거나 없어도 웹은 0건, 앱은 보낸다 (방어)', async () => {
+    for (const data of [{ ...TARGETS_APP_ONLY, subscriptions: null }, { notification: TARGETS_APP_ONLY.notification }]) {
+      const app = appDeps();
+      const web = webOnly(data);
+      expect(await (await handlePush(post(), ENV, { ...web, app })).json()).toEqual({ ok: true, sent: 0 });
+      expect(web.send).not.toHaveBeenCalled();
+      expect(app.iosSend).toHaveBeenCalledTimes(1);
+    }
+  });
+  test('그 사이 앱 토큰도 지워졌으면(로그아웃 등) 외부 호출 없이 조용히 끝난다', async () => {
+    const app = appDeps({ tokens: [] });
+    expect(await (await handlePush(post(), ENV, { ...webOnly(TARGETS_APP_ONLY), app })).json()).toEqual({ ok: true, sent: 0 });
+    expect(app.iosSend).not.toHaveBeenCalled();
+    expect(app.andSend).not.toHaveBeenCalled();
+    expect(logs).toEqual([]);
+  });
+  test('073 마이그레이션: push_wanted 마지막 조건이 「웹 구독 또는 앱 토큰」이고, 위 판단은 067과 같다', async () => {
+    const { readFileSync } = await import('node:fs');
+    const body = (file) => {
+      const src = readFileSync(new URL(`../../supabase/migrations/${file}`, import.meta.url), 'utf8').replace(/\r/g, '');
+      const m = /\ncreate or replace function public\.push_wanted\(p_user uuid, p_kind text\)\n([\s\S]*?)\n\$\$;/.exec(src);
+      return m[1];
+    };
+    const before = body('067_build_edit_notify.sql');
+    const after = body('073_push_wanted_device_tokens.sql');
+    const OLD = '  and exists (select 1 from public.push_subscriptions where user_id = p_user);';
+    const NEW = '  and (exists (select 1 from public.push_subscriptions where user_id = p_user)\n'
+      + '       or exists (select 1 from public.device_push_tokens where user_id = p_user));  -- 073: 웹 구독 또는 앱 기기 토큰';
+    expect(before.endsWith(OLD)).toBe(true);
+    expect(after.endsWith(NEW)).toBe(true);
+    expect(after.replace(NEW, OLD)).toBe(before); // 나머지(묶음·운영자 모드·설정)는 한 글자도 안 바뀜
+  });
+});

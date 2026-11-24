@@ -948,7 +948,7 @@ RLS 원칙:
 7. 확인: `supabase/scripts/check_web_push.sql` → 14·15번 true. 브라우저에서 `https://<프로젝트ID>.supabase.co/functions/v1/web-push`를 열면 `{"publicKey":"…"}` (공개 키라 보여도 괜찮다). 사이트에서 알림을 켜고 알림이 생기게 한 뒤 Edge Functions → web-push → Logs에 `{"event":"web_push",…,"sent":1}`.
    - 안 오면: `select id, status_code, left(content::text, 120) from net._http_response order by id desc limit 5;` — 401이면 `PUSH_WEBHOOK_SECRET`과 Vault 값이 다름, 404면 함수 이름·주소, 응답의 `failed`가 늘면 VAPID 세 값 확인.
 8. 끄기(잠깐 멈추기): Vault의 `push_function_url`을 지우면 알림 저장은 그대로이고 푸시만 안 간다.
-9. **앱(iOS·Android) 푸시** (1.3 패치 P-2): 같은 함수 `web-push`가 보낸다. 비밀 값 4개(`APNS_KEY_P8`·`APNS_KEY_ID`·`APNS_TEAM_ID`·`FCM_SERVICE_ACCOUNT_JSON`)와 배포 순서는 **6-102**.
+9. **앱(iOS·Android) 푸시** (1.3 패치 P-2): 같은 함수 `web-push`가 보낸다. 비밀 값 4개(`APNS_KEY_P8`·`APNS_KEY_ID`·`APNS_TEAM_ID`·`FCM_SERVICE_ACCOUNT_JSON`)와 배포 순서는 **6-102**. 웹 알림을 켜지 않은 앱 전용 사용자도 받으려면 073(**6-106**)까지 실행.
 
 ### 6-28. 용어 정리 "카운터" → "상대법" (2026-11-11, 041)
 - **새 용어**: 카운터 → "상대법", 카운터 챔피언 → "플레이할 챔피언". 화면에 보이는 글자만 바꾼다. 표·칸·함수 이름, 주소(URL), 코드 변수명, 알림 종류(kind)는 그대로.
@@ -2063,7 +2063,7 @@ RLS 원칙:
   - **토큰이 로그·오류에 안 나오게**: 함수가 표 제약과 같은 검사를 먼저 해 고정 문장(「기기 종류는 ios 또는 android만 됩니다.」「알림 토큰 형식이 올바르지 않습니다.」「앱 버전 형식이 올바르지 않습니다.」)으로 거절한다 → 제약 위반 상세(“Failing row contains …”)가 생기지 않는다. 중복은 `on conflict`라 중복 키 오류 상세도 없다. 반환값에도 토큰이 없다.
 - **068 활동 제한**: 두 함수는 `assert_can_write`를 넣지 않고 **허용 목록(restriction_exemptions)** 에 이유와 함께 넣었다. 선례: 웹 푸시 켜기·끄기(`push_subscriptions` 넣기·지우기 정책)와 알림 읽음 처리(`mark_notifications_read`·`mark_all_notifications_read`)가 허용 목록에 있다. 제한 중인 사람도 알림(제한·경고 안내 포함)을 받아야 하고, 토큰 등록은 남에게 보이는 쓰기가 아니다. → 일반 사용자가 부를 수 있는 쓰기 함수 101 → 103, 첫 줄 검사 30 그대로, 허용 목록 함수 71 → 73(전체 줄 79 → 81). 로컬 검사 `build_difficulty_test.sql`의 「쓰기 함수 101개」 기대값을 103개로, `user_warnings_test.sql`의 허용 목록 「71/8」을 「73/8」로 고쳤다(`restriction_coverage_test.sql`·`user_restrictions_test.sql`은 검사 30개만 세므로 그대로).
 - **발송 설계 (다음 단계 P-2, 이번에 만들지 않음) — 기존 함수를 고치지 않고 가능**:
-  - 지금도 알림 줄이 생기면 `notifications_push` 트리거가 `push_wanted`(설정·운영자 모드)로 거른 뒤 Edge Function `web-push`를 알림 번호로 부른다. 이 호출은 **웹 구독이 없는 사람에게도** 간다(트리거는 구독 여부를 보지 않음).
+  - 지금도 알림 줄이 생기면 `notifications_push` 트리거가 `push_wanted`(설정·운영자 모드)로 거른 뒤 Edge Function `web-push`를 알림 번호로 부른다. ~~이 호출은 웹 구독이 없는 사람에게도 간다~~ → **바로잡음(6-106)**: 이때의 `push_wanted`(067 본문)는 마지막에 웹 구독이 있어야 true라 웹 구독이 없는 사람에게는 부르지 않았다. 073이 「웹 구독 또는 앱 기기 토큰」으로 바꿨다.
   - Edge Function(service_role)은 기존대로 `push_targets(번호)`로 웹 구독에 보내고, 이어서 `notifications`에서 그 번호의 `user_id`·`created_at`을 직접 읽어(`push_targets`와 같은 1시간 규칙) `device_push_tokens`에서 그 사람의 토큰을 읽어 APNs/FCM으로 보낸다. 무효 토큰(APNs 410 / FCM UNREGISTERED 등)은 이 표에서 지운다. 알림 내용·주소는 `push_targets`가 주는 notification과 기존 `describePush`를 그대로 쓴다.
   - service_role의 `notifications` 읽기는 Supabase 기본 권한이다(007은 anon·authenticated에서만 회수).
   - 차이 하나: `push_targets`는 보내기 직전 `push_wanted`를 한 번 더 보지만(트리거 뒤 몇 ms 사이 설정 변경), `push_wanted`는 service_role에 실행 권한이 없어 Edge Function이 앱 토큰 쪽에서는 다시 볼 수 없다. 트리거가 이미 걸렀으므로 실제 차이는 거의 없다. 다시 보게 하려면 service_role 전용 새 읽기 함수(예: `device_push_targets(번호)`)를 다음 마이그레이션에 더하면 된다(기존 함수 변경 없음).
@@ -2074,7 +2074,7 @@ RLS 원칙:
 ### 6-102. 1.3 패치 P-2 — 앱(iOS·Android) 푸시 보내기: Edge Function `web-push`에 앱 발송 추가 (2026-11-24 — Edge Function 파일만, 배포·비밀 값 입력 안 함, DB·웹 화면·앱 네이티브 파일 변경 없음)
 - **배포 방식 확인**: Edge Function은 CLI가 아니라 **대시보드 편집기에 파일 내용을 붙여 넣어 Deploy**한다(11-11 4번, 11-10). 그래서 `supabase/functions/web-push/index.ts` **한 파일**, import는 `npm:` 지정 그대로(새 import 없음 — 서명은 WebCrypto, 호출은 fetch).
 - **전체 흐름** (DB 트리거·함수는 그대로):
-  1. 알림 줄이 생김 → 트리거 `notifications_push` → `push_on_notification()`이 `push_wanted`(설정·운영자 모드)로 거른 뒤 pg_net으로 `web-push`를 알림 번호로 부른다(웹 구독이 없어도 부른다).
+  1. 알림 줄이 생김 → 트리거 `notifications_push` → `push_on_notification()`이 `push_wanted`(설정·운영자 모드)로 거른 뒤 pg_net으로 `web-push`를 알림 번호로 부른다(**바로잡음(6-106)**: 073 전에는 웹 구독이 없으면 `push_wanted`가 false라 부르지 않았다 — 073 뒤에는 웹 구독 또는 앱 기기 토큰이 있으면 부른다).
   2. **웹 발송**: `push_targets(번호)` → 웹 구독에 VAPID로 보냄 → 404·410 구독 지움. 응답·로그·규칙은 P-2 전과 같다(코드는 `webPush()`로 옮기기만).
   3. **앱 발송**(웹이 끝난 뒤, `finally`라 웹 쪽에 예외가 나도 실행): `push_targets`가 알림 내용을 줬을 때만(=알림이 있고 1시간 안) → service_role로 `notifications`에서 `user_id`·`created_at`을 읽어 **1시간 규칙을 한 번 더** → `device_push_tokens`에서 그 사람의 토큰(최대 20줄 읽음, 한 사람 10대 제한) → iOS·Android를 `Promise.allSettled`로 따로 → 확실한 무효 토큰만 지움 → 요약 로그 한 줄.
   4. 앱 발송은 Supabase가 `EdgeRuntime.waitUntil`을 주면 **응답을 먼저 돌려주고 뒤에서** 한다(웹 응답 시각이 P-2 전과 같음). 없으면 끝날 때까지 기다린 뒤 응답한다. 앱 쪽 실패·예외는 웹 응답에 닿지 않는다.
@@ -2153,3 +2153,29 @@ RLS 원칙:
 - **바꾼 값**: Android `versionName` 1.2 → 1.3, `versionCode` 2 → 3 / iOS `MARKETING_VERSION` 1.2 → 1.3 (Debug·Release 두 줄). iOS 빌드 번호(`CURRENT_PROJECT_VERSION`, 저장소 값 2)와 Android 실제 versionCode는 Codemagic이 빌드 머신 안에서만 올린다(iOS = TestFlight 최신 +1과 Codemagic 빌드 번호 중 큰 값, Android = Codemagic 빌드 번호와 저장소 값 +1 중 큰 값). 저장소 값은 그 아래로만 내려가지 않으면 된다.
 - **다른 버전 값**: `package.json`의 `0.1.0`은 앱 버전과 무관(그대로). 앱 화면에 「1.2」를 하드코딩한 곳은 없다(앱 버전은 Capacitor `App.getInfo()`에서 읽음).
 - **`version.json`은 출시 후 올린다**: 앱 안 업데이트 배너는 `public/version.json`의 값이 설치된 앱 버전보다 높을 때만 뜬다. 스토어에 1.3이 실제로 올라온 **뒤에** `{"ios":"1.3.0","android":"1.3.0"}`로 올려 배포한다. 먼저 올리면 아직 받을 수 없는 버전을 안내하게 된다. 지금은 1.2.0 그대로이며, 앱 1.3(>1.2.0)에서는 배너가 뜨지 않는다(`appUpdate.test.jsx`로 확인).
+
+### 6-106. 1.3 패치 P-2b — 앱 토큰만 있고 웹 구독이 없는 사람도 앱 푸시를 받게 (073) (2026-11-24 — DB 파일·확인 스크립트·테스트만, 운영 DB 미실행, Edge Function 코드 변경 없음·다시 배포 불필요)
+- **문제**: 알림 줄이 생기면 트리거 `notifications_push` → `push_on_notification()`이 `push_wanted(받는 사람, 종류)`가 true일 때만 Edge Function `web-push`를 부른다. `push_wanted` 최신 본문(067)은 마지막에 `and exists (select 1 from public.push_subscriptions where user_id = p_user)` — **웹 푸시 구독이 하나라도 있어야** true다. 그래서 웹 알림을 한 번도 켜지 않고 앱에서만 알림을 켠 사람(`device_push_tokens`에만 줄이 있음)은 Edge Function이 아예 불리지 않아 **앱 푸시가 조용히 건너뛰어졌다**(오류·로그 없음). 072 머리 주석 7번과 6-101·6-102의 「웹 구독이 없어도 부른다」는 틀린 설명이었다 → 바로잡음 표시를 달았다.
+- **변경** (`migrations/073_push_wanted_device_tokens.sql`): `push_wanted(uuid, text)`의 마지막 조건 하나만
+  - 전: `and exists (select 1 from public.push_subscriptions where user_id = p_user);`
+  - 후: `and (exists (select 1 from public.push_subscriptions where user_id = p_user)`<br>`or exists (select 1 from public.device_push_tokens where user_id = p_user));`
+  - 그 위의 판단(알림 종류별 묶음 `push_group`, 운영진 알림의 감독관·운영자 모드, `push_settings` 종류별 켜기·끄기와 설정 줄이 없을 때의 기본값 — `new_followers`만 꺼짐)은 **한 글자도 바꾸지 않았다**: 새 본문에서 새 조건을 옛 조건으로 되바꾸면 067 본문 지문 `bfb8e95016ca726a7dade1b76bb56fce`와 같다(확인 스크립트·SQL 테스트·웹 테스트 셋 다 확인).
+  - 이름·인자·반환(boolean)·stable·security definer·search_path ''·소유자·실행 권한(anon·authenticated·service_role 모두 없음)은 `create or replace`라 그대로. 새 본문 지문(CR 뺌) `e6f1723ae3a6b0126ece4b51488a067c`.
+  - **소유자 권한으로 `device_push_tokens`를 읽을 수 있음**: `push_wanted`는 security definer라 소유자(postgres) 권한으로 돈다. `device_push_tokens`도 postgres 소유이고, 표 소유자는 **FORCE ROW LEVEL SECURITY가 아니면 RLS를 거치지 않는다**(072는 RLS만 켜고 FORCE는 안 함, revoke는 public·anon·authenticated·service_role에서만). 073 실행 때 「소유자 같음·FORCE 꺼짐·소유자 select 권한」을 확인하고 아니면 멈춘다. 로컬 테스트는 슈퍼유저가 아닌 역할을 표 소유자로 바꿔 봐도 정책 없는 RLS에 막히지 않고 읽는 것을 확인(되돌림).
+  - **다시 실행 방지**: 지금 본문 지문이 067(`bfb8e950…`)일 때만 바꾼다. 이미 073이면 「이미 실행했습니다」, 다른 본문이면 지문을 보여 주고 멈춤, 072 전이면 멈춤.
+- **영향**: 「웹 구독 없음 + 앱 토큰 있음」인 사람만 false → true(모든 알림 종류 × 모든 사람 표로 확인 — 다른 경우는 결과가 067과 같다). 웹 구독이 있는 사람·둘 다 없는 사람·설정을 끈 사람은 전과 같다. 다른 함수·표·트리거·정책·권한·데이터는 그대로, 068 쓰기 함수 수 103 / 첫 줄 검사 30 / 허용 목록 73 그대로(`push_wanted`는 일반 사용자가 부를 수 없는 stable 함수).
+- **Edge Function(`web-push`) 확인 — 고칠 곳 없음, 다시 배포 불필요**:
+  - `webPush()`는 `push_targets` 결과에 알림 내용이 있으면 **먼저** `shared.notice`에 담은 뒤, 웹 구독이 0개면 `{ ok: true, sent: 0 }`으로 끝낸다. 앱 발송은 `handlePush`의 `finally`에서 `shared.notice`가 있으면 이어서 하므로 **웹 구독이 없다고 앱 발송 전에 끝내는 코드는 없다**. 웹 쪽은 보내기·만료 지우기를 하나도 부르지 않고 오류·경고 로그도 없다(`subscriptions`가 null·없음이어도 `?? []`).
+  - 073 뒤 `push_targets(앱만 사람의 알림)`는 `{ notification: {…}, subscriptions: [] }`(`push_wanted`가 true라 구독 목록을 읽지만 0개) → 위 길로 앱 발송.
+  - 앱 쪽 1시간 규칙·토큰 조회·무효 토큰 지우기는 6-102 그대로.
+- **「웹 구독이 있다」를 전제한 다른 곳 찾기** (DB 마이그레이션 전체·Edge Function·화면):
+  - DB에서 `push_subscriptions`를 읽는 판단은 `push_wanted` 하나뿐(037~067의 옛 본문들 포함 모두 같은 줄). `push_wanted`를 부르는 곳은 `push_on_notification()`(트리거: 부를지)과 `push_targets(bigint)`(Edge Function용: 웹 구독 목록을 줄지) 둘뿐 → 둘 다 073으로 함께 고쳐진다. `push_targets`는 알림 내용을 `push_wanted`와 관계없이 주고 구독 목록만 거르므로 다른 전제 없음.
+  - **알림 합치기**(빌드 수정 10분 묶기 067, 팔로우 새 빌드 3시간 050, 새 팔로워 하루 한 번 052 등): 묶일 때는 있던 줄을 고치므로 트리거(after insert)가 다시 부르지 않는다 — 웹·앱 공통 규칙이고 웹 구독 여부와 무관. `notifications_notice_once`(공지 한 번)도 무관.
+  - 화면: [계정 설정 → 휴대폰 알림]의 받을 알림 종류(`PushKinds`)는 웹·앱 모두 기기 켜기 여부와 관계없이 보인다 → 앱 전용 사용자도 종류를 끄고 켤 수 있다. 전제 없음.
+  - (참고, 웹 구독과 무관한 기존 한계 — 6-102 그대로) 앱 쪽은 보내기 직전에 `push_wanted`를 다시 보지 않고 트리거가 걸러 준 결과를 따른다.
+- **확인 스크립트**: `scripts/check_push_wanted_before.sql`(1~3 실행 가능 확인: 072까지 실행·`push_wanted`가 067 본문·소유자 권한 / 4~13 적어 둘 값: 쓰기 함수 수 103/30/73·지문, `push_wanted`를 뺀 public 함수 전체 지문, 웹 푸시 발송 함수 4개(`push_on_notification`·`push_targets`·`push_forget`·`push_group`) 지문, `push_wanted`의 본문 밖 속성(인자·반환·volatile·보안·search_path·권한·소유자), 푸시 관련 표 4개의 칸·제약·트리거·정책·권한·RLS, 허용 목록 지문, 웹 구독·앱 토큰·설정·알림 수(개수·id·지문만, 토큰·endpoint 값 출력 없음), 읽기 함수 지문 / 14 참고: 웹만·앱만·둘 다 사람 수), `scripts/check_push_wanted_after.sql`(1~9: 새 본문 지문, 되바꾸면 067 지문, 모양·같은 이름 1개, 실행 권한 없음, 소유자 권한, 트리거 그대로, `push_wanted`를 부르는 함수 2개, 쓰기 함수 103/30/73, 빠뜨림 방지 없음 / 10~19: 실행 전 4~13과 같음 / 20 참고).
+- **테스트**: `tests/push_wanted_device_tokens_test.sql` 37개 — 웹 구독만(전과 같음, 모든 종류에서 067과 같음), 앱 토큰만(true, 073 전 false), 둘 다 없음(모든 종류 false), 둘 다(067과 같음), 설정을 모두 끈 사람(false), 감독관·운영자(운영자 모드 켬/끔)·운영진 설정 끔·운영진이 아닌 사람의 운영진 종류, 새 팔로워 기본 꺼짐·켬, 묶음 하나만 끔, **모든 사람 × 모든 알림 종류(제약에서 읽은 전체 + 없는 종류)** 에서 `push_wanted = 067 판단 and (웹 or 앱)`이고 067과 달라지는 곳은 「웹 없음 + 앱 있음」의 false → true뿐, 트리거가 앱만 사람에게 부름·없는 사람·설정 끔에는 안 부름·부르는 내용 그대로, `push_targets`가 앱만 사람에게 `[]`·웹 사람에게 구독 그대로, 토큰 해제·탈퇴 뒤 false, 본문·권한·소유자·쓰기 함수 수, 슈퍼유저가 아닌 소유자 흉내. 073 없이 돌리면 실패하는 것도 확인. `src/test/appPush.test.js`에 6개 추가(54개) — 073 뒤 DB가 주는 모양(`subscriptions: []`) 그대로 웹 보내기·지우기 호출 없음·오류 로그 없음·웹 응답 `{ ok, sent: 0 }`, 앱은 iOS·Android 모두 `describePush` 내용으로 보냄·요약 한 줄, 응답 뒤 발송(defer)에서도, `subscriptions`가 null·없음, 그 사이 토큰도 없어지면 외부 호출·로그 없음, 073 파일과 067 파일의 `push_wanted` 본문을 읽어 마지막 조건만 다른지.
+- **확인(로컬 Docker Postgres)**: 072까지 만든 DB에서 실행 전 스크립트(14줄) → 073 → 실행 뒤 스크립트(20줄)가 모두 정상 값·실행 전과 같은 지문(쓰기 함수 103/30/73, `push_wanted`를 뺀 public 함수 374개 지문 같음, `push_wanted` 본문 밖 속성 같음). 073을 다시 실행하면 「이미 실행했습니다」로 멈춤. 아래 되돌리기 SQL을 파일 주석에서 그대로 떼어 실행하면 067 지문·권한으로 돌아가고, 그 뒤 073을 CRLF로 붙여 넣어 다시 실행해도 같은 지문(CR 뺌).
+- **되돌리는 법**: 073 맨 위 주석의 되돌리기 블록(`begin; create or replace function public.push_wanted … 067 본문 그대로 … commit;`)을 맨 앞 `-- `를 빼고 SQL Editor에서 실행. 데이터는 지우지 않는다. 되돌리면 앱 토큰만 있는 사람은 다시 앱 푸시를 못 받는다. 되돌린 뒤 `check_push_wanted_before.sql` 2번이 「067 본문」이면 정상. Edge Function은 바꾸지 않았으므로 되돌릴 것 없음.
+- **운영 반영 순서** (사장님): ① `check_push_wanted_before.sql` 실행 → 1~3번 정상 값 확인, 4~13번 적어 두기 ② `073_push_wanted_device_tokens.sql` 통째로 실행 ③ `check_push_wanted_after.sql` 실행 → 1~9번 정상 값, 10~19번이 ①과 같은지. Edge Function은 **이 일 때문에 다시 배포할 필요 없다**(코드 변경 없음). 다만 P-2(6-102) 버전 `web-push`가 아직 배포 전이면 앱 푸시는 6-102 순서(비밀 값 4개 → Deploy)를 마쳐야 나간다 — 073은 그 앞뒤 어느 쪽에 실행해도 된다(P-2 전 코드는 웹 구독 0개면 아무것도 안 하고 `{ ok, sent: 0 }`).
+- **다음 단계**: 커밋만 했고 운영 DB 실행·Edge Function 배포·push는 하지 않았다.
