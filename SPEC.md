@@ -2108,3 +2108,25 @@ RLS 원칙:
   - **앱 발송만 끄기**(가장 빠름): Secrets에서 `APNS_*` 세 개 또는 `FCM_SERVICE_ACCOUNT_JSON`을 지운다 → 그 플랫폼은 건너뜀(웹 푸시 그대로). 확실히 적용하려면 같은 코드로 Deploy를 한 번 더.
   - **이전 버전으로 되돌리기**: GitHub에서 P-2 직전 파일(`git show 6b846ee:supabase/functions/web-push/index.ts`, 또는 저장소 웹 화면에서 커밋 6b846ee의 `supabase/functions/web-push/index.ts` → Raw)을 복사해 Edge Functions → web-push → Code에 붙여 넣고 Deploy. DB는 바꾼 것이 없어 되돌릴 SQL이 없다. 앱 비밀 값은 남아 있어도 옛 코드가 읽지 않는다.
 - **테스트**: `src/test/appPush.test.js` 48개(테스트에서 만든 P-256·RSA 키로 JWT 서명 확인, APNs·FCM 요청 헤더·본문, JWT·액세스 토큰 재사용·만료·401, 응답 코드별 지우기 여부 18가지, 1시간 넘은 알림·알림 없음·토큰 없음(외부 호출 없음)·비밀 값 없음(경고 한 줄, 다른 플랫폼은 보냄), 한쪽 실패가 다른 쪽·웹 응답에 영향 없음, 웹 실패·예외에도 앱 발송, 웹 구독 없을 때 앱만, 동시 호출 4개, 미루기(defer), 로그에 토큰·키·이메일 없음). 기존 웹 푸시 검사(`push.test.jsx`·`followNotify.test.jsx` 등)는 고치지 않고 그대로 통과. **실제 런타임 확인**: 공식 Edge 런타임 컨테이너에서 이 파일을 그대로 띄우고 가짜 Supabase(로컬)·테스트 키로 POST → 웹 응답 모양 그대로, APNs가 실제로 403 InvalidProviderToken(서명·HTTP/2 경로 동작, 지우지 않음), FCM은 테스트 키라 토큰 발급 400(보내지 않음·지우지 않음), 로그에 토큰·키 없음.
+
+### 6-103. 1.3 패치 P-3 — 앱(iOS·Android)이 휴대폰 알림 토큰을 받아 등록 (2026-11-24 — 웹 코드·앱 네이티브 설정, DB·Edge Function 변경 없음, 앱 다시 빌드 필요)
+- **플러그인**: `@capacitor/push-notifications` 8.1.3(Capacitor 8용) 추가 → `npx cap sync`가 iOS SPM(`CapApp-SPM/Package.swift`)·Android(`capacitor.settings.gradle`·`capacitor.build.gradle`)에 넣음.
+- **흐름** (`src/lib/nativePush.js`, 앱에서만. 웹·PWA는 이 파일을 쓰지 않고 웹 푸시(6-37 계열)는 그대로):
+  1. 앱이 켜질 때 리스너 등록(`index.jsx` → `startNativePush`): 토큰(`registration`)·등록 실패·알림 누름·앱을 보고 있을 때 온 알림(빨간 점 다시 세기).
+  2. **로그인 확인 뒤**(로그인 직후·로그인된 채 앱을 열 때, `AuthProvider`): 이 계정이 이 기기에서 끄지 않았으면 → 권한이 이미 있으면 토큰을 다시 등록(갱신), 아직 안 물어봤으면 **이 기기에서 한 번만** 허용 창 → 허용이면 등록. 거절해도 앱은 그대로(알림만 안 옴). 실패는 조용히.
+  3. 토큰: iOS = APNs 기기 토큰, Android = FCM 토큰 → DB 함수 `register_device_push_token(platform, token, 앱 버전)`. platform은 `Capacitor.getPlatform()` 값 그대로(`ios`·`android` = 072 허용 값), 사람은 함수가 로그인한 사람으로 정한다(앱이 user_id를 보내지 않음). 같은 (platform, token)은 한 줄(갱신), 다른 계정이 등록하면 소유자가 바뀐다.
+  4. **토큰이 바뀌면**(앱을 열 때 다른 토큰이 오거나, 열려 있는 동안 FCM이 새 토큰을 줌): 이 계정에 등록됐던 옛 토큰은 `unregister_device_push_token`으로 지우고 새 토큰 등록.
+  5. **로그아웃·처음부터 다시**: 로그인이 끊기기 전에 이 기기 토큰을 그 계정에서 지운다(3초까지만 기다림, 실패해도 로그아웃은 됨 — 웹 푸시 `forgetDevicePush` 뒤). **탈퇴**: 토큰은 계정과 함께 DB에서 지워짐(072 cascade) → 이 기기 기록만 비움.
+  6. **알림을 누르면**: 서버(6-102)가 보낸 `data.url`로 이동(`Layout`). `/`로 시작하는 사이트 안 주소만(`//`·`\`·바깥 주소·없음 → 알림 목록 `/notifications`). 앱이 꺼져 있다가 알림으로 켜졌으면 화면이 뜬 뒤 이동.
+- **알림 설정과 맞추기**: 받을 알림 종류(체크 상자, `push_settings`)는 계정 단위라 웹·앱 공통 — 서버 트리거의 `push_wanted`가 알림을 만들 때 거르므로 앱 알림에도 그대로 적용된다(6-102 한계 그대로). [계정 설정 → 휴대폰 알림]의 "이 기기" 켜기/끄기는 앱에서 **이 기기 토큰 등록/해제**(웹은 구독 등록/해제)다. 앱에서는 "준비 중" 문장 대신 웹과 같은 모양의 「이 기기: 켜짐/꺼짐」 + 버튼, 휴대폰 설정에서 거절된 상태면 설정 → 탑신병자 → 알림 안내. 끈 상태는 이 기기·이 계정에 기억(다음 로그인 때 다시 등록하지 않음).
+- **이 기기에 남기는 값**(localStorage): `tsb.appPush.device`(토큰·platform·등록된 계정), `tsb.appPush.asked`(로그인 직후 한 번 물어봄), `tsb.appPush.off.<계정>`(이 기기에서 끔). 로그·오류 문장에 토큰을 넣지 않는다.
+- **앱이 열려 있을 때 온 알림**: `capacitor.config.json` `PushNotifications.presentationOptions = ["badge","sound","alert"]` → 화면 위에도 보인다.
+- **네이티브**:
+  - iOS: `App.entitlements`에 `aps-environment`(저장소 = `development`, Xcode 개발 실행용). Codemagic `ios-testflight`가 빌드 머신 안에서만 `production`으로 바꾼다(서버는 운영 APNs만, 6-102). `AppDelegate.swift`에 APNs 토큰·실패를 플러그인에 넘기는 두 메서드. 진단 단계에 `aps-environment` 있음/없음 줄 추가.
+  - Android: `AndroidManifest.xml`에 `POST_NOTIFICATIONS`(Android 13+ 권한 창). `google-services.json`은 저장소에 넣지 않는다(.gitignore) — Codemagic `android-aab`가 `web_env` 그룹의 `GOOGLE_SERVICES_JSON_BASE64`로 빌드 머신 안에서 만들고, 없거나 패키지 이름이 다르면 빌드를 멈춘다(없이 만든 앱은 등록 때 멈출 수 있음).
+- **사장님이 할 일** (앱 다시 빌드 전):
+  1. Apple: developer.apple.com → Certificates, IDs & Profiles → **Identifiers** → `com.topsinbyeongja.app` → **Push Notifications** 체크 → Save(인증서 만들기 창은 무시 — 키(.p8) 방식). → **Profiles**에서 이 앱의 App Store 프로파일이 Invalid가 되면 **삭제**(Codemagic이 다음 빌드에서 새로 만든다).
+  2. Firebase: 프로젝트 설정 → 일반 → Android 앱 `com.topsinbyeongja.app`의 **google-services.json** 받기 → base64로 바꿔(맥 `base64 -i google-services.json | pbcopy`, 윈도 PowerShell `[Convert]::ToBase64String([IO.File]::ReadAllBytes("google-services.json")) | Set-Clipboard`) → Codemagic → 앱 → Environment variables → 그룹 `web_env`에 `GOOGLE_SERVICES_JSON_BASE64`(Secret 체크).
+  3. Codemagic에서 `ios-testflight`·`android-aab`를 직접 실행 → TestFlight·Play 내부 테스트로 실제 기기 확인.
+- **되돌리기**: 이 커밋을 `git revert` 후 앱 다시 빌드. 이미 깔린 1.3 앱의 토큰은 서버 비밀 값(6-102)을 지우면 보내지 않는다. DB는 바꾼 것이 없다.
+- **테스트**: `src/test/nativePush.test.jsx` 24개(가짜 플러그인: 처음 한 번 묻기·거절·이미 허용·갱신·토큰 변경·FCM 저절로 갱신·등록 실패·웹/로그아웃이면 아무것도 안 함, 끄기·켜기·설정 거절 안내, 로그아웃 때 해제·다른 계정 등록·해제 실패해도 로그아웃, `data.url` 주소 7가지·꺼진 앱/열린 앱 누름 이동, 설정 화면 버튼, AuthProvider 자동 등록, 웹에서 무동작). 가짜 Supabase에 두 DB 함수 흉내 추가. 기존 웹 푸시 검사는 그대로 통과.

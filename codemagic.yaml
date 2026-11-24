@@ -88,6 +88,19 @@ workflows:
             exit 1
           fi
 
+      # 휴대폰 알림(P-3): 저장소의 App.entitlements는 Xcode 개발 실행용 development. TestFlight·App Store 빌드는 production이어야
+      # 서버(api.push.apple.com, SPEC 6-102)로 받을 수 있다. 빌드 머신 안에서만 바꾼다 (저장소에는 커밋하지 않음).
+      - name: 푸시 권한 production으로
+        script: |
+          ENT_FILE=ios/App/App/App.entitlements
+          /usr/libexec/PlistBuddy -c "Set :aps-environment production" "$ENT_FILE"
+          VALUE=$(/usr/libexec/PlistBuddy -c "Print :aps-environment" "$ENT_FILE")
+          if [ "$VALUE" != "production" ]; then
+            echo "aps-environment를 production으로 바꾸지 못했습니다: $VALUE"
+            exit 1
+          fi
+          echo "aps-environment: $VALUE"
+
       - name: 아카이브 및 .ipa 만들기
         script: |
           xcode-project build-ipa \
@@ -117,6 +130,11 @@ workflows:
             echo "[진단] 서명된 앱: applesignin 있음"
           else
             echo "[진단] 서명된 앱: applesignin 없음"
+          fi
+          if echo "$ENT" | grep -q "aps-environment"; then
+            echo "[진단] 서명된 앱: aps-environment 있음 (휴대폰 알림)"
+          else
+            echo "[진단] 서명된 앱: aps-environment 없음 — 휴대폰 알림을 받을 수 없습니다 (App ID의 Push Notifications·프로파일 확인)"
           fi
 
           echo "== 임베디드 프로비저닝 프로필 (이름·팀·만료·권한만) =="
@@ -198,6 +216,23 @@ workflows:
 
       - name: Capacitor Android 동기화
         script: npx cap sync android
+
+      # 휴대폰 알림(P-3): Firebase 설정 파일은 저장소에 넣지 않는다(.gitignore). web_env 그룹의 GOOGLE_SERVICES_JSON_BASE64
+      # (google-services.json을 base64로 바꾼 값)로 빌드 머신 안에서만 만든다. 없으면 알림 등록 때 앱이 멈출 수 있어 빌드를 멈춘다.
+      - name: Firebase 설정 파일 만들기 (값은 출력하지 않음)
+        script: |
+          if [ -z "$GOOGLE_SERVICES_JSON_BASE64" ]; then
+            echo "환경 변수 GOOGLE_SERVICES_JSON_BASE64 이(가) 비어 있습니다. Codemagic web_env 그룹에 google-services.json(base64)을 넣어 주세요."
+            exit 1
+          fi
+          OUT=android/app/google-services.json
+          echo "$GOOGLE_SERVICES_JSON_BASE64" | base64 --decode > "$OUT"
+          if ! grep -q '"package_name": *"com.topsinbyeongja.app"' "$OUT"; then
+            echo "google-services.json에 com.topsinbyeongja.app 앱이 없습니다. Firebase 프로젝트 설정에서 이 패키지 이름으로 받은 파일인지 확인하세요."
+            rm -f "$OUT"
+            exit 1
+          fi
+          echo "google-services.json 준비됨"
 
       - name: versionCode 올리기
         script: |

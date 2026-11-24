@@ -15,6 +15,7 @@ import { noticeText, startFresh } from '../api/auth';
 import { usePageTitle } from '../lib/pageTitle';
 import { SITE_NAME, SITE_TAGLINE } from '../lib/legal';
 import { onOpenPath } from '../lib/sw';
+import { onPushOpen } from '../lib/nativePush';
 
 export const RIOT_NOTICE =
   '이 사이트는 Riot Games가 보증하거나 후원하지 않으며, Riot Games 또는 League of Legends 제작·관리에 공식적으로 관여한 사람의 견해를 반영하지 않습니다. League of Legends 및 Riot Games는 Riot Games, Inc.의 상표 또는 등록 상표입니다.';
@@ -29,6 +30,11 @@ export default function Layout() {
   // 잠금 화면 알림을 눌러 돌아오면 그 주소로 (037)
   useEffect(() => {
     const stop = onOpenPath((path) => navigate(path));
+    return stop;
+  }, [navigate]);
+  // 앱(P-3): 휴대폰 알림을 누르면 서버가 data.url에 담은 주소로 (앱이 꺼져 있다가 켜졌어도)
+  useEffect(() => {
+    const stop = onPushOpen((path) => navigate(path));
     return stop;
   }, [navigate]);
   // 앱(6-57): 시스템 브라우저에서 로그인을 마치면 웹에서 돌아왔을 경로로 (로그인 화면이면 Login이 원래 페이지로 보낸다)

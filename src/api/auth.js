@@ -2,6 +2,7 @@
 import { INFLUENCER_MARK_MESSAGE, hasReservedMark, mimicsInfluencer } from '../lib/nickname';
 import { db } from './supabase';
 import { dropBrowserPush, forgetDevicePush } from './push';
+import { dropAppPush, forgetAppPush } from '../lib/nativePush';
 import { ALREADY_MEMBER_TEXT } from '../lib/guest';
 import { isIosApp, isNativeApp } from '../lib/native';
 import { NATIVE_REDIRECT, emitNativeAuth, listenAuthCallbacks, openAuthBrowser } from '../lib/nativeAuth';
@@ -187,6 +188,7 @@ export async function signInAsGuest(captchaToken) {
  */
 export async function startFresh(provider, returnTo = '/') {
   await forgetDevicePush(); // 비회원 때 켠 알림이 다음 계정으로 가지 않게 (037)
+  await forgetAppPush(); // 앱: 이 기기 토큰도 (P-3)
   await db().auth.signOut({ scope: 'local' });
   return signIn(provider, returnTo);
 }
@@ -385,6 +387,7 @@ function loginError(error, providerError, providerCode, pending) {
 
 export async function signOut() {
   await forgetDevicePush(); // 이 기기의 알림 주소를 먼저 지운다 (로그인이 남아 있을 때만 지울 수 있음, 037)
+  await forgetAppPush(); // 앱: 이 기기 토큰을 이 계정에서 지운다 → 다른 계정으로 로그인해도 이전 계정 알림이 오지 않음 (P-3)
   const { error } = await db().auth.signOut();
   if (error) throw new Error(`로그아웃하지 못했습니다. (${error.message})`);
 }
@@ -526,6 +529,7 @@ export async function deleteMyAccount(confirm) {
     throw new Error(message ?? `탈퇴하지 못했습니다. (${error.message})`);
   }
   await dropBrowserPush(); // 알림 주소는 계정과 함께 DB에서 지워졌다 — 이 브라우저 구독만 끊는다 (037)
+  dropAppPush(); // 앱 기기 토큰도 계정과 함께 지워졌다(072 cascade) — 이 기기 기록만 비운다 (P-3)
   await db().auth.signOut({ scope: 'local' }).catch(() => {});
   return { apple: data?.apple ?? 'none' };
 }

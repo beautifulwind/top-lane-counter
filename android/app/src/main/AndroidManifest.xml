@@ -47,4 +47,6 @@
     <!-- Permissions -->
 
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- 휴대폰 알림 (1.3 패치 P-3): Android 13 이상은 알림 권한을 앱이 물어야 한다 (@capacitor/push-notifications requestPermissions) -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 </manifest>

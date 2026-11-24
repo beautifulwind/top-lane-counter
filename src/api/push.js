@@ -142,3 +142,29 @@ export async function savePushSettings(userId, settings) {
   }
   return pick(row);
 }
+
+// ---------------- 앱(iOS·Android) 기기 토큰 (072, 1.3 패치 P-3) ----------------
+// 표 device_push_tokens는 앱이 직접 읽거나 쓰지 못한다 → DB 함수로만. platform은 'ios' | 'android'(Capacitor.getPlatform()과 같은 값),
+// 사용자 연결은 함수가 로그인한 사람(auth.uid())으로 한다. 같은 (platform, token)은 한 줄 — 다른 계정이 등록하면 소유자가 바뀐다.
+// 보내기(Edge Function web-push, SPEC 6-102)는 service_role로 이 표를 읽어 iOS는 APNs, Android는 FCM으로 보낸다.
+const missingFunction = (error) => error?.code === 'PGRST202' || error?.code === '42883' || /device_push_token/.test(error?.message ?? '');
+
+/** 이 기기 토큰을 내 계정에 등록·갱신 (오류 문장에 토큰은 들어가지 않는다 - DB가 고정 문장으로 거절) */
+export async function registerAppToken(platform, token, appVersion = null) {
+  const { data, error } = await db().rpc('register_device_push_token', { p_platform: platform, p_token: token, p_app_version: appVersion });
+  if (error) {
+    if (missingFunction(error)) throw new Error('알림 기능이 아직 준비 중입니다. 잠시 뒤 다시 시도해 주세요.');
+    throw friendly(error, '이 기기의 알림을 켜지 못했습니다.');
+  }
+  return data;
+}
+
+/** 이 기기 토큰을 내 계정에서 지운다 (내 것이 아니거나 없으면 false, 오류 아님) */
+export async function unregisterAppToken(token) {
+  const { data, error } = await db().rpc('unregister_device_push_token', { p_token: token });
+  if (error) {
+    if (missingFunction(error)) return false;
+    throw friendly(error, '이 기기의 알림을 끄지 못했습니다.');
+  }
+  return data === true;
+}

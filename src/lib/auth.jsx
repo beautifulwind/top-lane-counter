@@ -3,6 +3,7 @@ import { finishLoginFromUrl, getProfile, getSession, onAuthChange, touchLastSeen
 import { blockUser, getMyBlocks, unblockUser } from '../api/blocks';
 import { isGuest } from './guest';
 import { onNativeAuth } from './nativeAuth';
+import { syncAppPush } from './nativePush';
 import { isStaffPerson } from './nickname';
 
 /**
@@ -103,6 +104,11 @@ export function AuthProvider({ children }) {
   // 마지막 접속 (오래 안 쓴 비회원 정리 기준, 하루 한 번)
   useEffect(() => {
     if (userId) touchLastSeen(userId);
+  }, [userId]);
+
+  // 앱(P-3): 로그인 확인 뒤 이 기기 알림 토큰 등록·갱신 (처음이면 권한을 한 번 묻는다). 웹에서는 아무것도 안 함, 실패는 조용히
+  useEffect(() => {
+    syncAppPush(userId).catch(() => {});
   }, [userId]);
 
   const setProfile = useCallback((profile) => setLoaded({ userId, profile, error: null }), [userId]);

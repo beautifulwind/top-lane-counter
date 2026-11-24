@@ -215,6 +215,7 @@ export function resetFake() {
   fakeState.inserts = [];
   fakeState.insertError = null;
   fakeState.rpcCalls = [];
+  fakeState.deviceTokens = [];
   fakeState.queryLog = [];
   fakeState.contributors = {};
   fakeState.editorCounts = {};
@@ -618,6 +619,24 @@ async function rpc(name, args) {
     };
   }
   fakeState.queryLog.push({ table: name, kind: 'rpc' });
+  if (name === 'register_device_push_token' || name === 'unregister_device_push_token') {
+    // 072: (platform, token) 한 줄, 다른 계정이 등록하면 소유자가 바뀐다. 본인 것만 지운다
+    const me = fakeState.session?.user?.id;
+    if (!me) return { data: null, error: { code: '42501', message: '로그인이 필요합니다.' } };
+    fakeState.rpcCalls.push({ name, args });
+    if (fakeState.rpcError) return { data: null, error: { message: fakeState.rpcError, code: fakeState.rpcErrorCode } };
+    const rows = (fakeState.deviceTokens ??= []);
+    if (name === 'unregister_device_push_token') {
+      const i = rows.findIndex((r) => r.token === args.p_token && r.user_id === me);
+      if (i < 0) return { data: false, error: null };
+      rows.splice(i, 1);
+      return { data: true, error: null };
+    }
+    const old = rows.find((r) => r.platform === args.p_platform && r.token === args.p_token);
+    if (old) Object.assign(old, { user_id: me, app_version: args.p_app_version });
+    else rows.push({ user_id: me, platform: args.p_platform, token: args.p_token, app_version: args.p_app_version });
+    return { data: { platform: args.p_platform, devices: rows.filter((r) => r.user_id === me).length }, error: null };
+  }
   if (['warn_user', 'ack_warning', 'admin_member_warnings'].includes(name)) {
     if (fakeState.warningsMissing) return { data: null, error: { code: 'PGRST202', message: `Could not find the function public.${name} in the schema cache` } };
     const rows = TABLES.user_warnings;

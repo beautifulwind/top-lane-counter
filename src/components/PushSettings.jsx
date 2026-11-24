@@ -3,6 +3,7 @@ import { disableDevicePush, enableDevicePush, getDevicePush, getPushSettings, sa
 import { PUSH_HELP, currentPushSupport } from '../lib/push';
 import { useAsync } from '../lib/useAsync';
 import { APPROVAL_ENABLED } from '../lib/features';
+import { disableAppPush, enableAppPush, getAppPushState } from '../lib/nativePush';
 import { ErrorBox, Loading } from './Status';
 import SectionHead from './SectionHead';
 import { BellIcon } from './Icons';
@@ -25,7 +26,9 @@ export default function PushSettings({ auth }) {
           : `켜 두면 ${staffAccount ? (auth.isOperatorAccount ? '새 상대법·새 빌드·새 글·새 문의·새 오류 신고·새 신고·새 장인 신청이나 ' : '새 문의·새 오류 신고·새 신고나 ') : ''}숨겨졌던 내 상대법·빌드가 다시 공개된 소식, 내가 만들거나 고친 빌드의 수정 소식, 장인 인증 결과, 팔로우한 장인의 새 빌드, 새 공지를 휴대폰 잠금 화면 알림으로 받습니다.`}
         알림을 누르면 그 내용을 볼 수 있는 화면으로 갑니다.
       </p>
-      {support === 'ok' ? <DeviceSwitch userId={auth.user.id} /> : <p className="hint push-help" role="note">{PUSH_HELP[support]}</p>}
+      {support === 'ok' ? <DeviceSwitch userId={auth.user.id} />
+        : support === 'app' ? <AppDeviceSwitch userId={auth.user.id} />
+          : <p className="hint push-help" role="note">{PUSH_HELP[support]}</p>}
       <PushKinds userId={auth.user.id} influencer={influencer} staffAccount={staffAccount} operatorAccount={auth.isOperatorAccount} operatorOff={auth.isOperatorAccount && !auth.isOperator} />
     </section>
   );
@@ -61,6 +64,46 @@ function DeviceSwitch({ userId }) {
         이 기기: <strong>{on ? '켜짐' : '꺼짐'}</strong>
       </p>
       <button type="button" className="btn btn-small" onClick={toggle} disabled={busy} aria-pressed={on}>
+        {busy ? '바꾸는 중…' : on ? '이 기기에서 알림 끄기' : '이 기기에서 알림 켜기'}
+      </button>
+      {actionError && <p className="form-error" role="alert">{actionError}</p>}
+      <small className="hint push-note">로그아웃하면 이 기기의 알림도 꺼집니다. 다른 기기는 그 기기에서 따로 켜 주세요.</small>
+    </>
+  );
+}
+
+/** 앱(iOS·Android, P-3): 이 기기 알림 켜기/끄기 — 웹의 DeviceSwitch와 같은 모양. 토큰은 lib/nativePush가 DB 함수로 등록·해제 */
+function AppDeviceSwitch({ userId }) {
+  const loaded = useAsync(() => getAppPushState(userId), [userId]);
+  const [changed, setChanged] = useState(null);
+  const on = changed ?? loaded.data?.on;
+  const denied = changed === null && loaded.data?.permission === 'denied';
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState(null);
+
+  const toggle = async () => {
+    if (busy) return;
+    setBusy(true);
+    setActionError(null);
+    try {
+      if (on) await disableAppPush(userId);
+      else await enableAppPush(userId);
+      setChanged(!on);
+    } catch (e) {
+      setActionError(e.message);
+    }
+    setBusy(false);
+  };
+
+  if (changed === null && loaded.loading) return <Loading />;
+  if (changed === null && loaded.error) return <ErrorBox error={loaded.error} onRetry={loaded.retry} />;
+  return (
+    <>
+      <p className="operator-mode-state" role="status">
+        이 기기: <strong>{on ? '켜짐' : '꺼짐'}</strong>
+      </p>
+      {denied && !on && <p className="hint push-help" role="note">{PUSH_HELP.app}</p>}
+      <button type="button" className="btn btn-small" onClick={toggle} disabled={busy} aria-pressed={!!on}>
         {busy ? '바꾸는 중…' : on ? '이 기기에서 알림 끄기' : '이 기기에서 알림 켜기'}
       </button>
       {actionError && <p className="form-error" role="alert">{actionError}</p>}
