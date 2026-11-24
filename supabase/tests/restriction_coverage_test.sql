@@ -48,7 +48,7 @@ grant execute on all functions in schema pg_temp to anon, authenticated;
 select t.ok('쓰기 함수가 있다 (판정 대상 90개 넘게)', (select count(*) from pg_temp.fn_coverage()) > 90);
 select coalesce(string_agg(sig || ' ' || state, ', ' order by sig), '') as bad_fn from pg_temp.fn_coverage() where state not in ('checked', 'exempt') \gset
 select t.ok('모든 쓰기 함수: 맨 앞에 검사가 있거나 허용 목록에 있음 [' || :'bad_fn' || ']', :'bad_fn' = '');
-select t.ok('검사가 든 함수 29개 (068)', (select count(*) from pg_temp.fn_coverage() where state = 'checked') = 29);
+select t.ok('검사가 든 함수 30개 (068의 29개 + 071 set_build_difficulty)', (select count(*) from pg_temp.fn_coverage() where state = 'checked') = 30);
 select t.ok('검사와 허용 목록에 둘 다 있는 함수 없음', not exists (
   select 1 from pg_temp.fn_coverage() c join public.restriction_exemptions e on e.kind = 'function' and e.name = c.sig where c.state = 'checked'
   union all

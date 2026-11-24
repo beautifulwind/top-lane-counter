@@ -166,8 +166,8 @@ set role authenticated;
 set request.jwt.claim.sub = :'R';
 select pg_temp.call_all() as all1 \gset
 reset role;
-select t.ok('검사가 든 쓰기 함수 29개', (select count(*) from jsonb_object_keys(:'all1'::jsonb)) = 29);
-select t.ok('29개 모두 「활동이 제한된 상태입니다. …에 풀립니다. 사유: 욕설 반복」으로 거절',
+select t.ok('검사가 든 쓰기 함수 30개 (071 set_build_difficulty 포함)', (select count(*) from jsonb_object_keys(:'all1'::jsonb)) = 30);
+select t.ok('30개 모두 「활동이 제한된 상태입니다. …에 풀립니다. 사유: 욕설 반복」으로 거절',
   not exists (select 1 from jsonb_each_text(:'all1'::jsonb) e
                where e.value <> '활동이 제한된 상태입니다. ' || :'until' || '에 풀립니다. 사유: 욕설 반복'));
 -- 올바른 입력으로도
@@ -306,7 +306,7 @@ select t.ok('해제 처리 기록', exists (select 1 from public.moderation_log 
 set role authenticated;
 set request.jwt.claim.sub = :'R';
 select pg_temp.call_all() as all2 \gset
-select t.ok('해제 뒤: 29개 모두 제한 문장 없음 (다음 검사로 넘어감)', not exists (select 1 from jsonb_each_text(:'all2'::jsonb) e where e.value like '%활동이 제한된%'));
+select t.ok('해제 뒤: 30개 모두 제한 문장 없음 (다음 검사로 넘어감)', not exists (select 1 from jsonb_each_text(:'all2'::jsonb) e where e.value like '%활동이 제한된%'));
 select t.ok('해제 뒤 my_restriction() = null, can_write()', my_restriction() is null and can_write());
 select t.ok('해제 뒤 글쓰기', pg_temp.err($$select create_post('다시 쓴 글', '본문')$$) = 'OK');
 select t.ok('해제 뒤 문서 댓글', pg_temp.err(format($$select create_doc_comment(%s, '다시 쓴 댓글')$$, pg_temp.id('m1'))) = 'OK');
@@ -335,7 +335,7 @@ update public.user_restrictions set starts_at = now() - interval '1 day', ends_a
 set role authenticated;
 set request.jwt.claim.sub = :'R';
 select pg_temp.call_all() as all3 \gset
-select t.ok('기간이 지나면 29개 모두 제한 문장 없음', not exists (select 1 from jsonb_each_text(:'all3'::jsonb) e where e.value like '%활동이 제한된%'));
+select t.ok('기간이 지나면 30개 모두 제한 문장 없음', not exists (select 1 from jsonb_each_text(:'all3'::jsonb) e where e.value like '%활동이 제한된%'));
 select t.ok('기간이 지나면 글쓰기', pg_temp.err($$select create_post('만료 뒤 글', '본문')$$) = 'OK');
 set request.jwt.claim.sub = :'OP';
 select t.fails('기간이 지난 제한은 해제할 것이 없음', format('select lift_restriction(%s, null)', :r2), '이미 기간이 끝나 풀린 제한입니다');
