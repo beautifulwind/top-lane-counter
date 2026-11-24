@@ -2148,3 +2148,8 @@ RLS 원칙:
 - **표시(3-B)**: 「★ 3.5」(주황 강조색), 읽는 문구 「난이도 3.5점」. `BuildAuthorName`의 별점 자리(`rating`)를 채우고, 닉네임이 없는 카드는 선마·추천 줄 끝에 둔다. 상대법 빌드 목록·[더보기]·`/builds`·홈 검색·빌드 고르기·내 빌드 목록은 select 목록에 `difficulty`를 더해 받고, 장인 프로필·`/following`·`/lists`는 보이는 id로 `build_difficulties`를 한 번 더 부른다(`useBuildDifficulties`, 이미 받은 id는 다시 묻지 않고 실패하면 별점만 빈다).
 - **테스트**: `src/test/difficulty104.test.jsx` 6개, 기존 `buildPatch097` 별점 자리 기대값 1곳 수정, `fakeSupabase`에 071 두 함수 흉내 추가.
 - **다음 단계**: 커밋만 했고 push·배포·앱 다시 빌드는 하지 않았다.
+
+### 6-105. 1.3 패치 버전 올림 (2026-11-24 — 설정 값만, 코드·DB·Edge Function·`public/version.json` 변경 없음)
+- **바꾼 값**: Android `versionName` 1.2 → 1.3, `versionCode` 2 → 3 / iOS `MARKETING_VERSION` 1.2 → 1.3 (Debug·Release 두 줄). iOS 빌드 번호(`CURRENT_PROJECT_VERSION`, 저장소 값 2)와 Android 실제 versionCode는 Codemagic이 빌드 머신 안에서만 올린다(iOS = TestFlight 최신 +1과 Codemagic 빌드 번호 중 큰 값, Android = Codemagic 빌드 번호와 저장소 값 +1 중 큰 값). 저장소 값은 그 아래로만 내려가지 않으면 된다.
+- **다른 버전 값**: `package.json`의 `0.1.0`은 앱 버전과 무관(그대로). 앱 화면에 「1.2」를 하드코딩한 곳은 없다(앱 버전은 Capacitor `App.getInfo()`에서 읽음).
+- **`version.json`은 출시 후 올린다**: 앱 안 업데이트 배너는 `public/version.json`의 값이 설치된 앱 버전보다 높을 때만 뜬다. 스토어에 1.3이 실제로 올라온 **뒤에** `{"ios":"1.3.0","android":"1.3.0"}`로 올려 배포한다. 먼저 올리면 아직 받을 수 없는 버전을 안내하게 된다. 지금은 1.2.0 그대로이며, 앱 1.3(>1.2.0)에서는 배너가 뜨지 않는다(`appUpdate.test.jsx`로 확인).
