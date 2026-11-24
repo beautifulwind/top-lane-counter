@@ -6,14 +6,22 @@ import { publicBuilds, setPublicBuildCount } from './buildCount';
 import { compareAllBuilds } from '../lib/wikiBuild';
 
 export const PAGE_SIZE = 1000;
-const COLS = 'id, name, seq, max_skill, up_count, created_at, author_id, author:profiles!builds_author_id_fkey(influencer)';
+const COLS_BASE = 'id, name, seq, max_skill, up_count, created_at, author_id';
+const COLS = `${COLS_BASE}, author:profiles!builds_author_id_fkey(influencer, nickname, photo_path)`;
+const COLS_NO_PHOTO = `${COLS_BASE}, author:profiles!builds_author_id_fkey(influencer, nickname)`; // 062(프로필 사진) 실행 전 DB
 
-/** [{ id, name, seq, max_skill, up, created_at, author_id, author: { influencer } | null, target, mine }] — 정렬까지 끝난 것 */
+/** [{ id, name, seq, max_skill, up, created_at, author_id, author: { influencer, nickname, photo_path } | null, target, mine }] — 정렬까지 끝난 것 */
 export async function getAllPublicBuilds() {
   const rows = [];
+  let cols = COLS;
   for (let from = 0; ; from += PAGE_SIZE) {
-    const { data, error } = await publicBuilds(COLS, 'target_champion, counter_champion, status')
+    let { data, error } = await publicBuilds(cols, 'target_champion, counter_champion, status')
       .order('id', { ascending: true }).range(from, from + PAGE_SIZE - 1);
+    if (error && cols === COLS && from === 0) {
+      cols = COLS_NO_PHOTO;
+      ({ data, error } = await publicBuilds(cols, 'target_champion, counter_champion, status')
+        .order('id', { ascending: true }).range(from, from + PAGE_SIZE - 1));
+    }
     if (error) throw new Error(`빌드 목록을 불러오지 못했습니다. (${error.message})`);
     rows.push(...data);
     if (data.length < PAGE_SIZE) break;
@@ -24,11 +32,11 @@ export async function getAllPublicBuilds() {
       const a = Array.isArray(b.author) ? b.author[0] : b.author;
       return {
         id: b.id, name: b.name ?? null, seq: b.seq ?? null, max_skill: b.max_skill ?? null, up: b.up_count ?? 0,
-        created_at: b.created_at, author_id: b.author_id ?? null, author: a ? { influencer: a.influencer ?? null } : null,
+        created_at: b.created_at, author_id: b.author_id ?? null, author: a ? { influencer: a.influencer ?? null, nickname: a.nickname ?? null, photo_path: a.photo_path ?? null } : null,
         target: b.counter.target_champion, mine: b.counter.counter_champion,
       };
     })
-    .sort(compareAllBuilds);
+    .sort(compareAllBuilds); // 기본(추천순). 「최신순」 칩은 화면에서 다시 나열한다 (칩을 바꿔도 다시 받지 않음)
   setPublicBuildCount(list.length); // 배지 = 목록 개수 (차단으로 숨긴 것도 포함한 전체)
   return list;
 }

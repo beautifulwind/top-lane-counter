@@ -96,7 +96,7 @@ test('공지 칸은 운영자(운영자 모드 켜짐)의 새 글에만 — 일�
   expect(screen.queryByRole('checkbox', { name: /알림 보내기/ })).toBeNull();
 });
 
-test('목록: 1쪽 위에 최근 공지 3개 고정 + [공지] 표시, 아래 목록에도 제자리에 / 검색에는 고정 없음', async () => {
+test('목록: 1쪽 위에 최근 공지 3개 고정 + [공지] 표시, 아래 목록에서는 뺀다(6-97, 고정에 못 든 옛 공지 1개만 [공지]로 남음) / 검색에는 고정 없음', async () => {
   TABLES.posts.push(
     fakePost(1, { title: '공지 하나', is_notice: true }),
     fakePost(2, { title: '보통 글' }),
@@ -109,7 +109,7 @@ test('목록: 1쪽 위에 최근 공지 3개 고정 + [공지] 표시, 아래 �
   expect(within(pinned).getAllByRole('link').map((a) => a.textContent.match(/공지 (넷|셋|둘|하나)/)[0])).toEqual(['공지 넷', '공지 셋', '공지 둘']);
   expect(within(pinned).getAllByText('공지', { selector: '.notice-badge' })).toHaveLength(3);
   const list = screen.getByRole('list', { name: '글 목록' });
-  expect(within(list).getAllByText('공지', { selector: '.notice-badge' })).toHaveLength(4);
+  expect(within(list).getAllByText('공지', { selector: '.notice-badge' })).toHaveLength(1); // 6-97: 고정한 3개는 빠지고 옛 공지 하나만
   expect(within(list).getByText('보통 글').closest('li').querySelector('.notice-badge')).toBeNull();
   cleanup();
   start('/board?q=공지');

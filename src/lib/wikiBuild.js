@@ -60,6 +60,11 @@ export function compareAllBuilds(a, b) {
     || b.id - a.id;
 }
 
+/** 전체 빌드 목록 「최신순」 (6-97): 만든 때 최신 먼저, 같으면 id 큰 것 먼저. 장인 빌드를 따로 앞세우지 않는다 */
+export function compareRecentBuilds(a, b) {
+  return String(b.created_at ?? '').localeCompare(String(a.created_at ?? '')) || b.id - a.id;
+}
+
 /** 글자로 쓰는 빌드 이름 (안내 문장·읽는 이름): 장인 빌드면 "장인 빌드 이름"(이름이 없으면 "장인 빌드") */
 export const buildTitleText = (b, index = 0) =>
   (isInfluencerBuild(b) ? (b.name ? `장인 빌드 ${b.name}` : '장인 빌드') : buildLabel(b, index));

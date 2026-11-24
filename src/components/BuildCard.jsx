@@ -1,4 +1,4 @@
-import { WITHDRAWN_USER, displayNickname } from '../lib/nickname';
+import { displayNickname } from '../lib/nickname';
 import { useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { voteBuild } from '../api/builds';
@@ -8,7 +8,7 @@ import GuestHint from './GuestHint';
 import VoteNotice, { useVoteNotice } from './VoteNotice';
 import { GO_DELAY_MS, MSG, SAVE_MSG, voteErrorText } from '../lib/voteMessages';
 import { patchMinor } from '../lib/buildContent';
-import UserName from './UserName';
+import BuildAuthorName from './BuildAuthorName';
 import SkillSequenceView from './SkillSequenceView';
 import { BookmarkIcon, ThumbIcon } from './Icons';
 
@@ -45,8 +45,7 @@ export function Icon({ entry, size = 32, round = false, fallback = '?' }) {
 
 /** 작성자 표시: 닉네임만(레벨·칭호 없이, 장인 표시는 보임 — 046) / 작성자가 없으면 탈퇴한 이용자 */
 export function BuildAuthor({ build }) {
-  if (build.author) return <UserName profile={build.author} plain linkTo={build.author_id} />;
-  return WITHDRAWN_USER;
+  return <BuildAuthorName author={build.author} linkTo={build.author_id} />;
 }
 
 /**

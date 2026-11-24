@@ -12,7 +12,7 @@ import { ChevronIcon, ImageIcon, MessageIcon, PencilIcon, SearchIcon, ThumbIcon 
 /**
  * 자유게시판 목록 (/board): 최신순 20개씩, 제목·본문 검색. 검색어·쪽은 주소(?q=&page=)에 남는다.
  * 읽기는 누구나, 글쓰기는 로그인 + 닉네임 (승인 없이 바로 올라감, SPEC 6-5)
- * 051: 공지는 [공지] 표시. 1쪽(검색 없음)에는 최근 공지 3개를 목록 위에 따로 고정한다(아래 목록에도 제자리에 그대로).
+ * 051: 공지는 [공지] 표시. 1쪽(검색 없음)에는 최근 공지 3개를 목록 위에 따로 고정한다(6-97: 아래 목록에서는 뺀다).
  */
 export default function Board() {
   const auth = useAuth();
@@ -40,6 +40,10 @@ export default function Board() {
     go(draft.trim(), 1);
   };
   const pages = data ? Math.max(1, Math.ceil(data.total / PAGE_SIZE)) : 1;
+  // 6-97: 위에 고정한 공지는 아래 목록에서 뺀다 (같은 공지가 두 번 나오지 않게). 고정에 들지 않은 옛 공지는 목록에 [공지] 표시로 그대로
+  const pinned = data?.notices ?? [];
+  const pinnedIds = new Set(pinned.map((p) => p.id));
+  const listRows = data ? data.rows.filter((p) => !pinnedIds.has(p.id)) : [];
 
   return (
     <article className="board">
@@ -71,17 +75,17 @@ export default function Board() {
 
       {loading && <Loading />}
       {error && <ErrorBox error={error} onRetry={retry} />}
-      {data && data.rows.length === 0 && (
+      {data && data.rows.length === 0 && pinned.length === 0 && (
         <p className="empty">{q ? '검색에 맞는 글이 없습니다.' : '아직 글이 없습니다. 첫 글을 써 보세요!'}</p>
       )}
-      {data?.notices?.length > 0 && (
+      {pinned.length > 0 && (
         <ul className="post-list pinned-notices" aria-label="공지">
-          {data.notices.map((p) => <PostRow key={p.id} p={p} />)}
+          {pinned.map((p) => <PostRow key={p.id} p={p} />)}
         </ul>
       )}
-      {data && data.rows.length > 0 && (
+      {listRows.length > 0 && (
         <ul className="post-list" aria-label="글 목록">
-          {data.rows.map((p) => <PostRow key={p.id} p={p} />)}
+          {listRows.map((p) => <PostRow key={p.id} p={p} />)}
         </ul>
       )}
       {data && pages > 1 && <Pager page={page} pages={pages} onGo={(n) => go(q, n)} />}

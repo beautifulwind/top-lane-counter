@@ -1561,6 +1561,17 @@ ul.build-cards > li.build-card.is-influencer { border-left-color: var(--brand); 
 @media (max-width: 480px) { .pg-step { padding: 0; font-size: var(--fs-xl); } }
 
 .all-builds .all-build { min-height: 44px; }
+/* 전체 빌드 정렬 칩 (6-97) — 고른 칩은 /following 탭과 같은 표시 */
+.sort-chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 var(--gap-md); }
+.sort-chips .btn { min-height: 44px; }
+.sort-chips .btn.on { border-color: var(--brand); background: var(--soft); color: var(--brand-dark); font-weight: 800; }
+/* 빌드 작성자 닉네임 공용 칸 (6-97): 사진·별점 칸은 줄지 않고, 닉네임만 줄을 바꾼다 (380px) */
+.build-author-name { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; min-width: 0; vertical-align: middle; }
+.build-author-name > .user-name { min-width: 0; overflow-wrap: anywhere; }
+.author-avatar { flex: none; display: grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; overflow: hidden; border: 1.5px solid var(--influencer-line); background: var(--soft); }
+.author-photo { width: 100%; height: 100%; object-fit: cover; display: block; }
+.author-initial { font-family: var(--font-display); font-size: var(--fs-sm); color: var(--brand-dark); line-height: 1; }
+.author-rating { flex: none; white-space: nowrap; font-size: var(--fs-xs); color: var(--muted); }
 .all-build-meta { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
 .all-build-meta .skill-key { padding: 0 5px; font-size: var(--fs-xs); }
 

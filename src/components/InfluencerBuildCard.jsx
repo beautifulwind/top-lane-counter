@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import VideoLink from './VideoLink';
-import { InfluencerName } from './UserName';
+import BuildAuthorName from './BuildAuthorName';
 import { ThumbIcon } from './Icons';
 import { matchupShort } from '../lib/josa';
 import { patchMinor } from '../lib/buildContent';
@@ -33,7 +33,7 @@ export default function InfluencerBuildCard({ b, champs, showAuthor = false, lin
           <ChampIcon champ={champs?.[b.target_champion]} />
         </span>
         <span className="inf-build-text">
-          {showAuthor && b.author && <span className="inf-build-author"><InfluencerName profile={b.author} /></span>}
+          {showAuthor && b.author && <span className="inf-build-author"><BuildAuthorName author={b.author} /></span>}
           <strong className="inf-build-matchup">{matchupShort(name(b.counter_champion), name(b.target_champion))}</strong>
           <span className="inf-build-name">{b.name || `빌드 ${b.seq ?? ''}`.trim()}</span>
           <small className="muted">
