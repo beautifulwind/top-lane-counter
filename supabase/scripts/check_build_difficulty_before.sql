@@ -1,9 +1,9 @@
 -- =====================================================================
--- 071(빌드 난이도 별점 difficulty + set_build_difficulty) 실행 "전" 확인 조회 (읽기만 - 아무것도 바꾸지 않는다).
+-- 071(빌드 난이도 별점 difficulty + set_build_difficulty + build_difficulties) 실행 "전" 확인 조회 (읽기만 - 아무것도 바꾸지 않는다).
 -- 071을 실행하기 전에 SQL Editor에 통째로 붙여넣어 실행하면 표 하나가 나온다 (맨 끝의 조회가 그 표다).
 --   - 1~2번: [지금 값]이 [정상 값]과 맞으면 071을 실행해도 된다. 다르면 실행하지 말고 알려 주세요.
---   - 3~11번은 "적어 둘 값"이다. 071 실행 뒤 check_build_difficulty_after.sql의 같은 이름 줄과 비교한다
---     (071은 칸 하나·제약 하나·쓰기 함수 하나만 더한다 - 기존 함수·트리거·정책·권한·데이터는 그대로여야 한다).
+--   - 3~12번은 "적어 둘 값"이다. 071 실행 뒤 check_build_difficulty_after.sql의 같은 이름 줄과 비교한다
+--     (071은 칸 하나·제약 하나·쓰기 함수 하나·읽기 함수 하나만 더한다 - 기존 함수·트리거·정책·권한·데이터는 그대로여야 한다).
 --   - 함수 본문 지문은 줄바꿈 CR을 뺀 값으로 계산한다(SQL Editor가 CRLF로 붙여 넣어도 같은 값 - c5333b1과 같은 방식).
 --   - 빌드 내용 지문은 difficulty 칸을 뺀 값이다(실행 뒤에도 같은 식으로 계산 → 기존 빌드가 그대로인지 비교).
 --   - 사이트 활동(빌드 수정·추천·알림)이 있으면 9~11번은 달라질 수 있다 - 사람이 적은 시간에 이어서 실행해 주세요.
@@ -14,6 +14,13 @@ wf as (
   select p.oid, p.proname || '(' || oidvectortypes(p.proargtypes) || ')' as sig, p.prosrc
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.prokind = 'f' and p.provolatile = 'v' and p.prorettype <> 'trigger'::regtype
+     and (has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('anon', p.oid, 'execute'))
+),
+-- 일반 사용자(로그인·비로그인)가 부를 수 있는 읽기 함수 (stable·immutable, 트리거 아님)
+rf as (
+  select p.proname || '(' || oidvectortypes(p.proargtypes) || ')' as sig
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.prokind = 'f' and p.provolatile in ('s', 'i') and p.prorettype <> 'trigger'::regtype
      and (has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('anon', p.oid, 'execute'))
 ),
 -- public의 모든 함수 (쓰기·읽기·트리거·내부 함수 전부) - 이름·인자·반환·본문·보안·search_path·권한
@@ -32,11 +39,12 @@ from (
       || ' / ' || coalesce(to_regprocedure('public.assert_can_write()')::text, '없음')
       || ' / ' || coalesce(to_regclass('public.restriction_exemptions')::text, '없음') as now_value,
     'influencer_directory(text,text,integer,integer) / assert_can_write() / restriction_exemptions' as ok_value, '없음이 있으면 앞 번호부터 실행' as memo
-  union all select 2, '071 아직 안 함 (builds.difficulty 칸 수 / 제약 builds_difficulty_check 수 / set_build_difficulty 함수 수)',
+  union all select 2, '071 아직 안 함 (builds.difficulty 칸 수 / 제약 builds_difficulty_check 수 / set_build_difficulty 함수 수 / build_difficulties 함수 수)',
     (select count(*) from information_schema.columns where table_schema = 'public' and table_name = 'builds' and column_name = 'difficulty')
       || ' / ' || (select count(*) from pg_constraint where conname = 'builds_difficulty_check')
-      || ' / ' || (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'set_build_difficulty'),
-    '0 / 0 / 0', '하나라도 1이면 071을 이미 실행한 것 - 다시 실행하지 말고 알려 주세요'
+      || ' / ' || (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'set_build_difficulty')
+      || ' / ' || (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'build_difficulties'),
+    '0 / 0 / 0 / 0', '하나라도 1이면 071을 이미 실행한 것 - 다시 실행하지 말고 알려 주세요'
   union all select 3, '적어 둘 값: 쓰기 함수 수 (전체 / 첫 줄에 assert_can_write 검사 / 허용 목록)',
     (select count(*) from wf) || ' / '
       || (select count(*) from wf where wf.prosrc ~ '^\s*declare\s*\n\s*_can_write constant boolean := public\.assert_can_write\(\);'
@@ -53,7 +61,7 @@ from (
     '(이 값을 적어 둠)', '옛 앱 1.1·1.2가 쓰는 읽기 경로 - 071은 고치지 않는다'
   union all select 6, '적어 둘 값: public의 모든 함수 수 / 지문 (쓰기·읽기·트리거·내부 함수 전부, CR 뺌)',
     (select count(*) || ' / ' || md5(string_agg(a.body, '|' order by a.sig)) from allf a),
-    '(이 값을 적어 둠)', '실행 뒤: set_build_difficulty를 뺀 나머지가 같은 수·같은 지문'
+    '(이 값을 적어 둠)', '실행 뒤: 새 함수 2개(set_build_difficulty·build_difficulties)를 뺀 나머지가 같은 수·같은 지문'
   union all select 7, '적어 둘 값: builds 칸 수 / 칸 목록 지문 · 제약 수 / 지문',
     (select count(*) || ' / ' || left(md5(string_agg(column_name || ':' || data_type || ':' || is_nullable || ':' || coalesce(column_default, ''), ',' order by ordinal_position)), 12)
        from information_schema.columns where table_schema = 'public' and table_name = 'builds')
@@ -80,5 +88,8 @@ from (
   union all select 11, '적어 둘 값: 알림 전체 수 · 가장 큰 id',
     (select count(*) || ' · ' || coalesce(max(id), 0) from public.notifications),
     '(이 값을 적어 둠)', '그 사이 사이트 활동이 있으면 달라질 수 있음'
+  union all select 12, '적어 둘 값: 일반 사용자가 부를 수 있는 읽기 함수 수 / 이름·본문·보안·권한 지문 (stable·immutable, CR 뺌)',
+    (select count(*) || ' / ' || md5(string_agg(a.body, '|' order by a.sig)) from allf a join rf on rf.sig = a.sig),
+    '(이 값을 적어 둠)', '실행 뒤: 수 +1(build_difficulties), 그 함수를 뺀 지문은 같음'
 ) x
 order by ord;

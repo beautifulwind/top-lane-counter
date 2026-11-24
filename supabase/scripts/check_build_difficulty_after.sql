@@ -1,13 +1,21 @@
 -- =====================================================================
--- 071(빌드 난이도 별점 difficulty + set_build_difficulty) 실행 "뒤" 확인 조회 (읽기만 - 아무것도 바꾸지 않는다). 운영 DB에서 언제 다시 실행해도 된다.
+-- 071(빌드 난이도 별점 difficulty + set_build_difficulty + build_difficulties) 실행 "뒤" 확인 조회 (읽기만 - 아무것도 바꾸지 않는다). 운영 DB에서 언제 다시 실행해도 된다.
 -- 071을 실행한 "직후" SQL Editor에 통째로 붙여넣어 실행하면 표 하나가 나온다 (맨 끝의 조회가 그 표다).
---   - 1~12번: [지금 값]이 [정상 값]과 모두 맞아야 한다. 하나라도 다르면 알려 주세요.
---   - 13~21번: 실행 전 check_build_difficulty_before.sql의 3~11번에 적어 둔 값과 비교한다(각 줄의 [정상 값]에 무엇과 같아야 하는지 적었다).
+--   - 1~12번·22~26번: [지금 값]이 [정상 값]과 모두 맞아야 한다. 하나라도 다르면 알려 주세요.
+--   - 13~21번·27번: 실행 전 check_build_difficulty_before.sql의 3~12번에 적어 둔 값과 비교한다(각 줄의 [정상 값]에 무엇과 같아야 하는지 적었다).
 --   - 함수 본문 지문은 줄바꿈 CR을 뺀 값으로 계산한다(SQL Editor가 CRLF로 붙여 넣어도 같은 값 - c5333b1과 같은 방식).
---   - 이 조회는 set_build_difficulty를 부르지 않는다(별점을 바꾸지 않음).
+--   - 이 조회는 set_build_difficulty를 부르지 않는다(별점을 바꾸지 않음). build_difficulties는 빈 입력으로만 부른다(읽기 함수).
 -- =====================================================================
 with
 fn as (select to_regprocedure('public.set_build_difficulty(bigint, numeric)') as oid),
+rd as (select to_regprocedure('public.build_difficulties(bigint[])') as oid),
+-- 일반 사용자(로그인·비로그인)가 부를 수 있는 읽기 함수 (stable·immutable, 트리거 아님) - 실행 전 스크립트와 같은 식
+rf as (
+  select p.proname || '(' || oidvectortypes(p.proargtypes) || ')' as sig
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.prokind = 'f' and p.provolatile in ('s', 'i') and p.prorettype <> 'trigger'::regtype
+     and (has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('anon', p.oid, 'execute'))
+),
 -- 일반 사용자(로그인·비로그인)가 부를 수 있는 쓰기 함수 (068 빠뜨림 방지 검사와 같은 대상)
 wf as (
   select p.oid, p.proname || '(' || oidvectortypes(p.proargtypes) || ')' as sig, p.prosrc,
@@ -91,8 +99,9 @@ from (
       where split_part(a.sig, '(', 1) in ('follow_build_card', 'influencer_builds', 'followed_builds', 'followed_builds_unchecked', 'my_saved_builds',
                                           'public_profile', 'build_json', 'build_links', 'build_editor_counts', 'build_contributors', 'wiki_snapshot', 'build_signature')),
     '실행 전 5번과 같음', '옛 앱 1.1·1.2가 쓰는 응답 모양 그대로'
-  union all select 16, '비교: public의 모든 함수 (새 함수 뺌) 수 / 지문',
-    (select count(*) || ' / ' || md5(string_agg(a.body, '|' order by a.sig)) from allf a where a.sig <> 'set_build_difficulty(bigint, numeric)'),
+  union all select 16, '비교: public의 모든 함수 (새 함수 2개 뺌) 수 / 지문',
+    (select count(*) || ' / ' || md5(string_agg(a.body, '|' order by a.sig)) from allf a
+      where a.sig not in ('set_build_difficulty(bigint, numeric)', 'build_difficulties(bigint[])')),
     '실행 전 6번과 같음', '기존 함수는 하나도 바뀌지 않았다'
   union all select 17, '비교: builds 칸 (difficulty 뺌) 수 / 지문 · 제약 (새 제약 뺌) 수 / 지문',
     (select count(*) || ' / ' || left(md5(string_agg(column_name || ':' || data_type || ':' || is_nullable || ':' || coalesce(column_default, ''), ',' order by ordinal_position)), 12)
@@ -120,5 +129,31 @@ from (
   union all select 21, '비교: 알림 전체 수 · 가장 큰 id',
     (select count(*) || ' · ' || coalesce(max(id), 0) from public.notifications),
     '실행 전 11번과 같음', null
+  -- ===== 새 읽기 함수 build_difficulties =====
+  union all select 22, '새 읽기 함수 build_difficulties (인자 / 같은 이름 함수 수 / 반환형)',
+    coalesce((select oid::regprocedure::text from rd), '없음')
+      || ' / ' || (select count(*) from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'public' and p.proname = 'build_difficulties')
+      || ' / ' || coalesce((select prorettype::regtype::text from pg_proc where oid = (select oid from rd)), '없음'),
+    'build_difficulties(bigint[]) / 1 / jsonb', null
+  union all select 23, '보안 (volatile 종류 / security definer / search_path)',
+    coalesce((select provolatile::text || ' / ' || prosecdef::text || ' / ' || coalesce(array_to_string(proconfig, ','), '없음') from pg_proc where oid = (select oid from rd)), '함수 없음'),
+    's / false / search_path=""', 's = stable(읽기 함수), false = security invoker → builds 읽기 규칙(RLS) 그대로'
+  union all select 24, '실행 권한 (비로그인 anon / 로그인 authenticated / public 기본 권한)',
+    coalesce((select has_function_privilege('anon', oid, 'execute')::text || ' / ' || has_function_privilege('authenticated', oid, 'execute')::text
+            || ' / ' || exists (select 1 from unnest(proacl) a where a::text like '=%')::text
+       from pg_proc where oid = (select oid from rd)), '함수 없음'),
+    'true / true / false', '로그아웃 상태의 장인 프로필에서도 부른다'
+  union all select 25, '함수 본문 지문 (줄바꿈 CR을 뺀 값)',
+    coalesce((select md5(replace(prosrc, E'\r', '')) from pg_proc where oid = (select oid from rd)), '함수 없음'),
+    '0a738b0c9a5531826caaa77f238e9f06', '파일 그대로 실행했으면 같음 (CRLF로 붙여 넣어도 같음)'
+  union all select 26, '빈 입력 (빈 배열 / null / null만 든 배열) · 쓰기 함수 목록에 있음',
+    coalesce((select public.build_difficulties('{}'::bigint[])::text || ' / ' || public.build_difficulties(null)::text || ' / ' || public.build_difficulties(array[null]::bigint[])::text
+       where (select oid from rd) is not null), '함수 없음')
+      || ' · ' || exists (select 1 from wf where wf.sig = 'build_difficulties(bigint[])')::text,
+    '{} / {} / {} · false', '읽기 함수라 쓰기 함수 수(101)에 들어가지 않는다'
+  union all select 27, '비교: 읽기 함수 수 / 새 함수를 뺀 지문',
+    (select count(*) from rf) || ' / '
+      || (select md5(string_agg(a.body, '|' order by a.sig)) from allf a join rf on rf.sig = a.sig where a.sig <> 'build_difficulties(bigint[])'),
+    '실행 전 12번 + (1 / 같은 지문)', '읽기 함수는 새 함수 1개만 늘었다'
 ) x
 order by ord;

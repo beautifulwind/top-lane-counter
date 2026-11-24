@@ -1,5 +1,5 @@
 -- =====================================================================
--- 071: 빌드 난이도 별점 칸 + 쓰기 함수 set_build_difficulty (2026-11-24, SPEC 6-100, 1.3 패치 2-A) - "더하기만" 한다.
+-- 071: 빌드 난이도 별점 칸 + 쓰기 함수 set_build_difficulty + 읽기 함수 build_difficulties (2026-11-24, SPEC 6-100, 1.3 패치 2-A) - "더하기만" 한다.
 --
 -- 1. builds에 칸 difficulty numeric(2,1) 하나 (null 허용, 기본값 없음 → 기존 빌드는 모두 null = 「별점 없음」).
 --    제약 builds_difficulty_check: null이거나 0.5~5.0 사이의 0.5 단위(0.5, 1.0, 1.5, … 5.0)만.
@@ -12,6 +12,15 @@
 --      board_writer()(로그인 + 닉네임). security definer + search_path ''.
 --    - 바꾸는 것은 difficulty 칸 하나뿐: updated_at·updated_by·version·edited_at은 그대로(「최근 수정」 순서·수정 충돌 검사에 영향 없음),
 --      수정 기록(build_revisions)을 남기지 않는다.
+-- 2-1. build_difficulties(p_ids bigint[]) → jsonb { "<빌드 id>": 별점, … } (비로그인·로그인 모두, public 회수, stable, search_path '')
+--    - 장인 프로필·/following·/lists처럼 빌드를 jsonb 함수(follow_build_card·my_saved_builds - 키가 고정)로 받는 화면이
+--      받은 빌드 id들로 한 번 더 불러 별점을 붙인다(build_links·build_editor_counts처럼 { 빌드 id: 값 } 모양). 기존 함수는 고치지 않는다.
+--    - 별점이 비어 있는(null) 빌드·볼 수 없는 빌드는 키를 넣지 않는다. 빈 배열·null이면 {}. 목록 안의 null id는 무시한다.
+--    - 한 번에 id 200개까지(null을 뺀 개수). 넘으면 오류 「별점은 한 번에 200개까지 불러올 수 있습니다.」
+--    - 보안: security invoker(부른 사람 권한). builds 읽기 규칙(RLS)이 그대로 적용된다 → 공개 빌드(빌드·상대법 모두 approved -
+--      화면의 publicBuilds와 같은 조건)·내 빌드(상태 무관)·운영자(is_admin, 운영자 모드 켬)는 전부, 감독관은 RLS대로 처리할 수 있는
+--      작성자의 숨긴 빌드까지. difficulty 칸은 표 단위 읽기 권한이라 표를 직접 읽어도 같은 범위가 보이므로, 이 함수가 그보다 넓게
+--      보여 줄 길이 없다(security definer로 조건을 따로 적으면 RLS와 어긋날 위험만 생긴다).
 -- 3. 알림이 생기지 않는 이유 (조사 결과): 빌드 수정 알림 build_edited는 067의 트리거 build_revisions_notify가
 --    "build_revisions에 'edit'·'revert' 줄이 생길 때"만 만든다. 이 함수는 build_revisions에 줄을 넣지 않는다.
 --    builds의 UPDATE 트리거 중 칸 지정 없이 도는 것은 builds_bump_version(재검토→대기 다시 보내기 때만 버전 +1)과
@@ -24,6 +33,7 @@
 --    읽을 수 있는 빌드(공개·내 것·운영자)의 difficulty는 바로 읽힌다. 넣기 칸 권한(8칸)에는 들어가지 않는다 → 함수로만 바뀐다.
 -- 5. 068 빠뜨림 방지 검사: 새 쓰기 함수라 첫 줄에 assert_can_write()가 있다 → 「검사가 든 함수」가 29개 → 30개
 --    (일반 사용자가 부를 수 있는 쓰기 함수 100개 → 101개, 허용 목록 71개는 그대로). 허용 목록 표는 건드리지 않는다.
+--    build_difficulties는 읽기 함수(stable)라 이 검사의 대상이 아니다(쓰기 함수 수는 101 그대로).
 --
 -- 실행 전 supabase/scripts/check_build_difficulty_before.sql, 실행 뒤 check_build_difficulty_after.sql
 -- (함수 본문 지문은 줄바꿈 CR을 뺀 값으로 비교 - c5333b1과 같은 방식). 070까지 실행한 DB에서 SQL Editor에 통째로 붙여넣어 "한 번" 실행한다.
@@ -34,6 +44,7 @@
 --     begin;
 --     -- 1) 함수만 지움 (별점 데이터는 남는다. 화면이 함수를 부르면 「함수를 찾을 수 없음」 오류)
 --     drop function if exists public.set_build_difficulty(bigint, numeric);
+--     drop function if exists public.build_difficulties(bigint[]);
 --     -- 2) 칸까지 지움 - 별점 데이터 삭제 (제약은 칸과 함께 지워진다)
 --     alter table public.builds drop constraint if exists builds_difficulty_check;
 --     alter table public.builds drop column if exists difficulty;
@@ -46,8 +57,9 @@ do $$
 begin
   if exists (select 1 from information_schema.columns
               where table_schema = 'public' and table_name = 'builds' and column_name = 'difficulty')
-     or to_regprocedure('public.set_build_difficulty(bigint, numeric)') is not null then
-    raise exception '071을 이미 실행했습니다 (builds.difficulty 칸 또는 set_build_difficulty 함수가 있음). 다시 실행하지 마세요. 아무것도 바뀌지 않았습니다.' using errcode = 'P0001';
+     or to_regprocedure('public.set_build_difficulty(bigint, numeric)') is not null
+     or to_regprocedure('public.build_difficulties(bigint[])') is not null then
+    raise exception '071을 이미 실행했습니다 (builds.difficulty 칸 또는 set_build_difficulty·build_difficulties 함수가 있음). 다시 실행하지 마세요. 아무것도 바뀌지 않았습니다.' using errcode = 'P0001';
   end if;
   if to_regprocedure('public.assert_can_write()') is null or to_regprocedure('public.influencer_directory(text, text, integer, integer)') is null then
     raise exception '068~070을 먼저 실행해 주세요 (assert_can_write 또는 influencer_directory 함수가 없음). 아무것도 바뀌지 않았습니다.' using errcode = 'P0001';
@@ -92,5 +104,31 @@ comment on function public.set_build_difficulty(bigint, numeric) is
 
 revoke execute on function public.set_build_difficulty(bigint, numeric) from public, anon;
 grant execute on function public.set_build_difficulty(bigint, numeric) to authenticated;
+
+-- 3. 읽기 함수 - security invoker: builds 읽기 규칙(RLS)이 그대로 걸려 표를 직접 읽을 때보다 넓게 보일 수 없다
+create function public.build_difficulties(p_ids bigint[])
+returns jsonb language plpgsql stable security invoker set search_path = ''
+as $$
+declare
+  ids bigint[] := array_remove(coalesce(p_ids, '{}'::bigint[]), null);  -- null id는 무시
+begin
+  if cardinality(ids) > 200 then
+    raise exception '별점은 한 번에 200개까지 불러올 수 있습니다.' using errcode = '22023';
+  end if;
+  if cardinality(ids) = 0 then
+    return '{}'::jsonb;
+  end if;
+  return (
+    select coalesce(jsonb_object_agg(b.id::text, b.difficulty), '{}'::jsonb)
+      from public.builds b
+     where b.id = any (ids) and b.difficulty is not null  -- 볼 수 없는 빌드는 RLS가 뺀다, 비어 있는 별점은 키 없음
+  );
+end;
+$$;
+comment on function public.build_difficulties(bigint[]) is
+  '빌드 난이도 별점 묶음 읽기 (071): { 빌드 id: 별점 }. 별점 없음·볼 수 없는 빌드는 키 없음. 200개까지. security invoker - builds RLS 그대로';
+
+revoke execute on function public.build_difficulties(bigint[]) from public;
+grant execute on function public.build_difficulties(bigint[]) to anon, authenticated;
 
 commit;

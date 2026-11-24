@@ -2,19 +2,23 @@
 -- 071 빌드 난이도 별점: 칸·제약(0.5~5.0, 0.5 단위, null 허용, 기존 빌드 null), set_build_difficulty 권한(로그인만·anon·public 없음),
 --   작성자 본인만(숨긴 빌드도 본인은 됨, 남은 공개·숨김·없는 빌드 모두 같은 문장), 범위·단위 위반 거부(반올림 안 함), null로 비우기,
 --   비로그인 거부, 068 활동 제한(첫 줄 검사), 표 직접 고치기 불가, 별점만 바꾸면 수정 시각·버전·수정 기록·알림·푸시 모두 그대로,
---   기존 읽기 함수 응답에 새 칸이 끼지 않음
+--   기존 읽기 함수 응답에 새 칸이 끼지 않음,
+--   읽기 함수 build_difficulties(공개·비로그인·본인·운영자·감독관 범위 = builds 읽기 규칙 그대로, 숨김·대기·숨긴 상대법 빌드는 남에게 안 나옴,
+--   비어 있는 별점은 키 없음, 빈 배열·null id, 200개 상한)
 \set ON_ERROR_STOP 1
 \set QUIET 1
 \set OP '00000000-0000-0000-0000-00000000000a'
 \set A  '00000000-0000-0000-0000-0000000000d1'
 \set B  '00000000-0000-0000-0000-0000000000d2'
 \set R  '00000000-0000-0000-0000-0000000000d3'
+\set M  '00000000-0000-0000-0000-0000000000d4'
 \set doc '{"summary":"요약","level_notes":{"1":"a","2":"b","3":"c","6":"d"},"lane_cautions":""}'
-insert into auth.users (id, email) values (:'OP', 'op@x.com'), (:'A', 'a@x.com'), (:'B', 'b@x.com'), (:'R', 'r@x.com');
+insert into auth.users (id, email) values (:'OP', 'op@x.com'), (:'A', 'a@x.com'), (:'B', 'b@x.com'), (:'R', 'r@x.com'), (:'M', 'm@x.com');
 update public.profiles set nickname = '영자', role = 'admin' where id = :'OP';
 update public.profiles set nickname = '에이' where id = :'A';
 update public.profiles set nickname = '비이' where id = :'B';
 update public.profiles set nickname = '제한맨' where id = :'R';
+update public.profiles set nickname = '감독', role = 'moderator' where id = :'M';
 update public.xp_rules set value = 0 where key in ('wiki_create_interval', 'build_edit_interval');
 create temp table ids (k text primary key, v bigint);
 grant all on ids to authenticated, anon;
@@ -207,4 +211,90 @@ reset role;
 set role anon;
 set request.jwt.claim.sub = '';
 select t.ok('비로그인: 공개 빌드 별점 읽음', (select difficulty from public.builds where id = pg_temp.id('bA')) = 1.0);
+reset role;
+
+-- ===== 11. 읽기 함수 build_difficulties =====
+select t.ok('읽기 함수: stable, security invoker(부른 사람 권한 = builds 읽기 규칙), search_path "", jsonb', (
+  select provolatile = 's' and not prosecdef and proconfig = array['search_path=""'] and prorettype = 'jsonb'::regtype
+    from pg_proc where oid = 'public.build_difficulties(bigint[])'::regprocedure));
+select t.ok('권한: 비로그인·로그인 모두, public 없음', has_function_privilege('anon', 'public.build_difficulties(bigint[])', 'execute')
+  and has_function_privilege('authenticated', 'public.build_difficulties(bigint[])', 'execute')
+  and not exists (select 1 from pg_proc, unnest(proacl) a where oid = 'public.build_difficulties(bigint[])'::regprocedure and a::text like '=%'));
+select t.ok('읽기 함수라 068 쓰기 함수 검사 대상이 아님 (쓰기 함수 101개·검사 30개 그대로)', (
+  select count(*) filter (where p.proname = 'build_difficulties') = 0 and count(*) = 101
+     and count(*) filter (where p.prosrc ~ '^\s*declare\s*\n\s*_can_write constant boolean := public\.assert_can_write\(\);'
+                             or p.prosrc ~ '^\s*begin\s*\n\s*perform public\.assert_can_write\(\);') = 30
+    from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+   where n.nspname = 'public' and p.prokind = 'f' and p.provolatile = 'v' and p.prorettype <> 'trigger'::regtype
+     and (has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('anon', p.oid, 'execute'))));
+-- 준비: A의 승인 대기 빌드(2.5), B의 숨긴 상대법 밑 빌드(3.0). 지금: bA 1.0 공개 · bAh 1.5 숨김 · bR 4.0 공개 · bB 공개(별점 없음)
+set role authenticated;
+set request.jwt.claim.sub = :'A';
+insert into ids values ('bAp', create_build(pg_temp.id('m1'), t.build(array['6631','3047','3742']) || pg_temp.doc()));
+select set_build_difficulty(pg_temp.id('bAp'), 2.5);
+set request.jwt.claim.sub = :'B';
+select create_matchup('Darius', 'Sett', t.build() || pg_temp.doc()) as m2 \gset
+insert into ids values ('m2', (:'m2'::jsonb ->> 'counter_id')::bigint), ('bB2', (:'m2'::jsonb ->> 'build_id')::bigint);
+select set_build_difficulty(pg_temp.id('bB2'), 3.0);
+reset role;
+update public.builds set status = 'pending', reviewed_by = null, reviewed_at = null where id = pg_temp.id('bAp');
+update public.counters set status = 'hidden' where id = pg_temp.id('m2');
+select t.ok('준비: 대기 빌드 1개 · 숨긴 상대법 밑 빌드 1개', (select status from public.builds where id = pg_temp.id('bAp')) = 'pending'
+  and (select c.status from public.builds b join public.counters c on c.id = b.counter_id where b.id = pg_temp.id('bB2')) = 'hidden');
+-- 부를 id 목록 (탈퇴한 작성자의 픽스처 빌드·없는 id·null 포함) / 같은 사람이 표를 직접 읽은 값
+create function pg_temp.all_ids() returns bigint[] language sql stable as $$
+  select array[pg_temp.id('bA'), pg_temp.id('bAh'), pg_temp.id('bAp'), pg_temp.id('bB'), pg_temp.id('bB2'), pg_temp.id('bR'),
+               (select min(id) from public.builds), 999999, null] $$;
+create function pg_temp.direct() returns jsonb language sql stable as $$
+  select coalesce(jsonb_object_agg(id::text, difficulty), '{}'::jsonb) from public.builds where id = any (pg_temp.all_ids()) and difficulty is not null $$;
+create function pg_temp.expect(variadic ks text[]) returns jsonb language sql stable as $$
+  select coalesce(jsonb_object_agg(pg_temp.id(k)::text, (select difficulty from public.builds where id = pg_temp.id(k))), '{}'::jsonb) from unnest(ks) k $$;
+grant execute on all functions in schema pg_temp to anon, authenticated;
+select pg_temp.expect('bA', 'bR') as e_public, pg_temp.expect('bA', 'bAh', 'bAp', 'bR') as e_a, pg_temp.expect('bA', 'bR', 'bB2') as e_b,
+       pg_temp.expect('bA', 'bAh', 'bAp', 'bB2', 'bR') as e_op, pg_temp.expect('bA', 'bAh', 'bR') as e_mod \gset
+select t.ok('준비: 기대값 (공개 = 1.0·4.0, 운영자 = 5개)', :'e_public'::jsonb = jsonb_build_object(pg_temp.id('bA')::text, 1.0, pg_temp.id('bR')::text, 4.0)
+  and (select count(*) from jsonb_object_keys(:'e_op'::jsonb)) = 5);
+
+set role anon;
+set request.jwt.claim.sub = '';
+select t.ok('비로그인: 공개 빌드 별점만 (숨김·대기·숨긴 상대법·별점 없음·없는 id·null은 키 없음)', build_difficulties(pg_temp.all_ids()) = :'e_public'::jsonb);
+select t.ok('비로그인: 표를 직접 읽은 값과 같음', build_difficulties(pg_temp.all_ids()) = pg_temp.direct());
+select t.ok('값은 숫자 (1.0 → 1.0)', (build_difficulties(array[pg_temp.id('bA')]) -> pg_temp.id('bA')::text) = '1.0'::jsonb
+  and jsonb_typeof(build_difficulties(array[pg_temp.id('bA')]) -> pg_temp.id('bA')::text) = 'number');
+reset role;
+set role authenticated;
+set request.jwt.claim.sub = :'B';
+select t.ok('남(B): 공개 빌드 + 내 빌드(숨긴 상대법 밑이어도)만, A의 숨김·대기 빌드 별점은 안 나옴', build_difficulties(pg_temp.all_ids()) = :'e_b'::jsonb
+  and not (build_difficulties(pg_temp.all_ids()) ?| array[pg_temp.id('bAh')::text, pg_temp.id('bAp')::text]));
+select t.ok('남(B): 숨김·대기 빌드 id만 넣어도 {}', build_difficulties(array[pg_temp.id('bAh'), pg_temp.id('bAp')]) = '{}'::jsonb);
+select t.ok('남(B): 표를 직접 읽은 값과 같음', build_difficulties(pg_temp.all_ids()) = pg_temp.direct());
+set request.jwt.claim.sub = :'A';
+select t.ok('본인(A): 내 숨긴 빌드·대기 빌드 별점도 나옴', build_difficulties(pg_temp.all_ids()) = :'e_a'::jsonb);
+select t.ok('본인(A): 남의 숨긴 상대법 밑 빌드는 안 나옴', not (build_difficulties(pg_temp.all_ids()) ? pg_temp.id('bB2')::text));
+set request.jwt.claim.sub = :'OP';
+select t.ok('운영자: 숨김·대기·숨긴 상대법 빌드까지 모두', build_difficulties(pg_temp.all_ids()) = :'e_op'::jsonb);
+set request.jwt.claim.sub = :'M';
+select t.ok('감독관: builds 읽기 규칙대로 (처리할 수 있는 작성자의 숨긴 빌드는 보임, 대기·숨긴 상대법 밑 빌드는 안 보임)',
+  build_difficulties(pg_temp.all_ids()) = :'e_mod'::jsonb and build_difficulties(pg_temp.all_ids()) = pg_temp.direct());
+reset role;
+update public.profiles set operator_mode = false where id = :'OP';
+set role authenticated;
+set request.jwt.claim.sub = :'OP';
+select t.ok('운영자 모드를 끄면 일반 회원과 같은 범위 (is_admin과 같음)', build_difficulties(pg_temp.all_ids()) = :'e_public'::jsonb);
+reset role;
+update public.profiles set operator_mode = true where id = :'OP';
+
+-- 별점 없음·빈 입력·null·상한
+set role anon;
+set request.jwt.claim.sub = '';
+select t.ok('비어 있는 별점은 키 없음 (bB 하나만 → {})', build_difficulties(array[pg_temp.id('bB')]) = '{}'::jsonb);
+select t.ok('빈 배열 → {}', build_difficulties('{}'::bigint[]) = '{}'::jsonb);
+select t.ok('null → {}', build_difficulties(null) = '{}'::jsonb);
+select t.ok('null만 든 배열 → {}', build_difficulties(array[null, null]::bigint[]) = '{}'::jsonb);
+select t.ok('null id는 무시하고 나머지는 읽음', build_difficulties(array[null, pg_temp.id('bA'), null]) = jsonb_build_object(pg_temp.id('bA')::text, 1.0));
+select t.ok('같은 id가 여러 번 있어도 키 하나', build_difficulties(array[pg_temp.id('bA'), pg_temp.id('bA')]) = jsonb_build_object(pg_temp.id('bA')::text, 1.0));
+select t.ok('200개는 됨', build_difficulties(array_append(array(select g::bigint from generate_series(1000001, 1000199) g), pg_temp.id('bA')))
+  = jsonb_build_object(pg_temp.id('bA')::text, 1.0));
+select t.ok('null은 개수에 안 셈 (200개 + null 5개)', build_difficulties(array(select g::bigint from generate_series(1000001, 1000200) g) || array[null, null, null, null, null]::bigint[]) = '{}'::jsonb);
+select t.fails('201개는 오류', $$select build_difficulties(array(select g::bigint from generate_series(1, 201) g))$$, '한 번에 200개까지');
 reset role;
