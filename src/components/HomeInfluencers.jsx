@@ -3,14 +3,14 @@ import { Link } from 'react-router-dom';
 import { getInfluencerDirectory } from '../api/follow';
 import { isBlocked, useAuth } from '../lib/auth';
 import { HOME_INFLUENCER_COUNT, HOME_INFLUENCER_FETCH } from '../lib/homeLayout';
-import { INFLUENCER_SORT } from '../lib/influencerList';
+import { INFLUENCER_SORT_DEFAULT } from '../lib/influencerList';
 import { photoFirst } from '../lib/influencerOrder';
 import ProfilePhoto from './ProfilePhoto';
 import SectionHead from './SectionHead';
 import { ArrowRightIcon, UsersIcon } from './Icons';
 
 /**
- * 메인 화면의 장인 줄 (1.3 패치 1-B2, SPEC 6-94·6-95): 최근 활동 장인(사진 없는 장인은 맨 뒤) HOME_INFLUENCER_COUNT명을 사진 원 + 닉네임으로 가로로 보여 준다.
+ * 메인 화면의 장인 줄 (1.3 패치 1-B2, SPEC 6-94·6-96): 팔로워 많은 장인(같으면 최신순, 사진 없는 장인은 맨 뒤, 칩 없음) HOME_INFLUENCER_COUNT명을 사진 원 + 닉네임으로 가로로 보여 준다.
  * 오른쪽의 「전체」는 제자리에 있고(스크롤 영역 밖) 장인 원들만 그 왼쪽에서 밀린다 → /influencers.
  * 불러오는 동안은 같은 높이의 빈 자리만 잡고, 실패하거나 장인이 없으면 줄 전체를 조용히 숨긴다(오류 상자 없음 — 메인 화면은 그대로).
  */
@@ -19,7 +19,7 @@ export default function HomeInfluencers() {
   const [state, setState] = useState({ status: 'loading', total: 0, items: [] });
   useEffect(() => {
     let alive = true;
-    getInfluencerDirectory({ query: '', sort: INFLUENCER_SORT, page: 1, size: HOME_INFLUENCER_FETCH }).then(
+    getInfluencerDirectory({ query: '', sort: INFLUENCER_SORT_DEFAULT, page: 1, size: HOME_INFLUENCER_FETCH }).then(
       (d) => alive && setState({ status: 'ok', total: Number(d?.total) || 0, items: d?.items ?? [] }),
       () => alive && setState({ status: 'hidden', total: 0, items: [] }),
     );

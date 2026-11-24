@@ -1609,8 +1609,11 @@ ul.build-cards > li.build-card.is-influencer { border-left-color: var(--brand); 
 .inf-list-search { margin: 0 0 var(--gap-sm); }
 .inf-list-search .inf-search-input { width: 100%; min-width: 0; }
 .inf-sort { margin: 0 0 var(--gap-md); }
-/* 「최신순」 — 누르는 칩이 아니라 지금 정렬 표시 (선택된 모양: following-tabs의 선택된 칩과 같은 색) */
-.sort-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 32px; padding: 0 12px; border: 1px solid var(--brand); border-radius: 999px; background: var(--soft); color: var(--brand-dark); font-size: var(--fs-sm); font-weight: 800; cursor: default; user-select: none; }
+/* 「최신순」 칩 (켜고 끄는 토글, 1-B2 정정): 꺼짐 = 중립 테두리, 켜짐 = 주황 테두리·바탕·글자 */
+.sort-chip { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; padding: 0 14px; border: 1px solid var(--line-hover); border-radius: 999px; background: transparent; color: var(--muted); font: inherit; font-size: var(--fs-sm); font-weight: 700; cursor: pointer; }
+@media (hover: hover) { .sort-chip:hover { background: var(--raised); color: var(--text); } }
+.sort-chip.on { border-color: var(--brand); background: var(--soft); color: var(--brand-dark); font-weight: 800; }
+.sort-chip:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 .inf-rows { list-style: none; margin: 0 0 var(--gap-md); padding: 0; display: flex; flex-direction: column; gap: 8px; }
 .inf-row { display: flex; align-items: center; gap: var(--gap-sm); min-width: 0; padding: 8px 10px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
 .inf-row:hover { border-color: var(--line-hover); }

@@ -10,14 +10,15 @@ import ProfilePhoto from '../components/ProfilePhoto';
 import SearchField from '../components/SearchField';
 import { ErrorBox, Loading } from '../components/Status';
 import { isBlocked, useAuth } from '../lib/auth';
-import { INFLUENCER_FETCH_MAX, INFLUENCER_PAGE_SIZE, INFLUENCER_QUERY_MAX, INFLUENCER_SORT } from '../lib/influencerList';
+import { INFLUENCER_FETCH_MAX, INFLUENCER_PAGE_SIZE, INFLUENCER_QUERY_MAX, INFLUENCER_SORT_DEFAULT, INFLUENCER_SORT_RECENT } from '../lib/influencerList';
 import { photoFirst } from '../lib/influencerOrder';
 import { useAsync } from '../lib/useAsync';
 
 /**
- * 전체 장인 목록 (1.3 패치 1-B1·1-B2 보완, SPEC 6-93·6-95): 로그인 없이 볼 수 있다. 제목 + 인원수 칩 → 닉네임 검색(알약형) → 「최신순」 표시 → 장인 줄 → 쪽 번호.
- * 정렬은 늘 최근 활동순이다(influencer_directory 'recent'). 「최신순」은 누르는 칩이 아니라 지금 정렬을 알려 주는 표시이고, 주소의 ?sort=는 무시한다.
- * 사진 없는 장인은 맨 뒤(lib/influencerOrder.js — 나중에 DB 정렬로 바꾸기 쉽게 한 곳). 그러려면 전체를 봐야 해서 한 번에 INFLUENCER_FETCH_MAX(50)명을 받아
+ * 전체 장인 목록 (1.3 패치 1-B1·1-B2 보완·정정, SPEC 6-93·6-95·6-96): 로그인 없이 볼 수 있다. 제목 + 인원수 칩 → 닉네임 검색(알약형) → 「최신순」 칩 → 장인 줄 → 쪽 번호.
+ * 기본 정렬은 팔로워 많은 순(같으면 최신순, influencer_directory 'followers' — 화면에 따로 표시하지 않음). 「최신순」 칩은 켜고 끄는 토글: 켜면 'recent'(최근 활동순).
+ * 칩 상태는 주소 ?sort=recent에 남고(끄면 지움), 다른 값·잘못된 값은 followers로 본다. 칩을 바꾸면 1쪽으로, 검색어는 유지.
+ * 사진 없는 장인은 맨 뒤(lib/influencerOrder.js — 나중에 DB 정렬로 바꾸기 쉽게 한 곳). 두 정렬 모두 그렇다. 그러려면 전체를 봐야 해서 정렬이 바뀔 때마다 INFLUENCER_FETCH_MAX(50)명을 새로 받아
  * 웹에서 INFLUENCER_PAGE_SIZE(10)명씩 나눈다(검색어가 있어도 같음). 전체가 50명을 넘으면 사진 순서를 못 맞추므로 서버 쪽 나누기(쪽마다 요청)로 되돌린다.
  * 검색어·쪽은 주소(?q= ?page=)에 남아 새로고침해도 같다.
  * 줄: 사진(없으면 첫 글자 원) · 닉네임 · 「인증」 · 「빌드 N · 팔로워 N」 — 누르면 /u/:id. 팔로우 버튼은 줄 링크 밖에 따로 있어 눌러도 이동하지 않는다(본인 줄은 없음).
@@ -27,16 +28,19 @@ export default function Influencers() {
   const auth = useAuth();
   const [params, setParams] = useSearchParams();
   const query = (params.get('q') ?? '').trim().slice(0, INFLUENCER_QUERY_MAX);
+  const sort = params.get('sort') === INFLUENCER_SORT_RECENT ? INFLUENCER_SORT_RECENT : INFLUENCER_SORT_DEFAULT; // 다른 값은 followers
   const wantPage = Math.max(1, Number.parseInt(params.get('page') ?? '', 10) || 1);
   const [input, setInput] = useState(query);
   const listRef = useRef(null);
   const moved = useRef(false);
 
-  /** 주소를 바꾼다 (기본값은 지움, 옛 ?sort=는 항상 지움). 주소 기록은 쌓지 않는다 */
+  /** 주소를 바꾼다 (기본값은 지움, sort는 recent일 때만 남기고 잘못된 값은 지움). 주소 기록은 쌓지 않는다 */
   const update = (patch) => {
     const next = new URLSearchParams(params);
     next.delete('sort');
+    if ((patch.sort !== undefined ? patch.sort : sort) === INFLUENCER_SORT_RECENT) next.set('sort', INFLUENCER_SORT_RECENT);
     Object.entries(patch).forEach(([k, v]) => {
+      if (k === 'sort') return;
       if (v == null || v === '' || (k === 'page' && Number(v) <= 1)) next.delete(k);
       else next.set(k, String(v));
     });
@@ -56,11 +60,11 @@ export default function Influencers() {
   const clearSearch = () => update({ q: null, page: null }); // [지우기]: 입력은 SearchField가 비우고, 주소의 q·page도 바로 초기화
 
   // 한 번에 받아 오기 (검색어가 바뀔 때만). 50명 이하면 이걸로 끝, 넘으면 서버 쪽 나누기로
-  const all = useAsync(() => getInfluencerDirectory({ query, sort: INFLUENCER_SORT, page: 1, size: INFLUENCER_FETCH_MAX }), [query]);
+  const all = useAsync(() => getInfluencerDirectory({ query, sort, page: 1, size: INFLUENCER_FETCH_MAX }), [query, sort]);
   const serverMode = !!all.data && Number(all.data.total) > INFLUENCER_FETCH_MAX;
   const paged = useAsync(
-    () => getInfluencerDirectory({ query, sort: INFLUENCER_SORT, page: wantPage, size: INFLUENCER_PAGE_SIZE }),
-    [query, wantPage], { enabled: serverMode },
+    () => getInfluencerDirectory({ query, sort, page: wantPage, size: INFLUENCER_PAGE_SIZE }),
+    [query, sort, wantPage], { enabled: serverMode },
   );
   const data = serverMode ? paged.data : all.data;
   const error = all.error ?? (serverMode ? paged.error : null);
@@ -117,8 +121,16 @@ export default function Influencers() {
         />
       </div>
 
-      {/* 정렬은 늘 최신순 — 누르는 칩이 아니라 지금 정렬을 알려 주는 표시 */}
-      <p className="inf-sort"><span className="sort-chip"><ClockIcon size={15} aria-hidden="true" /><span className="sr-only">정렬: </span>최신순</span></p>
+      {/* 정렬 칩: 꺼짐 = 팔로워 많은 순(기본, 표시 없음), 켜짐 = 최신순(주황) */}
+      <p className="inf-sort">
+        <button
+          type="button" className={sort === INFLUENCER_SORT_RECENT ? 'sort-chip on' : 'sort-chip'}
+          aria-pressed={sort === INFLUENCER_SORT_RECENT}
+          onClick={() => update({ sort: sort === INFLUENCER_SORT_RECENT ? null : INFLUENCER_SORT_RECENT, page: null })}
+        >
+          <ClockIcon size={15} aria-hidden="true" />최신순
+        </button>
+      </p>
 
       {!shown && loading && <Loading />}
       {error && <ErrorBox error={error} onRetry={retry} />}

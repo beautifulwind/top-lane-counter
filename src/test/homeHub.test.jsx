@@ -42,8 +42,8 @@ const follow = (n, whom) => { for (let i = 0; i < n; i++) TABLES.influencer_foll
 const cells = () => document.querySelectorAll('.champ-grid li');
 const LIMIT = COLS * CHAMP_VISIBLE_ROWS;
 
-test('장인 줄: 최근 활동순 20명을 받아 사진 없는 장인은 뒤로 보낸 뒤 앞 8명만, 인원수 칩은 전체 수, 「전체」는 목록 밖에 따로, 「상대 챔피언」보다 위', async () => {
-  // 서버 순서(활동 없음 → 팔로워 순): 장인01 … 장인10. 사진은 장인09·장인10만 → 앞으로
+test('장인 줄(칩 없음, 항상 팔로워 많은 순): 20명을 받아 사진 없는 장인은 뒤로 보낸 뒤 앞 8명만, 인원수 칩은 전체 수, 「전체」는 목록 밖에 따로, 「상대 챔피언」보다 위', async () => {
+  // 서버 순서(팔로워 많은 순): 장인01 … 장인10. 사진은 장인09·장인10만 → 앞으로
   for (let i = 1; i <= 10; i++) { inf(`i-${i}`, `장인${String(i).padStart(2, '0')}`, i >= 9 ? { photo_path: `u/i${i}.jpg` } : {}); follow(20 - i, `i-${i}`); }
   start();
   const list = await screen.findByRole('list', { name: '장인 목록' });
@@ -52,7 +52,7 @@ test('장인 줄: 최근 활동순 20명을 받아 사진 없는 장인은 뒤�
   expect(links.map((a) => a.getAttribute('aria-label'))).toEqual(['09', '10', '01', '02', '03', '04', '05', '06'].map((n) => `장인${n} 장인 페이지`));
   expect(links[0].getAttribute('href')).toBe('/u/i-9');
   expect(links[2].querySelector('.home-inf-initial').textContent).toBe('장'); // 사진 없으면 첫 글자
-  expect(fakeState.directoryCalls.at(-1)).toEqual({ p_query: '', p_sort: 'recent', p_page: 1, p_size: HOME_INFLUENCER_FETCH });
+  expect(fakeState.directoryCalls.at(-1)).toEqual({ p_query: '', p_sort: 'followers', p_page: 1, p_size: HOME_INFLUENCER_FETCH });
   const section = list.closest('section');
   expect(within(section).getByRole('heading', { name: /장인/ })).toBeDefined();
   expect(section.querySelector('.count-badge').textContent).toBe('10명');
@@ -60,6 +60,7 @@ test('장인 줄: 최근 활동순 20명을 받아 사진 없는 장인은 뒤�
   expect(all.getAttribute('href')).toBe('/influencers');
   expect(list.contains(all)).toBe(false); // 「전체」는 스크롤 목록 밖 = 제자리
   expect(all.textContent).toBe('전체');
+  expect(screen.queryByRole('button', { name: '최신순' })).toBeNull(); // 메인 줄에는 정렬 칩이 없다
   const enemy = await screen.findByRole('heading', { name: /상대 챔피언/ });
   expect(section.compareDocumentPosition(enemy.closest('section')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
   expect(screen.getByRole('heading', { level: 1, name: '챔피언 선택' }).compareDocumentPosition(section) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
