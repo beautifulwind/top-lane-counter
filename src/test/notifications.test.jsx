@@ -173,6 +173,22 @@ test('[모두 읽음]: 안 읽은 알림이 있을 때만 보이고, 누르면 �
   expect(screen.queryByRole('button', { name: '모두 읽음' })).toBeNull();
 });
 
+test('[모두 읽음]은 빨간 점과 같은 기준: 불러온 20개가 모두 읽음이어도 오래된 안 읽음이 있으면 보이고, 불러오지 않은 것까지 읽음 처리한다', async () => {
+  for (let i = 1; i <= 5; i++) TABLES.notifications.push(noti('level_up', { message: `오래된 ${i}`, read_at: null })); // 안 읽음, 화면에는 안 불러옴
+  for (let i = 1; i <= 20; i++) TABLES.notifications.push(noti('level_up', { message: `최근 ${i}` })); // 읽음 20개
+  fakeLogin(ME);
+  start('/notifications');
+  await screen.findByText('최근 20');
+  expect(screen.queryByText('오래된 5')).toBeNull(); // 첫 20개에 없다
+  expect(screen.queryByText('새')).toBeNull(); // 불러온 줄에는 안 읽음이 없다
+  const all = await screen.findByRole('button', { name: '모두 읽음' }); // 그래도 보인다 (전체 안 읽은 알림 5개)
+  expect(fakeState.rpcCalls).toEqual([]);
+  fireEvent.click(all);
+  await vi.waitFor(() => expect(fakeState.rpcCalls).toEqual([{ name: 'mark_all_notifications_read', args: { p_upto: TABLES.notifications[24].id } }]));
+  await vi.waitFor(() => expect(TABLES.notifications.every((n) => n.read_at)).toBe(true)); // 오래된 5개까지
+  await vi.waitFor(() => expect(screen.queryByRole('button', { name: '모두 읽음' })).toBeNull());
+});
+
 test('20개씩 [더 보기] — 더 오래된 알림을 이어 붙이고, 끝나면 버튼이 없다', async () => {
   for (let i = 1; i <= 25; i++) TABLES.notifications.push(noti('level_up', { message: `알림 ${i}` }));
   TABLES.notifications.push({ ...noti('level_up', { message: '남의 알림' }), user_id: 'u-x' });

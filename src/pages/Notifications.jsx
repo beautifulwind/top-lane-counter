@@ -4,6 +4,7 @@ import { getChampionMap } from '../api/ddragon';
 import { getNotifications, markAllNotificationsRead, markNotificationRead } from '../api/notifications';
 import { getMyTitleBookOnce, hasTitleBookOnce } from '../api/rewards';
 import { useAuth } from '../lib/auth';
+import { useUnreadCount } from '../lib/unread';
 import { describeNotification, noticeTime } from '../lib/notifications';
 import { fmtDateTime } from '../lib/format';
 import { useAsync } from '../lib/useAsync';
@@ -22,7 +23,7 @@ const ICONS = {
 
 /**
  * 알림 (/notifications, SPEC 6-17, 6-90): 내 알림 전부 최신순 한 줄씩, 20개씩 [더 보기].
- * 열어도 읽음 처리하지 않는다. 알림 한 줄을 누르면 그 줄만 읽음 처리(이동은 막지 않음), 맨 위 [모두 읽음]은 안 읽은 알림이 있을 때만.
+ * 열어도 읽음 처리하지 않는다. 알림 한 줄을 누르면 그 줄만 읽음 처리(이동은 막지 않음), 맨 위 [모두 읽음]은 빨간 점과 같은 기준(내 전체 안 읽은 알림 > 0)일 때만.
  * 읽으면 「새」 표시·색이 바로 꺼지고 ☰·[알림]의 빨간 점이 다시 센다. 로그인한 사람만 (비회원 포함, 닉네임 전도 볼 수 있음)
  */
 export default function Notifications() {
@@ -55,6 +56,8 @@ function NotificationList({ userId }) {
   const [readIds, setReadIds] = useState(() => new Set());
   const [allUpto, setAllUpto] = useState(null); // [모두 읽음]으로 처리한 맨 위 번호
   const [markError, setMarkError] = useState(null);
+  // [모두 읽음]은 헤더 빨간 점과 같은 값(내 전체 안 읽은 알림 수 > 0)으로 보인다 — 불러오지 않은 오래된 알림까지 센다
+  const unreadCount = useUnreadCount(userId);
 
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
@@ -64,7 +67,6 @@ function NotificationList({ userId }) {
 
   const name = (id) => data.champs[id]?.name ?? id;
   const isNew = (n) => !n.read_at && !readIds.has(n.id) && !(allUpto != null && n.id <= allUpto);
-  const anyNew = rows.some(isNew);
   /** 한 줄 읽음 처리: 색을 바로 끄고, 실패하면 되돌린다. 이동은 기다리지 않는다 (합쳐진 알림도 한 줄 = id 하나) */
   const readOne = (n) => {
     if (!isNew(n)) return;
@@ -94,7 +96,7 @@ function NotificationList({ userId }) {
 
   return (
     <>
-      {anyNew && (
+      {unreadCount > 0 && (
         <div className="actions end">
           <button type="button" className="btn btn-small" onClick={readAll}>모두 읽음</button>
         </div>
