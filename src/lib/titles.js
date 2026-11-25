@@ -1,6 +1,10 @@
 import { useEffect, useSyncExternalStore } from 'react';
 import { getPublicTitleInfo } from '../api/rewards';
 
+/** 마이페이지 칭호판 제목의 id와, 칭호 알림을 누르면 가는 주소 (6-111) */
+export const TITLE_BOARD_ID = 'my-titles';
+export const TITLE_BOARD_PATH = `/me#${TITLE_BOARD_ID}`;
+
 // 칭호 목록 (SPEC 6-3). DB의 user_titles.title_key / profiles.main_title 값 → 화면 이름.
 // 조건·숫자는 DB(xp_rules, sync_rewards)가 정한다. 여기는 이름과 보여 줄 순서·설명만.
 // "운영자"·"관리자"라는 단어는 칭호에 쓰지 않는다.

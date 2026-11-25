@@ -34,6 +34,14 @@ export async function getPublicProfile(id) {
   return rpc('public_profile', { p_user: String(id ?? '') }, '프로필을 불러오지 못했습니다.');
 }
 
+/**
+ * 일반 사용자 개인 페이지 (075 member_page, 비로그인도, SPEC 6-108·6-111): { member: { id, nickname, photo_path, main_title, titles }, total, page, size, items }.
+ * 공개 빌드 5개 미만·장인·운영자·비회원·닉네임 없음·정지·탈퇴·없는 id는 모두 null (페이지가 있는지 알 수 없게).
+ */
+export async function getMemberPage(id, page = 1) {
+  return rpc('member_page', { p_user: String(id ?? ''), p_page: page }, '프로필을 불러오지 못했습니다.');
+}
+
 /** 상대법의 공개 빌드 링크 { 빌드 id: 링크 }. 못 읽으면 빈 값 — 링크만 빠진다 */
 export async function getBuildLinks(counterRowId) {
   const { data, error } = await db().rpc('build_links', { p_counter: counterRowId });

@@ -17,6 +17,7 @@ import { InfluencerName, TitleBadge } from '../components/UserName';
 import BuildCard from '../components/BuildCard';
 import DiffView from '../components/DiffView';
 import MyTitles, { LevelBar } from '../components/MyRewards';
+import MyProgress from '../components/MyProgress';
 import { matchupTitle } from '../lib/josa';
 import VoteTally from '../components/VoteTally';
 import { DifficultyBadge } from '../components/Difficulty';
@@ -152,6 +153,7 @@ function MyActivity({ auth }) {
       {data && (
         <>
           <MyTitles book={data.book} />
+          {!operator && <MyProgress auth={auth} builds={data.builds} book={data.book} rules={data.rewards?.rules} />}
           {APPROVAL_ENABLED && <MyProposals data={data} />} {/* 039 뒤로 새 제안이 없어 모든 회원에게 숨김 (승인 제도를 다시 켜면 보임) */}
           <MyBuilds data={data} />
         </>

@@ -183,6 +183,7 @@ export function resetFake() {
   fakeState.followStatusCalls = [];
   fakeState.searchCalls = [];
   fakeState.directoryCalls = [];
+  fakeState.memberPageCalls = [];
   fakeState.noticeQueue = []; // 051 create_notice가 [알림 보내기]를 켜고 올린 공지 id
   fakeState.influencerNextAt = null;
   TABLES.xp_events = [];
@@ -1562,10 +1563,10 @@ function LINK_DOMAINS() {
     ['twitch.tv', '트위치'], ['twitter.com', 'X (트위터 예전 주소)'], ['x.com', 'X'], ['youtu.be', '유튜브 (짧은 주소)'], ['youtube.com', '유튜브'],
   ].map(([domain, label]) => ({ domain, label }));
 }
-const LINK_RPCS = ['my_links', 'set_profile_links', 'set_build_link', 'public_profile', 'build_links',
+const LINK_RPCS = ['my_links', 'set_profile_links', 'set_build_link', 'public_profile', 'member_page', 'build_links',
   'report_link', 'remove_link', 'admin_link_reports', 'dismiss_link_reports', 'admin_add_link_domain', 'admin_remove_link_domain']; // 뒤 6개: 3b
 function linkRpc(name, args) {
-  const reading = ['my_links', 'public_profile', 'build_links', 'admin_link_reports'].includes(name);
+  const reading = ['my_links', 'public_profile', 'member_page', 'build_links', 'admin_link_reports'].includes(name);
   if (!reading) fakeState.rpcCalls.push({ name, args });
   if (fakeState.rpcError && !reading) return { data: null, error: { message: fakeState.rpcError, code: fakeState.rpcErrorCode ?? '42501' } };
   const links = TABLES.ext_links;
@@ -1585,6 +1586,32 @@ function linkRpc(name, args) {
   const nextId = () => 900 + links.length + Math.floor(Math.random() * 1e6);
   const meRow = meNow();
   try {
+    if (name === 'member_page') {
+      // 075: 일반 사용자 개인 페이지. 기준에 안 맞으면 모두 null (장인·운영자·비회원·닉네임 없음·정지 중·공개 빌드 5개 미만·없는 id)
+      fakeState.memberPageCalls = [...(fakeState.memberPageCalls ?? []), args];
+      const p = prof(args.p_user);
+      if (!p || !p.nickname || p.influencer || p.role === 'admin' || p.is_guest) return ok(null);
+      if (TABLES.user_restrictions.some((r) => r.user_id === p.id && !r.lifted_at && Date.parse(r.ends_at) > Date.now())) return ok(null);
+      const all = TABLES.builds.filter((b) => b.author_id === p.id && b.status === 'approved' && (b.counter?.status ?? 'approved') === 'approved')
+        .sort((a, b) => String(b.updated_at ?? b.created_at).localeCompare(String(a.updated_at ?? a.created_at)) || b.id - a.id);
+      if (all.length < (TABLES.xp_rules.find((r) => r.key === 'member_page_min_builds')?.value ?? 5)) return ok(null);
+      const grp = { activity: 1, limited: 3 };
+      const titles = TABLES.title_catalog
+        .filter((c) => c.kind !== 'influencer' && !c.hidden && (!c.secret || p.main_title === c.key)
+          && TABLES.user_titles.some((t) => t.user_id === p.id && t.title_key === c.key))
+        .sort((a, b) => grp[a.kind] - grp[b.kind] || a.sort_order - b.sort_order).map((c) => c.key);
+      const page = Math.max(1, args.p_page ?? 1);
+      return ok(structuredClone({
+        member: { id: p.id, nickname: p.nickname, photo_path: p.photo_path ?? null, main_title: p.main_title ?? null, titles },
+        total: all.length, page, size: 20,
+        items: all.slice((page - 1) * 20, page * 20).map((b) => ({
+          id: b.id, counter_id: b.counter_id, seq: b.seq, name: b.name, patch: b.patch, summary: b.summary,
+          target_champion: b.counter.target_champion, counter_champion: b.counter.counter_champion, up_count: b.up_count, down_count: b.down_count,
+          created_at: b.created_at, updated_at: b.updated_at ?? b.created_at, editor_count: 0,
+          author: { id: p.id, nickname: p.nickname, influencer: null }, link: null,
+        })),
+      }));
+    }
     if (name === 'public_profile') {
       const p = prof(args.p_user);
       if (!p || !p.influencer || !p.nickname) return ok(null);

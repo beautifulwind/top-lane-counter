@@ -1721,3 +1721,12 @@ ul.build-cards > li.build-card.is-influencer { border-left-color: var(--brand); 
 .pill-search-clear:focus-visible { outline: 2px solid var(--brand); outline-offset: 2px; }
 /* 메인 검색창: 예전 .search처럼 위쪽에 붙어 따라온다 */
 .bs-search { position: sticky; top: calc(52px + env(safe-area-inset-top)); z-index: 5; background: var(--bg); padding: 8px 0; }
+
+/* 6-111 일반 사용자 개인 페이지: 장인 틀에서 사진 테두리만 사이트 색으로, 받은 칭호는 줄바꿈 배지 */
+.member-profile .inf-hero-avatar, .member-profile .inf-hero-photo { border-color: var(--brand); }
+.member-titles { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--gap-sm); }
+/* 6-111 마이페이지 진행 안내 · 칭호 알림에서 온 칭호판 위치(상단 줄에 가리지 않게) */
+.title-card { scroll-margin-top: calc(64px + env(safe-area-inset-top)); }
+.my-progress ul { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--gap-sm); }
+.my-progress li { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--gap-sm); min-width: 0; word-break: keep-all; overflow-wrap: anywhere; font-variant-numeric: tabular-nums; }
+.my-progress .btn { min-height: 44px; }

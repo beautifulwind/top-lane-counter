@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { useLocation } from 'react-router-dom';
 import { setMainTitle } from '../api/rewards';
 import { useAuth } from '../lib/auth';
-import { rememberTitle } from '../lib/titles';
+import { TITLE_BOARD_ID, rememberTitle } from '../lib/titles';
 import { levelProgress } from '../lib/levels';
 import { fmtDate, fmtDateTime } from '../lib/format';
 import { SparklesIcon } from './Icons';
@@ -57,10 +58,16 @@ export default function MyTitles({ book }) {
   const special = items.filter((t) => t.kind !== 'activity');
   const total = activity.length;
   const ownedCount = activity.filter((t) => t.owned).length;
+  // 6-111: 칭호 알림에서 /me#my-titles로 오면 칭호판까지 내려간다 (도감을 읽은 뒤에야 그려지므로 여기서)
+  const ref = useRef(null);
+  const { hash } = useLocation();
+  useEffect(() => {
+    if (hash === `#${TITLE_BOARD_ID}`) ref.current?.scrollIntoView?.({ block: 'start' });
+  }, [hash]);
   return (
-    <section className="me-section me-card" aria-labelledby="my-titles">
+    <section ref={ref} className="me-section me-card title-card" aria-labelledby={TITLE_BOARD_ID}>
       <div className="sub-head">
-        <h2 id="my-titles"><SparklesIcon size={18} className="title-icon" /> 칭호</h2>
+        <h2 id={TITLE_BOARD_ID}><SparklesIcon size={18} className="title-icon" /> 칭호</h2>
         <span className="count-badge" aria-label={`칭호 ${total}개 중 ${ownedCount}개 얻음`}>{ownedCount} / {total}</span>
       </div>
       <TitleBoard activity={activity} special={special} current={auth.profile?.main_title ?? null} />

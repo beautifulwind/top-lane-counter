@@ -2,7 +2,7 @@
 // 제안·빌드 알림은 DB에 메모만 저장돼 있어 제목은 여기서 만든다. 게시판·레벨·칭호 알림은 DB 문장이 곧 제목.
 import { TYPE_LABEL, fmtDateTime } from './format';
 import { matchupTitle } from './josa';
-import { TITLES } from './titles';
+import { TITLES, TITLE_BOARD_PATH } from './titles';
 import { fillOperatorId } from './influencer';
 
 // 제안·빌드 알림: 제목, 메모 이름
@@ -161,7 +161,7 @@ export function describeNotification(n, name = (id) => id, titleBook = []) {
   if (n.kind === 'level_up' || n.kind === 'level_down') return { icon: 'level', title: n.message, to: '/me' };
   if (n.kind === 'title_earned' || n.kind === 'title_revoked') {
     const t = titleIn(n.message, titleBook);
-    return { icon: 'medal', title: n.message, to: '/me', titleKey: t?.key ?? null, titleItem: t };
+    return { icon: 'medal', title: n.message, to: TITLE_BOARD_PATH, titleKey: t?.key ?? null, titleItem: t };
   }
   if (n.kind === 'inquiry_answered') return { icon: 'comment', title: '문의에 답변이 도착했습니다', subject: null, detail: inquiryCategoryIn(n.message), to: '/inquiries' };
   if (n.kind === 'error_report_handled') {

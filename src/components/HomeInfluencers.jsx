@@ -11,17 +11,18 @@ import { ArrowRightIcon, UsersIcon } from './Icons';
 
 /**
  * 메인 화면의 장인 줄 (1.3 패치 1-B2, SPEC 6-94·6-96): 팔로워 많은 장인(같으면 최신순, 사진 없는 장인은 맨 뒤, 칩 없음) HOME_INFLUENCER_COUNT명을 사진 원 + 닉네임으로 가로로 보여 준다.
+ * 제목 옆 인원수(「N명」)는 두지 않는다 (6-111).
  * 오른쪽의 「전체」는 제자리에 있고(스크롤 영역 밖) 장인 원들만 그 왼쪽에서 밀린다 → /influencers.
  * 불러오는 동안은 같은 높이의 빈 자리만 잡고, 실패하거나 장인이 없으면 줄 전체를 조용히 숨긴다(오류 상자 없음 — 메인 화면은 그대로).
  */
 export default function HomeInfluencers() {
   const auth = useAuth();
-  const [state, setState] = useState({ status: 'loading', total: 0, items: [] });
+  const [state, setState] = useState({ status: 'loading', items: [] });
   useEffect(() => {
     let alive = true;
     getInfluencerDirectory({ query: '', sort: INFLUENCER_SORT_DEFAULT, page: 1, size: HOME_INFLUENCER_FETCH }).then(
-      (d) => alive && setState({ status: 'ok', total: Number(d?.total) || 0, items: d?.items ?? [] }),
-      () => alive && setState({ status: 'hidden', total: 0, items: [] }),
+      (d) => alive && setState({ status: 'ok', items: d?.items ?? [] }),
+      () => alive && setState({ status: 'hidden', items: [] }),
     );
     return () => { alive = false; };
   }, []);
@@ -42,7 +43,7 @@ export default function HomeInfluencers() {
 
   return (
     <section className="section home-inf" aria-labelledby="home-inf-title">
-      <SectionHead icon={UsersIcon} count={state.total} unit="명" id="home-inf-title">장인</SectionHead>
+      <SectionHead icon={UsersIcon} id="home-inf-title">장인</SectionHead>
       <div className="home-inf-row">
         <ul className="home-inf-scroll" aria-label="장인 목록">
           {items.map((p) => (

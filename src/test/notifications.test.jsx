@@ -96,7 +96,7 @@ test('레벨·칭호 알림: 마이페이지로, 칭호는 그 칭호 색 훈장
   const level = await rowOf('레벨이 올랐습니다: Lv.3');
   expect(href(level)).toBe('/me');
   const title = await rowOf("칭호 '장군'을 얻었습니다. [마이페이지]에서 대표 칭호로 고를 수 있습니다.");
-  expect(href(title)).toBe('/me');
+  expect(href(title)).toBe('/me#my-titles');
   expect(title.querySelector('.noti-icon.title-color.general .medal-icon')).not.toBeNull();
 });
 

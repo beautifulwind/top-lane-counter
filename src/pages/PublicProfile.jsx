@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation, useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { getPublicProfile } from '../api/links';
+import { getMemberPage, getPublicProfile } from '../api/links';
 import { getFollowStatus, getFollowers, getInfluencerBuilds } from '../api/follow';
 import { isYoutubeHost, youtubeHandle } from '../lib/links';
 import ProfileBuilds from '../components/ProfileBuilds';
+import MemberProfile from '../components/MemberProfile';
 import ShareButton from '../components/ShareButton';
 import { getChampionMap } from '../api/ddragon';
 import { ErrorBox, Loading } from '../components/Status';
@@ -29,7 +30,8 @@ import NotFound from './NotFound';
  * 나머지 링크는 작게. 본문: 그 장인이 처음 만든 공개 빌드(ProfileBuilds — 「최신순」(기본, 최근 수정순)·「인기순」 칩, 쪽 번호 20개씩).
  * 팔로워 수는 누구나. [팔로워 목록] 버튼(20개씩 [더보기])은 063부터 "내 페이지"일 때만(정식 회원) + 운영자(운영자 모드 켜짐)에게만 — DB도 같은 규칙.
  * 052: ?followers=1(새 팔로워 알림 → /me/followers)로 열면 볼 수 있는 사람에게는 팔로워 목록이 처음부터 펼쳐져 있다.
- * DB가 장인이 아니거나 없는 id·모양이 틀린 id에 모두 null을 주므로 화면도 모두 같은 "없는 페이지".
+ * 6-111: 장인이 아니면(public_profile null) member_page(075)를 불러 일반 사용자 개인 페이지(MemberProfile)를 그린다.
+ * 둘 다 null이면(없는 id·모양 틀림·공개 빌드 5개 미만·정지·탈퇴 등) 모두 같은 "없는 페이지" — 어느 쪽인지 화면으로 구분되지 않는다.
  * 이메일·라이엇 닉네임·역할·레벨은 DB가 주지 않는다.
  * 062: 장인 프로필 사진(있을 때만 — 없으면 예전 그대로, 보기 전용. 올리기·바꾸기·삭제는 마이페이지 카드에서).
  *      ⋮ 메뉴: [프로필 사진 신고](정식 회원, 남의 사진) / [이 사용자 차단](061) / [프로필 사진 삭제](운영자만, 사유 필수 → 장인에게 알림)
@@ -47,14 +49,16 @@ export default function PublicProfile() {
       getChampionMap().catch(() => ({})),
       me && me !== id ? getFollowStatus([id]) : {},
     ]);
-    return { profile, first, champs, following: !!status[id] };
+    const member = profile ? null : await getMemberPage(id, 1); // 장인이 아닐 때만 (장인 화면은 요청이 늘지 않는다)
+    return { profile, first, champs, member, following: !!status[id] };
   }, [id, me]);
 
   if (loading) return <Loading />;
   if (error) return <ErrorBox error={error} onRetry={retry} />;
-  if (!data.profile || !data.first) return <NotFound />;
-  // 061: 내가 차단한 장인 → 빌드·링크·팔로우 대신 안내만
-  if (isBlocked(auth, data.profile.id)) {
+  const influencer = !!data.profile && !!data.first;
+  if (!influencer && !data.member) return <NotFound />;
+  // 061: 내가 차단한 사용자 → 빌드·링크·팔로우 대신 안내만
+  if (isBlocked(auth, influencer ? data.profile.id : data.member.member.id)) {
     return (
       <article className="me-page public-profile">
         <h1 className="doc-title">{BLOCKED_PROFILE}</h1>
@@ -64,6 +68,7 @@ export default function PublicProfile() {
       </article>
     );
   }
+  if (!influencer) return <MemberProfile key={`${id}:${me}`} first={data.member} champs={data.champs} />;
   return (
     <Profile
       key={`${id}:${me}`} data={data} me={me} signedIn={signedIn} notice={notice}
