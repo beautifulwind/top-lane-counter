@@ -5,7 +5,6 @@ import {
   MY_CHAMPION_LIMIT, MY_CHAMPION_LIMIT_TEXT, getMyChampionBuilds, getMyChampions, setMyChampion,
 } from '../api/myChampions';
 import { isBlocked, useAuth } from '../lib/auth';
-import { MY_CHAMPIONS_EDITION, isMyChampionsOpen } from '../lib/legal';
 import { rankChampions, tokenize } from '../lib/championSearch';
 import { useAsync } from '../lib/useAsync';
 import { useBuildDifficulties } from '../lib/useBuildDifficulties';
@@ -17,7 +16,6 @@ import { ErrorBox, Loading } from './Status';
 
 export const NO_MY_CHAMPION_TEXT = '내가 하는 챔피언을 검색해서 선택하면, 그 챔피언의 빌드를 한곳에서 볼 수 있습니다.';
 export const NO_MY_CHAMPION_BUILDS_TEXT = '선택한 챔피언의 공개 빌드가 아직 없습니다. 새 빌드가 올라오면 여기에 모입니다.';
-export const MY_CHAMPIONS_CLOSED_TEXT = `내 챔피언 기능은 준비 중입니다. ${MY_CHAMPIONS_EDITION}부터 쓸 수 있습니다.`;
 /** 검색 결과 줄 수 (넘으면 더 좁혀 달라는 안내) */
 const RESULT_ROWS = 8;
 
@@ -31,14 +29,8 @@ const RESULT_ROWS = 8;
  * - 아래: 빌드 목록 = 저장한 빌드·전체 빌드와 같은 BuildRow 카드, 20개씩 쪽 번호(?page=). 순서는 서버(/builds 추천순).
  *   차단한 사람의 빌드는 서버가 빼고 개수를 알려 준다. 별점은 보이는 쪽의 id로 build_difficulties(기존 방식).
  * 080 전 DB면 「준비 중」 안내만. 비회원(게스트)도 쓸 수 있다(비로그인은 바깥 화면이 로그인 안내).
- * 6-118: 방침 시행일(MY_CHAMPIONS_EDITION, 한국 0시) 전에는 「준비 중」 안내만 — 검색창·칩·목록이 없고 DB 함수도 부르지 않는다.
  */
 export default function MyChampions({ userId }) {
-  if (!isMyChampionsOpen()) return <p className="notice" role="status">{MY_CHAMPIONS_CLOSED_TEXT}</p>;
-  return <MyChampionsPanel userId={userId} />;
-}
-
-function MyChampionsPanel({ userId }) {
   const champions = useAsync(getChampions, []);
   const list = useAsync(getMyChampions, [userId]);
   const [picked, setPicked] = useState({ base: null, items: [] }); // 이 화면에서 바꾼 목록 (처음 받은 목록이 바뀌면 다시)

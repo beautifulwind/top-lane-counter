@@ -8,7 +8,7 @@ import { AppRoutes } from '../App';
 import { LEGAL, kstDate, resolveLegalVersion } from '../lib/legal';
 import { fakeFetch } from './fakeDdragon';
 
-const SAVED = { ...LEGAL, revisions: [...LEGAL.revisions], privacyRevisions: [...LEGAL.privacyRevisions] };
+const SAVED = { ...LEGAL, revisions: [...LEGAL.revisions] };
 const BEFORE = '2026-11-23T03:00:00Z'; // 오늘 (한국 12:00)
 const LAST_MOMENT = '2026-12-22T14:59:59Z'; // 한국 12-22 23:59:59 — 아직 12-14판
 const FIRST_MOMENT = '2026-12-22T15:00:00Z'; // 한국 12-23 00:00:00 — 새 판 시작
@@ -45,6 +45,20 @@ const leaves = (article) => [...article.querySelectorAll('li, p, h2, h3, td, th'
 const changedLeaves = (oldLeaves, newLeaves) => { const set = new Set(newLeaves); return oldLeaves.filter((t) => !set.has(t)); };
 const golden = (name) => readFileSync(`src/test/fixtures/legal-2026-12-14-${name}.txt`, 'utf8');
 const date = (iso) => new Date(iso).getTime();
+// 방침의 첫 판(2026-11-25) = 12-14 약관과 함께 저장해 둔 방침 글 + 「내 챔피언」 4줄 + 시행일 (6-119)
+const CHAMPION_LINES = [
+  '내 챔피언: 이용자가 [내 챔피언]에서 직접 등록한 챔피언 목록(최대 10개 — 계정 식별 번호, 챔피언, 등록한 시각). 서비스 화면에서는 본인에게만 보이며, 등록을 해제하거나 회원 탈퇴·비회원 계정 정리 때 삭제합니다.',
+  '내 챔피언: 이용자가 등록한 챔피언의 빌드만 모아서 보여 주기',
+  '내 챔피언: 등록한 챔피언은 해제하면 바로 지우고, 회원 탈퇴·비회원 기록 지우기를 하거나 오래 쓰지 않은 비회원(게스트) 계정이 정리되면 함께 삭제합니다.',
+  '내 챔피언에 등록한 챔피언 목록은 서비스 화면에서 본인에게만 표시되며, 다른 이용자에게 공개하지 않습니다.',
+];
+const squash = (t) => t.replace(/\s+/g, ' ').trim();
+/** 지금 방침에서 챔피언 4줄을 빼고 시행일을 12-14로 바꾸면 저장해 둔 글과 같아야 한다 */
+const withoutChampion = (article) => {
+  const copy = article.cloneNode(true);
+  copy.querySelectorAll('li').forEach((li) => { if (CHAMPION_LINES.includes(squash(li.textContent))) li.remove(); });
+  return bodyText(copy).replaceAll('2026-11-25', '2026-12-14');
+};
 
 // 새 판에서 더한 말 (공지 내용)
 const NEW_PRIVACY = ['저장한 빌드: 회원이 [저장]한 빌드 목록', '빌드 수정 알림: 빌드가 수정되거나 되돌려지면', '경고·활동 제한 기록: 운영자가 경고하거나 활동을 제한하면'];
@@ -65,10 +79,10 @@ test('판 정하기: 시행일(한국 0시)이 지나야 새 판, 그 전에는 
   expect(at(BEFORE, 'abc').shown).toBe('2026-12-14');
 });
 
-test('시행일 전: 개인정보처리방침은 12-14판 그대로(한 글자도 안 바뀜) + 시행 예정 안내와 미리 보기 링크', async () => {
+test('시행일 전: 개인정보처리방침은 11-25판(저장해 둔 글 + 「내 챔피언」 4줄) + 시행 예정 안내와 미리 보기 링크', async () => {
   const article = await open('/privacy', BEFORE, PRIVACY);
-  expect(bodyText(article)).toBe(golden('privacy'));
-  expect(article.textContent).toContain('시행일: 2026-12-14');
+  expect(withoutChampion(article)).toBe(golden('privacy'));
+  expect(article.textContent).toContain('시행일: 2026-11-25');
   const box = within(note());
   expect(box.getByText('2026-12-23부터 새 판이 시행됩니다.')).toBeDefined();
   expect(note().textContent).toContain('저장한 빌드, 빌드 수정 알림, 경고·활동 제한 기록을 처리하는 항목에 더했습니다.');
@@ -92,10 +106,10 @@ test('시행일 전 [시행 예정 판 미리 보기]: 새 판 내용과 시행�
   const now = document.querySelector('article.legal');
   expect(now.textContent).toContain('시행일: 2026-12-23');
   NEW_PRIVACY.forEach((t) => expect(now.textContent).toContain(t));
-  expect(note().textContent).toContain('지금 시행 중인 판은 2026-12-14판입니다.');
+  expect(note().textContent).toContain('지금 시행 중인 판은 2026-11-25판입니다.');
   fireEvent.click(within(note()).getByRole('link', { name: '지금 시행 중인 판 보기' }));
   await screen.findByText('2026-12-23부터 새 판이 시행됩니다.');
-  expect(bodyText(document.querySelector('article.legal'))).toBe(golden('privacy'));
+  expect(withoutChampion(document.querySelector('article.legal'))).toBe(golden('privacy'));
   expect(article).toBeDefined();
 });
 
@@ -118,15 +132,14 @@ test('방침 새 판 내용: 공지에 올린 세 가지가 의미 그대로 들
   // 탈퇴·공개 범위·권리
   expect(t).toContain('탈퇴하면 바로 삭제: 내가 저장한 빌드 목록');
   expect(t).toContain('경고·활동 제한 기록은 본인과 운영자만 볼 수 있으며, 감독관과 다른 이용자에게는 공개하지 않습니다.');
-  // 「내 챔피언」은 이번 판에 없다 (1.3에서 따로)
-  expect(t).not.toContain('내 챔피언 목록');
-  expect(t).not.toMatch(/내 챔피언을 (저장|고르|정)/);
+  // 앞 판의 「내 챔피언」 4줄은 새 판에도 있다
+  CHAMPION_LINES.forEach((line) => expect(leaves(article).map(squash)).toContain(line));
   // 앞 판의 글은 새 판에도 그대로 있다: 새 판이 고친 문장은 날짜 2곳 + 알림 종류 설정 + 알림 보관 문단뿐 (나머지는 더하기만)
   const now = leaves(article);
   cleanup();
-  const prev = leaves(await open('/privacy?version=2026-12-14', BEFORE, PRIVACY));
+  const prev = leaves(await open('/privacy?version=2026-11-25', BEFORE, PRIVACY));
   const changed = changedLeaves(prev, now);
-  expect(changed.map((c) => c.slice(0, 12)).sort()).toEqual(['시행일: 2026-12', '시행일: 2026-12', '알림: 사이트 알림(상', '휴대폰 알림을 켠 경우']);
+  expect(changed.map((c) => c.slice(0, 12)).sort()).toEqual(['시행일: 2026-11', '시행일: 2026-11', '알림: 사이트 알림(상', '휴대폰 알림을 켠 경우']);
   expect(now.length - prev.length).toBe(3 + 3 + 1 + 1 + 1); // 수집 항목 3 + 이용 목적 3 + 탈퇴 삭제 1 + 공개 1 + 권리 1
 });
 
@@ -155,16 +168,15 @@ test('약관 새 판: 제7조의2(경고와 이용 제한) 4개 항, 제7조에�
 });
 
 
-test('시행일(한국 0시) 직전까지 12-14판 + 시행 예정 안내, 0시부터 새 판이 현행(안내 상자 없음)', async () => {
+test('시행일(한국 0시) 직전까지 앞 판 + 시행 예정 안내, 0시부터 새 판이 현행(안내 상자 없음)', async () => {
   const last = await open('/privacy', LAST_MOMENT, PRIVACY);
-  expect(bodyText(last)).toBe(golden('privacy'));
+  expect(withoutChampion(last)).toBe(golden('privacy'));
   expect(note().textContent).toContain('2026-12-23부터 새 판이 시행됩니다.');
   cleanup();
   const first = await open('/privacy', FIRST_MOMENT, PRIVACY);
   NEW_PRIVACY.forEach((t) => expect(first.textContent).toContain(t));
   expect(first.textContent).toContain('시행일: 2026-12-23');
-  expect(note().textContent).toContain('2026-12-25부터 새 판이 시행됩니다.'); // 방침만의 다음 판 안내
-  expect(bodyText(first)).not.toContain('내 챔피언:');
+  expect(note()).toBeNull(); // 더 새 판이 없고 현행이면 안내 상자 없음
 });
 
 test('시행일 뒤: 새 판이 현행(안내 상자 없이 새 내용), ?version=2026-12-14로 지난 판을 볼 수 있다 (그대로, 지난 판 표시)', async () => {
@@ -180,25 +192,25 @@ test('시행일 뒤: 새 판이 현행(안내 상자 없이 새 내용), ?versio
   expect(within(note()).getByRole('link', { name: '지금 시행 중인 판 보기' })).toHaveAttribute('href', '/terms');
 });
 
-test('시행일 뒤 방침: 새 내용이 기본, 지난 판은 ?version=2026-12-14', async () => {
+test('시행일 뒤 방침: 새 내용이 기본, 지난 판은 ?version=2026-11-25', async () => {
   const cur = await open('/privacy', AFTER, PRIVACY);
   NEW_PRIVACY.forEach((t) => expect(cur.textContent).toContain(t));
-  expect(cur.textContent).toContain('시행일: 2026-12-25');
+  expect(cur.textContent).toContain('시행일: 2026-12-23');
   expect(note()).toBeNull();
   cleanup();
-  const old = await open('/privacy?version=2026-12-14', AFTER, PRIVACY);
-  expect(bodyText(old)).toBe(golden('privacy'));
+  const old = await open('/privacy?version=2026-11-25', AFTER, PRIVACY);
+  expect(withoutChampion(old)).toBe(golden('privacy'));
 });
 
 test('판이 하나뿐이면 안내 상자가 없고, 첫 판 시행일이 비면 노란 칸', async () => {
   LEGAL.revisions = [];
-  LEGAL.privacyRevisions = [];
   const one = await open('/privacy', BEFORE, PRIVACY);
   expect(note()).toBeNull();
-  expect(bodyText(one)).toBe(golden('privacy'));
+  expect(withoutChampion(one)).toBe(golden('privacy'));
   cleanup();
   LEGAL.revisions = ['2026-12-23'];
   LEGAL.effectiveDate = null;
+  LEGAL.privacyEffectiveDate = null;
   await open('/terms', BEFORE, TERMS);
   expect(screen.getAllByText('【채워 주세요: 시행일】').length).toBe(2);
 });
@@ -208,40 +220,19 @@ test('약관 제12조(약관의 변경) 문장은 새 판에서도 그대로', a
   expect(article.textContent).toContain('약관을 바꾸면 시행 7일 전부터 이 페이지에 알립니다. 이용자에게 불리한 변경은 시행 30일 전부터 알립니다.');
 });
 
-// 6-117: 방침만 바뀌는 2026-12-25판 — 「내 챔피언」에 등록한 챔피언
-const CHAMPION_LINES = [
-  '내 챔피언: 이용자가 [내 챔피언]에서 직접 등록한 챔피언 목록(최대 10개 — 계정 식별 번호, 챔피언, 등록한 시각). 서비스 화면에서는 본인에게만 보이며, 등록을 해제하거나 회원 탈퇴·비회원 계정 정리 때 삭제합니다.',
-  '내 챔피언: 이용자가 등록한 챔피언의 빌드만 모아서 보여 주기',
-  '내 챔피언: 등록한 챔피언은 해제하면 바로 지우고, 회원 탈퇴·비회원 기록 지우기를 하거나 오래 쓰지 않은 비회원(게스트) 계정이 정리되면 함께 삭제합니다.',
-  '내 챔피언에 등록한 챔피언 목록은 서비스 화면에서 본인에게만 표시되며, 다른 이용자에게 공개하지 않습니다.',
-];
-const squash = (t) => t.replace(/\s+/g, ' ').trim();
-
-test('방침 2026-12-25판: 12-23판에 「내 챔피언」 4줄만 더하고(날짜 2곳 말고는 그대로), 앞 판에는 없다', async () => {
-  const now = leaves(await open('/privacy?version=2026-12-25', BEFORE, PRIVACY)).map(squash);
-  cleanup();
-  const prev = leaves(await open('/privacy?version=2026-12-23', BEFORE, PRIVACY)).map(squash);
-  const added = changedLeaves(now, prev).filter((t) => !t.startsWith('시행일:'));
-  expect(added).toEqual(CHAMPION_LINES);
-  expect(changedLeaves(prev, now).every((t) => t.startsWith('시행일:'))).toBe(true);
-  expect(now.length - prev.length).toBe(4);
-  CHAMPION_LINES.forEach((t) => expect(prev).not.toContain(t));
-});
-
-test('오늘(2026-11-25) 방침 안내 상자: 12-23판과 12-25판을 함께 알리고(30일 전), 약관에는 12-25판이 없다', async () => {
+// 6-119: 방침의 첫 판 2026-11-25 — 「내 챔피언」 고지가 오늘부터 시행, 약관은 12-14 그대로
+test('오늘(2026-11-25) 방침: 시행일 11-25, 「내 챔피언」 4줄이 현행 판에 있고, 안내 상자는 12-23판만. 약관에는 영향 없음', async () => {
   const today = '2026-11-25T03:00:00Z';
   const article = await open('/privacy', today, PRIVACY);
-  expect(bodyText(article)).toBe(golden('privacy'));
+  const lines = leaves(article).map(squash);
+  CHAMPION_LINES.forEach((line) => expect(lines).toContain(line));
+  expect(article.textContent).toContain('시행일: 2026-11-25');
+  expect(article.textContent).not.toContain('2026-12-25');
   expect(note().textContent).toContain('2026-12-23부터 새 판이 시행됩니다.');
-  expect(note().textContent).toContain('2026-12-25부터 새 판이 시행됩니다. [내 챔피언]에 등록한 챔피언 목록을 처리하는 항목에 더했습니다.');
-  fireEvent.click(within(note()).getByRole('link', { name: '2026-12-25 시행 예정 판 미리 보기' }));
-  await screen.findByText(/이 판은 2026-12-25부터 시행됩니다/);
-  expect(document.querySelector('article.legal').textContent).toContain('시행일: 2026-12-25');
+  expect(note().textContent).not.toContain('내 챔피언');
+  expect(resolveLegalVersion(null, date(today), 'privacy')).toMatchObject({ versions: ['2026-11-25', '2026-12-23'], current: '2026-11-25' });
+  expect(resolveLegalVersion(null, date(today)).versions).toEqual(['2026-12-14', '2026-12-23']);
   cleanup();
-  await open('/terms', today, TERMS);
-  expect(note().textContent).not.toContain('2026-12-25');
-  expect(resolveLegalVersion(null, date('2026-12-30T00:00:00Z')).current).toBe('2026-12-23');
-  // 한국 12-25 0시부터 방침의 현행 판
-  expect(resolveLegalVersion(null, date('2026-12-24T14:59:59Z'), 'privacy').current).toBe('2026-12-23');
-  expect(resolveLegalVersion(null, date('2026-12-24T15:00:00Z'), 'privacy').current).toBe('2026-12-25');
+  const terms = await open('/terms', today, TERMS);
+  expect(bodyText(terms)).toBe(golden('terms'));
 });

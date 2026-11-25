@@ -35,7 +35,7 @@ test('푸터: 개인정보처리방침·이용약관 링크로 이동하고, Rio
 });
 
 test('빈칸(운영자 이메일·Supabase 지역·시행일)은 노란 칸 "채워 주세요"로 보인다', async () => {
-  Object.assign(LEGAL, { contactEmail: null, supabaseRegion: null, effectiveDate: null });
+  Object.assign(LEGAL, { contactEmail: null, supabaseRegion: null, effectiveDate: null, privacyEffectiveDate: null });
   start('/privacy');
   await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' });
   const blanks = [...document.querySelectorAll('mark.fill-me')].map((m) => m.textContent);
@@ -48,7 +48,7 @@ test('빈칸(운영자 이메일·Supabase 지역·시행일)은 노란 칸 "채
 });
 
 test('legal.js에 값을 넣으면 그 값이 보이고(이메일은 메일 링크), 노란 칸은 사라진다', async () => {
-  Object.assign(LEGAL, { contactEmail: 'op@example.com', supabaseRegion: '대한민국 (서울)', effectiveDate: '2026년 11월 15일' });
+  Object.assign(LEGAL, { contactEmail: 'op@example.com', supabaseRegion: '대한민국 (서울)', effectiveDate: '2026년 11월 15일', privacyEffectiveDate: '2026년 11월 15일' });
   start('/privacy');
   await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' });
   expect(document.querySelector('mark.fill-me')).toBeNull();
@@ -277,7 +277,7 @@ test('방침·약관 (062·064 장인 프로필 사진·신청 사진): 수집·
   expect(privacy).toContain('닉네임·장인 유형·프로필 사진(올린 경우)·팔로워 수');
   const removed = [...document.querySelectorAll('li')].find((li) => li.textContent.startsWith('삭제:')).textContent;
   expect(removed).toContain('장인 프로필 사진과 장인 인증 신청 사진(파일은 하루 안에 삭제)');
-  expect(screen.getAllByText(/2026-12-14/).length).toBeGreaterThan(0);
+  expect(screen.getAllByText(/2026-11-25/).length).toBeGreaterThan(0); // 방침 시행일 (6-119, 약관은 12-14)
   cleanup();
   start('/terms');
   await screen.findByRole('heading', { level: 1, name: '이용약관' });
