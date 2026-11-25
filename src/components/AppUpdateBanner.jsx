@@ -16,7 +16,7 @@ export default function AppUpdateBanner() {
   if (!info) return null;
   return (
     <div className="app-update-band" role="status">
-      <span>새 버전이 나왔어요</span>
+      <span>새 버전이 나왔습니다</span>
       <span className="app-update-actions">
         <a className="btn btn-primary btn-small" href={storeUrlFor(info.platform)} target="_blank" rel="noopener noreferrer">업데이트</a>
         <button type="button" className="btn btn-small" onClick={() => { snooze(info.latest); setInfo(null); }}>나중에</button>

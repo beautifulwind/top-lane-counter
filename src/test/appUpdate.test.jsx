@@ -39,12 +39,12 @@ test('웹 브라우저·PWA에서는 아무것도 하지 않는다 (요청도 �
   expect(fetchMock).not.toHaveBeenCalled();
   render(<AppUpdateBanner />);
   await new Promise((r) => setTimeout(r, 20));
-  expect(screen.queryByText('새 버전이 나왔어요')).toBeNull();
+  expect(screen.queryByText('새 버전이 나왔습니다')).toBeNull();
 });
 
 test('최신이 더 높으면 배너(문구·[업데이트]·[나중에]), 캐시 방지 쿼리·no-store로 한 번만 요청', async () => {
   render(<AppUpdateBanner />);
-  expect(await screen.findByText('새 버전이 나왔어요')).toBeTruthy();
+  expect(await screen.findByText('새 버전이 나왔습니다')).toBeTruthy();
   expect(screen.getByRole('button', { name: '나중에' })).toBeTruthy();
   expect(screen.getByRole('link', { name: '업데이트' }).getAttribute('href')).toBe('https://play.google.com/store/apps/details?id=com.topsinbyeongja.app');
   expect(fetchMock).toHaveBeenCalledTimes(1);
@@ -84,7 +84,7 @@ test('요청 실패·시간 초과·이상한 형식은 조용히 넘어간다 (
   fetchMock.mockRejectedValue(new Error('network'));
   render(<AppUpdateBanner />);
   await new Promise((r) => setTimeout(r, 20));
-  expect(screen.queryByText('새 버전이 나왔어요')).toBeNull();
+  expect(screen.queryByText('새 버전이 나왔습니다')).toBeNull();
 });
 
 test('시간 초과: 응답이 없으면 신호로 끊고 조용히 넘어간다', async () => {
@@ -102,7 +102,7 @@ test('시간 초과: 응답이 없으면 신호로 끊고 조용히 넘어간다
 test('[나중에]: 닫고 24시간 숨김 → 24시간 뒤에는 다시, 더 높은 새 버전이면 24시간 안에도 다시', async () => {
   const first = render(<AppUpdateBanner />);
   fireEvent.click(await screen.findByRole('button', { name: '나중에' }));
-  expect(screen.queryByText('새 버전이 나왔어요')).toBeNull();
+  expect(screen.queryByText('새 버전이 나왔습니다')).toBeNull();
   const saved = JSON.parse(localStorage.getItem(SNOOZE_KEY));
   expect(saved.version).toBe('1.3.0');
   expect(saved.until - Date.now()).toBeGreaterThan(SNOOZE_MS - 5000);
@@ -110,7 +110,7 @@ test('[나중에]: 닫고 24시간 숨김 → 24시간 뒤에는 다시, 더 높
   render(<AppUpdateBanner />); // 다시 켠 앱 — 아직 숨김
   await waitFor(() => expect(fetchMock).toHaveBeenCalledTimes(2));
   await new Promise((r) => setTimeout(r, 20));
-  expect(screen.queryByText('새 버전이 나왔어요')).toBeNull();
+  expect(screen.queryByText('새 버전이 나왔습니다')).toBeNull();
   const t = Date.now();
   expect(isSnoozed('1.3.0', t + SNOOZE_MS - 1000)).toBe(true);
   expect(isSnoozed('1.3.0', t + SNOOZE_MS + 1000)).toBe(false); // 24시간 뒤
