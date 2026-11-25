@@ -8,7 +8,7 @@ import { AppRoutes } from '../App';
 import { LEGAL, kstDate, resolveLegalVersion } from '../lib/legal';
 import { fakeFetch } from './fakeDdragon';
 
-const SAVED = { ...LEGAL, revisions: [...LEGAL.revisions] };
+const SAVED = { ...LEGAL, revisions: [...LEGAL.revisions], privacyRevisions: [...LEGAL.privacyRevisions] };
 const BEFORE = '2026-11-23T03:00:00Z'; // 오늘 (한국 12:00)
 const LAST_MOMENT = '2026-12-22T14:59:59Z'; // 한국 12-22 23:59:59 — 아직 12-14판
 const FIRST_MOMENT = '2026-12-22T15:00:00Z'; // 한국 12-23 00:00:00 — 새 판 시작
@@ -163,7 +163,8 @@ test('시행일(한국 0시) 직전까지 12-14판 + 시행 예정 안내, 0시�
   const first = await open('/privacy', FIRST_MOMENT, PRIVACY);
   NEW_PRIVACY.forEach((t) => expect(first.textContent).toContain(t));
   expect(first.textContent).toContain('시행일: 2026-12-23');
-  expect(note()).toBeNull(); // 더 새 판이 없고 현행이면 안내 상자 없음 (지난 판은 ?version=으로)
+  expect(note().textContent).toContain('2026-12-25부터 새 판이 시행됩니다.'); // 방침만의 다음 판 안내
+  expect(bodyText(first)).not.toContain('내 챔피언:');
 });
 
 test('시행일 뒤: 새 판이 현행(안내 상자 없이 새 내용), ?version=2026-12-14로 지난 판을 볼 수 있다 (그대로, 지난 판 표시)', async () => {
@@ -182,6 +183,7 @@ test('시행일 뒤: 새 판이 현행(안내 상자 없이 새 내용), ?versio
 test('시행일 뒤 방침: 새 내용이 기본, 지난 판은 ?version=2026-12-14', async () => {
   const cur = await open('/privacy', AFTER, PRIVACY);
   NEW_PRIVACY.forEach((t) => expect(cur.textContent).toContain(t));
+  expect(cur.textContent).toContain('시행일: 2026-12-25');
   expect(note()).toBeNull();
   cleanup();
   const old = await open('/privacy?version=2026-12-14', AFTER, PRIVACY);
@@ -190,6 +192,7 @@ test('시행일 뒤 방침: 새 내용이 기본, 지난 판은 ?version=2026-12
 
 test('판이 하나뿐이면 안내 상자가 없고, 첫 판 시행일이 비면 노란 칸', async () => {
   LEGAL.revisions = [];
+  LEGAL.privacyRevisions = [];
   const one = await open('/privacy', BEFORE, PRIVACY);
   expect(note()).toBeNull();
   expect(bodyText(one)).toBe(golden('privacy'));
@@ -203,4 +206,42 @@ test('판이 하나뿐이면 안내 상자가 없고, 첫 판 시행일이 비�
 test('약관 제12조(약관의 변경) 문장은 새 판에서도 그대로', async () => {
   const article = await open('/terms?version=2026-12-23', BEFORE, TERMS);
   expect(article.textContent).toContain('약관을 바꾸면 시행 7일 전부터 이 페이지에 알립니다. 이용자에게 불리한 변경은 시행 30일 전부터 알립니다.');
+});
+
+// 6-117: 방침만 바뀌는 2026-12-25판 — 「내 챔피언」에 등록한 챔피언
+const CHAMPION_LINES = [
+  '내 챔피언: 이용자가 [내 챔피언]에서 직접 등록한 챔피언 목록(최대 10개 — 계정 식별 번호, 챔피언, 등록한 시각). 서비스 화면에서는 본인에게만 보이며, 등록을 해제하거나 회원 탈퇴·비회원 계정 정리 때 삭제합니다.',
+  '내 챔피언: 이용자가 등록한 챔피언의 빌드만 모아서 보여 주기',
+  '내 챔피언: 등록한 챔피언은 해제하면 바로 지우고, 회원 탈퇴·비회원 기록 지우기를 하거나 오래 쓰지 않은 비회원(게스트) 계정이 정리되면 함께 삭제합니다.',
+  '내 챔피언에 등록한 챔피언 목록은 서비스 화면에서 본인에게만 표시되며, 다른 이용자에게 공개하지 않습니다.',
+];
+const squash = (t) => t.replace(/\s+/g, ' ').trim();
+
+test('방침 2026-12-25판: 12-23판에 「내 챔피언」 4줄만 더하고(날짜 2곳 말고는 그대로), 앞 판에는 없다', async () => {
+  const now = leaves(await open('/privacy?version=2026-12-25', BEFORE, PRIVACY)).map(squash);
+  cleanup();
+  const prev = leaves(await open('/privacy?version=2026-12-23', BEFORE, PRIVACY)).map(squash);
+  const added = changedLeaves(now, prev).filter((t) => !t.startsWith('시행일:'));
+  expect(added).toEqual(CHAMPION_LINES);
+  expect(changedLeaves(prev, now).every((t) => t.startsWith('시행일:'))).toBe(true);
+  expect(now.length - prev.length).toBe(4);
+  CHAMPION_LINES.forEach((t) => expect(prev).not.toContain(t));
+});
+
+test('오늘(2026-11-25) 방침 안내 상자: 12-23판과 12-25판을 함께 알리고(30일 전), 약관에는 12-25판이 없다', async () => {
+  const today = '2026-11-25T03:00:00Z';
+  const article = await open('/privacy', today, PRIVACY);
+  expect(bodyText(article)).toBe(golden('privacy'));
+  expect(note().textContent).toContain('2026-12-23부터 새 판이 시행됩니다.');
+  expect(note().textContent).toContain('2026-12-25부터 새 판이 시행됩니다. [내 챔피언]에 등록한 챔피언 목록을 처리하는 항목에 더했습니다.');
+  fireEvent.click(within(note()).getByRole('link', { name: '2026-12-25 시행 예정 판 미리 보기' }));
+  await screen.findByText(/이 판은 2026-12-25부터 시행됩니다/);
+  expect(document.querySelector('article.legal').textContent).toContain('시행일: 2026-12-25');
+  cleanup();
+  await open('/terms', today, TERMS);
+  expect(note().textContent).not.toContain('2026-12-25');
+  expect(resolveLegalVersion(null, date('2026-12-30T00:00:00Z')).current).toBe('2026-12-23');
+  // 한국 12-25 0시부터 방침의 현행 판
+  expect(resolveLegalVersion(null, date('2026-12-24T14:59:59Z'), 'privacy').current).toBe('2026-12-23');
+  expect(resolveLegalVersion(null, date('2026-12-24T15:00:00Z'), 'privacy').current).toBe('2026-12-25');
 });

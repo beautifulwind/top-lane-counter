@@ -9,6 +9,8 @@ export const LEGAL = {
   effectiveDate: '2026-12-14',
   /** 그 뒤 개정판의 시행일 (오래된 것부터). 판을 더할 때는 여기에 날짜를 넣고 Privacy.jsx·Terms.jsx에 <Since v="날짜">로 달라진 부분만 더한다 */
   revisions: ['2026-12-23'],
+  /** 개인정보처리방침만 바뀌는 판의 시행일 (약관은 그대로. revisions보다 뒤 날짜만) — Privacy.jsx에 <Since v="날짜">로 더한다 */
+  privacyRevisions: ['2026-12-25'],
 };
 
 /** 개정판마다 방침·약관에서 무엇이 달라졌는지 한 줄 (시행 예정 안내 상자에 보인다) */
@@ -17,10 +19,15 @@ export const LEGAL_REVISION_NOTES = {
     privacy: '저장한 빌드, 빌드 수정 알림, 경고·활동 제한 기록을 처리하는 항목에 더했습니다.',
     terms: '운영자의 경고와 활동 제한(제7조의2)을 더했습니다.',
   },
+  '2026-12-25': {
+    privacy: '[내 챔피언]에 등록한 챔피언 목록을 처리하는 항목에 더했습니다.',
+  },
 };
 
 /** 판 목록 (오래된 것부터). 첫 판의 시행일이 비어 있으면 빈 목록 */
-export const legalVersions = () => (LEGAL.effectiveDate ? [LEGAL.effectiveDate, ...(LEGAL.revisions ?? [])] : []);
+export const legalVersions = (kind) => (LEGAL.effectiveDate
+  ? [LEGAL.effectiveDate, ...(LEGAL.revisions ?? []), ...(kind === 'privacy' ? (LEGAL.privacyRevisions ?? []) : [])]
+  : []);
 
 /** 한국 날짜 'YYYY-MM-DD' (시행일은 한국 시각 0시에 바뀐다) */
 export const kstDate = (ms = Date.now()) => new Date(ms + 9 * 3600 * 1000).toISOString().slice(0, 10);
@@ -30,8 +37,8 @@ export const kstDate = (ms = Date.now()) => new Date(ms + 9 * 3600 * 1000).toISO
  * requested(주소의 ?version=)가 판 목록에 있으면 그 판을 보여 주고(시행 예정 미리 보기·이전 판 보기), 아니면 현행.
  * 판 비교는 날짜 문자열이 아니라 목록 순서로 한다(날짜 형식이 달라도 어긋나지 않게).
  */
-export function resolveLegalVersion(requested = null, now = Date.now()) {
-  const versions = legalVersions();
+export function resolveLegalVersion(requested = null, now = Date.now(), kind = undefined) {
+  const versions = legalVersions(kind);
   if (versions.length === 0) return { versions, shown: null, shownIdx: -1, current: null, currentIdx: -1 };
   const today = kstDate(now);
   let currentIdx = 0;
