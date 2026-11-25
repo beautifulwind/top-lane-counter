@@ -15,6 +15,8 @@
 --  052: 새 팔로워 알림에서 센 기록(new_follower_counted)을 전부 지운다. 푸시 설정의 notice·new_followers 칸은 계정 설정이라 그대로다.)
 -- (053: 운영자가 준 한정판 칭호(user_titles 중 title_catalog.kind = 'limited')를 전부 지운다. 칭호 도감 표(title_catalog)는 설정이라 남긴다.
 --  활동 칭호는 끝의 다시 계산이 정하고, 장인 칭호는 장인 표시(influencer)를 따른다.)
+-- (076: 한 번 얻으면 유지하는 칭호(title_catalog.permanent - 첫 발자국·빌드 설계자)는 다시 계산이 회수하지 않으므로 먼저 전부 지우고,
+--  끝의 다시 계산 뒤에 남은 데이터(남기는 카운터의 빌드 등)로 조용히(알림 없이) 다시 준다.)
 -- (055: 탈퇴한 장인의 닉네임 예약(nickname_holds)을 전부 지운다 - 테스트 중 탈퇴한 장인의 닉네임을 다시 쓸 수 있게.
 --  탈퇴로 누른 사람만 비운 익명 추천/비추천은 아래 "빌드 추천·비추천"과 "자유게시판 추천"에서 다른 추천과 함께 지워진다.)
 -- (058·059: 탑신병자 커뮤니티 답글·문서 댓글 답글은 댓글과 함께 지워진다. 058의 빌드 댓글은 060에서 표째 없앴다.)
@@ -131,6 +133,10 @@ begin
   if to_regclass('public.title_catalog') is not null then  -- 053: 한정판 칭호 (도감 표는 남김)
     delete from public.user_titles t using public.title_catalog c where c.key = t.title_key and c.kind = 'limited';
   end if;
+  if exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'title_catalog' and column_name = 'permanent') then
+    -- 076: 유지 칭호 (끝에서 남은 데이터로 다시 준다)
+    execute 'delete from public.user_titles t using public.title_catalog c where c.key = t.title_key and c.permanent';
+  end if;
   if to_regclass('public.nickname_holds') is not null then  -- 055: 탈퇴한 장인의 닉네임 예약
     delete from public.nickname_holds;
   end if;
@@ -231,6 +237,13 @@ $$;
 -- 8. 경험치·레벨·칭호 다시 계산 (운영자는 빼고, 알림 없음, 원래 날짜로)
 -- ---------------------------------------------------------------------
 select public.recalc_all_xp(true);
+-- 076: 유지 칭호를 남은 데이터로 다시 준다 (알림 없음, 운영자 제외 - 076 전 DB면 건너뜀)
+do $$
+begin
+  if to_regprocedure('public.grant_kept_titles(uuid, boolean)') is not null then
+    perform public.grant_kept_titles(p.id, true) from public.profiles p where p.role <> 'admin';
+  end if;
+end $$;
 set constraints all immediate;
 delete from public.notifications;
 

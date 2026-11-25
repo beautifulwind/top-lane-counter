@@ -2214,3 +2214,59 @@ RLS 원칙:
 - **되돌리는 법**: 074 맨 위 되돌리기 블록(두 함수를 069·073 본문으로 + `push_settings.comments` 칸 삭제 — 끈 기록도 사라짐)을 SQL Editor에서 실행. 되돌린 뒤 `check_comment_push_before.sql` 1·2번이 「073 본문」「069 본문」이면 정상. Edge Function은 되돌리지 않아도 된다(댓글 알림이 다시 푸시 대상이 아니게 되므로 새 코드가 쓰이지 않음). 웹은 `git revert` 후 배포(되돌린 DB에서도 저장은 `comments` 없이 다시 시도해 성공).
 - **운영 반영 순서** (사장님): ① Edge Function `web-push`에 이번 커밋의 `supabase/functions/web-push/index.ts` 전체를 붙여 넣고 Deploy(Verify JWT 끔 그대로 — 6-102와 같은 방법, 비밀 값 그대로) ② `check_comment_push_before.sql` → `074_comment_push_group.sql` → `check_comment_push_after.sql` ③ `git push`(웹 배포 — 설정 화면 「댓글」 칸) ④ 앱 1.3 빌드(Codemagic)에서 앱 설정 화면에도 칸이 생긴다. ①을 먼저 해도 댓글 알림은 아직 푸시 대상이 아니라 아무 일도 없다. ③을 ②보다 먼저 해도 화면은 죽지 않는다(칸 없이 다시 저장 — 그 사이 「댓글」을 끈 것만 저장되지 않음).
 - **다음 단계**: 커밋만 했고 운영 DB 실행·Edge Function 배포·push는 하지 않았다.
+
+### 6-108. 1.3 패치 2-B — 일반 사용자 개인 페이지 DB (075, 읽기 함수 member_page) (2026-11-25 — DB 파일·확인 스크립트·테스트만, 운영 DB 미실행, 웹·앱 화면 변경 없음)
+- **무엇을**: 장인이 아닌 일반 사용자도 **공개 빌드가 5개 이상**이면 개인 페이지가 열린다. 이번은 DB(읽기 함수)만 — 화면(주소·링크)은 다음 단계.
+- **「공개 빌드」 기준(지금 코드 기준)**: `builds.status = 'approved'` **그리고** 그 상대법 `counters.status = 'approved'`. builds 읽기 정책 「승인된 것 / 내 것 읽기」의 "누구나 보는 빌드"와 같고, `public_profile.build_count`·`influencer_builds.total`·`influencer_directory`의 빌드 수와 같은 식이다. 숨김(`hidden`)·대기(`pending`)·거절·재검토 요청 빌드, 숨기거나 대기 중인 상대법의 빌드는 세지 않는다. security definer 안에서 표를 직접 세므로 로그인 여부·부른 사람과 관계없이 같은 수.
+- **장인 프로필이 쓰는 함수(조사)**: `/u/:id`는 `public_profile(text)`(id·닉네임·장인 유형·사진·링크·빌드 수·최근 10개)와 `influencer_builds(text, integer)`(팔로워 수·빌드 수·20개씩 `follow_build_card`)를 부른다. 둘 다 **장인이 아니면 null**. 장인 전용 칸(장인 유형·링크·팔로워)이 응답 모양에 들어 있어서, 일반 사용자에게 열려면 반환 모양이나 판정 의미를 바꿔야 한다 → **기존 함수는 그대로 두고 새 읽기 함수**를 만들었다.
+- **새 읽기 함수** `member_page(p_user text, p_page integer default 1) returns jsonb` — stable, security definer, `search_path ''`, anon·authenticated 실행(public 회수). `influencer_builds`와 같은 인자 모양·쪽 크기 20·같은 카드(`follow_build_card`)·같은 정렬(최근 수정순).
+  - 돌려주는 값: `{ member: { id, nickname, photo_path, main_title, titles: [칭호 키] }, total, page, size, items: [빌드 카드] }`
+  - `titles`: 가진 칭호 중 도감에서 숨김이 아닌 것(비밀 칭호는 대표로 단 것만 — `public_title_info`와 같은 규칙), 활동 → 한정판, 도감 순. 이름·그림은 화면이 `public_title_info`로.
+  - `photo_path`: 지금은 장인만 사진을 올릴 수 있어(`profiles_photo_influencer` 제약, Storage 보기 규칙 `profile_photo_visible`도 장인만) 일반 사용자는 **항상 null**.
+  - **null**(장인 프로필과 같은 방식 — 없는 페이지와 구별 불가): 모양이 틀린 id / 없는 사람·탈퇴(프로필 줄이 지워짐) / 닉네임 없음 / 비회원 / 운영자 / 장인(장인 페이지가 따로 있음) / 지금 활동 제한(정지) 중(`active_restriction_id`) / 공개 빌드 5개 미만. 정지가 끝나거나 풀리면 다시 열린다.
+  - **나가지 않는 것**: 이메일, 가입일시, 역할(감독관도 일반 사용자처럼 열리지만 역할은 안 나감), 레벨·경험치, 운영 정보, 정지·경고·탈퇴·닉네임 상태, 인증 배지, 유튜브·링크, 팔로우·팔로워.
+  - 「숨김 처리된 사용자」: DB에 계정 단위 숨김 상태는 없다(숨김은 빌드·상대법·글 단위). 숨긴 빌드는 목록·수에서 빠진다. 계정 숨김이 생기면 이 함수에 조건을 더해야 한다.
+  - 기준 수는 `xp_rules.member_page_min_builds`(5) — 이 값만 고치면 바뀐다.
+- **함수 수**: 읽기 함수(일반 사용자가 부를 수 있는 stable·immutable) **65 → 66**. 쓰기 함수 **103 / 첫 줄 검사 30 / 허용 목록 73 그대로**(stable이라 068 빠뜨림 방지 대상 아님). 고친 기존 함수 없음.
+- **옛 앱 1.1·1.2**: 이 함수를 부르지 않으므로 달라지는 것 없음.
+- **확인 스크립트**: `scripts/check_member_page_before.sql`(1~2 실행 가능: 074 실행됨·075 아직 / 3~10 적어 둘 값: 쓰기 함수 수·지문, 읽기 함수 수·지문, 모든 함수 지문, 트리거·정책, 허용 목록·xp_rules, **모든 사람 × 모든 알림 종류의 푸시 판정 지문**, 프로필·빌드·상대법 / 11 예상: 열릴 사람 수 / 12 참고), `scripts/check_member_page_after.sql`(1~9: 함수·설정값·모양·권한, 103/30/73, 빠뜨림 0, 읽기 66, 열린 페이지가 모두 기준에 맞음·칸 5개뿐·빌드 수 일치 / 10~18 비교: 전 3~11과 같음). 이메일·닉네임·id 값은 출력 없음.
+- **테스트**: `tests/member_page_test.sql` 52개(권한·모양·103/30/73·읽기 66, 공개 5개 기준·숨김·대기·거절·재검토·숨긴/대기 상대법 제외·상대법 공개·다시 공개/숨김·기준 값 변경, 모양 틀린 id·없는 사람·탈퇴·닉네임 없음·비회원·운영자·장인·정지 중 → null, 정지 해제·만료 → 다시 열림, 비로그인·로그인·본인·운영자 응답 같음, 칸 5개·민감 값 없음·카드 모양, 칭호 숨김·비밀 규칙, 쪽 나누기·정렬, 데이터 그대로·장인 함수 그대로).
+- **되돌리는 법**: 075 맨 위 되돌리기 블록(함수 1개·설정값 1줄 삭제). 로컬에서 되돌린 뒤 스키마가 074와 같음을 `pg_dump -s` 비교로 확인했다.
+- **4단계 마무리 항목(할 일)**: 개인 페이지가 공개하는 정보(닉네임·대표 칭호·가진 칭호·공개 빌드 목록, 공개 빌드 5개 이상일 때만 열림)를 **개인정보 처리방침에 고지**해야 한다(공개 범위가 넓어지는 변경 → 다음 판 시행일, 6-88의 `LEGAL.revisions` 방식). 화면을 공개하기 전에 함께 반영.
+- **운영 반영 순서**: `check_member_page_before.sql` → `075_member_page.sql` → `check_member_page_after.sql`(076보다 먼저, 따로). 화면은 아직 이 함수를 부르지 않으므로 push·앱 빌드와 순서 무관.
+
+### 6-109. 1.3 패치 2-C — 칭호 개편: 한 번 얻으면 유지하는 칭호 2개 (076) (2026-11-25 — DB 파일·확인 스크립트·테스트만, 운영 DB 미실행, 웹·앱 화면 변경 없음)
+- **지금 칭호 체계(조사)**:
+  - 표: `title_catalog`(053 도감: key·이름·얻는 방법·종류 activity/influencer/limited·장착·기간·비밀·숨김·순서·그림·색, 직접 읽기 불가), `user_titles`(user_id·title_key·earned_at, 기본 키 (user_id, title_key), 누구나 읽기·운영자만 쓰기), `profiles.main_title`(대표 칭호, 가진·장착 가능한 칭호만 — FK `profiles_main_title_owned` + 트리거 `profiles_main_title_equippable`), 기준 숫자는 `xp_rules.title_*`.
+  - 종류와 부여: **활동 6개**(탑신병자 기여 1개 또는 글·댓글 1개 / 도구혐오자·단단묵직·백정주인 상대법 관련 승인 10·25·50 / 장군 공개 빌드 추천 합계 100 / 비주류 비주류 픽 기여 5) — `sync_rewards(uuid, boolean)`가 조건을 다시 계산해 **주고, 조건이 깨지면 회수**한다. 언제: deferrable 트리거 `builds_rewards`·`counters_rewards`·`edit_proposals_rewards`와 글·댓글 쪽 트리거가 트랜잭션 끝에. **장인 1개**(`profiles.influencer`로 표시만, user_titles에 안 넣음, 장착 불가). **한정판**(지금 0개, 운영자가 `grant_title`/`revoke_title`). 운영자 계정은 칭호 없음(`user_titles_skip_operator`).
+  - 쓰이는 곳: 닉네임 옆 대표 칭호 배지(`UserName`·`TitleBadge`, 이름·그림은 `public_title_info`), 마이페이지 칭호판(`my_title_book` — 활동은 위 칸, 장인·한정판은 「특별 칭호」, 얻은 활동 칭호만 [대표로 설정]), 알림 목록(칭호 알림 문장에서 도감 줄을 찾아 훈장), 운영자 회원 정보(대표 칭호 이름).
+  - 지금 부여된 칭호 종류·사람 수: 이 환경에서는 운영 DB에 접속하지 않아 **세지 않았다** — `check_kept_titles_before.sql` 12번(받은 칭호 줄 수·지문)과 아래 소급 예상(15~17번)이 운영에서 센다. 운영 DB에서 종류별 수를 보려면 `select title_key, count(*) from public.user_titles group by 1;`(값이 아니라 수만 나옴).
+  - 알림 종류: **`title_earned`(칭호 얻음)·`title_revoked`(회수)가 이미 있다**(014). 둘 다 `push_group` = null → 푸시 없음, 앱 안 알림 목록에만.
+- **새 칭호** (`title_catalog`, 종류 activity — 지금 칭호판·배지·대표 칭호 규칙을 그대로 쓰고 옛 앱에서도 칭호로 보이게):
+  - `first_upload` 「첫 발자국」 순서 5(맨 앞): **상대법 또는 빌드를 처음 올리면**. "올림" = 내 빌드(대기·공개·거절·재검토 요청) / 내가 등록한 상대법(`counters.proposed_by`) / 옛 방식 새 상대법 제안(`edit_proposals` new_counter) 중 하나라도 있음. **숨김 처리된 것(빌드 hidden·상대법 hidden·제안 revoked)은 세지 않는다.**
+  - `builder` 「빌드 설계자」 순서 65(활동 칭호 끝): **공개 빌드 10개**(`xp_rules.title_builder`). 공개 빌드 기준은 6-108과 같음(숨김 제외).
+  - 얻는 방법 문장은 도감 `how_to`(`{n}` → 10). 칭호 이름은 임시로 정한 것이며 `title_catalog.name` 한 줄만 고치면 바뀐다(알림 문장은 그때의 이름). 그림·색 없음 → 기본 훈장 색.
+- **기존 체계와의 관계 = 병행(대체 아님)**. 이유: 기존 6개는 회수형이라 기준을 바꾸면 이미 받은 사람의 칭호·대표 칭호가 사라질 수 있고, 옛 앱·알림·도감이 키를 그대로 쓴다. 새 두 개는 성격(한 번 얻으면 유지)이 달라 따로 더하는 쪽이 안전하다. 이미 부여된 칭호·대표 칭호·알림은 지우지 않았다(확인 스크립트 20번).
+- **유지(회수 없음)**: 도감 칸 `title_catalog.permanent boolean not null default false`(새 2개만 true). 빌드를 지우거나 숨겨도, 기준 숫자를 올려도 유지. 운영자가 바로 지우는 길은 없다(`revoke_title`은 한정판만 — 그대로).
+- **중복 방지**: `user_titles` 기본 키 (user_id, title_key) + `insert … on conflict do nothing` → 같은 사람이 두 번 받지 않고 알림도 한 번.
+- **주는 시점**: 새 deferrable 트리거 3개(트랜잭션 끝, 014 보상 트리거와 같은 방식 — 함수가 여러 표를 바꿔도 최종 상태로 판단) → 내부 함수 `kept_titles_on_change()` → `grant_kept_titles(uuid, boolean)`.
+  - `builds_kept_titles`: 빌드 새 줄·상태/작성자/상대법 바뀜 → 그 작성자 / `counters_kept_titles`: 상대법 새 줄·상태 바뀜 → 등록자 + 그 상대법의 빌드 작성자 전원 / `edit_proposals_kept_titles`: 새 상대법 제안 새 줄 → 제안자. 지우기에는 반응하지 않는다.
+  - 도감 줄이 없거나 `permanent`가 아니면 주지 않는다(빌드 등록이 외래 키 오류로 실패하지 않게).
+- **알림**: 기존 종류 `title_earned`, 문장은 `sync_rewards`와 같은 「칭호 '첫 발자국'을 얻었습니다. [마이페이지]에서 대표 칭호로 고를 수 있습니다.」 → 앱 안 알림 목록에 쌓이고 웹·앱 화면이 이미 훈장과 함께 보여 준다. **푸시 없음**: `push_group('title_earned')` = null → `push_wanted` = false → 트리거가 Edge Function을 부르지 않는다. `push_group`·`push_wanted`·`push_on_notification`은 고치지 않았다(지문 2be75ed9…·fa8eb83c… 그대로) → 모든 사람 × 모든 종류 판정이 한 건도 안 바뀐다(테스트·확인 스크립트 17번).
+- **고친 기존 함수 (1개)**: `sync_rewards(uuid, boolean)` — 회수 반복문 한 줄에 `and not c.permanent`를 더함(053과 같은 replace, 정확히 한 번 나와야 바꿈, 076 전 지문 `c405f791…`일 때만 실행).
+  - 전: `… where ut.user_id = p_user and c.kind = 'activity' and not (ut.title_key = any (want)) loop  -- 053: 활동 칭호만 회수`
+  - 후: `… where ut.user_id = p_user and c.kind = 'activity' and not c.permanent and not (ut.title_key = any (want)) loop  -- 053: 활동 칭호만 회수, 076: 유지 칭호 제외`
+  - 이유: 새 칭호도 activity라 그대로 두면 다음 `sync_rewards` 때 "조건에 없는 활동 칭호"로 회수된다. 기존 6개는 permanent = false라 지급·회수 결과가 전과 같다. 이름·인자·반환·보안·search_path·권한·소유자 그대로. 지문 `c405f7913721afcaf02a560d0427dd40` → `d31e09d02d8344c09ec4adc3a2a00992`(바뀐 줄을 되돌리면 이전 지문 — 테스트·확인 스크립트 1번).
+- **새 함수 2개**(모두 실행 권한 회수 — anon·authenticated·public): `grant_kept_titles(p_user uuid, p_quiet boolean default false) returns integer`(새로 준 칭호 수, security definer), `kept_titles_on_change() returns trigger`. → 쓰기 함수 **103 / 30 / 73 그대로**, 읽기 함수 **66 그대로**(075 뒤).
+- **소급**: 076 끝에서 운영자가 아닌 모든 사람에게 `grant_kept_titles` 한 번(알림도 한 줄씩, 푸시 없음, 실행 결과 NOTICE에 「n명을 확인해 칭호 m개」). `check_kept_titles_before.sql` 15~17번이 받을 사람 수·합계를 미리 세고, `check_kept_titles_after.sql` 22~24번이 실제 수와 맞는지, 9번이 「조건을 채웠는데 없는 사람 0」인지 본다.
+- **옛 앱 1.1·1.2**: 새 칭호는 activity라 칭호판 위 칸에 보이고(이름·얻는 방법은 DB), 얻으면 [대표로 설정] 가능, 닉네임 옆 배지는 `public_title_info`의 이름. 칭호판의 「n / 전체」가 6 → 8로 바뀐다. 알림은 기존 종류라 그대로 보인다.
+- **한계**:
+  - 소급은 **지금 남아 있는 기록**으로만 판단한다 — 예전에 올렸다가 완전히 지워진 빌드·상대법만 있던 사람은 첫 발자국을 받지 못한다. 반대로 실시간으로는 올리는 순간 받으므로, 나중에 숨겨진 것 하나만 있는 사람도 (실시간으로 받았다면) 유지된다(소급과 실시간의 차이).
+  - 거절된 빌드도 "올림"으로 센다(요구 「처음 올리면」 그대로). 운영자가 회수하는 기능은 없다.
+  - 칭호별 색·그림이 없어 기본 훈장으로 보인다(웹 `TITLES`·`titleCondition`의 고정 6개 목록에는 없지만 이름·조건은 DB에서 읽으므로 표시에는 문제 없음).
+  - 기준 숫자(`title_builder`)를 나중에 내리면 다음 계산 때 새로 채운 사람에게 주지만, 이미 조건을 넘긴 사람은 그 사람의 빌드·상대법이 다시 바뀔 때까지 기다린다(전체 소급은 076 실행 때 한 번).
+- **확인 스크립트**: `scripts/check_kept_titles_before.sql`(1~3 실행 가능: 075 실행됨·sync_rewards 076 전 본문·새 칸·키·설정값 없음 / 4~14 적어 둘 값 / 15~17 소급 예상), `scripts/check_kept_titles_after.sql`(1~11 정상 값: sync_rewards 지문·되돌린 지문, 도감 2줄, 칸·설정값, 새 함수 권한 없음, 트리거 3개, 103/30/73, 빠뜨림 0, 칭호 알림 푸시 대상 0명, 조건 채웠는데 없음 0, 운영자 0·중복 0, 알림 수 = 칭호 수 / 12~21 비교 / 22~24 소급 결과). 이메일·토큰 값 출력 없음.
+- **테스트**: `tests/kept_titles_test.sql` 45개(모양·권한·103/30/73·읽기 66·트리거, sync_rewards 지문·되돌린 지문, push 함수 지문·묶음 없음, 실제 `create_matchup`·`create_build`·옛 제안 → 첫 발자국 + 알림 1줄·**net.http_post 0건**(웹 구독·앱 토큰·발송 주소가 있어도), 숨김만 → 없음, 거절도 올림, 공개 9+숨김+대기 → 없음 → 10개 → 받음, 모두 숨기고 지워도 유지·회수 알림 없음, 두 번 안 받음, 대기·숨긴 상대법 → 없음 → 공개 → 받음, 기준을 올려도 유지, 탑신병자는 예전처럼 회수·첫 발자국은 대표 칭호째 유지, 운영자 없음, 조용히 주기, 도감 줄 없음 → 안 주고 등록 성공, 탈퇴 cascade, `my_title_book`·`public_title_info`·장착, **모든 사람 × 모든 종류 푸시 판정이 전후로 같음**). 기존 테스트 기대값 수정(076이 칭호·알림을 더해서 바뀌는 값만): `xp_test.sql`(칭호·알림 도우미가 076 칭호를 빼고 셈, 탑신병자 알림 문장 조회를 그 칭호로 좁힘, 「칭호·레벨은 누구나 봄」 줄 수), `title_catalog_test.sql`(도우미 같은 방식, 처음 7줄·도감 표 수 11 → 13·운영자 도감 10 → 12·도감 순서에 새 2개), `title_badge_test.sql`(054가 넣은 줄 수는 permanent 제외로, `public_title_info` 순서에 새 2개).
+- **되돌리는 법**: 076 맨 위 되돌리기 블록(트리거 3개·함수 2개 삭제, sync_rewards 줄 되돌림, 새 칭호 받은 기록·그 알림·도감 2줄·칸·설정값 삭제 — 대표 칭호였으면 비워짐). 로컬에서 되돌린 뒤 스키마가 075와 같음을 `pg_dump -s` 비교로 확인했다.
+- **운영 반영 순서** (사장님, 075 다음에 따로): ① `check_kept_titles_before.sql`(15~17번 값을 적어 둠) → ② `076_kept_titles.sql`(NOTICE 「n명을 확인해 칭호 m개」 — m이 17번과 같아야 함) → ③ `check_kept_titles_after.sql`. 화면 변경이 없어 push·앱 빌드와 순서 무관(옛 앱도 바로 새 칭호를 보여 줌).
+- **다음 단계**: 커밋만 했고 운영 DB 실행·push는 하지 않았다.

@@ -23,8 +23,8 @@ select t.ok('053 제약은 없어지고 054 제약이 있음',
   not exists (select 1 from pg_constraint where conname = 'title_catalog_equip_activity_only')
   and exists (select 1 from pg_constraint where conname = 'title_catalog_equip_kind'));
 select t.fails('장인은 장착 가능으로 못 바꿈', $$update title_catalog set equippable = true where key = 'influencer'$$, 'title_catalog_equip_kind');
-select t.ok('054는 칭호를 넣거나 equippable을 바꾸지 않음', (select count(*) = 7 from title_catalog)
-  and (select count(*) = 6 from title_catalog where equippable));
+select t.ok('054는 칭호를 넣거나 equippable을 바꾸지 않음 (076 유지 칭호 2줄 제외)', (select count(*) = 7 from title_catalog where not permanent)
+  and (select count(*) = 6 from title_catalog where equippable and not permanent));
 
 -- 시험용 한정판 5개: 장착 가능(그림+색) / 장착 불가 / 비밀 + 장착 가능 / 숨김 + 장착 가능 / 색만 + 장착 가능
 insert into title_catalog (key, name, description, how_to, kind, equippable, sort_order, secret, hidden, icon, color) values
@@ -46,7 +46,8 @@ select t.ok('회원도 부를 수 있음', jsonb_typeof(pg_temp.info()) = 'array
 select t.fails('회원: 도감 표 직접 읽기는 그대로 거부', 'select * from title_catalog', 'permission denied');
 reset role;
 select t.ok('순서: 활동 6 -> 한정판(sort_order), 장인/숨김/아무도 안 단 비밀은 빠짐',
-  pg_temp.info_keys() = array['top_addict', 'tool_hater', 'solid_heavy', 'butcher_owner', 'general', 'offmeta', 'lim_color', 'lim_cup', 'lim_plain']);
+  pg_temp.info_keys() = array['first_upload', 'top_addict', 'tool_hater', 'solid_heavy', 'butcher_owner', 'general', 'offmeta', 'builder',  -- 076 유지 칭호 2개
+                              'lim_color', 'lim_cup', 'lim_plain']);
 select t.ok('칸은 key/kind/name/icon/color만',
   not exists (select 1 from jsonb_array_elements(pg_temp.info()) e
               where (select array_agg(k order by k) from jsonb_object_keys(e) k) <> array['color', 'icon', 'key', 'kind', 'name']));
