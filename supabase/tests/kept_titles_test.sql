@@ -1,8 +1,8 @@
 -- 로컬 검사 전용 (supabase/tests/run.sh). 실제 Supabase SQL Editor에서 실행하지 말 것. (운영 DB 확인은 scripts/check_kept_titles_after.sql)
--- 076 유지 칭호 first_upload(첫 발자국)·builder(빌드 설계자):
+-- 076 유지 칭호 builder(빌드 설계자) - 077에서 first_upload(첫 발자국)는 폐지(아래 「첫 발자국」 기대값은 077 뒤 규칙 = 주지 않음):
 --   도감·설정값·칸 모양, 새 함수 실행 권한 없음(쓰기 함수 103/30/73·읽기 함수 66 그대로), sync_rewards 본문은 한 줄만 바뀜(되돌리면 이전 지문),
---   첫 상대법(create_matchup)·첫 빌드(create_build)·옛 방식 새 상대법 제안 → 첫 발자국 + title_earned 알림 1줄, 휴대폰 알림(net.http_post) 없음,
---   숨김 처리된 빌드만 있으면 첫 발자국 없음, 공개 빌드 10개 → 빌드 설계자(숨김·대기·숨긴 상대법 제외, 상대법이 공개되면 셈),
+--   첫 상대법(create_matchup)·첫 빌드(create_build)·옛 방식 새 상대법 제안 → 077 뒤로는 칭호·알림 없음,
+--   공개 빌드 10개 → 빌드 설계자 + title_earned 알림 1줄·휴대폰 알림(net.http_post) 없음(숨김·대기·숨긴 상대법 제외, 상대법이 공개되면 셈),
 --   한 번 얻으면 숨기거나 지워도 유지(sync_rewards가 기존 활동 칭호는 회수하지만 유지 칭호는 안 건드림), 두 번 받지 않음, 운영자 없음,
 --   조용히(p_quiet) 주기, 도감 줄이 없으면 주지 않고 등록도 실패하지 않음, 도감·대표 칭호(my_title_book·public_title_info·장착),
 --   푸시 판정: push_group·push_wanted 074 지문 그대로, title_earned는 묶음 없음, 모든 사람 × 모든 종류 판정이 칭호를 준 전후로 같음
@@ -68,10 +68,11 @@ grant execute on all functions in schema pg_temp to anon, authenticated;
 select pg_temp.push_fp() as push0 \gset
 
 -- ===== 1. 모양 / 권한 =====
-select t.ok('도감 2줄: 활동·장착 가능·유지, 순서 5·65, 그림·색 없음',
+select t.ok('유지 칭호 도감 1줄(077에서 첫 발자국 삭제): 활동·장착 가능·유지, 순서 65, 그림·색 없음',
   (select array_agg(key || ':' || name || ':' || kind || ':' || equippable || ':' || permanent || ':' || sort_order order by sort_order)
      from public.title_catalog where permanent)
-  = array['first_upload:첫 발자국:activity:true:true:5', 'builder:빌드 설계자:activity:true:true:65']
+  = array['builder:빌드 설계자:activity:true:true:65']
+  and not exists (select 1 from public.title_catalog where key = 'first_upload')
   and not exists (select 1 from public.title_catalog where permanent and (icon is not null or color is not null or secret or hidden)));
 select t.ok('기존 7줄은 permanent = false, 칸 기본값 false·not null',
   (select count(*) = 7 from public.title_catalog where not permanent and key in
@@ -97,9 +98,11 @@ select t.ok('읽기 함수 66개 그대로 (075 뒤 수)', (
   select count(*) = 66 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.prokind = 'f' and p.provolatile in ('s', 'i') and p.prorettype <> 'trigger'::regtype
      and (has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('anon', p.oid, 'execute'))));
-select t.ok('트리거 3개: deferrable initially deferred, 지우기에는 반응 안 함', (
-  select count(*) = 3 and bool_and(tgdeferrable and tginitdeferred) and bool_and((tgtype & 8) = 0)
+select t.ok('트리거 2개(077에서 edit_proposals_kept_titles 삭제): deferrable initially deferred, 지우기에는 반응 안 함', (
+  select count(*) = 2 and bool_and(tgdeferrable and tginitdeferred) and bool_and((tgtype & 8) = 0)
     from pg_trigger where tgname in ('builds_kept_titles', 'counters_kept_titles', 'edit_proposals_kept_titles')));
+select t.ok('grant_kept_titles: 077 본문(첫 발자국 조건 없음) 지문 3370625…', (select md5(replace(prosrc, E'\r', '')) from pg_proc
+  where oid = 'public.grant_kept_titles(uuid, boolean)'::regprocedure) = '3370625539c7ce4bd794a96b4609b03f');
 select t.ok('sync_rewards: 076 지문, 바뀐 줄을 되돌리면 076 전 지문(c405f791…), 모양·권한 그대로',
   (select md5(replace(prosrc, E'\r', '')) from pg_proc where oid = 'public.sync_rewards(uuid, boolean)'::regprocedure) = 'd31e09d02d8344c09ec4adc3a2a00992'
   and (select md5(replace(replace(prosrc, E'\r', ''),
@@ -114,26 +117,23 @@ select t.ok('push_group·push_wanted 본문은 074 그대로, title_earned·titl
   and public.push_group('title_earned') is null and public.push_group('title_revoked') is null);
 select t.ok('fixtures 빌드(작성자 없음)에는 칭호를 주지 않음', not exists (select 1 from public.user_titles where user_id is null));
 
--- ===== 2. 첫 발자국: 실제 등록 함수 =====
+-- ===== 2. 첫 발자국 폐지(077): 실제 등록 함수로 처음 올려도 칭호·알림 없음 =====
 set role authenticated;
 set request.jwt.claim.sub = :'U';
 select create_matchup('Darius', 'Garen', t.build() || :'doc'::jsonb) as mu \gset
 reset role;
-select t.ok('첫 상대법(create_matchup) → 첫 발자국 + 알림 1줄', pg_temp.has(:'U', 'first_upload') and pg_temp.earned(:'U', '첫 발자국') = 1
-  and (select message from public.notifications where user_id = :'U' and kind = 'title_earned' and message like '칭호 ''첫 발자국''%')
-      = '칭호 ''첫 발자국''을 얻었습니다. [마이페이지]에서 대표 칭호로 고를 수 있습니다.');
+select t.ok('첫 상대법(create_matchup) → 칭호·칭호 알림 없음', not exists (select 1 from public.user_titles where user_id = :'U' and title_key in ('first_upload', 'builder'))
+  and not exists (select 1 from public.notifications where user_id = :'U' and kind = 'title_earned' and (message like '%첫 발자국%' or message like '%빌드 설계자%')));
 set role authenticated;
 set request.jwt.claim.sub = :'V';
 insert into ids select 'bV', create_build((select id from public.counters where counter_champion = 'Quinn'), t.build(array['3071','3047','3053']) || :'doc'::jsonb);
 reset role;
-select t.ok('첫 빌드(create_build) → 첫 발자국 + 알림 1줄', pg_temp.has(:'V', 'first_upload') and pg_temp.earned(:'V', '첫 발자국') = 1);
--- 옛 방식(승인 제도) 새 상대법 제안 (대기) - 표에 바로 넣기 (승인 제도가 꺼져 있으면 화면은 이 길을 쓰지 않음)
+select t.ok('첫 빌드(create_build) → 칭호·칭호 알림 없음', not pg_temp.has(:'V', 'first_upload') and pg_temp.earned(:'V', '첫 발자국') = 0);
+-- 옛 방식(승인 제도) 새 상대법 제안 (대기) - 표에 바로 넣기
 insert into public.edit_proposals (type, target_champion, counter_champion, proposer_id, content, build)
 values ('new_counter', 'Darius', 'Fiora', :'W', :'doc', t.build());
-select t.ok('옛 방식 새 상대법 제안(대기) → 첫 발자국 (edit_proposals 트리거)', pg_temp.has(:'W', 'first_upload') and pg_temp.earned(:'W', '첫 발자국') = 1);
-select t.ok('칭호 알림은 휴대폰 알림(net.http_post)을 부르지 않음 (U 웹 구독·V 앱 토큰이 있어도)', pg_temp.pushed_titles() = 0);
-select t.ok('앱 안 알림 목록에는 있음 (안 읽음)', (select count(*) from public.notifications where kind = 'title_earned' and read_at is null
-  and user_id in (:'U', :'V') and message like '칭호 ''첫 발자국''%') = 2);
+select public.grant_kept_titles(:'W') as gw \gset
+select t.ok('옛 방식 새 상대법 제안 → 칭호 없음, 직접 불러도 0', not pg_temp.has(:'W', 'first_upload') and :gw = 0 and pg_temp.earned(:'W', '첫 발자국') = 0);
 -- 숨김 처리된 빌드만 있는 사람
 begin;
 alter table public.builds disable trigger builds_check_new;
@@ -142,15 +142,15 @@ set constraints all immediate;
 alter table public.builds enable trigger builds_check_new;
 commit;
 select public.grant_kept_titles(:'H') as gh \gset
-select t.ok('숨김 처리된 빌드만 있으면 첫 발자국 없음', not pg_temp.has(:'H', 'first_upload') and :gh = 0);
--- 대기·거절 빌드는 "올림"
+select t.ok('숨김 빌드만 있는 사람도 칭호 없음', not pg_temp.has(:'H', 'first_upload') and :gh = 0);
 begin;
 alter table public.builds disable trigger builds_check_new;
 select pg_temp.mk(:'N', 'rejected', 1);
 set constraints all immediate;
 alter table public.builds enable trigger builds_check_new;
 commit;
-select t.ok('거절된 빌드도 올린 것 → 첫 발자국', pg_temp.has(:'N', 'first_upload'));
+select t.ok('거절된 빌드만 있는 사람도 칭호 없음', not pg_temp.has(:'N', 'first_upload'));
+select t.ok('도감에 줄이 없어 first_upload는 user_titles에 들어갈 수도 없음(외래 키)', not exists (select 1 from public.title_catalog where key = 'first_upload'));
 
 -- ===== 3. 빌드 설계자: 공개 빌드 10개 =====
 begin;
@@ -159,26 +159,26 @@ select pg_temp.mk(:'B', 'approved', 9), pg_temp.mk(:'B', 'hidden', 3), pg_temp.m
 set constraints all immediate;
 alter table public.builds enable trigger builds_check_new;
 commit;
-select t.ok('공개 9 + 숨김 3 + 대기 2 → 빌드 설계자 없음 (첫 발자국은 있음)', not pg_temp.has(:'B', 'builder') and pg_temp.has(:'B', 'first_upload'));
+select t.ok('공개 9 + 숨김 3 + 대기 2 → 빌드 설계자 없음 (첫 발자국도 없음 - 077)', not pg_temp.has(:'B', 'builder') and not pg_temp.has(:'B', 'first_upload'));
 update public.builds set status = 'approved', hide_reason = null, hidden_at = null where id = (select min(id) from public.builds where author_id = :'B' and status = 'hidden');
 select t.ok('숨긴 빌드 하나가 다시 공개되어 10개 → 빌드 설계자 + 알림 1줄', pg_temp.has(:'B', 'builder') and pg_temp.earned(:'B', '빌드 설계자') = 1
   and (select message from public.notifications where user_id = :'B' and message like '칭호 ''빌드 설계자''%')
       = '칭호 ''빌드 설계자''를 얻었습니다. [마이페이지]에서 대표 칭호로 고를 수 있습니다.');
 -- 숨기고 지워도 유지
 update public.builds set status = 'hidden', hide_reason = '검사', hidden_at = now() where author_id = :'B' and status = 'approved';
-select t.ok('공개 빌드를 모두 숨겨도 두 칭호 유지, 회수 알림 없음', pg_temp.has(:'B', 'builder') and pg_temp.has(:'B', 'first_upload')
+select t.ok('공개 빌드를 모두 숨겨도 빌드 설계자 유지, 회수 알림 없음', pg_temp.has(:'B', 'builder')
   and not exists (select 1 from public.notifications where user_id = :'B' and kind = 'title_revoked' and (message like '%빌드 설계자%' or message like '%첫 발자국%')));
 delete from public.builds where author_id = :'B';
 select public.sync_rewards(:'B');
-select t.ok('빌드를 모두 지우고 sync_rewards를 다시 돌려도 유지', pg_temp.has(:'B', 'builder') and pg_temp.has(:'B', 'first_upload'));
+select t.ok('빌드를 모두 지우고 sync_rewards를 다시 돌려도 유지', pg_temp.has(:'B', 'builder'));
 begin;
 alter table public.builds disable trigger builds_check_new;
 select pg_temp.mk(:'B', 'approved', 10);
 set constraints all immediate;
 alter table public.builds enable trigger builds_check_new;
 commit;
-select t.ok('다시 10개를 채워도 두 번 받지 않음 (칭호 1줄·알림 1줄)', pg_temp.earned(:'B', '빌드 설계자') = 1 and pg_temp.earned(:'B', '첫 발자국') = 1
-  and (select count(*) from public.user_titles where user_id = :'B' and title_key in ('builder', 'first_upload')) = 2
+select t.ok('다시 10개를 채워도 두 번 받지 않음 (칭호 1줄·알림 1줄, 첫 발자국 0)', pg_temp.earned(:'B', '빌드 설계자') = 1 and pg_temp.earned(:'B', '첫 발자국') = 0
+  and (select count(*) from public.user_titles where user_id = :'B' and title_key in ('builder', 'first_upload')) = 1
   and public.grant_kept_titles(:'B') = 0);
 -- 숨긴·대기 상대법의 빌드는 세지 않고, 상대법이 공개되면 센다
 insert into public.counters (target_champion, counter_champion, sort_order, status) values ('Darius', 'Vayne', 10, 'pending');
@@ -188,7 +188,7 @@ select pg_temp.mk(:'C', 'approved', 10, 'Vayne');
 set constraints all immediate;
 alter table public.builds enable trigger builds_check_new;
 commit;
-select t.ok('대기 상대법의 공개 빌드 10개 → 빌드 설계자 없음', not pg_temp.has(:'C', 'builder') and pg_temp.has(:'C', 'first_upload'));
+select t.ok('대기 상대법의 공개 빌드 10개 → 빌드 설계자 없음', not pg_temp.has(:'C', 'builder') and not pg_temp.has(:'C', 'first_upload'));
 update public.counters set status = 'hidden' where counter_champion = 'Vayne';
 select t.ok('숨긴 상대법이어도 없음', not pg_temp.has(:'C', 'builder'));
 update public.counters set status = 'approved' where counter_champion = 'Vayne';
@@ -200,18 +200,18 @@ update public.xp_rules set value = 10 where key = 'title_builder';
 -- ===== 4. 기존 활동 칭호는 예전처럼 회수, 유지 칭호는 그대로 =====
 begin;
 alter table public.builds disable trigger builds_check_new;
-select pg_temp.mk(:'T', 'approved', 1);
+select pg_temp.mk(:'T', 'approved', 10);
 set constraints all immediate;
 alter table public.builds enable trigger builds_check_new;
 commit;
-select t.ok('공개 빌드 1개: 탑신병자(기존) + 첫 발자국(새)', pg_temp.has(:'T', 'top_addict') and pg_temp.has(:'T', 'first_upload'));
-update public.profiles set main_title = 'first_upload' where id = :'T';
+select t.ok('공개 빌드 10개: 탑신병자(기존) + 빌드 설계자(유지), 첫 발자국 없음', pg_temp.has(:'T', 'top_addict') and pg_temp.has(:'T', 'builder') and not pg_temp.has(:'T', 'first_upload'));
+update public.profiles set main_title = 'builder' where id = :'T';
 update public.builds set status = 'hidden', hide_reason = '검사', hidden_at = now() where author_id = :'T';
-select t.ok('숨기면 탑신병자는 예전처럼 회수(알림), 첫 발자국은 유지·대표 칭호 그대로',
-  not pg_temp.has(:'T', 'top_addict') and pg_temp.has(:'T', 'first_upload')
+select t.ok('숨기면 탑신병자는 예전처럼 회수(알림), 빌드 설계자는 유지·대표 칭호 그대로',
+  not pg_temp.has(:'T', 'top_addict') and pg_temp.has(:'T', 'builder')
   and exists (select 1 from public.notifications where user_id = :'T' and kind = 'title_revoked' and message like '%탑신병자%')
-  and not exists (select 1 from public.notifications where user_id = :'T' and kind = 'title_revoked' and message like '%첫 발자국%')
-  and (select main_title from public.profiles where id = :'T') = 'first_upload');
+  and not exists (select 1 from public.notifications where user_id = :'T' and kind = 'title_revoked' and message like '%빌드 설계자%')
+  and (select main_title from public.profiles where id = :'T') = 'builder');
 select t.ok('회수 알림도 휴대폰 알림 없음', pg_temp.pushed_titles() = 0);
 
 -- ===== 5. 운영자·조용히·도감 줄 없음·탈퇴 =====
@@ -232,9 +232,9 @@ set constraints all immediate;
 alter table public.builds enable trigger builds_check_new;
 alter table public.builds enable trigger builds_kept_titles;
 commit;
-select t.ok('트리거 없이 넣으면 아직 없음', not pg_temp.has(:'Q', 'first_upload'));
+select t.ok('트리거 없이 넣으면 아직 없음', not pg_temp.has(:'Q', 'builder'));
 select public.grant_kept_titles(:'Q', true) as gq \gset
-select t.ok('조용히 주기: 2개, 알림 없음', :gq = 2 and pg_temp.has(:'Q', 'builder')
+select t.ok('조용히 주기: 1개(빌드 설계자만), 알림 없음', :gq = 1 and pg_temp.has(:'Q', 'builder') and not pg_temp.has(:'Q', 'first_upload')
   and pg_temp.earned(:'Q', '빌드 설계자') = 0 and pg_temp.earned(:'Q', '첫 발자국') = 0);
 -- 도감에서 줄이 지워지면(받은 사람이 없을 때만 지울 수 있음) 주지 않고, 등록도 실패하지 않음
 create temp table kept_backup as select * from public.user_titles where title_key = 'builder';
@@ -262,9 +262,9 @@ select t.ok('탈퇴하면 칭호 줄도 지워짐 (cascade)', not exists (select
 set role authenticated;
 set request.jwt.claim.sub = :'C';
 select public.my_title_book() as book \gset
-select t.ok('my_title_book: 활동 칭호 8개(새 2개 포함), 순서 첫 발자국 → … → 빌드 설계자, 얻는 방법 {n} → 10, 얻음 표시',
+select t.ok('my_title_book: 활동 칭호 7개(빌드 설계자 포함, 첫 발자국 없음), 얻는 방법 {n} → 10, 얻음 표시',
   (select array_agg(e ->> 'key' order by o) from jsonb_array_elements(:'book'::jsonb -> 'items') with ordinality x(e, o) where e ->> 'kind' = 'activity')
-    = array['first_upload', 'top_addict', 'tool_hater', 'solid_heavy', 'butcher_owner', 'general', 'offmeta', 'builder']
+    = array['top_addict', 'tool_hater', 'solid_heavy', 'butcher_owner', 'general', 'offmeta', 'builder']
   and (select e ->> 'how_to' from jsonb_array_elements(:'book'::jsonb -> 'items') e where e ->> 'key' = 'builder') = '공개 빌드 10개 (숨김 처리된 빌드는 세지 않음, 한 번 얻으면 유지)'
   and (select (e ->> 'owned')::boolean and (e ->> 'equippable')::boolean from jsonb_array_elements(:'book'::jsonb -> 'items') e where e ->> 'key' = 'builder'));
 update public.profiles set main_title = 'builder' where id = :'C';
@@ -272,9 +272,10 @@ select t.ok('본인이 대표 칭호로 장착 가능', (select main_title from 
 reset role;
 set role anon;
 reset request.jwt.claim.sub;
-select t.ok('public_title_info(비로그인): 새 2개가 이름과 함께 나옴', (
-  select count(*) = 2 from jsonb_array_elements(public.public_title_info()) e
-   where (e ->> 'key', e ->> 'name', e ->> 'kind') in (('first_upload', '첫 발자국', 'activity'), ('builder', '빌드 설계자', 'activity'))));
+select t.ok('public_title_info(비로그인): 빌드 설계자는 나오고 첫 발자국은 없음', (
+  select count(*) = 1 from jsonb_array_elements(public.public_title_info()) e
+   where (e ->> 'key', e ->> 'name', e ->> 'kind') in (('first_upload', '첫 발자국', 'activity'), ('builder', '빌드 설계자', 'activity')))
+  and not exists (select 1 from jsonb_array_elements(public.public_title_info()) e where e ->> 'key' = 'first_upload'));
 reset role;
 set role authenticated;
 set request.jwt.claim.sub = :'H';

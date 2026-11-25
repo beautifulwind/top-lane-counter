@@ -84,7 +84,7 @@ rows (ord, what, to_delete, to_keep, note) as (
   union all select 15.8, 'user_titles 중 한정판 칭호 (운영자가 준 것, 053)',
          case when to_regclass('public.title_catalog') is null then 0 else (xpath('/row/c/text()', query_to_xml($q$select count(*) as c from public.user_titles t join public.title_catalog c on c.key = t.title_key where c.kind = 'limited'$q$, false, true, '')))[1]::text::bigint end,
          0, '전부 지움 (053 실행 전이면 0). 칭호 도감 표 title_catalog는 설정이라 남김'
-  union all select 15.85, 'user_titles 중 유지 칭호 (첫 발자국·빌드 설계자, 076)',
+  union all select 15.85, 'user_titles 중 유지 칭호 (빌드 설계자, 076)',
          case when not exists (select 1 from information_schema.columns where table_schema = 'public' and table_name = 'title_catalog' and column_name = 'permanent') then 0
               else (xpath('/row/c/text()', query_to_xml($q$select count(*) as c from public.user_titles t join public.title_catalog c on c.key = t.title_key where c.permanent$q$, false, true, '')))[1]::text::bigint end,
          0, '전부 지운 뒤 남은 데이터(남기는 카운터의 빌드 등)로 알림 없이 다시 줌 - 그래서 0이 아닐 수 있음 (076 실행 전이면 0)'

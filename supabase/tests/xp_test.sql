@@ -21,10 +21,10 @@ create function pg_temp.xp(u uuid) returns integer language sql as $$ select xp 
 create function pg_temp.lv(u uuid) returns integer language sql as $$ select level from public.profiles where id = u $$;
 create function pg_temp.titles(u uuid) returns text[] language sql as $$
   select coalesce(array_agg(title_key order by title_key), '{}') from public.user_titles where user_id = u
-     and title_key not in ('first_upload', 'builder') $$;  -- 076 유지 칭호는 kept_titles_test.sql에서 따로 본다
+     and title_key <> 'builder' $$;  -- 076 유지 칭호(빌드 설계자)는 kept_titles_test.sql에서 따로 본다 (첫 발자국은 077에서 삭제)
 create function pg_temp.notes(u uuid, k text) returns integer language sql as $$
   select count(*)::integer from public.notifications where user_id = u and kind = k
-     and not (kind = 'title_earned' and (message like '칭호 ''첫 발자국''%' or message like '칭호 ''빌드 설계자''%')) $$;  -- 076 알림 제외
+     and not (kind = 'title_earned' and message like '칭호 ''빌드 설계자''%') $$;  -- 076 빌드 설계자 알림 제외
 create function pg_temp.key_sum(u uuid, k text) returns integer language sql as $$
   select coalesce(sum(amount), 0)::integer from public.xp_events where user_id = u and source_key = k $$;
 grant execute on all functions in schema pg_temp to authenticated;
@@ -58,7 +58,7 @@ select t.ok('알림: 레벨업 1 + 칭호 1',
   pg_temp.notes(:'B', 'level_up') = 1 and pg_temp.notes(:'B', 'title_earned') = 1
   and (select message = '레벨이 올랐습니다: Lv.2' from notifications where user_id = :'B' and kind = 'level_up')
   and (select message = '칭호 ''탑신병자''를 얻었습니다. [마이페이지]에서 대표 칭호로 고를 수 있습니다.' from notifications where user_id = :'B' and kind = 'title_earned'
-       and message like '칭호 ''탑신병자''%'));  -- 076: 같은 때 「첫 발자국」 알림도 생긴다 (kept_titles_test.sql)
+       and message like '칭호 ''탑신병자''%'));
 select t.ok('운영자는 처리해도 경험치·칭호 없음', pg_temp.xp(:'A') = 0 and pg_temp.lv(:'A') = 0 and pg_temp.titles(:'A') = '{}'
   and (select count(*) = 0 from xp_events where user_id = :'A'));
 
@@ -73,7 +73,7 @@ select t.fails('칭호 직접 넣기 불가', $$insert into user_titles (user_id
 select t.ok('내 경험치 내역은 읽힘', (select count(*) = 1 from xp_events));
 set request.jwt.claim.sub = :'D';
 select t.ok('남의 경험치 내역은 안 보임', (select count(*) = 0 from xp_events));
-select t.ok('칭호·레벨은 누구나 봄', (select count(*) = 1 from user_titles where user_id = :'B' and title_key not in ('first_upload', 'builder')));  -- 076 유지 칭호 제외
+select t.ok('칭호·레벨은 누구나 봄', (select count(*) = 1 from user_titles where user_id = :'B' and title_key <> 'builder'));  -- 076 빌드 설계자 제외
 reset role;
 
 -- ===================================================================

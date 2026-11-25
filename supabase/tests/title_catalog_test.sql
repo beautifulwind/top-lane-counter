@@ -20,16 +20,16 @@ update public.xp_rules set value = 0 where key in ('post_interval', 'comment_int
 
 create function pg_temp.titles(u uuid) returns text[] language sql as $$
   select coalesce(array_agg(title_key order by title_key), '{}') from public.user_titles where user_id = u
-     and title_key not in ('first_upload', 'builder') $$;  -- 076 유지 칭호는 kept_titles_test.sql에서 따로 본다
+     and title_key <> 'builder' $$;  -- 076 유지 칭호(빌드 설계자)는 kept_titles_test.sql에서 따로 본다 (첫 발자국은 077에서 삭제)
 create function pg_temp.notes(u uuid, k text) returns integer language sql as $$
   select count(*)::integer from public.notifications where user_id = u and kind = k
-     and not (kind = 'title_earned' and (message like '칭호 ''첫 발자국''%' or message like '칭호 ''빌드 설계자''%')) $$;  -- 076 알림 제외
+     and not (kind = 'title_earned' and message like '칭호 ''빌드 설계자''%') $$;  -- 076 빌드 설계자 알림 제외
 create function pg_temp.item(book jsonb, k text) returns jsonb language sql as $$
   select i from jsonb_array_elements(book -> 'items') i where i ->> 'key' = k $$;
 grant execute on all functions in schema pg_temp to anon, authenticated;
 
 -- ===== 0. 도감 표: 처음 7줄, 순서, 장착 가능 =====
-select t.ok('처음 7줄: 활동 6 + 장인 1, 한정판 0 (076 유지 칭호 2줄 제외)', (select count(*) = 7 from title_catalog where not permanent)
+select t.ok('처음 7줄: 활동 6 + 장인 1, 한정판 0 (076 빌드 설계자 제외)', (select count(*) = 7 from title_catalog where not permanent)
   and (select count(*) = 6 from title_catalog where kind = 'activity' and equippable and not permanent)
   and (select count(*) = 1 from title_catalog where kind = 'influencer' and key = 'influencer' and name = '장인' and not equippable)
   and not exists (select 1 from title_catalog where kind = 'limited'));
@@ -194,7 +194,7 @@ select my_title_book() as bo \gset
 reset role;
 select t.ok('순서: 활동 6 -> 장인 -> 한정판, 숨김은 빠짐',
   (select array_agg(i ->> 'key' order by n) from jsonb_array_elements(:'bu'::jsonb -> 'items') with ordinality a(i, n))
-  = array['first_upload', 'top_addict', 'tool_hater', 'solid_heavy', 'butcher_owner', 'general', 'offmeta', 'builder',  -- 076 유지 칭호 2개(순서 5·65)
+  = array['top_addict', 'tool_hater', 'solid_heavy', 'butcher_owner', 'general', 'offmeta', 'builder',  -- 076 빌드 설계자(순서 65), 첫 발자국은 077에서 삭제
           'influencer', 'lim_open', 'lim_secret', 'lim_ended']);
 select t.ok('숨김 칭호는 가진 사람에게도 빠짐', pg_temp.item(:'bv'::jsonb, 'lim_hidden') is null and pg_temp.item(:'bu'::jsonb, 'lim_hidden') is null);
 select t.ok('활동 칭호 얻는 방법: {n}이 지금 기준 숫자로',
@@ -227,7 +227,7 @@ select t.ok('장인: 인증된 사람은 owned + 인증일, 아닌 사람은 fal
   and (:'bw'::jsonb ->> 'influencer') = 'pro'
   and not (pg_temp.item(:'bu'::jsonb, 'influencer') ->> 'owned')::boolean and (:'bu'::jsonb -> 'influencer') = 'null'::jsonb
   and pg_temp.item(:'bu'::jsonb, 'influencer') ->> 'how_to' like '장인 인증을 받으면 표시됩니다%');
-select t.ok('운영자 계정도 도감을 봄 (모두 못 가짐)', jsonb_array_length(:'bo'::jsonb -> 'items') = 12  -- 076 유지 칭호 2줄 더함
+select t.ok('운영자 계정도 도감을 봄 (모두 못 가짐)', jsonb_array_length(:'bo'::jsonb -> 'items') = 11  -- 076 빌드 설계자 1줄 더함 (077에서 첫 발자국 삭제)
   and not exists (select 1 from jsonb_array_elements(:'bo'::jsonb -> 'items') i where (i ->> 'owned')::boolean));
 select t.ok('대표 칭호 칸', (:'bu'::jsonb -> 'main_title') = 'null'::jsonb);
 
@@ -257,4 +257,4 @@ update profiles set role = 'admin' where id = :'GU';
 select t.ok('운영자가 되면 칭호가 모두 지워짐 (한정판 포함)', pg_temp.titles(:'GU') = '{}');
 delete from auth.users where id = :'V';
 select t.ok('탈퇴하면 한정판 칭호 줄도 지워짐', not exists (select 1 from user_titles where user_id = :'V'));
-select t.ok('도감 표는 그대로', (select count(*) = 13 from title_catalog));  -- 076 유지 칭호 2줄 포함
+select t.ok('도감 표는 그대로', (select count(*) = 12 from title_catalog));  -- 076 빌드 설계자 1줄 포함 (077에서 첫 발자국 삭제)
