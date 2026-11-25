@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { LEGAL, SITE_NAME } from '../lib/legal';
+import { LEGAL, MY_CHAMPIONS_EDITION, SITE_NAME } from '../lib/legal';
 import LegalFill from '../components/LegalFill';
 import { LegalVersionNote, LegalVersionProvider, Since, useLegalVersion } from '../components/LegalVersion';
 import { LockIcon } from '../components/Icons';
@@ -115,7 +115,7 @@ export default function Privacy() {
                       이 기록은 본인과 운영자만 볼 수 있고, 탈퇴하면 바로 삭제합니다. 운영진 처리 기록에는 처리 종류와 기간만 남으며, 탈퇴하면 대상이 누구였는지 알 수 없게 바뀝니다.
                     </li>
                   </Since>
-                  <Since v="2026-12-25">
+                  <Since v={MY_CHAMPIONS_EDITION}>
                     <li>
                       내 챔피언: 이용자가 [내 챔피언]에서 직접 등록한 챔피언 목록(최대 10개 — 계정 식별 번호, 챔피언, 등록한 시각). 서비스 화면에서는 본인에게만 보이며, 등록을 해제하거나 회원 탈퇴·비회원 계정 정리 때 삭제합니다.
                     </li>
@@ -181,7 +181,7 @@ export default function Privacy() {
             <li>빌드 수정 알림: 빌드가 수정되거나 되돌려졌을 때 운영자와 그 빌드를 만들거나 고친 회원에게 알리기</li>
             <li>경고·활동 제한: 운영자가 약관을 어긴 이용을 경고하거나 활동을 제한하고, 그 사유와 풀리는 시각을 본인에게 알리며, 이의 제기를 받아 확인하기</li>
           </Since>
-          <Since v="2026-12-25">
+          <Since v={MY_CHAMPIONS_EDITION}>
             <li>내 챔피언: 이용자가 등록한 챔피언의 빌드만 모아서 보여 주기</li>
           </Since>
           <li>공지: 운영자가 올린 공지를 가입자 모두(비회원 포함)의 알림으로 알립니다. 운영자가 알림 없이 올린 공지는 알리지 않습니다. 휴대폰 알림은 처음에 켜져 있고 [계정 설정]의 &ldquo;공지&rdquo;에서 끌 수 있습니다.</li>
@@ -211,7 +211,7 @@ export default function Privacy() {
               내가 받은 경고·활동 제한 기록(사유, 기간, 처리한 운영자, 해제한 시각과 메모, 경고를 확인한 시각).
             </li>
           </Since>
-          <Since v="2026-12-25">
+          <Since v={MY_CHAMPIONS_EDITION}>
             <li>
               <strong>내 챔피언:</strong> 등록한 챔피언은 해제하면 바로 지우고, <strong>회원 탈퇴·비회원 기록 지우기를 하거나 오래 쓰지 않은 비회원(게스트) 계정이 정리되면 함께 삭제합니다.</strong>
             </li>
@@ -331,7 +331,7 @@ export default function Privacy() {
               빌드 수정 알림은 받는 사람(운영자, 그 빌드를 처음 만든 회원, 이전에 고친 회원)에게만 보입니다.
             </li>
           </Since>
-          <Since v="2026-12-25">
+          <Since v={MY_CHAMPIONS_EDITION}>
             <li>내 챔피언에 등록한 챔피언 목록은 서비스 화면에서 본인에게만 표시되며, 다른 이용자에게 공개하지 않습니다.</li>
           </Since>
           <li>이메일 등 그 밖의 개인정보는 다른 이용자에게 공개하지 않습니다.</li>

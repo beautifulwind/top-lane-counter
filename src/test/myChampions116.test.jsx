@@ -2,21 +2,26 @@
 // 검색창 하나 → 줄 단위 결과(아이콘 + 이름 + 선택/선택됨), 메인 검색 규칙(초성·영문) 그대로, 선택·해제, 10개 한도 안내(버튼은 그대로),
 // 이름 칩 한 줄(새로 고른 것이 맨 앞, 누르면 그 챔피언만 · 한 번 더 누르면 전체, ×로 해제), 빌드 카드(BuildRow)·20개씩 쪽 번호,
 // 빈 상태 안내(등록 없음 / 공개 빌드 없음), 비로그인 로그인 안내, 080 전 DB 「준비 중」, 비회원 가능, 차단한 사람의 빌드 숨김.
+import { readFileSync } from 'node:fs';
 import { afterEach, beforeEach, expect, test, vi } from 'vitest';
 import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { AppRoutes } from '../App';
 import { fakeFetch } from './fakeDdragon';
 import { TABLES, fakeBuild, fakeGuestLogin, fakeLogin, fakeState } from './fakeSupabase';
-import { NO_MY_CHAMPION_BUILDS_TEXT, NO_MY_CHAMPION_TEXT } from '../components/MyChampions';
+import { MY_CHAMPIONS_CLOSED_TEXT, NO_MY_CHAMPION_BUILDS_TEXT, NO_MY_CHAMPION_TEXT } from '../components/MyChampions';
+import { LEGAL, MY_CHAMPIONS_EDITION, isMyChampionsOpen } from '../lib/legal';
 import { MY_CHAMPION_LIMIT_TEXT, MY_CHAMPIONS_NOT_READY } from '../api/myChampions';
 
+const OPEN = new Date('2026-12-26T03:00:00Z'); // 열린 뒤 (6-118)
 beforeEach(() => {
+  vi.useFakeTimers({ toFake: ['Date'] });
+  vi.setSystemTime(OPEN);
   window.matchMedia = undefined;
   vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch());
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
 });
-afterEach(() => { cleanup(); vi.restoreAllMocks(); });
+afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.useRealTimers(); });
 
 function Where() {
   const l = useLocation();
@@ -239,4 +244,39 @@ test('없는 챔피언·활동 제한 등 서버 거절은 그 문장을 그대�
   fireEvent.click(await within(sec).findByRole('button', { name: '티모 선택' }));
   expect((await within(sec).findByRole('alert')).textContent).toBe('없는 챔피언입니다. 다시 골라 주세요.');
   expect(chips(sec)).toEqual([]);
+});
+
+test('6-118: 시행일(한국 0시) 전에는 /lists·/following 모두 「준비 중」 안내만 — 검색창·칩 없음, DB 함수 호출 없음', async () => {
+  expect(MY_CHAMPIONS_EDITION).toBe('2026-12-25');
+  expect(LEGAL.privacyRevisions).toEqual([MY_CHAMPIONS_EDITION]); // 방침 판과 같은 값
+  expect(MY_CHAMPIONS_CLOSED_TEXT).toBe('내 챔피언 기능은 준비 중입니다. 2026-12-25부터 쓸 수 있습니다.');
+  expect(isMyChampionsOpen(Date.parse('2026-12-24T14:59:59Z'))).toBe(false);
+  expect(isMyChampionsOpen(Date.parse('2026-12-24T15:00:00Z'))).toBe(true);
+  vi.setSystemTime(new Date('2026-12-24T14:59:59Z'));
+  fakeLogin('u-me', { nickname: '나' });
+  register('u-me', ['Quinn']);
+  for (const path of ['/lists?tab=champions&champ=Quinn', '/following?tab=champions']) {
+    start(path);
+    expect(await screen.findByText(MY_CHAMPIONS_CLOSED_TEXT)).toBeTruthy();
+    expect(screen.queryByRole('region', { name: '내 챔피언' })).toBeNull();
+    expect(screen.queryByRole('searchbox', { name: '내 챔피언 검색' })).toBeNull();
+    expect(document.querySelector('.mc-chip, .mc-result, .my-champ-builds')).toBeNull();
+    cleanup();
+  }
+  expect(fakeState.rpcCalls.filter((c) => /my_champion/.test(c.name))).toEqual([]);
+});
+
+test('6-118: 한국 12-25 0시부터는 코드 변경 없이 열린다', async () => {
+  vi.setSystemTime(new Date('2026-12-24T15:00:00Z'));
+  fakeLogin('u-me', { nickname: '나' });
+  start('/lists?tab=champions');
+  expect(await panel()).toBeTruthy();
+  expect(screen.queryByText(MY_CHAMPIONS_CLOSED_TEXT)).toBeNull();
+});
+
+test('6-118: (선택) DB 차단 SQL의 날짜가 화면이 여는 날짜와 같다', () => {
+  const sql = readFileSync('supabase/scripts/block_my_champions_until_open.sql', 'utf8');
+  const dates = [...sql.matchAll(/date '(\d{4}-\d{2}-\d{2})'/g)].map((m) => m[1]);
+  expect(dates.length).toBeGreaterThan(0);
+  expect(new Set(dates)).toEqual(new Set([MY_CHAMPIONS_EDITION]));
 });
