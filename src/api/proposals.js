@@ -360,7 +360,7 @@ export function getDeletions() {
     db()
       .from('counter_deletions')
       .select(
-        'id, target_champion, counter_champion, reason, deleted_at, proposals_count, revisions_count, builds_count, votes_count, comments_count, ' +
+        'id, proposer_id, target_champion, counter_champion, reason, deleted_at, proposals_count, revisions_count, builds_count, votes_count, comments_count, ' +
           `deleter:profiles!counter_deletions_deleted_by_fkey(${PERSON}), proposer:profiles!counter_deletions_proposer_id_fkey(${PERSON})`,
       )
       .order('deleted_at', { ascending: false }),

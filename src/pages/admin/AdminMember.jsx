@@ -151,12 +151,14 @@ function MemberPage() {
 }
 
 function Info({ info, onDone }) {
+  const { id } = useParams();
   useTitleInfo(); // 054: 칭호 이름은 앱이 처음 읽은 칭호 정보에서 (한정판 포함, 모르는 키는 키 그대로)
   const titles = (info.titles ?? []).map(titleName);
   return (
     <section className="section" aria-label="기본 정보">
       <h2 className="section-title">기본 정보</h2>
       <p><UserName profile={info} /></p>
+      {info.influencer && <p><Link to={`/u/${id}`} className="op-link">공개 프로필 보기</Link></p>}
       <ul className="log-list info-grid" aria-label={`${info.nickname} 회원 정보`}>
         <li>가입일 {fmtDateTime(info.created_at)}</li>
         <li>가입 방식 {joinedWith(info)}</li>

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom';
 import { titleInfo, useTitleInfo } from '../lib/titles';
+import { useAuth } from '../lib/auth';
 import { INFLUENCER_TIP, displayNickname } from '../lib/nickname';
 import TitleMedal, { BUILTIN_TITLE, titleColorClass, titleColorStyle } from './TitleMedal';
 
@@ -74,13 +75,24 @@ export function InfluencerName({ profile, linkTo = null }) {
  * 운영자·감독관은 role을 보고 닉네임 앞에 똑같이 (운)을 붙인다: "Lv.0 (운)영자", "Lv.7 [칭호] (운)감독" (다른 역할 글자는 붙이지 않는다)
  * plain: 레벨·칭호를 빼고 닉네임(+ 장인 표시)만 — 빌드 작성자·기여자·수정 기록 (046)
  * linkTo: 회원 id를 주면 장인일 때만 닉네임이 공개 프로필(/u/:id) 링크가 된다 (047). 줄 전체가 이미 링크인 자리(회원 목록 등)에는 주지 않는다
+ * 6-112: 운영자(운영자 모드 켜짐)에게는 linkTo·memberId가 있고 닉네임이 있으면 누구든(장인 포함) 닉네임이 회원 정보(/admin/members/:id) 링크가 된다.
+ *        memberId: 운영자에게만 링크를 만들 자리(운영 화면의 작성자)에 준다 — 다른 사람에게는 아무것도 바뀌지 않는다. 탈퇴(id 없음)·닉네임 없음은 링크 없음.
  */
-export default function UserName({ profile, plain = false, linkTo = null }) {
+export default function UserName({ profile, plain = false, linkTo = null, memberId = null }) {
+  const { isOperator } = useAuth();
+  const member = isOperator && profile?.nickname ? (memberId ?? linkTo) : null;
   return (
     <span className="user-name">
       {!plain && <><span className="user-lv">Lv.{profile.level}</span>{' '}</>}
       {!plain && <TitleBadge titleKey={profile.main_title} space />}
-      <InfluencerName profile={profile} linkTo={linkTo} />
+      {member ? (
+        <Link to={`/admin/members/${member}`} className="member-link" title="회원 정보 보기">
+          <InfluencerName profile={profile} />
+          <span className="sr-only"> (회원 정보 보기)</span>
+        </Link>
+      ) : (
+        <InfluencerName profile={profile} linkTo={linkTo} />
+      )}
       {profile.is_guest && <>{' '}<span className="guest-badge">비회원</span></>}
     </span>
   );

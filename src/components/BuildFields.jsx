@@ -56,7 +56,7 @@ export default function BuildFields({ game, value: build, onChange, author, with
         {problem ? (
           <p className="hint" role="status">아직 고를 것: {problem}</p>
         ) : (
-          <BuildCard build={{ ...build, patch: game.latest, author }} {...game} />
+          <BuildCard build={{ ...build, patch: game.latest, author, author_id: null }} {...game} />
         )}
       </fieldset>
     </>

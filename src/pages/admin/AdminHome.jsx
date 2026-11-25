@@ -264,7 +264,7 @@ function PendingList() {
                   <div className="proposal-meta">
                     <span>{fmtDateTime(d.deleted_at)}</span>
                     <span>삭제: {d.deleter ? <UserName profile={d.deleter} /> : '—'}</span>
-                    <span>원래 제안자: {d.proposer ? <UserName profile={d.proposer} /> : '없음(초기 데이터)'}</span>
+                    <span>원래 제안자: {d.proposer ? <UserName profile={d.proposer} memberId={d.proposer_id} /> : '없음(초기 데이터)'}</span>
                   </div>
                   <p className="reject-reason">사유: {d.reason}</p>
                   <small className="hint">
@@ -477,7 +477,7 @@ function HiddenRow({ counter: c, name, onDone }) {
       )}
       {c.origin?.proposer && (
         <div className="proposal-meta">
-          <span>제안자: <UserName profile={c.origin.proposer} /></span>
+          <span>제안자: <UserName profile={c.origin.proposer} memberId={c.origin.proposer_id} /></span>
         </div>
       )}
       {state.text && (

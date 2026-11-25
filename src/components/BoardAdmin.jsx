@@ -89,7 +89,7 @@ function HiddenBoardRow({ kind, row, champs, onDone }) {
       </div>
       {k && <p className="hint">{matchupTitle(name(k.counter_champion), name(k.target_champion))}</p>}
       <div className="proposal-meta">
-        <span>작성자: {row.author ? <UserName profile={row.author} /> : WITHDRAWN_USER}</span>
+        <span>작성자: {row.author ? <UserName profile={row.author} memberId={row.author_id} /> : WITHDRAWN_USER}</span>
         <span>숨긴 날 {fmtDateTime(row.hidden_at)}</span>
       </div>
       <p className="reject-reason">메모: {row.hidden_note}</p>
