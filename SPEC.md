@@ -2334,3 +2334,44 @@ RLS 원칙:
   - 상대법을 만든 분은 일반 화면에 원래 표시가 없어 새로 만들지 않았다(운영 화면의 제안자만).
   - 380px 폭은 실제 화면으로 확인하지 않았다(밑줄만 더해 자리는 그대로).
 - **테스트**: `test/memberLink112.test.jsx` 11개.
+
+### 6-113. 1.3 패치 2-0b — 장인 목록 정렬에 프로필 사진 유무 반영 (078) (2026-11-25 — DB 파일·확인 스크립트·테스트·웹 주석과 테스트, 운영 DB 미실행)
+- **조사**:
+  - 장인 목록은 읽기 함수 `influencer_directory(p_query, p_sort, p_page, p_size)`(070) 하나가 만든다. `/influencers`와 메인 장인 줄이 이 함수를 쓰고, 옛 앱 1.1·1.2는 쓰지 않는다(`search_influencers`만 씀).
+  - 070 정렬: `followers`는 팔로워 → 최근 활동(null 뒤) → 팔로워 → 닉네임 → id, `recent`는 최근 활동 → 팔로워 → 닉네임 → id.
+  - 쪽 나누기는 **offset 방식**이다. 매번 전체에 `row_number()`를 매기고 그 번호로 자른다(keyset 아님). 마지막 키가 id(유일)라 같은 데이터에서는 순서가 하나로 정해진다.
+  - 웹은 한 번에 50명(`INFLUENCER_FETCH_MAX`)까지 받아 `lib/influencerOrder.js photoFirst`로 사진 없는 장인을 뒤로 보낸 뒤 10명(`INFLUENCER_PAGE_SIZE`)씩 나눈다. 50명을 넘으면 쪽마다 서버에 묻는데, 이때는 사진 순서를 맞추지 못했다. 메인 줄은 20명을 받아 사진 순으로 8명을 보인다.
+  - 사진 칸은 `profiles.photo_path`(062)다. null이면 사진 없음이고, 빈 문자열은 제약 `profiles_photo_path_shape`(경로가 `id/`로 시작) 때문에 들어올 수 없다. 사진을 지우면(본인·운영자) 같은 트랜잭션에서 null이 된다.
+  - 장인 수: 운영 DB에 접속하지 않아 세지 않았다. 확인 스크립트 2번이 세고, 50명을 넘으면 「!! 50명 초과」로 표시한다.
+- **정렬 규칙(078)**: **사진 있는 장인 먼저**(`photo_path`가 null이 아니고 공백뿐이 아님 — 웹 `hasPhoto`와 같은 판정) → 그 뒤는 070 그대로. 두 정렬(팔로워 순·최신순)과 검색 결과에 모두 적용한다(웹이 이미 두 정렬 모두 사진 먼저로 보여 주었으므로 같은 결과).
+  - 새 순서는 옛 순서에서 사진 있는 장인만 순서대로 앞으로 모은 것과 같다(테스트·확인 스크립트 4·5번).
+- **고친 함수 (1개)**: `influencer_directory(text, text, integer, integer)` — `row_number() over (order by …)` 맨 앞에 한 줄을 더했다.
+  - 전: `order by case when srt = 'followers' then m.followers end desc nulls last, m.last_at desc nulls last, m.followers desc, m.nickname, m.id`
+  - 후: `order by (m.photo_path is not null and btrim(m.photo_path) <> '') desc, case when srt = 'followers' then m.followers end desc nulls last, m.last_at desc nulls last, m.followers desc, m.nickname, m.id`
+  - 이름·인자·기본값·반환(jsonb)·칸 7개·total·검색·크기 보정·stable·security definer·search_path·권한·소유자·설명은 그대로다. 지문(CR 뺌)은 `7955c630a2b304baf7628375ca3f3940` → `ef21f41e761c3785defccdf6a8bcbf42`이다. 070 본문일 때만 실행된다(다시 실행하면 멈춤).
+  - 이유: 50명이 넘으면 웹이 사진 순서를 맞출 수 없어서, DB가 정렬해야 모든 쪽이 한 순서가 된다.
+- **성능·쪽 일관성**:
+  - 정렬 키가 하나 늘 뿐이다. 장인 수만큼 팔로워·빌드를 세는 기존 비용(070과 같음)이 대부분이고, 수백 명까지는 차이가 없다. 장인이 수천 명이 되면 070부터 있던 offset·전체 세기 비용이 먼저 문제가 된다(그때 keyset이나 미리 센 칸 검토).
+  - 쪽 사이 겹침·빠짐: 같은 데이터면 없다(쪽 크기 1·2·3·7·10으로 이어도 같음 — 테스트). offset이라 쪽을 넘기는 사이에 팔로우·사진이 바뀌면 한 명이 두 쪽에 보이거나 빠질 수 있다(070과 같은 한계이고, 사진을 올리거나 지울 때도 그렇다).
+- **웹**: 화면 문구에 정렬 설명은 없다(주석만 고침). `photoFirst`는 그대로 남겼다. 078 뒤에는 받은 순서를 바꾸지 않고(이미 사진 순), 078 전 DB에서도 화면이 예전처럼 보이게 한다. 테스트용 가짜 DB의 `influencer_directory`에 사진 먼저를 더했다.
+  - 고친 기존 테스트: `influencers.test.jsx` 「50명 초과 서버 쪽 나누기」 1곳 — 예전 기대(사진 있는 장인51이 앞으로 오지 않음, 6쪽 = 장인51)를 새 규칙(1쪽 맨 앞 = 장인51, 6쪽 = 장인50)으로 바꿨다. SQL 테스트 `influencer_directory_test.sql`은 사진 있는 장인이 없어 그대로 통과한다.
+- **한계**: 저장소 파일이 따로 사라진 경우(직접 지움 등)는 DB가 알 수 없어 「사진 있음」으로 정렬된다(화면은 첫 글자 원으로 보인다). 메인 장인 줄은 받은 20명 안에서만 고르는 것이 그대로지만, 078 뒤에는 앞 20명이 이미 사진 순이다.
+- **확인 스크립트**: `scripts/check_influencer_photo_sort_before.sql`
+  - 1 070 본문
+  - 2 장인 수·사진 있는 장인 수·50명 초과 표시
+  - 3 지금 순서 지문
+  - 4 078 뒤 예상 지문
+  - 5~12 적어 둘 값: 쓰기 함수 103/30/73·지문, 이 함수를 뺀 읽기 함수·모든 함수 지문, 이 함수의 본문 밖 속성, 푸시 판정, 허용 목록·xp_rules, 트리거·정책
+
+  `scripts/check_influencer_photo_sort_after.sql`
+  - 1 078 본문
+  - 3 사진 없는 장인 뒤에 나온 사진 있는 장인 0(두 정렬 × 쪽 크기 50·10·7)
+  - 4 묶음 안 팔로워 순 어긋남 0
+  - 5 새 순서 지문 = 전 4
+  - 6 쪽 크기 10·7로 이어도 같고 중복·누락 0
+  - 7~14 비교(전 5~12)
+  - 15 읽기 함수 66
+
+  id 지문·개수만 출력하고, 이메일·토큰·닉네임 값은 출력하지 않는다.
+- **테스트**: `tests/influencer_photo_sort_test.sql` 17개 — 60명(사진 20명)으로 두 정렬 사진 먼저, 묶음 안 팔로워·최근 활동·닉네임 순, 검색, 쪽 크기 1~10 겹침·빠짐 없음, 빈 경로 불가, 사진 삭제, 103/30/73/66, 되돌리기 블록으로 070 지문·옛 순서, 새 순서 = 옛 순서의 사진 먼저 분리, 078 다시 실행, 재실행 멈춤. 로컬에서 되돌린 뒤 스키마가 077과 같음을 `pg_dump -s`로 확인했다.
+- **운영 반영 순서**: ① `check_influencer_photo_sort_before.sql`(2·4번과 5~12번을 적어 둠) → ② `078_influencer_photo_sort.sql` → ③ `check_influencer_photo_sort_after.sql`. 웹은 078 전후 어느 쪽이든 같은 화면이라 순서와 무관하다. 되돌리기는 078 맨 위 블록(070 본문)으로 한다.

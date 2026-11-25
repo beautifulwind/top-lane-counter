@@ -174,18 +174,19 @@ test('검색어가 있어도 같은 방식(50명까지 받아 웹에서 사진 �
   expect(screen.getByText('2명', { selector: '.count-badge' })).toBeDefined();
 });
 
-test('장인이 50명을 넘으면 사진 순서를 못 맞추므로 서버 쪽 나누기로 되돌린다 (쪽마다 10명 요청, 화면 깨짐 없음)', async () => {
+test('장인이 50명을 넘으면 서버 쪽 나누기 (쪽마다 10명 요청, 화면 깨짐 없음). 078부터 사진 있는 장인은 DB가 1쪽 맨 앞에 둔다', async () => {
   for (let i = 1; i <= 51; i++) { const id = `p-${String(i).padStart(2, '0')}`; inf(id, `장인${String(i).padStart(2, '0')}`, i === 51 ? { photo_path: 'u/p51.jpg' } : {}); follow(100 - i, id); }
   start();
   await screen.findByText('51명');
   await waitFor(() => expect(names()).toHaveLength(10));
-  expect(names()[0]).toBe('장인01'); // 사진 있는 장인51이 앞으로 오지 않는다 (서버 순서 그대로)
+  expect(names()[0]).toBe('장인51'); // 6-113(078): 사진 있는 장인51이 팔로워가 가장 적어도 1쪽 맨 앞 (DB 정렬)
+  expect(names()[1]).toBe('장인01');
   expect(fakeState.directoryCalls).toEqual([
     { p_query: '', p_sort: 'followers', p_page: 1, p_size: 50 },
     { p_query: '', p_sort: 'followers', p_page: 1, p_size: INFLUENCER_PAGE_SIZE },
   ]);
   fireEvent.click(within(await screen.findByRole('navigation', { name: '쪽 이동' })).getByRole('button', { name: '6쪽' }));
-  await waitFor(() => expect(names()).toEqual(['장인51']));
+  await waitFor(() => expect(names()).toEqual(['장인50'])); // 6쪽 = 사진 없는 50명의 마지막 (겹침·빠짐 없음)
   expect(fakeState.directoryCalls.at(-1)).toEqual({ p_query: '', p_sort: 'followers', p_page: 6, p_size: INFLUENCER_PAGE_SIZE });
   expect(where()).toBe('/influencers?page=6');
   // 최신순 칩을 켜도 50명 초과면 서버 쪽 나누기(recent), 1쪽으로

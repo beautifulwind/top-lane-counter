@@ -1878,7 +1878,7 @@ function followRpc(name, args) {
     return ok({ total: all.length, page: args.p_page ?? 1, size: 20, items: pageOf(all, args.p_page).map(({ exact, ...x }) => x) });
   }
   if (name === 'influencer_directory') {
-    // 070: 공개 장인 목록 — 검색(선택)·정렬 followers|recent·쪽·크기(1~50). 개수는 search_influencers와 같은 기준(공개 빌드·공개 상대법), 최근 활동 = 공개 빌드의 최근 updated_at
+    // 070·078: 공개 장인 목록 — 검색(선택)·정렬(사진 있는 장인 먼저 → followers|recent)·쪽·크기(1~50). 개수는 search_influencers와 같은 기준(공개 빌드·공개 상대법), 최근 활동 = 공개 빌드의 최근 updated_at
     fakeState.directoryCalls = [...(fakeState.directoryCalls ?? []), args];
     const q = String(args.p_query ?? '').trim();
     if (q.length > 20) return { data: null, error: { message: '검색어는 20자 이하로 적어 주세요.', code: '22023' } };
@@ -1892,7 +1892,8 @@ function followRpc(name, args) {
     });
     const byRecent = (a, b) => (a.last_activity_at && b.last_activity_at ? b.last_activity_at.localeCompare(a.last_activity_at) : (a.last_activity_at ? -1 : b.last_activity_at ? 1 : 0));
     const byFollowers = (a, b) => b.follower_count - a.follower_count;
-    all.sort((a, b) => (srt === 'followers' ? byFollowers(a, b) || byRecent(a, b) : byRecent(a, b) || byFollowers(a, b))
+    const byPhoto = (a, b) => Number(!!b.photo_path?.trim()) - Number(!!a.photo_path?.trim()); // 078: 사진 있는 장인 먼저 (두 정렬 모두)
+    all.sort((a, b) => byPhoto(a, b) || (srt === 'followers' ? byFollowers(a, b) || byRecent(a, b) : byRecent(a, b) || byFollowers(a, b))
       || a.nickname.localeCompare(b.nickname) || String(a.id).localeCompare(String(b.id)));
     return ok({ total: all.length, page: pg, size: sz, sort: srt, items: all.slice((pg - 1) * sz, pg * sz) });
   }
