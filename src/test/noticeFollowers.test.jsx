@@ -237,7 +237,7 @@ test('방침·약관 (051 공지·052 새 팔로워): 수집 항목·이용 목�
   start('/privacy');
   await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' });
   const privacy = document.querySelector('article.legal').textContent;
-  expect(privacy).toContain('받을 알림 종류 설정(운영진 알림·내 상대법·빌드 다시 공개·팔로우한 장인의 새 빌드·공지·새 팔로워)');
+  expect(privacy).toContain('받을 알림 종류 설정(운영진 알림·내 상대법·빌드 다시 공개·팔로우한 장인의 새 빌드·공지·새 팔로워·댓글)'); // 6-121: 074 댓글 알림 설정
   expect(privacy).toContain('이미 센 장인·팔로워와 센 시각(같은 사람을 다시 세지 않으려고 30일 보관)');
   expect(privacy).toContain('그날 새로 생긴 팔로워 수만 알리며, 누가 팔로우했는지는 알리지 않습니다.');
   expect(privacy).toContain('공지: 운영자가 올린 공지를 가입자 모두(비회원 포함)의 알림으로 알립니다.');

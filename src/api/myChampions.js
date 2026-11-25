@@ -41,9 +41,19 @@ export async function getMyChampions() {
   return { limit: Number(data?.limit ?? MY_CHAMPION_LIMIT), items: Array.isArray(data?.items) ? data.items : [] };
 }
 
-/** 등록(selected = true)·해제(false) → { champion, selected, count, limit }. 11개째는 err.limit = true */
-export const setMyChampion = (champion, selected) =>
-  call('set_my_champion', { p_champion: champion, p_selected: !!selected }, selected ? '선택하지 못했습니다.' : '해제하지 못했습니다.');
+/**
+ * 등록(selected = true)·해제(false) → { champion, selected, count, limit }. 11개째는 err.limit = true
+ * 해제는 081 unselect_my_champion(활동 제한 중에도 됨, SPEC 6-121). 081 전 DB면 예전처럼 set_my_champion(…, false).
+ */
+export async function setMyChampion(champion, selected) {
+  if (selected) return call('set_my_champion', { p_champion: champion, p_selected: true }, '선택하지 못했습니다.');
+  const { data, error } = await db().rpc('unselect_my_champion', { p_champion: champion });
+  if (!error) return data;
+  if (['42883', 'PGRST202'].includes(error.code) || /unselect_my_champion/.test(error.message ?? '')) {
+    return call('set_my_champion', { p_champion: champion, p_selected: false }, '해제하지 못했습니다.');
+  }
+  throw friendly(error, '해제하지 못했습니다.');
+}
 
 /**
  * 내 챔피언들의 공개 빌드 (champion을 주면 그 챔피언 하나만). 20개씩, /builds 추천순(장인 → 추천 → 최신)은 DB가 정한다.

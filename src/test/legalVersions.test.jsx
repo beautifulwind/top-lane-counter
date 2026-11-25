@@ -53,11 +53,34 @@ const CHAMPION_LINES = [
   '내 챔피언에 등록한 챔피언 목록은 서비스 화면에서 본인에게만 표시되며, 다른 이용자에게 공개하지 않습니다.',
 ];
 const squash = (t) => t.replace(/\s+/g, ' ').trim();
-/** 지금 방침에서 챔피언 4줄을 빼고 시행일을 12-14로 바꾸면 저장해 둔 글과 같아야 한다 */
+// 6-121: 11-25판에 더한 앱 알림 토큰·개인 페이지 (덩이째 더한 것)
+const ADDED_1125 = [
+  '앱 휴대폰 알림을 켠 경우(iOS·Android 앱): 기기 종류, Apple 또는 Google의 알림 서비스가 앱에 발급한 알림 토큰, 앱 버전, 등록한 시각, 마지막으로 확인한 시각',
+  '앱의 알림 토큰은 이용자가 앱에서 알림을 허용하면 만들어지며, 로그인한 상태로 앱을 열 때 다시 확인해 저장합니다.',
+  '앱 휴대폰 알림 보내기',
+  '개인 페이지: 공개 빌드가 5개 이상인 회원의 공개 빌드와 칭호를 모아 보여 주기',
+  '앱 알림 토큰: 앱에서 알림을 끄거나 로그아웃하면 지웁니다(연결이 끊겨 지우지 못하면 남을 수 있습니다). Apple·Google이 더 이상 쓸 수 없는 토큰이라고 알려 오면 지웁니다. 한 계정에 10대까지 저장하며, 넘으면 가장 오래전에 확인한 기기부터 지웁니다. 회원 탈퇴·비회원 기록 지우기·비회원 계정 정리 때 함께 삭제합니다.',
+  '개인 페이지: 개인 페이지는 공개 빌드가 5개 미만이 되거나 활동 제한 중이면 닫히며, 탈퇴하면 사라집니다.',
+];
+const APP_PUSH_ROW = '앱 푸시 서비스: Apple Inc.(Apple 푸시 알림 서비스, APNs), Google LLC(Firebase 클라우드 메시징, FCM) (미국 등)';
+// 6-121: 11-25판이 바꾼 문장 [지금, 12-14판]
+const MEMBER_PAGE_NEW = '장인이 아닌 회원(비회원·운영자 제외)은 공개 빌드가 5개 이상이면 개인 페이지가 열리며, 닉네임, 대표 칭호와 가진 칭호(비밀 칭호는 대표로 고른 것만), 공개 빌드 목록과 그 수를 로그인하지 않은 사람도 볼 수 있습니다. 이메일·레벨·경험치·가입일은 이 페이지에 보이지 않습니다.';
+const REPLACED_1125 = [
+  [MEMBER_PAGE_NEW, '장인이 아닌 회원의 공개 프로필은 없습니다.'],
+  ['·공지·새 팔로워·댓글)', '·공지·새 팔로워)'],
+];
+/** 지금 방침(11-25판)에서 11-25판이 더한 덩이를 빼고, 바꾼 문장을 되돌리고, 시행일을 12-14로 바꾸면 저장해 둔 12-14판 글과 같아야 한다 */
 const withoutChampion = (article) => {
   const copy = article.cloneNode(true);
-  copy.querySelectorAll('li').forEach((li) => { if (CHAMPION_LINES.includes(squash(li.textContent))) li.remove(); });
-  return bodyText(copy).replaceAll('2026-11-25', '2026-12-14');
+  const added = [...CHAMPION_LINES, ...ADDED_1125];
+  copy.querySelectorAll('li, p').forEach((el) => { if (added.includes(squash(el.textContent))) el.remove(); });
+  copy.querySelectorAll('tr').forEach((tr) => { if (squash(tr.querySelector('th')?.textContent ?? '') === APP_PUSH_ROW) tr.remove(); });
+  let text = bodyText(copy);
+  for (const [now, old] of REPLACED_1125) {
+    expect(text).toContain(now);
+    text = text.replace(now, old);
+  }
+  return text.replaceAll('2026-11-25', '2026-12-14');
 };
 
 // 새 판에서 더한 말 (공지 내용)
@@ -125,7 +148,7 @@ test('방침 새 판 내용: 공지에 올린 세 가지가 의미 그대로 들
   expect(t).toContain('알림은 만든 날부터 90일 동안 보관하며, 수정한 회원이 탈퇴하면 알림 속 닉네임은 “탈퇴한 사용자”로 바뀝니다.');
   expect(t).toContain('[계정 설정]의 알림 설정에서 받지 않도록 끌 수 있습니다.');
   expect(t).toContain('사이트 알림(상대법·빌드 처리, 댓글, 레벨·칭호 등)은 만든 날부터 90일이 지나면 자동으로 지웁니다. 빌드 수정 알림도 같습니다.'); // 4번 보관 기간과 같은 90일
-  expect(t).toContain('받을 알림 종류 설정(운영진 알림·내 상대법·빌드 다시 공개·팔로우한 장인의 새 빌드·공지·새 팔로워·빌드 수정)');
+  expect(t).toContain('받을 알림 종류 설정(운영진 알림·내 상대법·빌드 다시 공개·팔로우한 장인의 새 빌드·공지·새 팔로워·빌드 수정·댓글)');
   // 3 경고·활동 제한 기록
   expect(t).toContain('그 사유, 기간(시작·끝 시각), 처리한 운영자, 해제한 시각과 메모, 경고를 확인한 시각을 기록합니다.');
   expect(t).toContain('이 기록은 본인과 운영자만 볼 수 있고, 탈퇴하면 바로 삭제합니다.');
@@ -235,4 +258,22 @@ test('오늘(2026-11-25) 방침: 시행일 11-25, 「내 챔피언」 4줄이 �
   cleanup();
   const terms = await open('/terms', today, TERMS);
   expect(bodyText(terms)).toBe(golden('terms'));
+});
+
+// 6-121: 11-25판에 바로 넣은 앱 알림 토큰(1·2·3·4·6번)·댓글 알림 설정·개인 페이지(3·4·5번)
+test('방침 11-25판: 앱 알림 토큰·댓글 설정·개인 페이지 문구, 위탁 표에 앱 푸시(제목·내용이 Apple·Google에 전달), 시행일 그대로', async () => {
+  const article = await open('/privacy', '2026-11-25T03:00:00Z', PRIVACY);
+  const lines = leaves(article).map(squash);
+  ADDED_1125.forEach((line) => expect(lines).toContain(line));
+  const t = squash(article.textContent);
+  expect(t).toContain(MEMBER_PAGE_NEW);
+  expect(t).not.toContain('장인이 아닌 회원의 공개 프로필은 없습니다');
+  expect(t).toContain('공지·새 팔로워·댓글)');
+  expect(article.textContent).toContain('시행일: 2026-11-25');
+  const row = [...article.querySelectorAll('tr')].find((tr) => squash(tr.querySelector('th')?.textContent ?? '') === APP_PUSH_ROW);
+  expect(squash(row.textContent)).toContain('알림 제목과 내용');
+  expect(squash(row.textContent)).toContain('Apple·Google이 제목과 내용을 받아 처리합니다');
+  expect(squash(row.textContent)).not.toContain('볼 수 없습니다');
+  // 개인 페이지 문구에 사진은 없다 (일반 사용자는 사진을 올릴 수 없음)
+  expect(MEMBER_PAGE_NEW).not.toContain('사진');
 });

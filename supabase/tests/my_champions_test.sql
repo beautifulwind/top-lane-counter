@@ -15,6 +15,11 @@
 \set X   '00000000-0000-0000-0000-0000000005a6'
 \set BL  '00000000-0000-0000-0000-0000000005a7'
 \set R   '00000000-0000-0000-0000-0000000005a8'
+-- 081(unselect_my_champion)은 이 파일이 아니라 unselect_my_champion_test.sql이 본다. 080만의 상태를 보려고 081 되돌리기 블록을 먼저 실행한다.
+begin;
+drop function public.unselect_my_champion(text);
+delete from public.restriction_exemptions where kind = 'function' and name = 'unselect_my_champion(text)';
+commit;
 insert into auth.users (id, email) values (:'A', 'a@x.com'), (:'B', 'b@x.com'), (:'OP', 'op@x.com'), (:'INF', 'inf@x.com'),
   (:'X', 'x@x.com'), (:'BL', 'bl@x.com'), (:'R', 'r@x.com');
 insert into auth.users (id, email, is_anonymous) values (:'GU', null, true);

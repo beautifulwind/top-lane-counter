@@ -206,6 +206,7 @@ export function resetFake() {
   fakeState.bookmarksMissing = false; // true = 066 실행 전 DB (저장 표·함수 없음)
   TABLES.user_champions = [];
   fakeState.myChampionsMissing = false; // true = 080 실행 전 DB (내 챔피언 함수 없음)
+  fakeState.unselectMissing = false; // true = 081 실행 전 DB (unselect_my_champion만 없음)
   fakeState.unknownChampions = []; // 080 champion_catalog에 없는 것으로 칠 챔피언 id
   fakeState.buildEditsMissing = false; // true = 067 실행 전 DB (push_settings.build_edits 칸 없음)
   fakeState.commentsPushMissing = false; // true = 074 실행 전 DB (push_settings.comments 칸 없음)
@@ -930,13 +931,21 @@ async function rpc(name, args) {
   const wiki = wikiRpc(name, args);
   if (wiki) return wiki;
   // 080 내 챔피언: DB 함수처럼 (로그인만 - 비회원 가능, 활동 제한이면 거부, 없는 챔피언 거부, 10개 한도 TL413, 중복 등록·없는 것 해제는 그대로 성공)
-  if (['set_my_champion', 'my_champions', 'my_champion_builds'].includes(name)) {
+  if (['set_my_champion', 'unselect_my_champion', 'my_champions', 'my_champion_builds'].includes(name)) {
     fakeState.rpcCalls.push({ name, args });
+    // 081 전 DB: unselect_my_champion만 없음 (fakeState.unselectMissing)
+    if (name === 'unselect_my_champion' && (fakeState.myChampionsMissing || fakeState.unselectMissing)) return { data: null, error: { code: 'PGRST202', message: 'Could not find the function public.unselect_my_champion in the schema cache' } };
     if (fakeState.myChampionsMissing) return { data: null, error: { code: 'PGRST202', message: `Could not find the function public.${name} in the schema cache` } };
     const me = fakeState.session?.user.id;
     if (!me) return { data: null, error: { code: '42501', message: '로그인해 주세요.' } };
     const mineRows = () => TABLES.user_champions.filter((r) => r.user_id === me)
       .sort((x, y) => String(y.created_at).localeCompare(String(x.created_at)) || x.champion.localeCompare(y.champion));
+    if (name === 'unselect_my_champion') { // 081: 해제만, 활동 제한 검사 없음(허용 목록)
+      const c = args.p_champion;
+      if (!/^[A-Za-z]{1,30}$/.test(c ?? '')) return { data: null, error: { code: '22023', message: '없는 챔피언입니다. 다시 골라 주세요.' } };
+      TABLES.user_champions = TABLES.user_champions.filter((r) => !(r.user_id === me && r.champion === c));
+      return { data: { champion: c, selected: false, count: mineRows().length, limit: 10 }, error: null };
+    }
     if (name === 'set_my_champion') {
       if (fakeState.restriction) return { data: null, error: { code: 'TL423', message: fakeState.restriction.message ?? '활동이 제한된 상태입니다.' } };
       const c = args.p_champion;

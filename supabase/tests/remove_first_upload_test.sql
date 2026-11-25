@@ -281,8 +281,8 @@ select t.ok('grant_kept_titles 모양·권한 그대로 (integer, security defin
      from pg_proc where oid = 'public.grant_kept_titles(uuid, boolean)'::regprocedure));
 select t.ok('트리거: 제안 트리거 삭제, 빌드·상대법 트리거 그대로', not exists (select 1 from pg_trigger where tgname = 'edit_proposals_kept_titles')
   and (select count(*) from pg_trigger where tgname in ('builds_kept_titles', 'counters_kept_titles')) = 2);
-select t.ok('쓰기 함수 104 / 첫 줄 검사 31 / 허용 목록 함수 73 / 읽기 함수 69(079·080 포함) / 허용 목록 지문 그대로 (' || pg_temp.counts() || ')',
-  pg_temp.counts() = :'cnt0' and pg_temp.counts() like '104/31/73/69/%');  -- 읽기 함수 69 = 077 때 66 + 079 my_following_cards + 080 2개, 쓰기 104/31 = 080 set_my_champion
+select t.ok('쓰기 함수 105 / 첫 줄 검사 31 / 허용 목록 함수 74 / 읽기 함수 69(079·080 포함) / 허용 목록 지문 그대로 (' || pg_temp.counts() || ')',
+  pg_temp.counts() = :'cnt0' and pg_temp.counts() like '105/31/74/69/%');  -- 읽기 함수 69 = 077 때 66 + 079 my_following_cards + 080 2개, 쓰기 105/31/74 = 080 set_my_champion + 081 unselect_my_champion
 select t.ok('모든 사람 × 모든 알림 종류의 푸시 판정 지문 그대로', pg_temp.push_fp() = :'push0');
 select t.ok('지우는 동안 휴대폰 알림 호출 없음', (select count(*) from net.calls) = :calls0);
 

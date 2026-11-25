@@ -85,12 +85,12 @@ select t.ok('새 함수 2개: 아무도(anon·authenticated·public) 실행 못 
                   and not exists (select 1 from unnest(p.proacl) a where a::text like '=%')
                   and p.prosecdef and p.proconfig = array['search_path=""']) and count(*) = 2
     from pg_proc p where p.oid in ('public.grant_kept_titles(uuid, boolean)'::regprocedure, 'public.kept_titles_on_change()'::regprocedure)));
-select t.ok('068 쓰기 함수 수: 104 / 첫 줄 검사 31 / 허용 목록 73 (080 set_my_champion 포함)', (
-  select count(*) = 104
+select t.ok('068 쓰기 함수 수: 105 / 첫 줄 검사 31 / 허용 목록 74 (080 · 081 포함)', (
+  select count(*) = 105
      and count(*) filter (where p.prosrc ~ '^\s*declare\s*\n\s*_can_write constant boolean := public\.assert_can_write\(\);'
                              or p.prosrc ~ '^\s*begin\s*\n\s*perform public\.assert_can_write\(\);') = 31
      and count(*) filter (where exists (select 1 from public.restriction_exemptions e where e.kind = 'function'
-                                         and e.name = p.proname || '(' || oidvectortypes(p.proargtypes) || ')')) = 73
+                                         and e.name = p.proname || '(' || oidvectortypes(p.proargtypes) || ')')) = 74
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.prokind = 'f' and p.provolatile = 'v' and p.prorettype <> 'trigger'::regtype
      and (has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('anon', p.oid, 'execute'))));

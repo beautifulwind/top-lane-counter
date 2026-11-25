@@ -243,3 +243,55 @@ test('없는 챔피언·활동 제한 등 서버 거절은 그 문장을 그대�
   expect((await within(sec).findByRole('alert')).textContent).toBe('없는 챔피언입니다. 다시 골라 주세요.');
   expect(chips(sec)).toEqual([]);
 });
+
+/** 그 함수에 보낸 인자 (가짜 DB는 호출을 두 번씩 기록하므로 같은 것은 하나로) */
+const argsOf = (name) => [...new Set(calls(name).map((c) => JSON.stringify(c.args)))].map((a) => JSON.parse(a));
+
+// 6-121 (081): 해제는 unselect_my_champion — 활동 제한 중에도 해제는 되고 등록은 막힌다. 081 전 DB면 set_my_champion(…, false)로 되돌아간다.
+test('해제는 unselect_my_champion을 부른다 (set_my_champion은 등록에만)', async () => {
+  fakeLogin('u-me', { nickname: '나' });
+  register('u-me', ['Quinn', 'Garen']);
+  start('/lists?tab=champions');
+  const sec = await panel();
+  await waitFor(() => expect(chips(sec)).toEqual(['가렌', '퀸']));
+  fireEvent.click(within(sec).getByRole('button', { name: '퀸 해제' }));
+  await waitFor(() => expect(chips(sec)).toEqual(['가렌']));
+  expect(argsOf('unselect_my_champion')).toEqual([{ p_champion: 'Quinn' }]);
+  expect(calls('set_my_champion')).toEqual([]);
+  expect(TABLES.user_champions.map((r) => r.champion)).toEqual(['Garen']);
+});
+
+test('활동 제한 중: 칩 ×로 해제는 되고, 새로 선택하려고 누르면 제한 안내만(서버를 부르지 않음)', async () => {
+  fakeLogin('u-me', { nickname: '나' });
+  register('u-me', ['Quinn', 'Garen']);
+  fakeState.restriction = { id: 1, reason: '검사', ends_at: '2999-01-01T00:00:00Z' };
+  start('/lists?tab=champions');
+  const sec = await panel();
+  await screen.findByRole('status', { name: '활동 제한 안내' });
+  await waitFor(() => expect(chips(sec)).toEqual(['가렌', '퀸']));
+  fireEvent.click(within(sec).getByRole('button', { name: '퀸 해제' }));
+  await waitFor(() => expect(chips(sec)).toEqual(['가렌']));
+  expect(argsOf('unselect_my_champion')).toEqual([{ p_champion: 'Quinn' }]);
+  search(sec, 'ㄷㄹ');
+  await waitFor(() => expect(results(sec)).toEqual(['다리우스 선택']));
+  const pick = within(sec).getByRole('button', { name: '다리우스 선택' });
+  expect(pick.hasAttribute('data-write')).toBe(true);
+  expect(within(sec).getByRole('button', { name: '가렌 해제' }).hasAttribute('data-write')).toBe(false);
+  fireEvent.click(pick);
+  await waitFor(() => expect(document.body.textContent).toContain('활동이 제한된 상태입니다'));
+  expect(calls('set_my_champion')).toEqual([]);
+  expect(chips(sec)).toEqual(['가렌']);
+});
+
+test('081 전 DB(unselect_my_champion 없음): 해제는 예전처럼 set_my_champion(…, false)', async () => {
+  fakeLogin('u-me', { nickname: '나' });
+  register('u-me', ['Quinn']);
+  fakeState.unselectMissing = true;
+  start('/lists?tab=champions');
+  const sec = await panel();
+  await waitFor(() => expect(chips(sec)).toEqual(['퀸']));
+  fireEvent.click(within(sec).getByRole('button', { name: '퀸 해제' }));
+  await waitFor(() => expect(chips(sec)).toEqual([]));
+  expect(argsOf('set_my_champion')).toEqual([{ p_champion: 'Quinn', p_selected: false }]);
+  expect(TABLES.user_champions).toEqual([]);
+});

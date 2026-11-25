@@ -88,12 +88,12 @@ set role authenticated;
 set request.jwt.claim.sub = :'A';
 select t.fails('로그인 사용자는 직접 못 부름', format('select push_wanted(%L, %L)', :'A', 'link_removed'), 'permission denied');
 reset role;
-select t.ok('068 쓰기 함수 수: 104 / 첫 줄 검사 31 / 허용 목록 73 (080 set_my_champion 포함, push_wanted는 쓰기 함수 아님)', (
-  select count(*) = 104
+select t.ok('068 쓰기 함수 수: 105 / 첫 줄 검사 31 / 허용 목록 74 (080 · 081 포함, push_wanted는 쓰기 함수 아님)', (
+  select count(*) = 105
      and count(*) filter (where p.prosrc ~ '^\s*declare\s*\n\s*_can_write constant boolean := public\.assert_can_write\(\);'
                              or p.prosrc ~ '^\s*begin\s*\n\s*perform public\.assert_can_write\(\);') = 31
      and count(*) filter (where exists (select 1 from public.restriction_exemptions e where e.kind = 'function'
-                                         and e.name = p.proname || '(' || oidvectortypes(p.proargtypes) || ')')) = 73
+                                         and e.name = p.proname || '(' || oidvectortypes(p.proargtypes) || ')')) = 74
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.prokind = 'f' and p.provolatile = 'v' and p.prorettype <> 'trigger'::regtype
      and (has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('anon', p.oid, 'execute'))));

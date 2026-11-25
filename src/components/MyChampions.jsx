@@ -106,6 +106,7 @@ export default function MyChampions({ userId }) {
                   <button
                     type="button" className={on ? 'mc-result on' : 'mc-result'} aria-pressed={on}
                     aria-label={`${c.name} ${on ? '선택됨' : '선택'}`} disabled={busy === c.id} onClick={() => toggle(c.id)}
+                    data-write={!on || undefined} /* 068·081: 등록은 막고 해제는 그대로 */
                   >
                     <ChampIcon champ={c} />
                     <span className="mc-result-name">{c.name}</span>
