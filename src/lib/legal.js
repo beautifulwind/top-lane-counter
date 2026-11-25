@@ -6,23 +6,15 @@ export const LEGAL = {
   /** Supabase 프로젝트 서버 지역 (대시보드 → Project Settings → General). 예: '대한민국 (서울)' */
   supabaseRegion: '대한민국(서울), AWS ap-northeast-2',
   /** 첫 판의 시행일 (비어 있으면 노란 칸). 판마다 'YYYY-MM-DD' 형식이어야 날짜로 전환된다 */
-  effectiveDate: '2026-12-14',
+  effectiveDate: '2026-11-25',
   /** 그 뒤 개정판의 시행일 (오래된 것부터). 판을 더할 때는 여기에 날짜를 넣고 Privacy.jsx·Terms.jsx에 <Since v="날짜">로 달라진 부분만 더한다 */
-  revisions: ['2026-12-23'],
-  /**
-   * 개인정보처리방침의 첫 판 시행일. 약관(effectiveDate)과 따로 — 2026-11-25에 「내 챔피언」 고지를 넣어 그날 시행(6-119).
-   * revisions의 날짜보다 앞이어야 한다.
-   */
+  revisions: [],
+  /** 개인정보처리방침의 첫 판 시행일 (약관과 따로 정할 수 있다). 지금은 둘 다 2026-11-25 (6-123). revisions의 날짜보다 앞이어야 한다. */
   privacyEffectiveDate: '2026-11-25',
 };
 
 /** 개정판마다 방침·약관에서 무엇이 달라졌는지 한 줄 (시행 예정 안내 상자에 보인다) */
-export const LEGAL_REVISION_NOTES = {
-  '2026-12-23': {
-    privacy: '저장한 빌드, 빌드 수정 알림, 경고·활동 제한 기록을 처리하는 항목에 더했습니다.',
-    terms: '운영자의 경고와 활동 제한(제7조의2)을 더했습니다.',
-  },
-};
+export const LEGAL_REVISION_NOTES = {};
 
 /** 판 목록 (오래된 것부터). kind: 'privacy'면 방침, 아니면 약관. 첫 판의 시행일이 비어 있으면 빈 목록 */
 export const legalVersions = (kind) => {

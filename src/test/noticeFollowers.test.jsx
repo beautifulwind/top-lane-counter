@@ -232,12 +232,12 @@ describe('web-push: 공지·새 팔로워', () => {
 
 // ---------------- 방침·약관 ----------------
 
-test('방침·약관 (051 공지·052 새 팔로워): 수집 항목·이용 목적·보관 기간, 제4조의3 / 시행일 2026-12-14', async () => {
+test('방침·약관 (051 공지·052 새 팔로워): 수집 항목·이용 목적·보관 기간, 제4조의3 / 시행일 2026-11-25', async () => {
   const before = { ...LEGAL };
   start('/privacy');
   await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' });
   const privacy = document.querySelector('article.legal').textContent;
-  expect(privacy).toContain('받을 알림 종류 설정(운영진 알림·내 상대법·빌드 다시 공개·팔로우한 장인의 새 빌드·공지·새 팔로워·댓글)'); // 6-121: 074 댓글 알림 설정
+  expect(privacy).toContain('받을 알림 종류 설정(운영진 알림·내 상대법·빌드 다시 공개·팔로우한 장인의 새 빌드·공지·새 팔로워·빌드 수정·댓글)'); // 6-121: 074 댓글 알림 설정
   expect(privacy).toContain('이미 센 장인·팔로워와 센 시각(같은 사람을 다시 세지 않으려고 30일 보관)');
   expect(privacy).toContain('그날 새로 생긴 팔로워 수만 알리며, 누가 팔로우했는지는 알리지 않습니다.');
   expect(privacy).toContain('공지: 운영자가 올린 공지를 가입자 모두(비회원 포함)의 알림으로 알립니다.');
@@ -249,5 +249,5 @@ test('방침·약관 (051 공지·052 새 팔로워): 수집 항목·이용 목�
   expect(sec).toContain('누가 팔로우했는지는 알리지 않으며');
   expect(sec).toContain('휴대폰 알림은 처음에 꺼져 있고 [계정 설정]의 “새 팔로워”에서 켤 수 있습니다');
   expect(LEGAL).toEqual(before);
-  expect(LEGAL.effectiveDate).toBe('2026-12-14');
+  expect(LEGAL.effectiveDate).toBe('2026-11-25');
 });

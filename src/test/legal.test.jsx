@@ -10,7 +10,7 @@ import { fakeLogin } from './fakeSupabase';
 const SAVED = { ...LEGAL };
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
-  vi.setSystemTime(new Date('2026-11-23T03:00:00Z')); // 6-88: 판 전환이 오늘 날짜를 보므로 고정 (2026-12-14판이 현행인 때)
+  vi.setSystemTime(new Date('2026-11-25T03:00:00Z')); // 6-88: 판 전환이 오늘 날짜를 보므로 고정 (6-123: 시행일 2026-11-25)
   vi.spyOn(globalThis, 'fetch').mockImplementation(fakeFetch());
   vi.spyOn(window, 'scrollTo').mockImplementation(() => {});
 });
@@ -76,7 +76,7 @@ test('개인정보처리방침 (037): 휴대폰 알림 수집 항목·삭제 시
   expect(text).toContain('브라우저 푸시 서비스: Google LLC');
 });
 
-test('방침·약관 (046 장인 인증): 수집·보관·공개 범위, 인증 절차, 사칭 금지 / 시행일 2026-12-14', async () => {
+test('방침·약관 (046 장인 인증): 수집·보관·공개 범위, 인증 절차, 사칭 금지 / 시행일 2026-11-25', async () => {
   const before = { ...LEGAL };
   start('/privacy');
   await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' });
@@ -143,7 +143,7 @@ test('지금 legal.js에는 빈칸이 없다 (배포 전 체크)', async () => {
   expect(screen.getByText(/대한민국\(서울\), AWS ap-northeast-2/)).toBeDefined();
 });
 
-test('칭호 도감 문구: 약관 제4조의4, 방침의 수집·처리 기록·공개 정보, 시행일 2026-12-14', async () => {
+test('칭호 도감 문구: 약관 제4조의4, 방침의 수집·처리 기록·공개 정보, 시행일 2026-11-25', async () => {
   start('/terms');
   await screen.findByRole('heading', { level: 1, name: '이용약관' });
   const sec = screen.getByRole('heading', { name: '제4조의4 (칭호 도감)' }).closest('section');
@@ -163,10 +163,10 @@ test('칭호 도감 문구: 약관 제4조의4, 방침의 수집·처리 기록�
   expect(text).toMatch(/한정판 칭호 지급·회수.*메모는 최대 500자/);
   expect(text).toMatch(/한정판 칭호와 장인 칭호\(장인 표시\)도 다른 이용자에게 보일 수 있습니다/);
   expect(text).toMatch(/한정판 칭호 지급: 운영자가 한정판 칭호를 지급하거나 회수/);
-  expect(LEGAL.effectiveDate).toBe('2026-12-14');
+  expect(LEGAL.effectiveDate).toBe('2026-11-25');
 });
 
-test('방침·약관 (055 회원 탈퇴 정리): 추천 익명 유지, 신청·처리 기록 정리, 탈퇴한 장인 닉네임 30일 예약 / 시행일 2026-12-14', async () => {
+test('방침·약관 (055 회원 탈퇴 정리): 추천 익명 유지, 신청·처리 기록 정리, 탈퇴한 장인 닉네임 30일 예약 / 시행일 2026-11-25', async () => {
   start('/privacy');
   await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' });
   const privacy = document.querySelector('article.legal').textContent;
@@ -201,10 +201,10 @@ test('방침·약관 (055 회원 탈퇴 정리): 추천 익명 유지, 신청·�
   expect(change).toContain('바뀐 약관을 알린 뒤 시행일까지 거부 의사를 밝히지 않고 계속 이용하면 바뀐 약관에 동의한 것으로 봅니다.');
   expect(change).toContain('동의하지 않으면 시행일 전에 [마이페이지] → [계정 설정](/me/settings)에서 탈퇴할 수 있습니다.');
   expect(sec('제9조 (탈퇴)')).toContain('[마이페이지] → [계정 설정](닉네임 전이면 닉네임 정하기 화면)의 “비회원 기록 지우기”');
-  expect(LEGAL.effectiveDate).toBe('2026-12-14');
+  expect(LEGAL.effectiveDate).toBe('2026-11-25');
 });
 
-test('방침·약관 (6-54 댓글·답글, 6-60 빌드 댓글 → 문서 댓글 답글): 비회원 권한, 승인 없이 게시, 삭제된 댓글 표시, 탈퇴 삭제·남김, 공개 범위 / 시행일 2026-12-14', async () => {
+test('방침·약관 (6-54 댓글·답글, 6-60 빌드 댓글 → 문서 댓글 답글): 비회원 권한, 승인 없이 게시, 삭제된 댓글 표시, 탈퇴 삭제·남김, 공개 범위 / 시행일 2026-11-25', async () => {
   start('/terms');
   await screen.findByRole('heading', { level: 1, name: '이용약관' });
   const terms = document.querySelector('article.legal').textContent;
@@ -224,10 +224,10 @@ test('방침·약관 (6-54 댓글·답글, 6-60 빌드 댓글 → 문서 댓글 
   expect(privacy).not.toContain('빌드 댓글');
   expect(terms).not.toContain('빌드 댓글');
   expect(privacy).toContain('새 댓글·답글 알림');
-  expect(LEGAL.effectiveDate).toBe('2026-12-14');
+  expect(LEGAL.effectiveDate).toBe('2026-11-25');
 });
 
-test('방침·약관 (Apple 로그인): iOS 앱 전용 수집 항목·이메일 가리기 안내, 시행일 2026-12-14 그대로', async () => {
+test('방침·약관 (Apple 로그인): iOS 앱 전용 수집 항목·이메일 가리기 안내, 시행일 2026-11-25 그대로', async () => {
   start('/privacy');
   await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' });
   const privacy = document.querySelector('article.legal').textContent;
@@ -243,10 +243,10 @@ test('방침·약관 (Apple 로그인): iOS 앱 전용 수집 항목·이메일 
   expect(terms).toContain('구글 또는 카카오 로그인(iOS 앱에서는 Apple 로그인도 가능)으로');
   expect(terms).toContain('Apple 로그인에서 “이메일 가리기”를 선택하면 다른 로그인 수단과 자동으로 합쳐지지 않고 별도 계정이 될 수 있습니다.');
   expect(terms).toContain('구글·카카오·Apple 없이 [비회원으로 시작하기]');
-  expect(LEGAL.effectiveDate).toBe('2026-12-14');
+  expect(LEGAL.effectiveDate).toBe('2026-11-25');
 });
 
-test('방침·약관 (6-67 사용자 차단): 차단 목록 수집·용도·삭제 시점, 약관의 이용 제한 조항 / 시행일 2026-12-14', async () => {
+test('방침·약관 (6-67 사용자 차단): 차단 목록 수집·용도·삭제 시점, 약관의 이용 제한 조항 / 시행일 2026-11-25', async () => {
   start('/privacy');
   await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' });
   const privacy = document.querySelector('article.legal').textContent;
@@ -261,10 +261,10 @@ test('방침·약관 (6-67 사용자 차단): 차단 목록 수집·용도·삭�
   const terms = document.querySelector('article.legal').textContent;
   // 운영자의 제재 조항은 원래 있다 (바꾸지 않음)
   expect(terms).toContain('제6조를 어기면 운영자는 해당 내용을 숨기거나 삭제하고, 이용을 제한할 수 있습니다.');
-  expect(LEGAL.effectiveDate).toBe('2026-12-14');
+  expect(LEGAL.effectiveDate).toBe('2026-11-25');
 });
 
-test('방침·약관 (062·064 장인 프로필 사진·신청 사진): 수집·이용·보관·공개 범위·탈퇴 / 시행일 2026-12-14 그대로', async () => {
+test('방침·약관 (062·064 장인 프로필 사진·신청 사진): 수집·이용·보관·공개 범위·탈퇴 / 시행일 2026-11-25 그대로', async () => {
   start('/privacy');
   await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' });
   const privacy = document.querySelector('article.legal').textContent;
@@ -277,7 +277,7 @@ test('방침·약관 (062·064 장인 프로필 사진·신청 사진): 수집·
   expect(privacy).toContain('닉네임·장인 유형·프로필 사진(올린 경우)·팔로워 수');
   const removed = [...document.querySelectorAll('li')].find((li) => li.textContent.startsWith('삭제:')).textContent;
   expect(removed).toContain('장인 프로필 사진과 장인 인증 신청 사진(파일은 하루 안에 삭제)');
-  expect(screen.getAllByText(/2026-11-25/).length).toBeGreaterThan(0); // 방침 시행일 (6-119, 약관은 12-14)
+  expect(screen.getAllByText(/2026-11-25/).length).toBeGreaterThan(0); // 시행일 (6-123)
   cleanup();
   start('/terms');
   await screen.findByRole('heading', { level: 1, name: '이용약관' });

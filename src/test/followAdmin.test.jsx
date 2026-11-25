@@ -93,7 +93,7 @@ test('운영자 모드를 끈 운영자: 회원 관리는 안내만(계정 설�
   expect(calls()).toHaveLength(0);
 });
 
-test('방침·약관 (050 팔로우): 저장 목적·보관 기간·공개 범위, 팔로우·알림 조항 / 시행일 2026-12-14', async () => {
+test('방침·약관 (050 팔로우): 저장 목적·보관 기간·공개 범위, 팔로우·알림 조항 / 시행일 2026-11-25', async () => {
   const before = { ...LEGAL };
   start('/privacy');
   await screen.findByRole('heading', { level: 1, name: '개인정보처리방침' });
@@ -113,5 +113,5 @@ test('방침·약관 (050 팔로우): 저장 목적·보관 기간·공개 범�
   expect(sec).toContain('팔로워 목록(닉네임)은 그 장인 본인과 운영자만 볼 수 있습니다'); // 063
   expect(sec).toContain('“팔로우한 장인의 새 빌드”에서 끌 수 있습니다');
   expect(LEGAL).toEqual(before);
-  expect(LEGAL.effectiveDate).toBe('2026-12-14');
+  expect(LEGAL.effectiveDate).toBe('2026-11-25');
 });
