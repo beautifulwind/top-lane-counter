@@ -5,8 +5,9 @@ import { LEAVE_TEXT, LINK_REL, siteName } from '../lib/links';
  * 장인 외부 링크 (047, SPEC 6-34). 새 창 + rel="noopener noreferrer nofollow ugc".
  * 누르면 바로 가지 않고 확인 창: "탑신병자를 떠나 외부 사이트로 이동합니다. 주소를 확인하세요." + 전체 주소 + [이동] [취소].
  * 사이트 이름(유튜브·치지직…)을 글자 칸으로 앞에 붙인다. children이 없으면 사이트 이름 + 주소 일부를 글자로 쓴다.
+ * content를 주면 버튼 속을 통째로 그것으로 바꾼다(장인 페이지 유튜브 버튼) — 이때 읽어 주는 이름은 label로 준다. 확인 창·새 창은 같다.
  */
-export default function ExternalLink({ link, domains, children, className = '' }) {
+export default function ExternalLink({ link, domains, children, className = '', content, label }) {
   const [asking, setAsking] = useState(false);
   const opener = useRef(null);
   const site = siteName(link.host, domains);
@@ -22,12 +23,17 @@ export default function ExternalLink({ link, domains, children, className = '' }
         target="_blank"
         rel={LINK_REL}
         className={`ext-link ${className}`.trim()}
+        aria-label={label}
         onClick={ask}
         onAuxClick={(e) => { if (e.button === 1) ask(e); }}
       >
-        <span className="ext-site">{site}</span>{' '}
-        <span className="ext-text">{children ?? shortUrl(link.url)}</span>
-        <span className="sr-only"> (외부 사이트, 새 창)</span>
+        {content ?? (
+          <>
+            <span className="ext-site">{site}</span>{' '}
+            <span className="ext-text">{children ?? shortUrl(link.url)}</span>
+            <span className="sr-only"> (외부 사이트, 새 창)</span>
+          </>
+        )}
       </a>
       {asking && <LeaveDialog link={link} site={site} opener={opener} onClose={() => setAsking(false)} />}
     </>

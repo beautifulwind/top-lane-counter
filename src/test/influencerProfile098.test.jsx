@@ -72,7 +72,9 @@ test('버튼 줄: 팔로우 · 유튜브(@한글 채널명) · 공유가 한 줄
   await screen.findByRole('heading', { level: 1 });
   const row = document.querySelector('.inf-btn-row');
   expect(within(row).getByRole('button', { name: '탑고수 팔로우' })).toBeTruthy();
-  expect(row.querySelector('.inf-yt a').textContent).toContain('@페이커');
+  const yt = row.querySelector('.inf-yt a'); // 6-122: 보이는 글자는 「유튜브」, 채널명은 읽어 주는 이름에
+  expect(yt.textContent).toBe('유튜브');
+  expect(yt.getAttribute('aria-label')).toBe('유튜브 @페이커 (외부 사이트, 새 창)');
   expect(within(row).getByRole('button', { name: '공유' })).toBeTruthy();
   expect(document.querySelector('.inf-leave-note').textContent).toMatch(/외부 사이트로 이동/);
   fireEvent.click(within(row).getByRole('button', { name: '탑고수 팔로우' })); // 기존 팔로우 동작 그대로

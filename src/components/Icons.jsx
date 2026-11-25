@@ -228,3 +228,10 @@ export const MedalIcon = ({ titleKey, size = 52, secret = false }) => {
     </svg>
   );
 };
+
+/** 유튜브식 재생 아이콘 (흰 삼각형 — 빨강 버튼 위, 글자 색을 따른다). 6-122 */
+export const YoutubePlayIcon = () => (
+  <svg className="yt-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+    <path d="M8 5.5v13l11-6.5z" />
+  </svg>
+);

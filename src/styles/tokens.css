@@ -153,6 +153,11 @@
   --page-max: 720px;         /* 넓은 화면에서도 한 줄 폭 */
   --ease: .15s ease;
 
+  /* 장인 페이지 유튜브 버튼 (6-122): 흰 글자 5.9가 되는 유튜브 진빨강 — #ff0000은 흰 글자 4.0이라 쓰지 않는다 */
+  --yt-red: #cc0000;
+  --yt-red-hover: #a80000;
+  --yt-on: #ffffff;
+
   color-scheme: dark;
 }
 @media (min-width: 768px) {

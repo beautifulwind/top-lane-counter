@@ -86,6 +86,7 @@ const withoutChampion = (article) => {
 // 새 판에서 더한 말 (공지 내용)
 const NEW_PRIVACY = ['저장한 빌드: 회원이 [저장]한 빌드 목록', '빌드 수정 알림: 빌드가 수정되거나 되돌려지면', '경고·활동 제한 기록: 운영자가 경고하거나 활동을 제한하면'];
 const NEW_TERMS = '제7조의2 (경고와 이용 제한)';
+const KEPT_TITLE = '다만 얻는 방법에 「한 번 얻으면 유지」라고 적힌 칭호는 조건이 더 이상 맞지 않아도 회수하지 않습니다(부정한 방법으로 얻은 경우는 제외합니다).';
 
 test('판 정하기: 시행일(한국 0시)이 지나야 새 판, 그 전에는 12-14판, 첫 판 시행 전(정식 공개 전)에도 첫 판', () => {
   const at = (iso, asked) => resolveLegalVersion(asked, date(iso));
@@ -117,7 +118,7 @@ test('시행일 전: 이용약관도 12-14판 그대로 + 시행 예정 안내 (
   const article = await open('/terms', BEFORE, TERMS);
   expect(bodyText(article)).toBe(golden('terms'));
   expect(screen.queryByRole('heading', { name: NEW_TERMS })).toBeNull();
-  expect(note().textContent).toContain('2026-12-23부터 새 판이 시행됩니다. 운영자의 경고와 활동 제한(제7조의2)을 더했습니다.');
+  expect(note().textContent).toContain('2026-12-23부터 새 판이 시행됩니다. 운영자의 경고와 활동 제한(제7조의2)을 더하고, 한 번 얻으면 유지하는 칭호(제4조의4)를 적었습니다.');
   expect(within(note()).getByRole('link', { name: '시행 예정 판 미리 보기' })).toHaveAttribute('href', '/terms?version=2026-12-23');
 });
 
@@ -172,8 +173,8 @@ test('약관 새 판: 제7조의2(경고와 이용 제한) 4개 항, 제7조에�
   const items = within(sec).getAllByRole('listitem').map((li) => li.textContent);
   expect(items).toHaveLength(4);
   expect(items[0]).toBe('운영자는 이용자가 이 약관이나 운영 정책을 어기면 경고를 하거나, 1일 이상 365일 이하의 기간을 정해 활동을 제한할 수 있습니다. 경고와 활동 제한은 따로 할 수도 있고 함께 할 수도 있습니다.');
-  expect(items[1]).toContain('활동이 제한된 동안에는 빌드·상대법의 등록·수정·되돌리기·제안, 추천, 글·댓글 쓰기와 고치기, 신고, 팔로우, 빌드 저장, 장인 신청, 사진·링크 올리기, 닉네임·대표 칭호 바꾸기를 할 수 없습니다.');
-  expect(items[1]).toContain('읽기, 로그인, 내 글 지우기, 팔로우 취소, 차단, 알림 설정, 문의, 탈퇴는 그대로 할 수 있습니다.');
+  expect(items[1]).toContain('활동이 제한된 동안에는 빌드·상대법의 등록·수정·되돌리기·제안, 추천, 글·댓글 쓰기와 고치기, 신고, 팔로우, 빌드 저장, 내 챔피언 등록, 장인 신청, 사진·링크 올리기, 닉네임·대표 칭호 바꾸기를 할 수 없습니다.');
+  expect(items[1]).toContain('읽기, 로그인, 내 글 지우기, 팔로우 취소, 빌드 저장 해제, 내 챔피언 해제, 차단, 알림 설정, 문의, 탈퇴는 그대로 할 수 있습니다.');
   expect(items[2]).toContain('정한 기간이 지나면 제한은 따로 신청하지 않아도 저절로 풀립니다.');
   expect(items[3]).toContain('[문의하기](/inquiries)에서 “이의 제기”를 골라 이의를 제기할 수 있습니다.');
   expect(within(sec).getByRole('link', { name: '/inquiries' })).toHaveAttribute('href', '/inquiries');
@@ -182,11 +183,12 @@ test('약관 새 판: 제7조의2(경고와 이용 제한) 4개 항, 제7조에�
   const heads = [...article.querySelectorAll('h2')].map((h) => h.textContent);
   expect(heads.indexOf(NEW_TERMS)).toBe(heads.indexOf('제7조 (운영자의 조치)') + 1);
   expect(article.textContent).toContain('시행일: 2026-12-23');
-  // 앞 판 조항은 새 판에도 그대로: 고친 문장은 날짜 2곳 + 제7조 끝 항(제7조의2 연결)뿐
+  expect(article.textContent).toContain(KEPT_TITLE);
+  // 앞 판 조항은 새 판에도 그대로: 고친 문장은 날짜 2곳 + 제7조 끝 항(제7조의2 연결) + 제4조의4 활동 칭호 항(유지 칭호)뿐
   const now = leaves(article);
   cleanup();
   const prev = leaves(await open('/terms?version=2026-12-14', BEFORE, TERMS));
-  expect(changedLeaves(prev, now).map((c) => c.slice(0, 12)).sort()).toEqual(['시행일: 2026-12', '시행일: 2026-12', '제6조를 어기면 운영자']);
+  expect(changedLeaves(prev, now).map((c) => c.slice(0, 12)).sort()).toEqual(['시행일: 2026-12', '시행일: 2026-12', '제6조를 어기면 운영자', '활동 칭호는 사이트 활']);
   expect(now.length - prev.length).toBe(1 + 4); // 제7조의2 제목 1 + 항 4
 });
 

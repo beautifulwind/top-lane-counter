@@ -141,7 +141,7 @@ test('공개 프로필: 닉네임·장인 표시·링크·최근 빌드(빌드 �
   const linkList = screen.getByRole('list', { name: '링크' });
   expect(within(linkList).getAllByRole('link').map((a) => a.textContent.replace(/\s*\(외부 사이트, 새 창\)$/, '')))
     .toEqual(['치지직 chzzk.naver.com/live/toptop']);
-  expect(document.querySelector('.inf-yt a').textContent.replace(/\s*\(외부 사이트, 새 창\)$/, '')).toBe('유튜브 @toptop');
+  expect(document.querySelector('.inf-yt a').getAttribute('aria-label')).toBe('유튜브 @toptop (외부 사이트, 새 창)'); // 6-122
   expect(linkList.closest('header').textContent).toMatch(/탑신병자가 내용을 보증하지 않습니다/);
   const builds = screen.getByRole('heading', { name: '처음 만든 빌드' }).closest('section');
   const go = within(builds).getByRole('link', { name: /퀸으로 다리우스\s*빌드 2/ });

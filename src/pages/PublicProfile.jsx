@@ -12,7 +12,7 @@ import ExternalLink from '../components/ExternalLink';
 import LinkActions from '../components/LinkActions';
 import FollowButton from '../components/FollowButton';
 import { InfluencerName } from '../components/UserName';
-import { UserIcon } from '../components/Icons';
+import { UserIcon, YoutubePlayIcon } from '../components/Icons';
 import { INFLUENCER_KINDS, displayNickname } from '../lib/nickname';
 import { canVote, isBlocked, isGuest, useAuth } from '../lib/auth';
 import { BLOCKED_PROFILE, SETTINGS_PATH, blockMenuItem } from '../lib/blocks';
@@ -26,7 +26,7 @@ import NotFound from './NotFound';
 
 /**
  * 장인 페이지 (/u/:id — 047 공개 프로필을 050에서 빌드 중심으로, SPEC 6-34 · 6-36).
- * 1.3 패치 1-C(6-98): 위 카드 = 사진 · 닉네임 + 장인 표시 + 유형 · 「빌드 N · 팔로워 N」(받은 추천 수는 넣지 않음), 버튼 줄 = [팔로우] [유튜브 @채널명] [공유] (+ 외부 이동 안내 한 줄),
+ * 1.3 패치 1-C(6-98): 위 카드 = 사진 · 닉네임 + 장인 표시 + 유형 · 「빌드 N · 팔로워 N」(받은 추천 수는 넣지 않음), 버튼 줄 = [팔로우] [▶ 유튜브(빨강, 6-122)] [공유] (+ 외부 이동 안내 한 줄),
  * 나머지 링크는 작게. 본문: 그 장인이 처음 만든 공개 빌드(ProfileBuilds — 「최신순」(기본, 최근 수정순)·「인기순」 칩, 쪽 번호 20개씩).
  * 팔로워 수는 누구나. [팔로워 목록] 버튼(20개씩 [더보기])은 063부터 "내 페이지"일 때만(정식 회원) + 운영자(운영자 모드 켜짐)에게만 — DB도 같은 규칙.
  * 052: ?followers=1(새 팔로워 알림 → /me/followers)로 열면 볼 수 있는 사람에게는 팔로워 목록이 처음부터 펼쳐져 있다.
@@ -171,7 +171,11 @@ function Profile({ data, me, signedIn, notice, onDone }) {
           )}
           {youtube && (
             <span className="link-item inf-yt">
-              <ExternalLink link={youtube} className="btn yt-btn">{youtubeHandle(youtube.url) ?? '채널 보기'}</ExternalLink>
+              <ExternalLink
+                link={youtube} className="btn yt-btn"
+                label={`유튜브 ${youtubeHandle(youtube.url) ?? '채널 보기'} (외부 사이트, 새 창)`} /* 보이는 글자는 「유튜브」, 읽어 주는 이름은 전과 같다 */
+                content={<><YoutubePlayIcon /><span>유튜브</span></>}
+              />
               {actions(youtube)}
             </span>
           )}

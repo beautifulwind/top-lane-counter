@@ -1345,10 +1345,19 @@ a.inf-link:hover .user-nick, a.inf-link:focus-visible .user-nick { text-decorati
 .inf-links { font-size: var(--fs-sm); }
 /* 장인 페이지 버튼 줄 (6-98): 팔로우·유튜브·공유가 한 줄, 좁으면 줄바꿈. 채널명이 길어도 넘치지 않게 */
 .inf-btn-row { display: flex; flex-wrap: wrap; align-items: flex-start; gap: var(--gap-sm); min-width: 0; }
-.inf-btn-row .btn { min-height: 44px; }
-.inf-yt { min-width: 0; max-width: 100%; flex-wrap: nowrap; }
-.inf-yt .yt-btn { display: inline-flex; align-items: center; gap: 6px; min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
-.inf-yt .yt-btn .ext-text { min-width: 0; overflow-wrap: anywhere; }
+.inf-btn-row .btn { min-height: 44px; border-radius: 999px; font-size: var(--fs-md); line-height: 1; } /* 6-122: 세 버튼이 같은 높이·글자·둥글기(알약) */
+.inf-btn-row .more-btn { margin-top: 0; } /* 6-122: 아이템 고르기 [더보기]용 .more-btn 위 여백이 ⋮에도 걸려 유튜브 버튼이 8px 내려가던 것 */
+/* 6-122 유튜브: 빨강 알약 + 흰 재생 아이콘. 색은 tokens.css. .btn의 hover·active 바탕색보다 앞서야 한다 */
+.inf-btn-row .btn.yt-btn,
+.inf-btn-row .btn.yt-btn:hover:not(:disabled),
+.inf-btn-row .btn.yt-btn:active:not(:disabled) {
+  display: inline-flex; flex-wrap: nowrap; align-items: center; justify-content: center; gap: 6px; white-space: nowrap;
+  background: var(--yt-red); border-color: var(--yt-red); color: var(--yt-on);
+}
+@media (hover: hover) { .inf-btn-row .btn.yt-btn:hover:not(:disabled) { background: var(--yt-red-hover); border-color: var(--yt-red-hover); } }
+.inf-btn-row .btn.yt-btn:active:not(:disabled) { background: var(--yt-red-hover); border-color: var(--yt-red-hover); }
+.yt-icon { flex: none; width: 18px; height: 18px; fill: currentColor; }
+.inf-yt { min-width: 0; max-width: 100%; }
 .share { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; max-width: 100%; }
 .share-msg { flex-basis: 100%; margin: 0; }
 .share-msg .copy-manual { display: block; width: 100%; margin-top: 4px; }
