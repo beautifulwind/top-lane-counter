@@ -166,8 +166,8 @@ set role authenticated;
 set request.jwt.claim.sub = :'R';
 select pg_temp.call_all() as all1 \gset
 reset role;
-select t.ok('검사가 든 쓰기 함수 30개 (071 set_build_difficulty 포함)', (select count(*) from jsonb_object_keys(:'all1'::jsonb)) = 30);
-select t.ok('30개 모두 「활동이 제한된 상태입니다. …에 풀립니다. 사유: 욕설 반복」으로 거절',
+select t.ok('검사가 든 쓰기 함수 31개 (071 set_build_difficulty · 080 set_my_champion 포함)', (select count(*) from jsonb_object_keys(:'all1'::jsonb)) = 31);
+select t.ok('31개 모두 「활동이 제한된 상태입니다. …에 풀립니다. 사유: 욕설 반복」으로 거절',
   not exists (select 1 from jsonb_each_text(:'all1'::jsonb) e
                where e.value <> '활동이 제한된 상태입니다. ' || :'until' || '에 풀립니다. 사유: 욕설 반복'));
 -- 올바른 입력으로도

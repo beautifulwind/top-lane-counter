@@ -84,6 +84,20 @@ export function summaryScore(token, summary) {
 const byScore = (a, b) => b.score - a.score;
 
 /**
+ * 모든 단어가 맞는 챔피언을 점수 높은 순(같으면 champs 순서 = 이름순)으로. 홈 검색 후보(searchAll의 champions)와
+ * 내 챔피언 선택 화면(6-116)이 같이 쓴다. limit을 주면 그 수까지만.
+ */
+export function rankChampions(tokens, champs, limit = Infinity) {
+  if (tokens.length === 0) return [];
+  const order = new Map(champs.map((c, i) => [c.id, i]));
+  return champs
+    .map((c) => ({ c, score: champMatch(tokens, c) }))
+    .filter((x) => x.score > 0)
+    .sort((a, b) => b.score - a.score || order.get(a.c.id) - order.get(b.c.id))
+    .slice(0, limit).map((x) => x.c);
+}
+
+/**
  * 후보 만들기.
  * champs: 챔피언 목록, index: { counters: [{id,target,mine,order}], builds: [{id,title,target,mine,influencer}] } | null (아직 못 받음)
  * 돌려주는 값: { champions, combos, missing, builds }
@@ -100,9 +114,7 @@ export function searchAll(tokens, champs, index) {
   const order = new Map(champs.map((c, i) => [c.id, i]));
   const rank = (a, b) => b.score - a.score || order.get(a.c.id) - order.get(b.c.id);
 
-  out.champions = champs
-    .map((c) => ({ c, score: champMatch(tokens, c) }))
-    .filter((x) => x.score > 0).sort(rank).slice(0, LIMITS.champions).map((x) => x.c);
+  out.champions = rankChampions(tokens, champs, LIMITS.champions);
 
   if (index) {
     const counterBuilds = new Map();

@@ -103,8 +103,8 @@ select t.ok('권한: 로그인(authenticated)만 실행, 비로그인(anon)·pub
   has_function_privilege('authenticated', 'public.my_following_cards(integer)', 'execute')
   and not has_function_privilege('anon', 'public.my_following_cards(integer)', 'execute')
   and (select not exists (select 1 from unnest(proacl) a where a::text like '=%') from pg_proc where oid = 'public.my_following_cards(integer)'::regprocedure));
-select t.ok('읽기 함수라 068 쓰기 함수 검사 대상이 아니고 허용 목록에도 없음 · 쓰기 함수 103/30/73 · 읽기 함수 67 (66 + my_following_cards)',
-  pg_temp.counts() like '103/30/73/67/%' and not exists (select 1 from public.restriction_exemptions where name like 'my_following_cards%'));
+select t.ok('읽기 함수라 068 쓰기 함수 검사 대상이 아니고 허용 목록에도 없음 · 쓰기 함수 104/31/73 · 읽기 함수 69 (66 + my_following_cards + 080 2개)',
+  pg_temp.counts() like '104/31/73/69/%' and not exists (select 1 from public.restriction_exemptions where name like 'my_following_cards%'));
 set role anon;
 reset request.jwt.claim.sub;
 select t.fails('비로그인: 실행 권한 없음', 'select public.my_following_cards()', 'permission denied');
@@ -169,9 +169,9 @@ select t.ok('불러도 데이터는 그대로 (profiles·팔로우·알림)', pg
 begin;
 drop function public.my_following_cards(integer);
 commit;
-select t.ok('되돌리기: my_following_cards 없음 · 다른 함수 지문·쓰기 함수 수 그대로 · 읽기 함수 66 · 푸시 판정 그대로',
+select t.ok('되돌리기: my_following_cards 없음 · 다른 함수 지문·쓰기 함수 수 그대로 · 읽기 함수 68(080 2개 포함) · 푸시 판정 그대로',
   to_regprocedure('public.my_following_cards(integer)') is null and pg_temp.fn_fp() = :'fn0'
-  and pg_temp.counts() like '103/30/73/66/%' and pg_temp.push_fp() = :'push0');
+  and pg_temp.counts() like '104/31/73/68/%' and pg_temp.push_fp() = :'push0');
 select t.ok('되돌려도 my_following은 063 본문(e40ce0e5…)·권한 그대로',
   (select md5(replace(prosrc, E'\r', '')) = 'e40ce0e5918ea536f64c16340501eddf' and has_function_privilege('authenticated', oid, 'execute')
           and not has_function_privilege('anon', oid, 'execute') from pg_proc where oid = 'public.my_following(integer)'::regprocedure));

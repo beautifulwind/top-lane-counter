@@ -1398,6 +1398,49 @@ a.inf-link:hover .user-nick, a.inf-link:focus-visible .user-nick { text-decorati
 /* 고른 탭 표시 (6-82에서 더함 — 예전에는 /following 탭도 고른 탭이 보이지 않았다). 색만이 아니라 굵기·테두리로도 */
 .following-tabs .btn.on { border-color: var(--brand); background: var(--soft); color: var(--brand-dark); font-weight: 800; }
 
+/* 내 챔피언 (6-116, /lists·/following 「내 챔피언」 탭): 검색창 → 결과 줄(작은 아이콘 + 이름 + 오른쪽 선택/선택됨) → 이름 칩 한 줄 → 빌드 카드 */
+.my-champs-search { margin: 0 0 var(--gap-sm); }
+.mc-results { list-style: none; margin: 0 0 var(--gap-md); padding: 0; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--paper); overflow: hidden; }
+.mc-results li + li { border-top: 1px solid var(--line-soft); }
+.mc-result {
+  display: flex; align-items: center; gap: var(--gap-sm); width: 100%; min-width: 0; min-height: 48px; padding: 6px 12px;
+  border: 0; background: none; color: var(--text); font: inherit; text-align: left; cursor: pointer;
+}
+.mc-result:hover { background: var(--raised); }
+.mc-result:disabled { opacity: .6; cursor: progress; }
+.mc-result .inf-champ { width: 28px; height: 28px; flex: none; }
+.mc-result-name { flex: 1 1 auto; min-width: 0; font-weight: 700; overflow-wrap: anywhere; }
+.mc-result-state {
+  flex: none; padding: 4px 12px; border: 1px solid var(--line-hover); border-radius: 999px;
+  font-size: var(--fs-sm); font-weight: 700; color: var(--muted); white-space: nowrap;
+}
+.mc-result.on .mc-result-state { border-color: var(--soft-line); background: var(--soft); color: var(--brand-dark); font-weight: 800; }
+.mc-note { margin: 0 0 var(--gap-md); }
+/* 칩 줄: 한 줄 고정, 넘치면 옆으로 밀기(스크롤바 숨김). 더 밀 수 있으면(.more) 오른쪽 끝을 흐리게 해 밀 수 있다는 것을 보인다 */
+.mc-chips-wrap { margin: 0 0 var(--gap-md); min-width: 0; }
+.mc-chips {
+  display: flex; flex-wrap: nowrap; gap: 6px; list-style: none; margin: 0; padding: 2px;
+  overflow-x: auto; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; scrollbar-width: none;
+}
+.mc-chips::-webkit-scrollbar { display: none; }
+.mc-chips-wrap.more .mc-chips {
+  -webkit-mask-image: linear-gradient(to right, black calc(100% - 36px), transparent); /* 마스크는 투명도만 본다 (색 아님) */
+  mask-image: linear-gradient(to right, black calc(100% - 36px), transparent); /* 마스크는 투명도만 본다 (색 아님) */
+}
+.mc-chip { flex: none; display: inline-flex; align-items: center; border: 1px solid var(--line-hover); border-radius: 999px; background: var(--paper); }
+.mc-chip.on { border-color: var(--brand); background: var(--soft); }
+.mc-chip-name {
+  min-height: 44px; padding: 0 2px 0 14px; border: 0; background: none; color: var(--text);
+  font: inherit; font-size: var(--fs-sm); font-weight: 700; white-space: nowrap; cursor: pointer; border-radius: 999px;
+}
+.mc-chip.on .mc-chip-name { color: var(--brand-dark); font-weight: 800; }
+.mc-chip-x {
+  display: inline-flex; align-items: center; justify-content: center; width: 38px; min-height: 44px; padding: 0;
+  border: 0; background: none; color: var(--muted); font-size: 18px; line-height: 1; cursor: pointer; border-radius: 999px;
+}
+.mc-chip-x:hover { color: var(--text); }
+.mc-chip-x:disabled { opacity: .5; cursor: progress; }
+
 /* 홈 검색 후보 목록 (6-61): 입력칸 바로 아래 흐름 안(떠 있지 않음) → 모바일 키보드에 가려지지 않고 내부 스크롤 */
 .bs-panel {
   margin: 0 0 8px; max-height: min(55dvh, 26rem); overflow-y: auto; overscroll-behavior: contain;

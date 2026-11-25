@@ -88,10 +88,10 @@ set role authenticated;
 set request.jwt.claim.sub = :'A';
 select t.fails('로그인 사용자는 직접 못 부름', format('select push_wanted(%L, %L)', :'A', 'link_removed'), 'permission denied');
 reset role;
-select t.ok('068 쓰기 함수 수: 103 / 첫 줄 검사 30 / 허용 목록 73 그대로 (push_wanted는 쓰기 함수 아님)', (
-  select count(*) = 103
+select t.ok('068 쓰기 함수 수: 104 / 첫 줄 검사 31 / 허용 목록 73 (080 set_my_champion 포함, push_wanted는 쓰기 함수 아님)', (
+  select count(*) = 104
      and count(*) filter (where p.prosrc ~ '^\s*declare\s*\n\s*_can_write constant boolean := public\.assert_can_write\(\);'
-                             or p.prosrc ~ '^\s*begin\s*\n\s*perform public\.assert_can_write\(\);') = 30
+                             or p.prosrc ~ '^\s*begin\s*\n\s*perform public\.assert_can_write\(\);') = 31
      and count(*) filter (where exists (select 1 from public.restriction_exemptions e where e.kind = 'function'
                                          and e.name = p.proname || '(' || oidvectortypes(p.proargtypes) || ')')) = 73
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace

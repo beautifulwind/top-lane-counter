@@ -102,6 +102,8 @@ export const TABLES = {
   user_blocks: [],
   // 066 빌드 저장(북마크) { user_id, build_id, created_at } (RLS 흉내: 본인 줄만 읽음. 넣기·지우기는 save_build/unsave_build로만)
   build_bookmarks: [],
+  // 080 내 챔피언 { user_id, champion, created_at } (화면은 set_my_champion·my_champions·my_champion_builds 함수로만)
+  user_champions: [],
   // 032 문의하기 (user = select가 붙여 주는 보낸 사람 관계)
   inquiries: [],
   // 017 닉네임 변경 기록 (본인 것만 넣는다)
@@ -202,6 +204,9 @@ export function resetFake() {
   fakeState.blocksMissing = false; // true = 061 실행 전 DB (차단 표 없음)
   TABLES.build_bookmarks = [];
   fakeState.bookmarksMissing = false; // true = 066 실행 전 DB (저장 표·함수 없음)
+  TABLES.user_champions = [];
+  fakeState.myChampionsMissing = false; // true = 080 실행 전 DB (내 챔피언 함수 없음)
+  fakeState.unknownChampions = []; // 080 champion_catalog에 없는 것으로 칠 챔피언 id
   fakeState.buildEditsMissing = false; // true = 067 실행 전 DB (push_settings.build_edits 칸 없음)
   fakeState.commentsPushMissing = false; // true = 074 실행 전 DB (push_settings.comments 칸 없음)
   TABLES.nickname_changes = [];
@@ -924,6 +929,53 @@ async function rpc(name, args) {
   if (board) return board;
   const wiki = wikiRpc(name, args);
   if (wiki) return wiki;
+  // 080 내 챔피언: DB 함수처럼 (로그인만 - 비회원 가능, 활동 제한이면 거부, 없는 챔피언 거부, 10개 한도 TL413, 중복 등록·없는 것 해제는 그대로 성공)
+  if (['set_my_champion', 'my_champions', 'my_champion_builds'].includes(name)) {
+    fakeState.rpcCalls.push({ name, args });
+    if (fakeState.myChampionsMissing) return { data: null, error: { code: 'PGRST202', message: `Could not find the function public.${name} in the schema cache` } };
+    const me = fakeState.session?.user.id;
+    if (!me) return { data: null, error: { code: '42501', message: '로그인해 주세요.' } };
+    const mineRows = () => TABLES.user_champions.filter((r) => r.user_id === me)
+      .sort((x, y) => String(y.created_at).localeCompare(String(x.created_at)) || x.champion.localeCompare(y.champion));
+    if (name === 'set_my_champion') {
+      if (fakeState.restriction) return { data: null, error: { code: 'TL423', message: fakeState.restriction.message ?? '활동이 제한된 상태입니다.' } };
+      const c = args.p_champion;
+      if (!/^[A-Za-z]{1,30}$/.test(c ?? '') || (fakeState.unknownChampions ?? []).includes(c)) return { data: null, error: { code: '22023', message: '없는 챔피언입니다. 다시 골라 주세요.' } };
+      const has = mineRows().some((r) => r.champion === c);
+      if (!args.p_selected) TABLES.user_champions = TABLES.user_champions.filter((r) => !(r.user_id === me && r.champion === c));
+      else if (!has) {
+        if (mineRows().length >= 10) return { data: null, error: { code: 'TL413', message: '최대 10개까지 선택할 수 있습니다. 하나를 해제한 뒤 선택해 주세요.' } };
+        TABLES.user_champions.push({ user_id: me, champion: c, created_at: new Date(Date.now() + TABLES.user_champions.length).toISOString() });
+      }
+      return { data: { champion: c, selected: !!args.p_selected, count: mineRows().length, limit: 10 }, error: null };
+    }
+    if (name === 'my_champions') return { data: { limit: 10, items: mineRows().map((r) => r.champion) }, error: null };
+    // my_champion_builds: 공개(빌드·상대법 approved) · 내 챔피언 쪽 · 차단한 사람 제외, /builds 추천순(장인 → 추천 → 최신 → id), 20개씩
+    const mine = new Set(mineRows().filter((r) => args.p_champion == null || r.champion === args.p_champion).map((r) => r.champion));
+    const counterOf = (b) => b.counter ?? (TABLES.counters ?? []).find((k) => k.id === b.counter_id);
+    const authorOf = (b) => (Array.isArray(b.author) ? b.author[0] : b.author) ?? null;
+    const pub = TABLES.builds.filter((b) => b.status === 'approved' && counterOf(b)?.status === 'approved' && mine.has(counterOf(b).counter_champion));
+    const blockedIds = new Set(TABLES.user_blocks.filter((k) => k.blocker_id === me).map((k) => k.blocked_id));
+    const shown = pub.filter((b) => !blockedIds.has(b.author_id))
+      .sort((a, b) => Number(!!authorOf(b)?.influencer) - Number(!!authorOf(a)?.influencer) || (b.up_count ?? 0) - (a.up_count ?? 0)
+        || String(b.created_at).localeCompare(String(a.created_at)) || b.id - a.id);
+    const pg = Math.max(1, Number(args.p_page) || 1);
+    return {
+      data: structuredClone({
+        total: shown.length, blocked: pub.length - shown.length, page: pg, size: 20,
+        items: shown.slice((pg - 1) * 20, pg * 20).map((b) => {
+          const a = authorOf(b);
+          const c = counterOf(b);
+          return {
+            id: b.id, name: b.name ?? null, seq: b.seq ?? null, max_skill: b.max_skill ?? null, up: b.up_count ?? 0, created_at: b.created_at ?? null,
+            author_id: b.author_id ?? null, author: a ? { influencer: a.influencer ?? null, nickname: a.nickname ?? null, photo_path: a.photo_path ?? null } : null,
+            target: c.target_champion, mine: c.counter_champion,
+          };
+        }),
+      }),
+      error: null,
+    };
+  }
   // 066 빌드 저장: DB 함수처럼 (로그인 → 닉네임 → 공개 빌드 → 500개 한도, 이미 저장했으면 그대로)
   if (['save_build', 'unsave_build', 'my_saved_builds'].includes(name)) {
     fakeState.rpcCalls.push({ name, args });

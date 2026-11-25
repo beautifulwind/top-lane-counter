@@ -88,17 +88,17 @@ select t.ok('stable · security definer · search_path 빈 값 · jsonb',
 select t.ok('068 빠뜨림 방지 검사(volatile 쓰기 함수만)의 대상이 아니고, 허용 목록에도 없음',
   (select provolatile <> 'v' from pg_proc where oid = 'public.member_page(text, integer)'::regprocedure)
   and not exists (select 1 from public.restriction_exemptions where name like 'member_page%'));
-select t.ok('068 쓰기 함수 수: 103 / 첫 줄 검사 30 / 허용 목록 73 그대로', (
-  select count(*) = 103
+select t.ok('068 쓰기 함수 수: 104 / 첫 줄 검사 31 / 허용 목록 73 (080 set_my_champion 포함)', (
+  select count(*) = 104
      and count(*) filter (where p.prosrc ~ '^\s*declare\s*\n\s*_can_write constant boolean := public\.assert_can_write\(\);'
-                             or p.prosrc ~ '^\s*begin\s*\n\s*perform public\.assert_can_write\(\);') = 30
+                             or p.prosrc ~ '^\s*begin\s*\n\s*perform public\.assert_can_write\(\);') = 31
      and count(*) filter (where exists (select 1 from public.restriction_exemptions e where e.kind = 'function'
                                          and e.name = p.proname || '(' || oidvectortypes(p.proargtypes) || ')')) = 73
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.prokind = 'f' and p.provolatile = 'v' and p.prorettype <> 'trigger'::regtype
      and (has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('anon', p.oid, 'execute'))));
-select t.ok('일반 사용자가 부를 수 있는 읽기 함수 67개 (074까지 65 + member_page + 079 my_following_cards)', (
-  select count(*) = 67 and count(*) filter (where p.proname = 'member_page') = 1
+select t.ok('일반 사용자가 부를 수 있는 읽기 함수 69개 (074까지 65 + member_page + 079 my_following_cards + 080 2개)', (
+  select count(*) = 69 and count(*) filter (where p.proname = 'member_page') = 1
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.prokind = 'f' and p.provolatile in ('s', 'i') and p.prorettype <> 'trigger'::regtype
      and (has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('anon', p.oid, 'execute'))));

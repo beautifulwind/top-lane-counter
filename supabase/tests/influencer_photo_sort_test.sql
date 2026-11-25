@@ -120,8 +120,8 @@ select t.ok('사진을 지우면(null) 사진 없는 묶음으로', not ('000000
 rollback;
 
 -- ===== 4. 바꾸지 않은 것 =====
-select t.ok('다른 함수 지문·103/30/73/67(079 포함)·허용 목록·푸시 판정 그대로 (' || pg_temp.counts() || ')',
-  pg_temp.counts() like '103/30/73/67/%');  -- 읽기 함수 67 = 078 때 66 + 079 my_following_cards
+select t.ok('다른 함수 지문·104/31/73/69(079·080 포함)·허용 목록·푸시 판정 그대로 (' || pg_temp.counts() || ')',
+  pg_temp.counts() like '104/31/73/69/%');  -- 읽기 함수 69 = 078 때 66 + 079 my_following_cards + 080 2개
 
 -- ===== 5. 되돌리기 블록 (078 파일 그대로) → 070 =====
 begin;

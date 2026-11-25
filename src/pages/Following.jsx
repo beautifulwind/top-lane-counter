@@ -11,6 +11,7 @@ import InfluencerBuildCard from '../components/InfluencerBuildCard';
 import FollowButton from '../components/FollowButton';
 import InfluencerRow from '../components/InfluencerRow';
 import { LayersIcon } from '../components/Icons';
+import MyChampions from '../components/MyChampions';
 
 export const NO_FOLLOW_TEXT = '아직 팔로우한 장인이 없습니다. 상단의 돋보기(장인 찾기)로 찾아보세요.';
 export const GUEST_FOLLOWING_TEXT = '비회원은 팔로우한 장인 목록을 볼 수 없습니다. 마이페이지에서 구글·카카오를 연결해 주세요.';
@@ -18,19 +19,21 @@ export const GUEST_FOLLOWING_TEXT = '비회원은 팔로우한 장인 목록을 
 /**
  * 팔로우 모아보기 (/following, 050 · SPEC 6-36). 상단 돋보기(장인 찾기) 검색 칸의 [내가 팔로우한 장인의 빌드 보기],
  * 내 목록(/lists, 6-82) [팔로우한 장인] 탭의 링크로 온다.
- * 탭 두 개 (?tab=list로 주소에 남는다):
+ * 탭 세 개 (?tab=list · ?tab=champions로 주소에 남는다):
  *  - 빌드: followed_builds — 팔로우한 장인들의 공개 빌드, 최근 수정순 20개씩 [더보기]. 카드 = 장인 닉네임·챔피언·상대법 이름 → 그 빌드로
  *  - 팔로우한 장인: my_following_cards(079, 없으면 my_following) — 20개씩, 장인 목록(/influencers)과 같은 카드(InfluencerRow, 6-115):
  *    사진(없으면 첫 글자 원)·닉네임·「인증」·유형·빌드 수·팔로워 수 + [팔로우중](누르면 취소, 다시 누르면 팔로우).
  *    063: 팔로우한 날은 보이지 않는다(DB도 주지 않음). 비회원(게스트)은 이 탭에서 안내만(DB도 거부).
- * 로그인하지 않았으면 로그인 안내만. 게스트도 빌드 탭은 쓸 수 있다.
+ *  - 내 챔피언 (6-116, 080): 내 목록(/lists?tab=champions)과 같은 화면(components/MyChampions). 비회원도 쓸 수 있다.
+ * 로그인하지 않았으면 로그인 안내만. 게스트도 빌드·내 챔피언 탭은 쓸 수 있다.
  */
 export default function Following() {
   const auth = useAuth();
   const location = useLocation();
   const [search, setSearch] = useSearchParams();
-  const tab = search.get('tab') === 'list' ? 'list' : 'builds';
-  const setTab = (t) => setSearch(t === 'list' ? { tab: 'list' } : {}, { replace: true });
+  const tab = ['list', 'champions'].includes(search.get('tab')) ? search.get('tab') : 'builds';
+  const setTab = (t) => setSearch(t === 'builds' ? {} : { tab: t }, { replace: true });
+  const tabId = { builds: 'ft-builds', list: 'ft-list', champions: 'ft-champions' }[tab];
 
   if (auth.status === 'loading') return <Loading />;
   return (
@@ -48,11 +51,14 @@ export default function Following() {
               className={tab === 'builds' ? 'btn btn-small on' : 'btn btn-small'} onClick={() => setTab('builds')}>빌드</button>
             <button type="button" role="tab" id="ft-list" aria-selected={tab === 'list'} aria-controls="ft-panel"
               className={tab === 'list' ? 'btn btn-small on' : 'btn btn-small'} onClick={() => setTab('list')}>팔로우한 장인</button>
+            <button type="button" role="tab" id="ft-champions" aria-selected={tab === 'champions'} aria-controls="ft-panel"
+              className={tab === 'champions' ? 'btn btn-small on' : 'btn btn-small'} onClick={() => setTab('champions')}>내 챔피언</button>
           </div>
-          <div id="ft-panel" role="tabpanel" aria-labelledby={tab === 'list' ? 'ft-list' : 'ft-builds'}>
-            {tab === 'list'
-              ? (isGuest(auth) ? <p className="notice" role="status">{GUEST_FOLLOWING_TEXT}</p> : <FollowingList userId={auth.user.id} />)
-              : <FollowedBuilds userId={auth.user.id} />}
+          <div id="ft-panel" role="tabpanel" aria-labelledby={tabId}>
+            {tab === 'champions' ? <MyChampions userId={auth.user.id} />
+              : tab === 'list'
+                ? (isGuest(auth) ? <p className="notice" role="status">{GUEST_FOLLOWING_TEXT}</p> : <FollowingList userId={auth.user.id} />)
+                : <FollowedBuilds userId={auth.user.id} />}
           </div>
         </>
       )}

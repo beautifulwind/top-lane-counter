@@ -85,17 +85,17 @@ select t.ok('새 함수 2개: 아무도(anon·authenticated·public) 실행 못 
                   and not exists (select 1 from unnest(p.proacl) a where a::text like '=%')
                   and p.prosecdef and p.proconfig = array['search_path=""']) and count(*) = 2
     from pg_proc p where p.oid in ('public.grant_kept_titles(uuid, boolean)'::regprocedure, 'public.kept_titles_on_change()'::regprocedure)));
-select t.ok('068 쓰기 함수 수: 103 / 첫 줄 검사 30 / 허용 목록 73 그대로', (
-  select count(*) = 103
+select t.ok('068 쓰기 함수 수: 104 / 첫 줄 검사 31 / 허용 목록 73 (080 set_my_champion 포함)', (
+  select count(*) = 104
      and count(*) filter (where p.prosrc ~ '^\s*declare\s*\n\s*_can_write constant boolean := public\.assert_can_write\(\);'
-                             or p.prosrc ~ '^\s*begin\s*\n\s*perform public\.assert_can_write\(\);') = 30
+                             or p.prosrc ~ '^\s*begin\s*\n\s*perform public\.assert_can_write\(\);') = 31
      and count(*) filter (where exists (select 1 from public.restriction_exemptions e where e.kind = 'function'
                                          and e.name = p.proname || '(' || oidvectortypes(p.proargtypes) || ')')) = 73
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.prokind = 'f' and p.provolatile = 'v' and p.prorettype <> 'trigger'::regtype
      and (has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('anon', p.oid, 'execute'))));
-select t.ok('읽기 함수 67개 (075 뒤 66 + 079 my_following_cards)', (
-  select count(*) = 67 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+select t.ok('읽기 함수 69개 (075 뒤 66 + 079 my_following_cards + 080 my_champions·my_champion_builds)', (
+  select count(*) = 69 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.prokind = 'f' and p.provolatile in ('s', 'i') and p.prorettype <> 'trigger'::regtype
      and (has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('anon', p.oid, 'execute'))));
 select t.ok('트리거 2개(077에서 edit_proposals_kept_titles 삭제): deferrable initially deferred, 지우기에는 반응 안 함', (

@@ -2436,3 +2436,49 @@ RLS 원칙:
   3. `check_followed_cards_after.sql`
   4. 웹 배포. 웹은 079 전에도 되돌아가므로 순서는 상관없지만, 079 뒤에 배포하면 바로 사진이 보인다.
   5. 앱 다시 빌드(1.3).
+
+### 6-116. 1.3 패치 — 「내 챔피언」 (080 user_champions · set_my_champion · my_champions · my_champion_builds) (2026-11-25 — DB 파일·확인 스크립트·테스트·웹, 운영 DB 미실행)
+- **무엇을**: 사용자가 자기가 하는 챔피언을 **최대 10개** 등록하면, 그 챔피언들에 대해 여러 사람이 올린 공개 빌드를 한곳에서 모아 본다. 내 목록(/lists?tab=champions)과 팔로우 모아보기(/following?tab=champions)의 세 번째 탭 「내 챔피언」.
+- **조사**:
+  - 탭: /lists(pages/MyLists.jsx)는 `?tab=`(없음=저장한 빌드, following), /following(pages/Following.jsx)은 `?tab=`(없음=빌드, list). 둘 다 `.following-tabs` 버튼 + `role=tab/tabpanel`이고 `setSearch({ tab })`로 바꾼다. 탭을 더하려면 허용 값 목록·버튼·패널 분기·`aria-labelledby` id를 한 줄씩 더하면 된다.
+  - 챔피언 id는 Data Dragon 영문 id(예: `MonkeyKing`, `KSante`)이고, DB(counters.target_champion·counter_champion)도 같은 값을 쓴다. DB에는 챔피언 목록이 없고 형식(`^[A-Za-z]{1,30}$`)만 본다.
+  - 메인 검색: `lib/championSearch.js`(tokenize·champMatch·searchAll — 한글 이름·초성(lib/chosung.js)·영문 id·별명(lib/champAliases.js), 띄어쓰기 단어 AND, 점수순). 이번에 챔피언 순위 부분을 `rankChampions(tokens, champs, limit)`로 꺼내 searchAll과 새 화면이 같이 쓴다(동작 같음, 기존 테스트 통과).
+  - 특정 챔피언의 공개 빌드를 서버에서 모아 주는 기존 함수는 없다. /builds는 `api/allBuilds.js`가 표를 직접 읽고(RLS) **정렬은 클라이언트**(`compareAllBuilds`: 장인 → 추천 → 최신 → id). 별점은 /lists·/following처럼 목록 함수가 주지 않으면 화면이 `build_difficulties`(071)로 보이는 id만 묻는다(`useBuildDifficulties`). 차단한 사람의 빌드는 /builds·/lists가 화면에서 거르고(`isBlocked`), 서버에서 거르는 곳은 board_page(061)다.
+  - 탈퇴(withdraw_account_unchecked)·비회원 정리(cleanup_guest_accounts)는 모두 `auth.users`를 지우고, 사용자별 표는 `profiles(id) on delete cascade`로 지워진다 → 새 표도 외래 키 cascade로 정리되어 **기존 탈퇴 함수 본문은 고치지 않았다**.
+- **DB (080_my_champions.sql)** — 새 표 2개 + 새 함수 3개, 기존 함수·표·정책·권한·데이터는 바꾸지 않음(고친 기존 함수 없음):
+  - `champion_catalog (champion_id pk, added_at)`: 「있는 챔피언」 목록. Data Dragon 16.23.1의 173개를 넣었다. RLS 켬·정책 없음·anon/authenticated 권한 없음(함수만 읽음). **새 챔피언이 나오면 운영자가** `insert into public.champion_catalog (champion_id) values ('새id');` 한 줄로 더한다(그 전이라도 공개 상대법의 내 챔피언 쪽에 쓰인 id는 받는다).
+  - `user_champions (user_id → profiles on delete cascade, champion, created_at default clock_timestamp(), pk (user_id, champion))`: RLS 켬, 본인 줄 읽기 정책 하나, authenticated는 select만(넣기·고치기·지우기 없음), anon 권한 없음. 다른 사람의 등록을 돌려주는 함수·화면은 없다(운영자 포함).
+  - 쓰기 `set_my_champion(p_champion text, p_selected boolean)` → `{ champion, selected, count, limit }`: 첫 줄 `assert_can_write()`(활동 제한이면 등록·해제 모두 TL423). 비로그인 거부, 비회원·닉네임 없음 허용. 등록: 이미 있으면 그대로 성공(시각·순서 그대로), 없는 챔피언 22023 「없는 챔피언입니다. 다시 골라 주세요.」, 10개면 **TL413** 「최대 10개까지 선택할 수 있습니다. 하나를 해제한 뒤 선택해 주세요.」. 해제: 없는 것도 그대로 성공. profiles 줄을 잠가 동시에 눌러도 10개를 넘지 않는다.
+  - 읽기 `my_champions()` → `{ limit: 10, items: [id] }` 최근 등록순. 로그인만(비회원 가능).
+  - 읽기 `my_champion_builds(p_champion text default null, p_page integer default 1)` → `{ total, blocked, page, size: 20, items }`: 내 등록 챔피언이 **내 챔피언 쪽(counter_champion)**인 공개 빌드(빌드 approved + 상대법 approved — 숨김·대기·거절·숨긴 상대법 제외). p_champion으로 하나만(내가 등록하지 않은 챔피언이면 빈 목록). 정렬은 서버에서 /builds 추천순(장인 → 추천 → 최신 → id). 차단한 사람의 빌드는 서버가 빼고 개수를 blocked로. items 칸 = `id, name, seq, max_skill, up, created_at, author_id, author{influencer, nickname, photo_path}|null(탈퇴), target, mine` — /builds 카드와 같고 이메일·역할·레벨·운영 정보·별점 없음. 다른 사람 id를 받는 인자가 없다.
+  - 모든 새 함수: security definer · search_path '' · authenticated만 실행(anon·public 회수). 080을 다시 실행하면 맨 앞 확인에서 멈춘다. 맨 위 되돌리기: drop function 3 + drop table 2(등록 데이터도 지워짐) — 로컬에서 되돌린 DB의 `pg_dump -s`가 079까지 만든 DB와 같음을 확인.
+  - **함수 수**: 쓰기 103 / 첫 줄 검사 30 / 허용 목록 73 → **104 / 31 / 73**(허용 목록은 건드리지 않음). 읽기 67 → **69**(079 때 67이 되었으므로 이번에는 67 → 69).
+- **웹**:
+  - `components/MyChampions.jsx`(두 화면 공용): 검색창 하나(SearchField) → 입력하면 줄 단위 결과(작은 아이콘 28px + 이름 + 오른쪽 「선택」/「선택됨」, 줄 전체가 버튼·aria-pressed, 8줄까지 + 「N개 더 있습니다」). 검색은 `tokenize` + `rankChampions`(메인과 같은 규칙).
+  - 칩 줄: 이름 칩 + ×(해제), 한 줄 고정·옆으로 밀기·스크롤바 숨김, 더 밀 수 있으면 오른쪽 끝 36px 흐림(mask). 새로 고른 챔피언이 맨 앞. 칩을 누르면 그 챔피언만(`?champ=`), 한 번 더 누르면 전체. 별도 필터 줄 없음.
+  - 10개를 고른 뒤 또 고르면 버튼은 그대로, 누를 때 안내(서버를 부르지 않음). 서버 TL413도 같은 안내.
+  - 빌드 목록: 기존 `BuildRow` 카드, 20개씩 **쪽 번호**(`?page=`, 저장한 빌드·전체 빌드와 같은 Pagination — 서버 쪽 나누기). 별점은 `useBuildDifficulties`. 차단 숨김 개수 안내.
+  - 빈 상태: 등록 없음 「내가 하는 챔피언을 검색해서 선택하면, 그 챔피언의 빌드를 한곳에서 볼 수 있습니다.」 / 공개 빌드 없음 「선택한 챔피언의 공개 빌드가 아직 없습니다. 새 빌드가 올라오면 여기에 모입니다.」 / 칩으로 좁혔는데 없음 「○○의 공개 빌드가 아직 없습니다.」. 비로그인은 다른 탭과 같은 로그인 안내.
+  - 080 전 DB: `api/myChampions.js`가 함수 없음 오류(PGRST202 등)를 `missing`으로 바꿔 탭 안에 「내 챔피언 기능을 준비하고 있습니다. 잠시 뒤 다시 시도해 주세요.」만 보인다.
+  - 가짜 DB에 세 함수(`myChampionsMissing`·`unknownChampions`), 새 테스트 `myChampions116.test.jsx` 9개.
+  - `supabase/scripts/reset_test_data*.sql`: user_champions를 지운다(champion_catalog는 설정이라 그대로).
+- **한계**:
+  - 챔피언 목록은 DB에 고정 목록으로 들어가 있어, 새 챔피언은 운영자가 한 줄 더하기 전까지 등록이 거절될 수 있다(그 챔피언의 공개 상대법이 생기면 받음).
+  - offset 쪽 나누기라 보는 사이에 빌드·추천이 바뀌면 쪽 사이에 한 개가 겹치거나 빠질 수 있다(/following 등과 같음).
+  - 화면에서 방금 차단한 사람의 빌드는 그 쪽에서만 숨기고, 서버 개수(total)에는 다음에 받을 때 반영된다.
+  - 활동 제한 중에는 해제도 막힌다(쓰기 함수 첫 줄 규칙, 허용 목록은 건드리지 않음).
+  - 비회원 정리 기준(guest_has_records)은 등록 챔피언을 기록으로 세지 않는다 — 챔피언만 등록한 비회원은 「빈 비회원」 기간 뒤 정리된다(함수 본문을 고치지 않음).
+  - 옛 앱 1.1·1.2에는 탭이 없다(새 표·함수만 더해 기존 동작은 그대로).
+- **이번 범위에서 뺀 것**: 내 챔피언에 새 빌드가 올라오면 알리는 **새 빌드 알림**(알림 종류·설정·푸시 판정 변경 필요 → 나중에).
+- **4단계 방침 개정(할 일)**: 개인정보 처리방침에 「등록한 챔피언(내 챔피언, 최대 10개) — 본인만 보며 탈퇴·비회원 정리 때 삭제」 저장 항목을 고지해야 한다. 다음 판 시행일에 `LEGAL.revisions`(6-88)로 넣고, 12-14 판 본문은 고치지 않는다. 화면 공개 전에 함께 정한다.
+- **확인 스크립트**:
+  - `scripts/check_my_champions_before.sql`: 1 표·함수 5개 「없음」, 2 쓰기 103 / 30 / 73, 3~8 쓰기·읽기(67)·모든 함수 지문, 푸시 판정, 허용 목록·xp_rules, 트리거·정책, 9 공개 빌드 수 / 회원 수.
+  - `scripts/check_my_champions_after.sql`: 1 표 RLS·키·cascade·챔피언 173, 2 user_champions 권한·정책(본인 읽기 하나), 3 champion_catalog 권한 없음, 4·5 함수 모양, 6 실행 권한(true / false / false)·첫 줄 검사·허용 목록 밖, 7 등록한 사람마다 그 사람으로 불러 등록 수·total·1쪽 순서를 기대값과 비교(사람 수만), 8 한도·형식, 9 쓰기 104 / 31 / 73, 10~15 비교(새 함수를 뺀 지문은 전과 같음), 16 읽기 69. 이메일·토큰·닉네임·챔피언 값은 출력하지 않는다.
+- **SQL 테스트** `tests/my_champions_test.sql` 65개: 모양·권한(비로그인 실행·표 읽기 불가, 표 직접 넣기 불가), sub 없음 거부, 등록·중복 등록 안전(시각 그대로)·없는 챔피언·형식·대소문자·null 거부, 10개 한도(11개째 TL413, 이미 등록한 것은 10개여도 성공, 해제 뒤 다시), 비회원·닉네임 없음 가능, 활동 제한 TL423(등록·해제)·읽기는 가능, 다른 사람의 등록이 함수·표 모두에서 안 보임, 공개 빌드만·좁히기·/builds 순서·쪽 겹침·빠짐 없음·장인 먼저·차단 제외·칸·탈퇴자 null, 숨기면 바로 빠짐, 데이터 그대로, 탈퇴·비회원 정리 cascade, 되돌리기 블록(쓰기 103/30/73·읽기 67·지문·푸시 판정·트리거·정책 그대로), 재실행 멈춤. 기존 SQL 테스트 11개 파일의 함수 수 기대값(103→104, 30→31, 67→69, 되돌린 뒤 66→68)을 고쳤다.
+- **운영 반영 순서**:
+  1. `check_my_champions_before.sql`: 1번이 모두 「없음」인지 보고, 2~9번을 적어 둔다(079까지 실행돼 있어야 읽기 67).
+  2. `080_my_champions.sql`
+  3. `check_my_champions_after.sql`: 1~8·16번 정상 값, 9~15번이 전 2~9번과 같은지.
+  4. 개인정보 처리방침 다음 판(「등록한 챔피언」 고지) 확정.
+  5. 웹 배포(080 전이어도 탭은 「준비 중」으로 열림).
+  6. 앱 다시 빌드(1.3).

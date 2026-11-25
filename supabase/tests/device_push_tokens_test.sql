@@ -87,10 +87,10 @@ select t.ok('068: 두 함수는 assert_can_write 없이 허용 목록에 (웹 �
      and name in ('register_device_push_token(text, text, text)', 'unregister_device_push_token(text)')) = 2
   and not exists (select 1 from pg_proc where proname in ('register_device_push_token', 'unregister_device_push_token') and prosrc like '%assert_can_write%')
   and exists (select 1 from public.restriction_exemptions where kind = 'policy' and name = 'public.push_subscriptions: push_subscriptions: 본인 넣기'));
-select t.ok('068 쓰기 함수 수: 103개 (071의 101 + 2), 첫 줄 검사 30개 그대로, 허용 목록 함수 73개', (
-  select count(*) = 103
+select t.ok('068 쓰기 함수 수: 104개 (071의 101 + 2 + 080 set_my_champion), 첫 줄 검사 31개, 허용 목록 함수 73개', (
+  select count(*) = 104
      and count(*) filter (where p.prosrc ~ '^\s*declare\s*\n\s*_can_write constant boolean := public\.assert_can_write\(\);'
-                             or p.prosrc ~ '^\s*begin\s*\n\s*perform public\.assert_can_write\(\);') = 30
+                             or p.prosrc ~ '^\s*begin\s*\n\s*perform public\.assert_can_write\(\);') = 31
      and count(*) filter (where exists (select 1 from public.restriction_exemptions e where e.kind = 'function'
                                          and e.name = p.proname || '(' || oidvectortypes(p.proargtypes) || ')')) = 73
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace

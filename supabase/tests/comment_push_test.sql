@@ -97,10 +97,10 @@ select t.ok('push_wanted 실행 권한 그대로 (anon·authenticated·service_r
   not has_function_privilege('anon', 'public.push_wanted(uuid, text)', 'execute')
   and not has_function_privilege('authenticated', 'public.push_wanted(uuid, text)', 'execute')
   and not has_function_privilege('service_role', 'public.push_wanted(uuid, text)', 'execute'));
-select t.ok('068 쓰기 함수 수: 103 / 첫 줄 검사 30 / 허용 목록 73 그대로', (
-  select count(*) = 103
+select t.ok('068 쓰기 함수 수: 104 / 첫 줄 검사 31 / 허용 목록 73 (080 set_my_champion 포함)', (
+  select count(*) = 104
      and count(*) filter (where p.prosrc ~ '^\s*declare\s*\n\s*_can_write constant boolean := public\.assert_can_write\(\);'
-                             or p.prosrc ~ '^\s*begin\s*\n\s*perform public\.assert_can_write\(\);') = 30
+                             or p.prosrc ~ '^\s*begin\s*\n\s*perform public\.assert_can_write\(\);') = 31
      and count(*) filter (where exists (select 1 from public.restriction_exemptions e where e.kind = 'function'
                                          and e.name = p.proname || '(' || oidvectortypes(p.proargtypes) || ')')) = 73
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace

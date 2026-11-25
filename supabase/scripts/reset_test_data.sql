@@ -22,6 +22,7 @@
 -- (058·059: 탑신병자 커뮤니티 답글·문서 댓글 답글은 댓글과 함께 지워진다. 058의 빌드 댓글은 060에서 표째 없앴다.)
 -- (061: 사용자 차단 목록(user_blocks)을 전부 지운다 - 테스트 계정끼리 걸어 둔 차단이 공개 뒤까지 남지 않게.)
 -- (066: 빌드 저장(북마크, build_bookmarks)을 전부 지운다 - 테스트 계정이 저장한 빌드가 공개 뒤까지 남지 않게. 빌드를 지우면 함께 지워지지만 남는 빌드의 저장도 지운다.)
+-- (080: 내 챔피언 등록(user_champions)을 전부 지운다 - 테스트 계정의 등록이 공개 뒤까지 남지 않게. 챔피언 목록(champion_catalog)은 설정이라 그대로 둔다.)
 -- (067: 빌드 수정 알림의 짝 표(build_edit_notices)는 알림과 함께 전부 지운다. 남는 말파 빌드의 '이전(migrate)' 기록 1줄은 수정 알림을 만들지 않는다.)
 -- (068: 활동 제한 기록(user_restrictions)을 전부 지운다 - 테스트로 건 제한이 공개 뒤에 띠로 남지 않게. 이의 제기 문의는 문의와 함께 지워진다.)
 -- (069: 경고 기록(user_warnings)을 전부 지운다 - 테스트로 보낸 경고가 공개 뒤에 안내 상자로 남지 않게. 경고 알림은 알림과 함께 지워진다.)
@@ -145,6 +146,9 @@ begin
   end if;
   if to_regclass('public.build_bookmarks') is not null then  -- 066: 빌드 저장(북마크)
     delete from public.build_bookmarks;
+  end if;
+  if to_regclass('public.user_champions') is not null then  -- 080: 내 챔피언 등록
+    delete from public.user_champions;
   end if;
 end;
 $$;
@@ -286,6 +290,7 @@ union all select '  └ 프로필 사진 정리 대기열 (062, 다음 정리 �
 union all select '장인 팔로우 / 호출 횟수 / 알림 대기 줄 (050 실행 전이면 0)', case when to_regclass('public.influencer_follows') is null then 0 else (xpath('/row/c/text()', query_to_xml('select (select count(*) from public.influencer_follows) + (select count(*) from public.follow_rate) + (select count(*) from public.follow_notify_queue) as c', false, true, '')))[1]::text::integer end
 union all select '공지 알림 대기 줄 / 새 팔로워 센 기록 (051·052 실행 전이면 0)', (case when to_regclass('public.notice_notify_queue') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.notice_notify_queue', false, true, '')))[1]::text::integer end) + (case when to_regclass('public.new_follower_counted') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.new_follower_counted', false, true, '')))[1]::text::integer end)
 union all select '빌드 저장·북마크 (066 실행 전이면 0)', case when to_regclass('public.build_bookmarks') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.build_bookmarks', false, true, '')))[1]::text::integer end
+union all select '내 챔피언 등록 (080 실행 전이면 0)', case when to_regclass('public.user_champions') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.user_champions', false, true, '')))[1]::text::integer end
 union all select '탈퇴한 장인 닉네임 예약 (055 실행 전이면 0)', case when to_regclass('public.nickname_holds') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.nickname_holds', false, true, '')))[1]::text::integer end
 union all select '알림', count(*) from public.notifications
 union all select '  └ 게시판 신고 알림 report_received (045, 0이어야 함)', count(*) from public.notifications where kind = 'report_received'

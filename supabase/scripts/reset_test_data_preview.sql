@@ -97,6 +97,9 @@ rows (ord, what, to_delete, to_keep, note) as (
   union all select 15.96, 'build_bookmarks (빌드 저장·북마크, 066)',
          case when to_regclass('public.build_bookmarks') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.build_bookmarks', false, true, '')))[1]::text::bigint end,
          0, '전부 지움 (066 실행 전이면 0)'
+  union all select 15.965, 'user_champions (내 챔피언 등록, 080)',
+         case when to_regclass('public.user_champions') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.user_champions', false, true, '')))[1]::text::bigint end,
+         0, '전부 지움 (080 실행 전이면 0). 챔피언 목록 champion_catalog는 설정이라 그대로'
   union all select 15.97, 'build_edit_notices (빌드 수정 알림 짝, 067)',
          case when to_regclass('public.build_edit_notices') is null then 0 else (xpath('/row/c/text()', query_to_xml('select count(*) as c from public.build_edit_notices', false, true, '')))[1]::text::bigint end,
          0, '알림과 함께 전부 지움 (067 실행 전이면 0)'
