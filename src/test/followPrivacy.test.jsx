@@ -119,13 +119,13 @@ test('/me/followers 알림 링크: 장인 본인은 그대로 내 팔로워 목�
   await waitFor(() => expect(followerNames()).toEqual(['팔로워02', '팔로워01']));
 });
 
-test('팔로우한 장인 목록: 유형·팔로워 수만(날짜 없음) / 비회원은 안내만(빌드 탭은 그대로)', async () => {
+test('팔로우한 장인 목록: 유형·빌드 수·팔로워 수만(날짜 없음) / 비회원은 안내만(빌드 탭은 그대로)', async () => {
   setup(1);
   TABLES.influencer_follows.push({ follower_id: 'u-fan', influencer_id: 'u-102', created_at: '2026-11-13T00:00:00Z' });
   fakeLogin('u-fan', { nickname: '팬' });
   start('/following?tab=list');
   const row = (await screen.findByRole('link', { name: /탑고수/ })).closest('li');
-  expect(row.textContent).toContain('크리에이터 · 팔로워 2명');
+  expect(row.querySelector('.muted').textContent).toBe('크리에이터 · 빌드 1 · 팔로워 2'); // 6-115 카드
   expect(row.textContent).not.toMatch(/2026-11-13|\d{4}-\d{2}-\d{2}/);
   cleanup();
   TABLES.influencer_follows.push({ follower_id: 'u-guest', influencer_id: 'u-102', created_at: '2026-11-13T00:00:00Z' });

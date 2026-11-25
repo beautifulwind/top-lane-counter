@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link, useSearchParams } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import { getFollowStatus, getInfluencerDirectory } from '../api/follow';
 import FollowButton from '../components/FollowButton';
+import InfluencerRow from '../components/InfluencerRow';
 import { SEARCH_WAIT_MS } from '../components/InfluencerSearch';
 import { ClockIcon } from '../components/Icons';
 import { NoneLine } from '../components/LimitedList';
 import Pagination, { clampPage } from '../components/Pagination';
-import ProfilePhoto from '../components/ProfilePhoto';
 import SearchField from '../components/SearchField';
 import { ErrorBox, Loading } from '../components/Status';
 import { isBlocked, useAuth } from '../lib/auth';
@@ -140,30 +140,11 @@ export default function Influencers() {
       ) : (
         <ul className="inf-rows" aria-label="장인 목록" aria-busy={loading} ref={listRef}>
           {items.map((p) => (
-            <li key={p.id} className="inf-row">
-              <Link to={`/u/${p.id}`} className="inf-row-main">
-                <span className="inf-row-avatar" aria-hidden="true">
-                  <ProfilePhoto
-                    path={p.photo_path} alt="" className="inf-row-photo"
-                    fallback={<span className="inf-row-initial">{Array.from(p.nickname ?? '?')[0]}</span>}
-                  />
-                </span>
-                <span className="inf-row-text">
-                  <span className="inf-row-name">
-                    <span className="user-nick">{p.nickname}</span>
-                    <span className="inf-tag">인증</span>
-                  </span>
-                  <small className="muted">
-                    빌드 {Number(p.build_count ?? 0).toLocaleString()} · 팔로워 {Number(counts[p.id] ?? p.follower_count ?? 0).toLocaleString()}
-                  </small>
-                </span>
-              </Link>
+            <InfluencerRow key={p.id} p={{ ...p, build_count: p.build_count ?? 0 }} followerCount={counts[p.id] ?? p.follower_count}>
               {auth.user?.id !== p.id && (
-                <div className="inf-row-follow">
-                  <FollowButton id={p.id} nickname={p.nickname} following={!!follows[p.id]} onChange={onFollow(p.id)} />
-                </div>
+                <FollowButton id={p.id} nickname={p.nickname} following={!!follows[p.id]} onChange={onFollow(p.id)} />
               )}
-            </li>
+            </InfluencerRow>
           ))}
         </ul>
       ))}

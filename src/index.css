@@ -1397,9 +1397,6 @@ a.inf-link:hover .user-nick, a.inf-link:focus-visible .user-nick { text-decorati
 .following-tabs { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 var(--gap-md); }
 /* 고른 탭 표시 (6-82에서 더함 — 예전에는 /following 탭도 고른 탭이 보이지 않았다). 색만이 아니라 굵기·테두리로도 */
 .following-tabs .btn.on { border-color: var(--brand); background: var(--soft); color: var(--brand-dark); font-weight: 800; }
-.following-row { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px var(--gap-md); padding: 10px 0; border-bottom: 1px solid var(--line); }
-.following-row:last-child { border-bottom: 0; }
-.following-who { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 
 /* 홈 검색 후보 목록 (6-61): 입력칸 바로 아래 흐름 안(떠 있지 않음) → 모바일 키보드에 가려지지 않고 내부 스크롤 */
 .bs-panel {

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
-import { getFollowedBuilds, getMyFollowing } from '../api/follow';
+import { getFollowedBuilds, getMyFollowingCards } from '../api/follow';
 import { getChampionMap } from '../api/ddragon';
 import { isGuest, useAuth } from '../lib/auth';
 import { useAsync } from '../lib/useAsync';
@@ -9,7 +9,7 @@ import { INFLUENCER_KINDS } from '../lib/nickname';
 import { ErrorBox, Loading } from '../components/Status';
 import InfluencerBuildCard from '../components/InfluencerBuildCard';
 import FollowButton from '../components/FollowButton';
-import { InfluencerName } from '../components/UserName';
+import InfluencerRow from '../components/InfluencerRow';
 import { LayersIcon } from '../components/Icons';
 
 export const NO_FOLLOW_TEXT = '아직 팔로우한 장인이 없습니다. 상단의 돋보기(장인 찾기)로 찾아보세요.';
@@ -20,7 +20,8 @@ export const GUEST_FOLLOWING_TEXT = '비회원은 팔로우한 장인 목록을 
  * 내 목록(/lists, 6-82) [팔로우한 장인] 탭의 링크로 온다.
  * 탭 두 개 (?tab=list로 주소에 남는다):
  *  - 빌드: followed_builds — 팔로우한 장인들의 공개 빌드, 최근 수정순 20개씩 [더보기]. 카드 = 장인 닉네임·챔피언·상대법 이름 → 그 빌드로
- *  - 팔로우한 장인: my_following — 20개씩, 줄마다 닉네임·장인 표시·유형·팔로워 수 + [팔로우중](누르면 취소, 다시 누르면 팔로우).
+ *  - 팔로우한 장인: my_following_cards(079, 없으면 my_following) — 20개씩, 장인 목록(/influencers)과 같은 카드(InfluencerRow, 6-115):
+ *    사진(없으면 첫 글자 원)·닉네임·「인증」·유형·빌드 수·팔로워 수 + [팔로우중](누르면 취소, 다시 누르면 팔로우).
  *    063: 팔로우한 날은 보이지 않는다(DB도 주지 않음). 비회원(게스트)은 이 탭에서 안내만(DB도 거부).
  * 로그인하지 않았으면 로그인 안내만. 게스트도 빌드 탭은 쓸 수 있다.
  */
@@ -116,7 +117,7 @@ function FollowedBuilds({ userId }) {
 
 /** 내가 팔로우한 장인 목록 — 내 목록(/lists) [팔로우한 장인] 탭도 쓴다 */
 export function FollowingList({ userId }) {
-  const list = usePaged((page) => async () => ({ page: await getMyFollowing(page) }), [userId]);
+  const list = usePaged((page) => async () => ({ page: await getMyFollowingCards(page) }), [userId]);
   const [now, setNow] = useState({}); // 이 화면에서 바꾼 것 { 장인 id: { following, follower_count } }
   if (list.loading && !list.data) return <Loading />;
   if (list.error) return <ErrorBox error={list.error} onRetry={list.retry} />;
@@ -124,23 +125,16 @@ export function FollowingList({ userId }) {
   return (
     <section aria-label="내가 팔로우한 장인">
       <p className="hint">팔로우한 장인 {list.total}명 · [팔로우중]을 누르면 팔로우를 취소합니다.</p>
-      <ul className="link-list following-list">
+      <ul className="inf-rows following-list">
         {list.items.map((p) => {
           const st = now[p.id];
-          const count = st ? st.follower_count : p.follower_count;
           return (
-            <li key={p.id} className="following-row">
-              <span className="following-who">
-                <InfluencerName profile={p} linkTo={p.id} />
-                <small className="muted">
-                  {INFLUENCER_KINDS[p.influencer] ?? '장인'} · 팔로워 {Number(count ?? 0).toLocaleString()}명
-                </small>
-              </span>
+            <InfluencerRow key={p.id} p={p} kind={INFLUENCER_KINDS[p.influencer] ?? '장인'} followerCount={st ? st.follower_count : p.follower_count}>
               <FollowButton
                 id={p.id} nickname={p.nickname} following={st ? st.following : true}
                 onChange={(r) => setNow((m) => ({ ...m, [p.id]: { following: !!r?.following, follower_count: Number(r?.follower_count) || 0 } }))}
               />
-            </li>
+            </InfluencerRow>
           );
         })}
       </ul>

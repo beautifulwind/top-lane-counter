@@ -97,8 +97,8 @@ select t.ok('068 쓰기 함수 수: 103 / 첫 줄 검사 30 / 허용 목록 73 �
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.prokind = 'f' and p.provolatile = 'v' and p.prorettype <> 'trigger'::regtype
      and (has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('anon', p.oid, 'execute'))));
-select t.ok('일반 사용자가 부를 수 있는 읽기 함수 66개 (074까지 65 + member_page)', (
-  select count(*) = 66 and count(*) filter (where p.proname = 'member_page') = 1
+select t.ok('일반 사용자가 부를 수 있는 읽기 함수 67개 (074까지 65 + member_page + 079 my_following_cards)', (
+  select count(*) = 67 and count(*) filter (where p.proname = 'member_page') = 1
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.prokind = 'f' and p.provolatile in ('s', 'i') and p.prorettype <> 'trigger'::regtype
      and (has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('anon', p.oid, 'execute'))));

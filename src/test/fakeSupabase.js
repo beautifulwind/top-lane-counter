@@ -256,6 +256,8 @@ export function resetFake() {
   fakeState.mediaUsage = EMPTY_USAGE();
   fakeState.restriction = null; // 068 내 활동 제한 (my_restriction)
   fakeState.restrictionsMissing = false; // true = 068 실행 전 DB
+  fakeState.followCardsMissing = false; // true = 079 실행 전 DB (my_following_cards 없음)
+  fakeState.followCardsCalls = 0;
   TABLES.user_restrictions = [];
   fakeState.warningsMissing = false; // true = 069 실행 전 DB
   TABLES.user_warnings = []; // 069 { id, user_id, memo, created_at, created_by, restriction_id, notice_read_at, acked_at }
@@ -1828,7 +1830,7 @@ function titleRpc(name, args) {
 
 // ---- 050 장인 팔로우 (SPEC 6-36): DB 함수와 같은 규칙만 흉내 낸다 ----
 const FOLLOW_RPCS = ['follow_influencer', 'unfollow_influencer', 'follow_status', 'influencer_builds', 'influencer_followers', 'influencer_follower_count',
-  'search_influencers', 'influencer_directory', 'followed_builds', 'my_following', 'admin_influencer_list'];
+  'search_influencers', 'influencer_directory', 'followed_builds', 'my_following', 'my_following_cards', 'admin_influencer_list'];
 function followRpc(name, args) {
   const writing = ['follow_influencer', 'unfollow_influencer'].includes(name);
   if (writing) fakeState.rpcCalls.push({ name, args });
@@ -1941,6 +1943,25 @@ function followRpc(name, args) {
     const mine = TABLES.influencer_follows.filter((f) => f.follower_id === meRow.id && isInf(f.influencer_id)).map((f) => f.influencer_id);
     const all = TABLES.builds.filter((b) => mine.includes(b.author_id) && b.status === 'approved').sort(recent);
     return ok(structuredClone({ total: all.length, page: args.p_page ?? 1, size: 20, items: pageOf(all, args.p_page).map(card) }));
+  }
+  // 079: 내가 팔로우한 장인 카드 — my_following과 같은 순서·20개씩 + 사진·공개 빌드 수, 인증 없음·닉네임 없음·정지 중인 장인은 뺀다
+  if (name === 'my_following_cards') {
+    fakeState.followCardsCalls = (fakeState.followCardsCalls ?? 0) + 1;
+    if (fakeState.followCardsMissing) return { data: null, error: { code: 'PGRST202', message: 'Could not find the function public.my_following_cards(p_page) in the schema cache' } };
+    if (meRow.is_guest) return { data: null, error: { message: '비회원은 팔로우한 장인 목록을 볼 수 없습니다. 마이페이지에서 구글·카카오를 연결해 주세요.', code: '42501' } };
+    const now = new Date().toISOString();
+    const restricted = (id) => TABLES.user_restrictions.some((r) => r.user_id === id && !r.lifted_at && String(r.ends_at) > now);
+    const all = TABLES.influencer_follows.filter((f) => f.follower_id === meRow.id)
+      .filter((f) => { const u = prof(f.influencer_id); return u?.influencer && u.nickname && !restricted(u.id); })
+      .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)) || String(a.influencer_id).localeCompare(String(b.influencer_id)));
+    const builds = (id) => TABLES.builds.filter((b) => b.author_id === id && b.status === 'approved' && (b.counter?.status ?? 'approved') === 'approved').length;
+    return ok(structuredClone({
+      total: all.length, page: Math.max(1, args.p_page ?? 1), size: 20,
+      items: pageOf(all, args.p_page).map((f) => {
+        const u = prof(f.influencer_id);
+        return { id: u.id, nickname: u.nickname, influencer: u.influencer, photo_path: u.photo_path ?? null, follower_count: count(u.id), build_count: builds(u.id) };
+      }),
+    }));
   }
   if (name === 'my_following') {
     if (meRow.is_guest) return { data: null, error: { message: '비회원은 팔로우한 장인 목록을 볼 수 없습니다. 마이페이지에서 구글·카카오를 연결해 주세요.', code: '42501' } };

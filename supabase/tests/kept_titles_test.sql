@@ -94,8 +94,8 @@ select t.ok('068 쓰기 함수 수: 103 / 첫 줄 검사 30 / 허용 목록 73 �
     from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.prokind = 'f' and p.provolatile = 'v' and p.prorettype <> 'trigger'::regtype
      and (has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('anon', p.oid, 'execute'))));
-select t.ok('읽기 함수 66개 그대로 (075 뒤 수)', (
-  select count(*) = 66 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
+select t.ok('읽기 함수 67개 (075 뒤 66 + 079 my_following_cards)', (
+  select count(*) = 67 from pg_proc p join pg_namespace n on n.oid = p.pronamespace
    where n.nspname = 'public' and p.prokind = 'f' and p.provolatile in ('s', 'i') and p.prorettype <> 'trigger'::regtype
      and (has_function_privilege('authenticated', p.oid, 'execute') or has_function_privilege('anon', p.oid, 'execute'))));
 select t.ok('트리거 2개(077에서 edit_proposals_kept_titles 삭제): deferrable initially deferred, 지우기에는 반응 안 함', (

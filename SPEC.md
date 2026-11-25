@@ -2375,3 +2375,64 @@ RLS 원칙:
   id 지문·개수만 출력하고, 이메일·토큰·닉네임 값은 출력하지 않는다.
 - **테스트**: `tests/influencer_photo_sort_test.sql` 17개 — 60명(사진 20명)으로 두 정렬 사진 먼저, 묶음 안 팔로워·최근 활동·닉네임 순, 검색, 쪽 크기 1~10 겹침·빠짐 없음, 빈 경로 불가, 사진 삭제, 103/30/73/66, 되돌리기 블록으로 070 지문·옛 순서, 새 순서 = 옛 순서의 사진 먼저 분리, 078 다시 실행, 재실행 멈춤. 로컬에서 되돌린 뒤 스키마가 077과 같음을 `pg_dump -s`로 확인했다.
 - **운영 반영 순서**: ① `check_influencer_photo_sort_before.sql`(2·4번과 5~12번을 적어 둠) → ② `078_influencer_photo_sort.sql` → ③ `check_influencer_photo_sort_after.sql`. 웹은 078 전후 어느 쪽이든 같은 화면이라 순서와 무관하다. 되돌리기는 078 맨 위 블록(070 본문)으로 한다.
+
+### 6-115. 1.3 패치 2-G — 팔로우한 장인 카드에 사진·빌드 수 (079 my_following_cards) (2026-11-25 — DB 파일·확인 스크립트·테스트·웹, 운영 DB 미실행)
+- **조사**:
+  - /lists [팔로우한 장인] 탭과 /following?tab=list는 같은 컴포넌트 `FollowingList`(pages/Following.jsx)를 쓰고, `getMyFollowing` → 읽기 함수 `my_following(p_page)`(050·063)를 부른다.
+  - my_following이 돌려주는 칸은 `{ id, nickname, influencer, follower_count }`이고 20개씩, 최근 팔로우 순이다. 팔로우한 때는 063부터 주지 않는다.
+  - 닉네임은 칸이 있어 이미 보였다. 다만 「장인」 꼬리표가 붙은 작은 글자 링크 한 줄이라 카드처럼 보이지 않았다.
+  - 사진이 안 보인 이유는 **칸(photo_path)이 없어서**다. 빌드 수 칸도 없다. 화면이 다른 함수를 부르는 문제는 아니었다.
+  - /influencers의 줄(.inf-row: 사진 원 · 닉네임 · 「인증」 · 「빌드 N · 팔로워 N」 · 링크 밖 팔로우 버튼)을 그대로 쓸 수 있다. 이번에 `components/InfluencerRow.jsx`로 꺼내 두 화면이 같이 쓴다.
+- **새 함수가 필요한 이유**:
+  - my_following에 칸을 더하면 반환 형태가 바뀐다. 옛 앱 1.1·1.2와 063 테스트가 이 모양을 쓰므로 원칙상 할 수 없다.
+  - 웹이 받은 id로 `influencer_directory`나 장인 페이지를 다시 부르는 방법도 있다. 그러나 장인마다 한 번씩 부르거나 이름 검색에 기대야 해서 느리고 정확하지 않다(검색은 닉네임 일부 일치).
+  - 따라서 기존 함수를 고치지 않고 읽기 함수 하나를 더했다.
+- **새 함수 `my_following_cards(p_page integer default 1)` → jsonb (079)**:
+  - 속성: stable · security definer · search_path ''. 실행은 authenticated만 되고 anon·public은 회수했다(my_following과 같음).
+  - 로그인이 필요하고 비회원은 거부한다(my_following과 같은 문장). 다른 사람 id를 받는 인자가 없어 언제나 「나」의 팔로우만 돌려준다.
+  - 순서와 쪽은 my_following과 같다: 최근 팔로우 순(같으면 장인 id 순), 20개씩.
+  - 노출 칸: `{ total, page, size, items: [{ id, nickname, influencer, photo_path, follower_count, build_count }] }`.
+    - follower_count = 장인 전체 팔로워 수
+    - build_count = 공개 빌드 수(승인 빌드 + 승인 상대법, influencer_directory와 같은 식)
+    - 이메일·가입일시·역할·레벨·운영 정보·제한·경고·닉네임 상태·팔로우한 때는 없다.
+  - 빼는 장인(목록과 total 모두): 장인 인증 없음, 닉네임 없음, 지금 정지 중(active_restriction_id). 정지가 풀리면 다시 나온다.
+    - 인증이 해제되면 050 트리거가 팔로우 줄을 지우고, 탈퇴하면 cascade로 지워져서 원래 나오지 않는다.
+  - 함수 수: 쓰기 함수 103 / 30 / 73 그대로, 읽기 함수 66 → **67**. 지문(CR 뺌)은 `0cfd5497d4e82573a44f87e34c020d9b`이다.
+  - 함수가 이미 있으면 실행을 멈춘다. 되돌리기는 맨 위 블록(drop function 한 줄)이다.
+- **웹**:
+  - `api/follow.js getMyFollowingCards`: 079 전 DB(PGRST202·42883)이면 `my_following`으로 되돌아간다. 이때 사진은 첫 글자 원으로 보이고 「빌드 N」은 빠진다.
+  - `FollowingList`가 `InfluencerRow`를 쓴다. 한 줄은 사진(없으면 첫 글자 원) · 닉네임 · 「인증」 · 「유형 · 빌드 N · 팔로워 N」이고, 전체가 /u/:id 링크다. [팔로우중]은 링크 밖에 있다.
+  - 취소·다시 팔로우, 팔로워 수 갱신, [더보기], 비회원 안내, 빈 목록 안내는 그대로다.
+  - 옛 줄 모양 CSS(.following-row·.following-who)는 지웠다. 380px에서는 /influencers와 같은 카드 규칙(min-width 0, 줄바꿈, 버튼 칸 45%)을 따른다.
+  - 테스트용 가짜 DB에 `my_following_cards`를 더했다. `followCardsMissing`을 켜면 079 전 DB를 흉내 낸다.
+  - 새 테스트 `followCards115.test.jsx` 5개.
+  - 고친 기존 테스트:
+    - `followFind.test.jsx` 「모아보기 팔로우한 장인」: `.following-row` → `.inf-row`, 「프로게이머 · 팔로워 2명」 → 「프로게이머 · 빌드 N · 팔로워 2」.
+    - `followPrivacy.test.jsx` 「팔로우한 장인 목록」: 「크리에이터 · 빌드 1 · 팔로워 2」.
+    - SQL 테스트의 읽기 함수 수 66 → 67: `member_page_test`, `kept_titles_test`, `influencer_photo_sort_test`, `remove_first_upload_test`.
+- **한계**:
+  - offset 쪽 나누기라, [더보기] 사이에 팔로우가 바뀌면 한 명이 빠지거나 겹칠 수 있다(my_following과 같음. 화면은 겹친 id를 한 번만 보여 준다).
+  - 장인마다 팔로워·빌드 수를 세므로 20명 한 쪽 기준이다.
+  - 정지 중인 장인은 이 화면에서만 빠진다. my_following·장인 목록·장인 페이지는 그대로다.
+  - 저장소 파일만 사라진 사진은 첫 글자 원으로 보인다.
+- **확인 스크립트**:
+  - `scripts/check_followed_cards_before.sql`
+    - 1: 함수 없음
+    - 2: 팔로우 줄 수 / 팔로우한 사람 수 / 빠질 팔로우 줄 수
+    - 3~10: 쓰기 함수 103/30/73·지문, 읽기 함수 66·지문, 모든 함수 지문, my_following 지문·속성, 푸시 판정, 허용 목록·xp_rules, 트리거·정책
+  - `scripts/check_followed_cards_after.sql`
+    - 1: 모양
+    - 2: 권한 true / false / false
+    - 3: 데이터 그대로
+    - 4: 팔로우한 회원마다 그 사람으로 불러 total·1쪽 순서를 기대값과 비교한 결과, 다른 사람 수 0. 사람 수만 출력한다.
+    - 5: 칸 이름 6개
+    - 6~13: 비교
+    - 14: 읽기 함수 67
+  - 이메일·토큰·닉네임 값은 출력하지 않는다.
+- **SQL 테스트** `tests/followed_cards_test.sql` 25개: 모양·권한, 비로그인·sub 없음·비회원 거부, 나의 팔로우만, 순서·쪽이 my_following과 같음, 쪽을 이어도 겹침·빠짐 없음, 칸·값, 정지 제외와 해제 후 복귀, 인증 해제·탈퇴, 데이터 그대로, 되돌리기 블록, 다시 실행, 재실행 멈춤.
+- **운영 반영 순서**:
+  1. `check_followed_cards_before.sql`: 1번이 「없음」인지 보고, 2~10번을 적어 둔다.
+  2. `079_followed_influencer_cards.sql`
+  3. `check_followed_cards_after.sql`
+  4. 웹 배포. 웹은 079 전에도 되돌아가므로 순서는 상관없지만, 079 뒤에 배포하면 바로 사진이 보인다.
+  5. 앱 다시 빌드(1.3).

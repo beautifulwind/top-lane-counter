@@ -185,14 +185,14 @@ test('모아보기 팔로우한 장인: 목록에서 [팔로우중]을 누르면
   follow('u-other', 'u-103');
   start('/following?tab=list');
   const sec = await screen.findByRole('region', { name: '내가 팔로우한 장인' });
-  const rows = [...sec.querySelectorAll('.following-row')];
+  const rows = [...sec.querySelectorAll('.inf-row')]; // 6-115: 장인 목록과 같은 카드
   expect(rows.map((r) => r.querySelector('.user-nick').textContent)).toEqual(['칭호없음', '탑고수']); // 최근 팔로우 순
-  expect(rows[0].textContent).toContain('프로게이머 · 팔로워 2명');
+  expect(rows[0].textContent).toMatch(/프로게이머 · 빌드 \d+ · 팔로워 2/);
   expect(rows[0].textContent).not.toContain('2026-11-05'); // 063: 팔로우한 날 없음
   expect(within(rows[0]).getByRole('link', { name: /칭호없음/ }).getAttribute('href')).toBe('/u/u-103');
   fireEvent.click(within(rows[0]).getByRole('button', { name: '칭호없음 팔로우 취소' }));
   const again = await within(rows[0]).findByRole('button', { name: '칭호없음 팔로우' });
-  expect(rows[0].textContent).toContain('팔로워 1명');
+  expect(rows[0].querySelector('.muted').textContent).toMatch(/팔로워 1$/);
   expect(TABLES.influencer_follows.some((f) => f.follower_id === 'u-fan' && f.influencer_id === 'u-103')).toBe(false);
   fireEvent.click(again);
   expect(await within(rows[0]).findByRole('button', { name: '칭호없음 팔로우 취소' })).toBeTruthy();

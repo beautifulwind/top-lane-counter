@@ -69,3 +69,18 @@ export const getFollowedBuilds = (page = 1) => rpc('followed_builds', { p_page: 
 
 /** 내가 팔로우한 장인 (로그인한 정식 회원만 — 063: 비회원 거부, 최근 팔로우 순 20개씩, 날짜는 주지 않음). { total, page, size, items: [{ id, nickname, influencer, follower_count }] } */
 export const getMyFollowing = (page = 1) => rpc('my_following', { p_page: page }, '팔로우한 장인 목록을 불러오지 못했습니다.');
+
+/** 079 my_following_cards 함수가 아직 없다는 오류인가 (079 전 DB) */
+const cardsMissing = (error) => ['PGRST202', '42883'].includes(error?.code) || /my_following_cards/.test(error?.message ?? '');
+
+/**
+ * 내가 팔로우한 장인 카드 (079, SPEC 6-115): my_following과 같은 순서·20개씩 + 사진(photo_path)·공개 빌드 수(build_count).
+ * 정지 중인 장인은 DB가 뺀다. 079 전 DB면 my_following으로 되돌아간다(사진·빌드 수 없음 → 첫 글자 원, 「빌드 N」 없음).
+ * 돌려주는 값: { total, page, size, items: [{ id, nickname, influencer, photo_path, follower_count, build_count }] }
+ */
+export async function getMyFollowingCards(page = 1) {
+  const { data, error } = await db().rpc('my_following_cards', { p_page: page });
+  if (!error) return data;
+  if (cardsMissing(error)) return getMyFollowing(page);
+  throw friendly(error, '팔로우한 장인 목록을 불러오지 못했습니다.');
+}
