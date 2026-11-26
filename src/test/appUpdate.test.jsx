@@ -125,11 +125,11 @@ test('저장이 안 되는 기기: 이번 실행 동안만 숨기고 오류는 �
   expect(isSnoozed('1.3.0')).toBe(true);
 });
 
-test('version.json: 스토어 출시 전이라 1.2.0 그대로 — 앱 1.3보다 낮아 배너가 뜨지 않고, _headers에 CORS·no-cache가 있다 (6-105)', async () => {
+test('version.json: iOS 1.3.0·Android 1.2.0 — 앱 1.3에서는 배너가 뜨지 않고, _headers에 CORS·no-cache가 있다 (6-105)', async () => {
   const v = JSON.parse(readFileSync('public/version.json', 'utf8'));
-  expect(v).toEqual({ ios: '1.2.0', android: '1.2.0' }); // 출시 뒤에만 올린다
+  expect(v).toEqual({ ios: '1.3.0', android: '1.2.0' }); // 출시 뒤에만, 출시된 플랫폼만 올린다
   expect(compareVersions(v.android, '1.3')).toBe(-1);
-  expect(compareVersions(v.ios, '1.3')).toBe(-1);
+  expect(compareVersions(v.ios, '1.3')).toBe(0);
   expect(compareVersions('1.3', '1.2.0')).toBe(1);
   cap.installed = '1.3';
   fetchMock.mockResolvedValueOnce(json(v));
